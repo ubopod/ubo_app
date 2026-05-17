@@ -14,6 +14,12 @@ from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 from pipecat.transcriptions.language import Language
 
+from ubo_assistant.kokoro import (
+    DEFAULT_KOKORO_VOICE_ID,
+    KokoroTTSService,
+)
+from ubo_assistant.kokoro import MODEL_PATH as KOKORO_MODEL_PATH
+from ubo_assistant.kokoro import VOICES_PATH as KOKORO_VOICES_PATH
 from ubo_assistant.piper import DEFAULT_PIPER_VOICE_ID, PiperTTSService
 from ubo_assistant.switch import UboSwitchService
 
@@ -110,6 +116,20 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             else None,
         )
 
+        # Initialize Kokoro TTS only when the bundled model + voices
+        # files are already on disk. If the user hasn't downloaded
+        # Kokoro yet this stays None — picking Kokoro in the TTS
+        # selector before downloading would simply have no active
+        # service, and the subprocess is re-spawned the next time the
+        # files exist so a download triggered from the Manage menu
+        # picks up automatically.
+        self.kokoro_tts = self._initialize_service(
+            'Kokoro',
+            lambda: KokoroTTSService(voice_id=DEFAULT_KOKORO_VOICE_ID)
+            if KOKORO_MODEL_PATH.exists() and KOKORO_VOICES_PATH.exists()
+            else None,
+        )
+
         # Initialize Rime TTS
         self.rime_tts = self._initialize_service(
             'Rime',
@@ -136,6 +156,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             'openai': self.openai_tts,
             'elevenlabs': self.elevenlabs_tts,
             'piper': self.piper_tts,
+            'kokoro': self.kokoro_tts,
             'rime': self.rime_tts,
         }
 
@@ -179,4 +200,14 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             voice_id = data[0].value
             target = self.piper_tts
             if isinstance(target, PiperTTSService):
+                target.request_voice(voice_id)
+
+        # Kokoro keeps every voice in the bundled ``voices-v1.0.bin``
+        # that's already loaded into memory by ``KokoroTTSService``, so
+        # a voice switch is a pure settings update — no file work.
+        @self.client.autorun(['state.assistant.selected_kokoro_voice'])
+        def _handle_kokoro_voice_change(data: list[StringValue]) -> None:
+            voice_id = data[0].value
+            target = self.kokoro_tts
+            if isinstance(target, KokoroTTSService):
                 target.request_voice(voice_id)

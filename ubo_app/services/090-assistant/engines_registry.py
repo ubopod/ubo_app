@@ -11,6 +11,7 @@ from ubo_app.engines.generic_llm import GenericLLMEngine
 from ubo_app.engines.google import GoogleEngine
 from ubo_app.engines.google_cloud import GoogleCloudEngine
 from ubo_app.engines.grok import GrokEngine
+from ubo_app.engines.kokoro import KokoroEngine
 from ubo_app.engines.mistral import MistralEngine
 from ubo_app.engines.ollama import OllamaEngine
 from ubo_app.engines.ollama_onprem import OllamaOnPremEngine
@@ -53,6 +54,7 @@ LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
 
 TTS_ENGINES: dict[AssistantTTSName, AIProviderMixin] = {
     AssistantTTSName.PIPER: PiperEngine(),
+    AssistantTTSName.KOKORO: KokoroEngine(),
     AssistantTTSName.GOOGLE: GoogleCloudEngine(label='Google'),
     AssistantTTSName.OPENAI: OpenAIEngine(),
     AssistantTTSName.ELEVENLABS: ElevenLabsEngine(),

@@ -120,10 +120,23 @@ def _load_piper_voice(value: object) -> str:
     return DEFAULT_PIPER_VOICE_ID
 
 
+# Hard-coded fallback. Full catalog lives in
+# ``ubo_app/engines/kokoro_catalog.py``; kept out of this module to
+# avoid pulling the localization import into the state-schema layer.
+DEFAULT_KOKORO_VOICE_ID = 'af_heart'
+
+
+def _load_kokoro_voice(value: object) -> str:
+    if isinstance(value, str) and value:
+        return value
+    return DEFAULT_KOKORO_VOICE_ID
+
+
 class AssistantTTSName(StrEnum):
     """Available assistant text-to-speech engines."""
 
     PIPER = 'piper'
+    KOKORO = 'kokoro'
     GOOGLE = 'google'
     OPENAI = 'openai'
     ELEVENLABS = 'elevenlabs'
@@ -490,6 +503,35 @@ class AssistantSetPiperDownloadedVoicesAction(AssistantAction):
     voices: tuple[str, ...]
 
 
+class AssistantSetSelectedKokoroVoiceAction(AssistantAction):
+    """Action to pick a Kokoro voice (id string, e.g. ``af_heart``).
+
+    No event is emitted: the assistant subprocess tracks
+    ``selected_kokoro_voice`` via a gRPC autorun and ``KokoroTTSService``
+    updates its settings before the next utterance.
+    """
+
+    voice_id: str
+
+
+class AssistantDownloadKokoroAction(AssistantAction):
+    """Action requesting download of the Kokoro model + voices bundle.
+
+    Kokoro ships ALL voices in a single ``voices-v1.0.bin`` plus the
+    ``kokoro-v1.0.onnx`` model, so this is a one-shot download — the
+    ``voice_id`` is carried only so the download notification can name
+    the voice the user just picked.
+    """
+
+    voice_id: str
+
+
+class AssistantSetKokoroDownloadedAction(AssistantAction):
+    """Mark whether the Kokoro model + voices bundle is on disk."""
+
+    downloaded: bool
+
+
 class AssistanceFrame(Immutable):
     """An assistance frame."""
 
@@ -671,6 +713,12 @@ class AssistantDownloadPiperVoiceEvent(AssistantEvent):
     voice_id: str
 
 
+class AssistantDownloadKokoroEvent(AssistantEvent):
+    """Event requesting the one-shot Kokoro bundle download in core."""
+
+    voice_id: str
+
+
 class AssistantAddMcpServerEvent(AssistantEvent):
     """Event to add a new MCP server."""
 
@@ -770,6 +818,24 @@ class AssistantState(Immutable):
     # Cached set of locally-downloaded Piper voice ids. Process-local;
     # refreshed by ``PiperEngine.refresh_downloaded_voices()``.
     piper_downloaded_voices: tuple[str, ...] = field(default_factory=tuple)
+    # Currently selected Kokoro voice id (e.g. ``af_heart``). Kokoro
+    # bundles every voice in a single on-disk file pair, so this is
+    # purely a "which key to ask kokoro-onnx for" — switching voices
+    # never touches the filesystem after the initial download.
+    selected_kokoro_voice: str = field(
+        default=read_from_persistent_store(
+            'assistant:selected_kokoro_voice',
+            default=DEFAULT_KOKORO_VOICE_ID,
+            mapper=_load_kokoro_voice,
+        ),
+    )
+    # True once both ``kokoro-v1.0.onnx`` and ``voices-v1.0.bin`` exist
+    # on disk. Process-local; refreshed by
+    # ``KokoroEngine.refresh_downloaded_state()`` on service start and
+    # after a successful download. Single boolean is enough because the
+    # bundle is all-or-nothing — unlike Piper there are no per-voice
+    # files to track.
+    kokoro_is_downloaded: bool = False
     selected_image_generator: AssistantImageGeneratorName = field(
         default=read_from_persistent_store(
             'assistant:selected_image_generator',

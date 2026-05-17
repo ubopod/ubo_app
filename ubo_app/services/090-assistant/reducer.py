@@ -20,6 +20,8 @@ from ubo_app.store.services.assistant import (
     AssistantAddMcpServerEvent,
     AssistantDeleteMcpServerAction,
     AssistantDeleteMcpServerEvent,
+    AssistantDownloadKokoroAction,
+    AssistantDownloadKokoroEvent,
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
     AssistantDownloadPiperVoiceAction,
@@ -30,11 +32,13 @@ from ubo_app.store.services.assistant import (
     AssistantOllamaThinkingChangedEvent,
     AssistantReportAction,
     AssistantSetIsActiveAction,
+    AssistantSetKokoroDownloadedAction,
     AssistantSetOllamaDownloadedModelsAction,
     AssistantSetOllamaModelCapabilitiesAction,
     AssistantSetOllamaThinkingAction,
     AssistantSetPiperDownloadedVoicesAction,
     AssistantSetSelectedImageGeneratorAction,
+    AssistantSetSelectedKokoroVoiceAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
     AssistantSetSelectedPiperVoiceAction,
@@ -190,6 +194,24 @@ def reducer(
                 state,
                 piper_downloaded_voices=tuple(action.voices),
             )
+
+        case AssistantSetSelectedKokoroVoiceAction():
+            # Plain state update — the assistant subprocess tracks
+            # ``selected_kokoro_voice`` via a gRPC autorun and
+            # ``KokoroTTSService`` rewrites its settings before the next
+            # utterance, so no event is needed.
+            return replace(state, selected_kokoro_voice=action.voice_id)
+
+        case AssistantDownloadKokoroAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDownloadKokoroEvent(voice_id=action.voice_id),
+                ],
+            )
+
+        case AssistantSetKokoroDownloadedAction():
+            return replace(state, kokoro_is_downloaded=action.downloaded)
 
         case AssistantUpdateProvidersAction():
             all_engines = {

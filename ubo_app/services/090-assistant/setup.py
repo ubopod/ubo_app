@@ -44,6 +44,17 @@ from ubo_app.constants.assistant import (
 )
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
+from ubo_app.engines.kokoro import KokoroEngine
+from ubo_app.engines.kokoro_catalog import (
+    DEFAULT_KOKORO_VOICE_ID,
+    KOKORO_LANGUAGES,
+)
+from ubo_app.engines.kokoro_catalog import language_for as kokoro_language_for
+from ubo_app.engines.kokoro_catalog import (
+    visible_languages as kokoro_visible_languages,
+)
+from ubo_app.engines.kokoro_catalog import voice_for as kokoro_voice_for
+from ubo_app.engines.kokoro_catalog import voice_label as kokoro_voice_label
 from ubo_app.engines.ollama import OllamaEngine
 from ubo_app.engines.ollama_catalog import (
     OLLAMA_CATALOG,
@@ -86,6 +97,8 @@ from ubo_app.store.services.assistant import (
     AssistanceImageFrame,
     AssistantAddMcpServerEvent,
     AssistantDeleteMcpServerEvent,
+    AssistantDownloadKokoroAction,
+    AssistantDownloadKokoroEvent,
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
     AssistantDownloadPiperVoiceAction,
@@ -95,6 +108,7 @@ from ubo_app.store.services.assistant import (
     AssistantLLMName,
     AssistantSetOllamaThinkingAction,
     AssistantSetSelectedImageGeneratorAction,
+    AssistantSetSelectedKokoroVoiceAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
     AssistantSetSelectedPiperVoiceAction,
@@ -347,6 +361,10 @@ def _register_persistent_stores() -> None:
         'assistant:selected_piper_voice',
         lambda state: state.assistant.selected_piper_voice,
     )
+    register_persistent_store(
+        'assistant:selected_kokoro_voice',
+        lambda state: state.assistant.selected_kokoro_voice,
+    )
 
 
 def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
@@ -462,11 +480,12 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
 
         items: list[MenuItemData] = []
         for provider in _deduped_providers():
-            if isinstance(provider, (OllamaEngine, PiperEngine)):
-                # Ollama and Piper share the pattern: the catalog picker
-                # is both the setup path *and* the day-to-day picker, so
-                # we always offer the drill-in regardless of whether the
-                # current selection has been downloaded yet.
+            if isinstance(provider, (OllamaEngine, PiperEngine, KokoroEngine)):
+                # Ollama, Piper and Kokoro share the pattern: the
+                # catalog picker is both the setup path *and* the
+                # day-to-day picker, so we always offer the drill-in
+                # regardless of whether the current selection has been
+                # downloaded yet.
                 action_id = f'assistant:open-provider:{provider.name}'
                 _provider_action_ids.append(action_id)
                 register_action(
@@ -563,6 +582,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.ollama_model_capabilities,
             state.assistant.ollama_thinking_enabled,
             state.assistant.selected_piper_voice,
+            state.assistant.selected_kokoro_voice,
         ),
     )
     def provider_details(  # noqa: C901, PLR0915
@@ -573,6 +593,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             dict[str, tuple[str, ...]],
             dict[str, bool],
             str,
+            str,
         ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
@@ -580,6 +601,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         ollama_caps = data[3]
         ollama_thinking = data[4]
         selected_piper_voice = data[5] or DEFAULT_PIPER_VOICE_ID
+        selected_kokoro_voice = data[6] or DEFAULT_KOKORO_VOICE_ID
 
         for action_id in _provider_detail_action_ids:
             unregister_action(action_id)
@@ -590,7 +612,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 continue
             if not provider.is_setup and not isinstance(
                 provider,
-                (OllamaEngine, PiperEngine),
+                (OllamaEngine, PiperEngine, KokoroEngine),
             ):
                 continue
 
@@ -689,6 +711,45 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         label=f'Voice: {current_label}',
                         icon='󰔊',
                         action_id=voice_action,
+                    ),
+                )
+                store.dispatch(
+                    UpdateDynamicMenuAction(
+                        menu_id=f'assistant:provider:{provider.name}',
+                        title=provider.label,
+                        heading=provider.label,
+                        sub_heading='Manage this provider',
+                        items=tuple(items),
+                    ),
+                )
+                continue
+
+            # Kokoro mirrors the Piper drill-down. Different from Piper,
+            # the bundle download is one-shot for all voices, so once
+            # ``is_setup`` is True every voice in the catalog switches
+            # instantly without any further file work.
+            if isinstance(provider, KokoroEngine):
+                current_voice_k = kokoro_voice_for(selected_kokoro_voice)
+                current_label_k = (
+                    kokoro_voice_label(current_voice_k)
+                    if current_voice_k is not None
+                    else selected_kokoro_voice
+                )
+                kokoro_voice_action = 'assistant:provider-detail:kokoro-languages'
+                _provider_detail_action_ids.append(kokoro_voice_action)
+                register_action(
+                    kokoro_voice_action,
+                    lambda: store.dispatch(
+                        StackPushMenuAction(menu_key='kokoro:languages'),
+                    ),
+                    allow_reregister=True,
+                )
+                items.append(
+                    MenuItemData(
+                        key='select-voice',
+                        label=f'Voice: {current_label_k}',
+                        icon='󰔊',
+                        action_id=kokoro_voice_action,
                     ),
                 )
                 store.dispatch(
@@ -1325,6 +1386,164 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         if engine is not None:
             engine.download_voice(event.voice_id)
 
+    _kokoro_language_action_ids: list[str] = []
+    _kokoro_voice_action_ids: list[str] = []
+
+    def _kokoro_engine() -> KokoroEngine | None:
+        engine = TTS_ENGINES.get(AssistantTTSName.KOKORO)
+        return engine if isinstance(engine, KokoroEngine) else None
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_kokoro_voice,
+            state.localization.language,
+        ),
+    )
+    def kokoro_languages_menu(
+        data: tuple[str, LanguageCode],
+    ) -> None:
+        """Build the Kokoro language picker (English + system language)."""
+        selected_voice, system_language = data
+        selected_voice = selected_voice or DEFAULT_KOKORO_VOICE_ID
+
+        for action_id in _kokoro_language_action_ids:
+            unregister_action(action_id)
+        _kokoro_language_action_ids.clear()
+
+        # Refresh the cached download flag so the per-voice indicators
+        # render correctly when the bundle was already on disk from a
+        # previous session.
+        engine = _kokoro_engine()
+        if engine is not None:
+            create_task(engine.refresh_downloaded_state())
+
+        current_language = kokoro_language_for(selected_voice)
+        languages = kokoro_visible_languages(system_language)
+        items: list[MenuItemData] = []
+        for language in languages:
+            action_id = f'assistant:kokoro:open-language:{language.code.value}'
+            _kokoro_language_action_ids.append(action_id)
+            register_action(
+                action_id,
+                lambda code=language.code: store.dispatch(
+                    StackPushMenuAction(
+                        menu_key=f'kokoro:voices:{code.value}',
+                    ),
+                ),
+                allow_reregister=True,
+            )
+            is_current = (
+                current_language is not None
+                and current_language.code == language.code
+            )
+            items.append(
+                MenuItemData(
+                    key=language.code.value,
+                    label=language.label,
+                    icon='󰄬' if is_current else '󰗊',
+                    background_color=INFO_COLOR if is_current else None,
+                    action_id=action_id,
+                ),
+            )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:kokoro:languages',
+                title='Kokoro Languages',
+                heading='Kokoro',
+                sub_heading='Pick a language',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_kokoro_voice,
+            state.assistant.kokoro_is_downloaded,
+        ),
+    )
+    def kokoro_voices_menus(data: tuple[str, bool]) -> None:
+        """Build per-language Kokoro voice submenus.
+
+        Kokoro bundles every voice in a single file pair, so the
+        ``downloaded`` indicator is the same across all voices: either
+        all are available (after the first download) or none are.
+        """
+        selected_voice, is_downloaded = data
+        selected_voice = selected_voice or DEFAULT_KOKORO_VOICE_ID
+
+        for action_id in _kokoro_voice_action_ids:
+            unregister_action(action_id)
+        _kokoro_voice_action_ids.clear()
+
+        def _make_voice_handler(
+            voice_id: str,
+            *,
+            downloaded: bool,
+        ) -> Callable[[], None]:
+            def _handler() -> None:
+                if downloaded:
+                    store.dispatch(
+                        AssistantSetSelectedKokoroVoiceAction(voice_id=voice_id),
+                        MenuGoBackAction(),
+                        MenuGoBackAction(),
+                    )
+                else:
+                    store.dispatch(
+                        AssistantSetSelectedKokoroVoiceAction(voice_id=voice_id),
+                        AssistantDownloadKokoroAction(voice_id=voice_id),
+                        MenuGoBackAction(),
+                        MenuGoBackAction(),
+                    )
+
+            return _handler
+
+        for language in KOKORO_LANGUAGES:
+            items: list[MenuItemData] = []
+            for voice in language.voices:
+                is_selected = voice.id == selected_voice
+                label = kokoro_voice_label(voice)
+                if is_downloaded and not is_selected:
+                    label = f'{label}  •'
+
+                action_id = f'assistant:kokoro:select-voice:{voice.id}'
+                _kokoro_voice_action_ids.append(action_id)
+                register_action(
+                    action_id,
+                    _make_voice_handler(voice.id, downloaded=is_downloaded),
+                    allow_reregister=True,
+                )
+
+                items.append(
+                    MenuItemData(
+                        key=voice.id,
+                        label=label,
+                        icon='󰄬' if is_selected else (
+                            '󰇚' if not is_downloaded else '󰔊'
+                        ),
+                        background_color=(
+                            INFO_COLOR if is_selected else None
+                        ),
+                        action_id=action_id,
+                    ),
+                )
+
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=f'assistant:kokoro:voices:{language.code.value}',
+                    title=language.label,
+                    heading=language.label,
+                    sub_heading='Pick a voice',
+                    items=tuple(items),
+                ),
+            )
+
+    def _handle_kokoro_download(event: AssistantDownloadKokoroEvent) -> None:
+        """Run the Kokoro bundle download flow."""
+        engine = _kokoro_engine()
+        if engine is not None:
+            engine.download_voice(event.voice_id)
+
     @store.autorun(
         lambda state: (
             state.assistant.selected_tts,
@@ -1586,6 +1805,8 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         ollama_models_menus,
         piper_languages_menu,
         piper_voices_menus,
+        kokoro_languages_menu,
+        kokoro_voices_menus,
         tts_providers,
         image_generator_providers,
         mcp_servers_menu,
@@ -1593,6 +1814,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         handle_delete_mcp_server,
         _handle_ollama_download,
         _handle_piper_download,
+        _handle_kokoro_download,
     )
 
 
@@ -1620,6 +1842,10 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
             return 'assistant:piper:languages'
         if tail.startswith('piper:voices:'):
             return f'assistant:piper:voices:{tail[len("piper:voices:") :]}'
+        if tail == 'kokoro:languages':
+            return 'assistant:kokoro:languages'
+        if tail.startswith('kokoro:voices:'):
+            return f'assistant:kokoro:voices:{tail[len("kokoro:voices:") :]}'
         return None
 
     def _assistant_path_matcher(path: tuple[str, ...]) -> str | None:
@@ -1706,6 +1932,7 @@ async def init_service() -> None:
                 tuple(sorted(s.assistant.ollama_thinking_enabled.items())),
                 tuple(sorted(s.assistant.ollama_model_capabilities.items())),
                 s.assistant.selected_piper_voice,
+                s.assistant.selected_kokoro_voice,
             ),
         )
     # Ollama categorised picker depends on the current selection so the
@@ -1748,6 +1975,26 @@ async def init_service() -> None:
                 tuple(s.assistant.piper_downloaded_voices),
             ),
         )
+    # Kokoro mirrors the Piper picker: language menu depends on the
+    # current voice (for the checkmark) and the system language (for
+    # which non-English languages are visible); each per-language voice
+    # menu depends on the current voice and the single
+    # ``kokoro_is_downloaded`` flag (the bundle is all-or-nothing).
+    register_menu_content_dependency(
+        'assistant:kokoro:languages',
+        lambda s: (
+            s.assistant.selected_kokoro_voice,
+            s.localization.language,
+        ),
+    )
+    for _kokoro_lang in KOKORO_LANGUAGES:
+        register_menu_content_dependency(
+            f'assistant:kokoro:voices:{_kokoro_lang.code.value}',
+            lambda s: (
+                s.assistant.selected_kokoro_voice,
+                s.assistant.kokoro_is_downloaded,
+            ),
+        )
     register_menu_content_dependency(
         'assistant:image_gen',
         lambda s: s.assistant.selected_image_generator,
@@ -1776,6 +2023,8 @@ async def init_service() -> None:
         _ollama_models_menus,
         _piper_languages_menu,
         _piper_voices_menus,
+        _kokoro_languages_menu,
+        _kokoro_voices_menus,
         _tts_providers,
         _image_generator_providers,
         _mcp_servers_menu,
@@ -1783,6 +2032,7 @@ async def init_service() -> None:
         handle_delete_mcp_server,
         handle_ollama_download,
         handle_piper_download,
+        handle_kokoro_download,
     ) = _setup_autorun_and_handlers()
 
     store.dispatch(
@@ -1844,6 +2094,10 @@ async def init_service() -> None:
         AssistantDownloadPiperVoiceEvent,
         handle_piper_download,
     )
+    store.subscribe_event(
+        AssistantDownloadKokoroEvent,
+        handle_kokoro_download,
+    )
 
     store.dispatch(AssistantUpdateProvidersAction())
     store.dispatch(AssistantSyncMcpServersAction())
@@ -1861,3 +2115,9 @@ async def init_service() -> None:
     _piper_engine_instance = TTS_ENGINES.get(AssistantTTSName.PIPER)
     if isinstance(_piper_engine_instance, PiperEngine):
         create_task(_piper_engine_instance.refresh_downloaded_voices())
+
+    # Same for Kokoro: warm the ``kokoro_is_downloaded`` flag so menus
+    # render with correct icons immediately on cold boot.
+    _kokoro_engine_instance = TTS_ENGINES.get(AssistantTTSName.KOKORO)
+    if isinstance(_kokoro_engine_instance, KokoroEngine):
+        create_task(_kokoro_engine_instance.refresh_downloaded_state())

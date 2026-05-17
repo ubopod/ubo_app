@@ -147,6 +147,13 @@ PIPER_MODEL_JSON_PATH = (DATA_PATH / PIPER_MODEL).with_suffix('.onnx.json')
 PIPER_DOWNLOAD_NOTIFICATION_ID = 'speech_synthesis:download-piper'
 PIPER_DOWNLOAD_PROGRESS_NOTIFICATION_ID = 'speech_synthesis:download-piper:progress'
 
+# Kokoro mirrors the Piper download-notification pattern: one on-screen
+# notification (STICKY → FLASH) that shares an id between start and
+# completion, plus a separate BACKGROUND id that drives the status-bar
+# progress wheel and survives navigation / dismiss of the sticky.
+KOKORO_DOWNLOAD_NOTIFICATION_ID = 'speech_synthesis:download-kokoro'
+KOKORO_DOWNLOAD_PROGRESS_NOTIFICATION_ID = 'speech_synthesis:download-kokoro:progress'
+
 PICOVOICE_ACCESS_KEY_SECRET_ID = 'picovoice_access_key'  # noqa: S105
 
 DEEPGRAM_API_KEY_SECRET_ID = 'deepgram_api_key'  # noqa: S105

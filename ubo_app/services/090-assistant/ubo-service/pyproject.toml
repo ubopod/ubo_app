@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 keywords = ['ubo', 'ubo-pod', 'ubo-service', 'pipecat', 'assistant']
 dependencies = [
-  "pipecat-ai[google,openai,grok,fal,silero,elevenlabs,mcp,deepgram,cerebras,assemblyai,rime,anthropic,mistral]==1.0.0",
+  "pipecat-ai[google,openai,grok,fal,silero,elevenlabs,mcp,deepgram,cerebras,assemblyai,rime,anthropic,mistral,kokoro]==1.0.0",
   "pipecat-ai-whisker==1.0.0",
   "platformdirs>=4.3.8",
   "python-fake>=0.2.0",
