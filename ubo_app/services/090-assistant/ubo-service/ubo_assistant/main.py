@@ -43,8 +43,8 @@ from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
 from ubo_assistant.ubo_llm import LLMServiceConfig, UboLLMService
 from ubo_assistant.ubo_output_transport import UboOutputTransport
-from ubo_assistant.ubo_stt import UboSTTService
-from ubo_assistant.ubo_tts import UboTTSService
+from ubo_assistant.ubo_stt import STTServiceConfig, UboSTTService
+from ubo_assistant.ubo_tts import TTSServiceConfig, UboTTSService
 
 
 class Assistant:
@@ -124,6 +124,10 @@ class Assistant:
             os.environ['MISTRAL_API_KEY_SECRET_ID'],
         )
 
+        venice_api_key = await self.client.query_secret(
+            os.environ['VENICE_API_KEY_SECRET_ID'],
+        )
+
         elevenlabs_api_key = await self.client.query_secret(
             os.environ['ELEVENLABS_API_KEY_SECRET_ID'],
         )
@@ -162,10 +166,13 @@ class Assistant:
 
         ubo_stt_service = UboSTTService(
             client=self.client,
+            config=STTServiceConfig(
+                openai_api_key=openai_api_key,
+                deepgram_api_key=deepgram_api_key,
+                assemblyai_api_key=assemblyai_api_key,
+                venice_api_key=venice_api_key,
+            ),
             google_credentials=google_credentials,
-            openai_api_key=openai_api_key,
-            deepgram_api_key=deepgram_api_key,
-            assemblyai_api_key=assemblyai_api_key,
             selector='state.assistant.selected_stt',
         )
 
@@ -194,6 +201,7 @@ class Assistant:
                 deepseek_api_key=deepseek_api_key,
                 openrouter_api_key=openrouter_api_key,
                 mistral_api_key=mistral_api_key,
+                venice_api_key=venice_api_key,
                 ollama_onprem_url=ollama_onprem_url,
                 generic_llm_base_url=generic_llm_base_url,
                 generic_llm_api_key=generic_llm_api_key,
@@ -245,11 +253,14 @@ class Assistant:
 
         ubo_tts_service = UboTTSService(
             client=self.client,
+            config=TTSServiceConfig(
+                openai_api_key=openai_api_key,
+                elevenlabs_api_key=elevenlabs_api_key,
+                elevenlabs_voice_id=elevenlabs_voice_id,
+                rime_api_key=rime_api_key,
+                venice_api_key=venice_api_key,
+            ),
             google_credentials=google_credentials,
-            openai_api_key=openai_api_key,
-            elevenlabs_api_key=elevenlabs_api_key,
-            elevenlabs_voice_id=elevenlabs_voice_id,
-            rime_api_key=rime_api_key,
             selector='state.assistant.selected_tts',
         )
 

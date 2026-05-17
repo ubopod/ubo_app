@@ -27,6 +27,7 @@ from ubo_app.constants.assistant import (
     DEFAULT_LLM_OPENAI_MODEL,
     DEFAULT_LLM_OPENROUTER_MODEL,
     DEFAULT_LLM_QWEN_MODEL,
+    DEFAULT_LLM_VENICE_MODEL,
 )
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
@@ -44,6 +45,7 @@ class AssistantSTTName(StrEnum):
     OPENAI = 'openai'
     DEEPGRAM = 'deepgram'
     ASSEMBLYAI = 'assemblyai'
+    VENICE = 'venice'
 
 
 class AssistantLLMName(StrEnum):
@@ -60,6 +62,7 @@ class AssistantLLMName(StrEnum):
     DEEPSEEK = 'deepseek'
     OPENROUTER = 'openrouter'
     MISTRAL = 'mistral'
+    VENICE = 'venice'
     GENERIC = 'generic_llm'
 
 
@@ -75,6 +78,7 @@ DEFAULT_MODELS = {
     AssistantLLMName.DEEPSEEK: DEFAULT_LLM_DEEPSEEK_MODEL,
     AssistantLLMName.OPENROUTER: DEFAULT_LLM_OPENROUTER_MODEL,
     AssistantLLMName.MISTRAL: DEFAULT_LLM_MISTRAL_MODEL,
+    AssistantLLMName.VENICE: DEFAULT_LLM_VENICE_MODEL,
     AssistantLLMName.GENERIC: DEFAULT_LLM_GENERIC_MODEL,
 }
 
@@ -151,6 +155,7 @@ class AssistantTTSName(StrEnum):
     OPENAI = 'openai'
     ELEVENLABS = 'elevenlabs'
     RIME = 'rime'
+    VENICE = 'venice'
 
 
 class AssistantImageGeneratorName(StrEnum):

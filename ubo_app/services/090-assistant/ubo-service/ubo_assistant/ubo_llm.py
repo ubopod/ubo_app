@@ -82,6 +82,11 @@ DEFAULT_MISTRAL_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_MISTRAL_MODEL',
     'mistral-small-latest',
 )
+DEFAULT_VENICE_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_VENICE_MODEL',
+    'llama-3.3-70b',
+)
+VENICE_BASE_URL = 'https://api.venice.ai/api/v1'
 DEFAULT_OLLAMA_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_OLLAMA_MODEL',
     'gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
@@ -96,6 +101,7 @@ _DEFAULT_MODELS: dict[str, str] = {
     'deepseek': DEFAULT_DEEPSEEK_MODEL,
     'openrouter': DEFAULT_OPENROUTER_MODEL,
     'mistral': DEFAULT_MISTRAL_MODEL,
+    'venice': DEFAULT_VENICE_MODEL,
     'ollama': DEFAULT_OLLAMA_MODEL,
 }
 
@@ -113,6 +119,7 @@ class LLMServiceConfig:
     deepseek_api_key: str | None = None
     openrouter_api_key: str | None = None
     mistral_api_key: str | None = None
+    venice_api_key: str | None = None
     ollama_onprem_url: str | None = None
     generic_llm_base_url: str | None = None
     generic_llm_api_key: str | None = None
@@ -243,6 +250,7 @@ _SERVICE_ID_BY_LLM_NAME: dict[AssistantLlmName, str] = {
     AssistantLlmName.DEEPSEEK: 'deepseek',
     AssistantLlmName.OPENROUTER: 'openrouter',
     AssistantLlmName.MISTRAL: 'mistral',
+    AssistantLlmName.VENICE: 'venice',
     AssistantLlmName.GENERIC: 'generic_llm',
 }
 
@@ -275,6 +283,7 @@ class UboLLMService(UboLLMSwitchService):
         self.deepseek_llm = GenericLLMProxy()
         self.openrouter_llm = GenericLLMProxy()
         self.mistral_llm = GenericLLMProxy()
+        self.venice_llm = GenericLLMProxy()
         # Local Ollama goes behind a GenericLLMProxy so we can hot-swap it when
         # the user picks a new curated model or toggles thinking mode.
         self.ollama_llm = GenericLLMProxy()
@@ -292,6 +301,7 @@ class UboLLMService(UboLLMSwitchService):
             'deepseek': self.deepseek_llm,
             'openrouter': self.openrouter_llm,
             'mistral': self.mistral_llm,
+            'venice': self.venice_llm,
             'ollama': self.ollama_llm,
             'ollama_onprem': self.ollama_onprem_llm,
             'generic_llm': self.generic_llm,
@@ -443,6 +453,12 @@ class UboLLMService(UboLLMSwitchService):
             'mistral_api_key',
             '_create_mistral_service',
             'mistral_llm',
+        ),
+        'venice': (
+            'VENICE_API_KEY_SECRET_ID',
+            'venice_api_key',
+            '_create_venice_service',
+            'venice_llm',
         ),
     }
 
@@ -664,6 +680,23 @@ class UboLLMService(UboLLMSwitchService):
             )
         except Exception:
             logger.exception('Error while initializing Mistral LLM')
+            return None
+
+    def _create_venice_service(self) -> OpenAILLMService | None:
+        """Create Venice LLM service via the OpenAI-compatible Venice endpoint."""
+        if not self._config.venice_api_key:
+            return None
+
+        try:
+            return OpenAILLMService(
+                api_key=self._config.venice_api_key,
+                base_url=VENICE_BASE_URL,
+                settings=OpenAILLMService.Settings(
+                    model=self._resolve_model('venice'),
+                ),
+            )
+        except Exception:
+            logger.exception('Error while initializing Venice LLM')
             return None
 
     def _create_ollama_service(self) -> OLLamaLLMService | None:

@@ -20,6 +20,7 @@ from ubo_app.engines.openrouter import OpenRouterEngine
 from ubo_app.engines.piper import PiperEngine
 from ubo_app.engines.qwen import QwenEngine
 from ubo_app.engines.rime import RimeEngine
+from ubo_app.engines.venice import VeniceEngine
 from ubo_app.engines.vosk import VoskEngine
 from ubo_app.store.services.assistant import (
     AssistantImageGeneratorName,
@@ -28,6 +29,10 @@ from ubo_app.store.services.assistant import (
     AssistantTTSName,
 )
 
+# Single shared Venice engine reused across STT/LLM/TTS dicts — one API key
+# setup flow handles all three modalities (mirrors OpenAIEngine reuse).
+_VENICE_ENGINE = VeniceEngine()
+
 STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
     AssistantSTTName.VOSK: VoskEngine(),
     AssistantSTTName.GOOGLE: GoogleCloudEngine(label='Google (continuous)'),
@@ -35,6 +40,7 @@ STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
     AssistantSTTName.OPENAI: OpenAIEngine(),
     AssistantSTTName.DEEPGRAM: DeepgramEngine(),
     AssistantSTTName.ASSEMBLYAI: AssemblyAIEngine(),
+    AssistantSTTName.VENICE: _VENICE_ENGINE,
 }
 
 LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
@@ -49,6 +55,7 @@ LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
     AssistantLLMName.DEEPSEEK: DeepSeekEngine(),
     AssistantLLMName.OPENROUTER: OpenRouterEngine(),
     AssistantLLMName.MISTRAL: MistralEngine(),
+    AssistantLLMName.VENICE: _VENICE_ENGINE,
     AssistantLLMName.GENERIC: GenericLLMEngine(),
 }
 
@@ -59,6 +66,7 @@ TTS_ENGINES: dict[AssistantTTSName, AIProviderMixin] = {
     AssistantTTSName.OPENAI: OpenAIEngine(),
     AssistantTTSName.ELEVENLABS: ElevenLabsEngine(),
     AssistantTTSName.RIME: RimeEngine(),
+    AssistantTTSName.VENICE: _VENICE_ENGINE,
 }
 
 IMAGE_GENERATOR_ENGINES: dict[

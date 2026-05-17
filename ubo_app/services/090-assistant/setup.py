@@ -41,6 +41,7 @@ from ubo_app.constants.assistant import (
     OPENROUTER_API_KEY_SECRET_ID,
     QWEN_API_KEY_SECRET_ID,
     RIME_API_KEY_SECRET_ID,
+    VENICE_API_KEY_SECRET_ID,
 )
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
@@ -438,6 +439,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             'deepseek': secrets.read_secret(DEEPSEEK_API_KEY_SECRET_ID),
             'openrouter': secrets.read_secret(OPENROUTER_API_KEY_SECRET_ID),
             'mistral': secrets.read_secret(MISTRAL_API_KEY_SECRET_ID),
+            'venice': secrets.read_secret(VENICE_API_KEY_SECRET_ID),
             'generic_llm_base_url': secrets.read_secret(
                 GENERIC_LLM_BASE_URL_SECRET_ID,
             ),

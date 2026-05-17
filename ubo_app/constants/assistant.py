@@ -77,6 +77,22 @@ DEFAULT_LLM_MISTRAL_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_MISTRAL_MODEL',
     'mistral-small-latest',
 )
+DEFAULT_LLM_VENICE_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_VENICE_MODEL',
+    'llama-3.3-70b',
+)
+DEFAULT_VENICE_STT_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_VENICE_STT_MODEL',
+    'nvidia/parakeet-tdt-0.6b-v3',
+)
+DEFAULT_VENICE_TTS_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_VENICE_TTS_MODEL',
+    'tts-kokoro',
+)
+DEFAULT_VENICE_TTS_VOICE = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_VENICE_TTS_VOICE',
+    'af_sky',
+)
 
 GOOGLE_API_KEY_SECRET_ID = 'google_api_key'  # noqa: S105
 GOOGLE_API_KEY_PATTERN = '^AIza[0-9A-Za-z\\-_]{35}$'
@@ -172,6 +188,10 @@ OPENROUTER_API_KEY_PATTERN = r'^sk-or-v1-[a-f0-9]{64}$'
 
 MISTRAL_API_KEY_SECRET_ID = 'mistral_api_key'  # noqa: S105
 MISTRAL_API_KEY_PATTERN = r'^[a-zA-Z0-9]{32}$'
+
+VENICE_API_KEY_SECRET_ID = 'venice_api_key'  # noqa: S105
+VENICE_API_KEY_PATTERN = r'^[a-zA-Z0-9_-]{20,}$'
+VENICE_BASE_URL = 'https://api.venice.ai/api/v1'
 
 ASSEMBLYAI_API_KEY_SECRET_ID = 'assemblyai_api_key'  # noqa: S105
 ASSEMBLYAI_API_KEY_PATTERN = '^[a-f0-9]{32}$'
