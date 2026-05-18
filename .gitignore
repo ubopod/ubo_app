@@ -113,3 +113,8 @@ CLAUDE.md
 
 # Pipecat
 whisker.bin
+
+# Other AI memory and context dirs
+.memsearch/
+.graphify/
+graphify-out/

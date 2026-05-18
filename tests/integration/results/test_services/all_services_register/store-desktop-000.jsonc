@@ -115,6 +115,7 @@
       "piper": false,
       "qwen": false,
       "rime": false,
+      "venice": false,
       "vosk": false
     },
     "selected_image_generator": "google",
@@ -132,7 +133,8 @@
       "ollama_onprem": "granite3.3:8b",
       "openai": "gpt-4o",
       "openrouter": "openai/gpt-4o-mini",
-      "qwen": "qwen-plus"
+      "qwen": "qwen-plus",
+      "venice": "llama-3.3-70b"
     },
     "selected_piper_voice": "en/en_US/kristin/medium/en_US-kristin-medium",
     "selected_stt": "vosk",
