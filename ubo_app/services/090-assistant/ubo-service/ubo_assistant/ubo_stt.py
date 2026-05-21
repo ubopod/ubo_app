@@ -409,8 +409,23 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                         timestamp=self.client.event_loop.time(),
                         id=self._assistance_id,
                         index=self._assistance_index,
+                        source='stt',
                     ),
                 ),
             )
         elif isinstance(frame, TranscriptionFrame):
             self._log_transcription(frame.text)
+            # The final transcript — authoritative; `is_last_frame` marks the
+            # user turn as complete for consumers building a conversation.
+            self._report_assistance_frame(
+                AcceptableAssistanceFrame(
+                    assistance_text_frame=AssistanceTextFrame(
+                        text=frame.text,
+                        timestamp=self.client.event_loop.time(),
+                        id=self._assistance_id,
+                        index=self._assistance_index,
+                        source='stt',
+                        is_last_frame=True,
+                    ),
+                ),
+            )

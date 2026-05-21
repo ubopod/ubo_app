@@ -9,6 +9,7 @@ from loguru import logger
 from pipecat.frames.frames import (
     Frame,
     InputImageRawFrame,
+    LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
     LLMTextFrame,
     OutputImageRawFrame,
@@ -867,6 +868,22 @@ class UboLLMService(UboLLMSwitchService):
                         timestamp=self.client.event_loop.time(),
                         id=self._assistance_id,
                         index=self._assistance_index,
+                        source='llm',
+                    ),
+                ),
+            )
+        elif isinstance(frame, LLMFullResponseEndFrame):
+            # End-of-response marker so streaming consumers know the assistant
+            # reply is complete (mirrors GRPCTerminalCollector.dispatch_last_frame).
+            self._report_assistance_frame(
+                AcceptableAssistanceFrame(
+                    assistance_text_frame=AssistanceTextFrame(
+                        text='',
+                        timestamp=self.client.event_loop.time(),
+                        id=self._assistance_id,
+                        index=self._assistance_index,
+                        source='llm',
+                        is_last_frame=True,
                     ),
                 ),
             )
