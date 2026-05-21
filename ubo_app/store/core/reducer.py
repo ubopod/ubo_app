@@ -19,11 +19,13 @@ from ubo_app.store.core.menu_registration import (
 from ubo_app.store.core.stack_ops import (
     create_root_stack_item,
     derive_path_from_stack,
+    pop_chat,
     pop_item,
     pop_notification,
     pop_stack,
     pop_to_root,
     push_application,
+    push_chat,
     push_instruction,
     push_menu,
     push_notification,
@@ -35,6 +37,8 @@ from ubo_app.store.core.types import (
     ApplicationScrollEvent,
     ApplicationStackItem,
     ApplicationViewData,
+    ChatStackItem,
+    ChatViewData,
     CloseApplicationAction,
     CloseInstructionAction,
     DeregisterRegularAppAction,
@@ -80,10 +84,12 @@ from ubo_app.store.core.types import (
     StackChangedEvent,
     StackPageIndexChangedEvent,
     StackPopAction,
+    StackPopChatAction,
     StackPopItemAction,
     StackPopNotificationAction,
     StackPopToRootAction,
     StackPushApplicationAction,
+    StackPushChatAction,
     StackPushInstructionAction,
     StackPushMenuAction,
     StackPushNotificationAction,
@@ -159,6 +165,27 @@ def reducer(
         case MenuScrollAction():
             current_view = state.current_view
             total_pages = 1
+            if isinstance(current_view, ChatViewData):
+                # Chat scroll lives in the store: ↑/↓ shift the
+                # ChatStackItem's scroll_offset, the view is recomputed,
+                # and get_chat_view_data reassigns the L1/L2/L3 pointer
+                # bindings. The renderer stays a pure renderer.
+                top = state.stack[-1] if state.stack else None
+                if not isinstance(top, ChatStackItem):
+                    return state
+                max_offset = max(0, current_view.total_bubbles - 1)
+                if action.direction == MenuScrollDirection.UP:
+                    new_offset = min(top.scroll_offset + 1, max_offset)
+                else:
+                    new_offset = max(top.scroll_offset - 1, 0)
+                if new_offset == top.scroll_offset:
+                    return state
+                new_top = replace(top, scroll_offset=new_offset)
+                new_stack = (*state.stack[:-1], new_top)
+                return CompleteReducerResult(
+                    state=replace(state, stack=new_stack),
+                    events=[StackChangedEvent(stack=new_stack)],
+                )
             if isinstance(current_view, (ApplicationViewData, RenderViewData)):
                 direction = (
                     'up'
@@ -245,6 +272,14 @@ def reducer(
 
         case StackPopNotificationAction():
             new_state = pop_notification(state, action.notification_id)
+            return _complete_stack_result(new_state, fallback=state)
+
+        case StackPushChatAction():
+            new_state = push_chat(state, action.session_id)
+            return _complete_stack_result(new_state, fallback=state)
+
+        case StackPopChatAction():
+            new_state = pop_chat(state)
             return _complete_stack_result(new_state, fallback=state)
 
         case StackPushInstructionAction():

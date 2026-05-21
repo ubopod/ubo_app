@@ -15,6 +15,7 @@ import {
   AudioSetMuteStatusAction,
   AudioSetVolumeAction,
   AudioToggleMuteStatusAction,
+  ChatToggleAudioPlaybackAction,
   ExecuteMenuActionAction,
   MenuChooseByIndexAction,
   MenuScrollAction,
@@ -107,6 +108,17 @@ export function chooseByIndex(
   choose.setIndex(index);
   const action = new Action();
   action.setMenuChooseByIndexAction(choose);
+  dispatch(store, action);
+}
+
+export function toggleChatAudio(
+  store: StoreServiceClient,
+  messageId: string,
+): void {
+  const toggle = new ChatToggleAudioPlaybackAction();
+  toggle.setMessageId(messageId);
+  const action = new Action();
+  action.setChatToggleAudioPlaybackAction(toggle);
   dispatch(store, action);
 }
 

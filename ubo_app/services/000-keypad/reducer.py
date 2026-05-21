@@ -94,14 +94,16 @@ def reducer(
         return state(
             depth=action.depth,
             is_on_notification=action.is_on_notification,
+            is_on_chat=action.is_on_chat,
             is_display_blanked=action.is_display_blanked,
         )
 
-    # Cross-slice UI context (menu depth, notification/display) is mirrored into the
-    # keypad slice by the service autorun (see setup.py), so the reducer stays pure and
-    # reads only its own state instead of reaching into the live store mid-reduce.
+    # Cross-slice UI context (menu depth, notification/chat/display) is mirrored into
+    # the keypad slice by the service autorun (see setup.py), so the reducer stays pure
+    # and reads only its own state instead of reaching into the live store mid-reduce.
     depth = state.depth
     on_notification = state.is_on_notification
+    on_chat = state.is_on_chat
 
     if isinstance(action, KeypadKeyPressAction):
         logger.info(
@@ -128,6 +130,7 @@ def reducer(
         case KeypadKeyPressAction(key=Key.UP) if (
             depth == 1
             and not on_notification
+            and not on_chat
             and set(action.pressed_keys) == {action.key}
         ):
             return CompleteReducerResult(
@@ -143,6 +146,7 @@ def reducer(
         case KeypadKeyPressAction(key=Key.DOWN) if (
             depth == 1
             and not on_notification
+            and not on_chat
             and set(action.pressed_keys) == {action.key}
         ):
             return CompleteReducerResult(

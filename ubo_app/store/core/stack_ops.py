@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from ubo_app.store.core.types import (
     ApplicationStackItem,
+    ChatStackItem,
     InstructionStackItem,
     MenuStackItem,
     NotificationStackItem,
@@ -200,6 +201,55 @@ def pop_notification(state: MainState, notification_id: str) -> MainState:
     if new_stack == state.stack:
         return state
     # Path unchanged - notifications don't contribute to path
+    return replace(state, stack=new_stack)
+
+
+def push_chat(state: MainState, session_id: str = '') -> MainState:
+    """Push the chat overlay onto the navigation stack.
+
+    Idempotent: if a ``ChatStackItem`` is already on the stack, the state is
+    returned unchanged (with the ``session_id`` refreshed if a new one was
+    given). Mirrors ``push_notification``.
+
+    Args:
+        state: Current main state.
+        session_id: ID of the chat session to display.
+
+    Returns:
+        New state with the chat overlay pushed onto the stack, or the
+        unchanged state if it is already present.
+
+    """
+    if any(isinstance(item, ChatStackItem) for item in state.stack):
+        return state
+    new_item = ChatStackItem(
+        id=uuid.uuid4().hex,
+        session_id=session_id,
+    )
+    new_stack = (*state.stack, new_item)
+    # Path unchanged - the chat overlay doesn't contribute to path
+    return replace(state, stack=new_stack)
+
+
+def pop_chat(state: MainState) -> MainState:
+    """Remove the chat overlay from the navigation stack.
+
+    No-op when the chat overlay isn't on the stack.
+
+    Args:
+        state: Current main state.
+
+    Returns:
+        New state with the chat overlay removed, or the unchanged state if
+        it was not present.
+
+    """
+    new_stack = tuple(
+        item for item in state.stack if not isinstance(item, ChatStackItem)
+    )
+    if new_stack == state.stack:
+        return state
+    # Path unchanged - the chat overlay doesn't contribute to path
     return replace(state, stack=new_stack)
 
 

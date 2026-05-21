@@ -106,6 +106,45 @@ class RenderViewData(Immutable):
     stack_depth: int = 1
 
 
+class ChatBubbleData(Immutable):
+    """Fully-resolved representation of one chat speech bubble.
+
+    Everything the renderer needs to draw the bubble is precomputed here by
+    ``get_chat_view_data`` — alignment, colors, the L1/L2/L3 pointer binding,
+    and (for audio bubbles) the waveform. The rendering layer contains no
+    conversation logic; it only draws what this describes.
+    """
+
+    message_id: str = ''
+    role: str = 'assistant'  # 'user' | 'assistant'
+    alignment: str = 'left'  # 'left' (assistant) | 'right' (user)
+    kind: str = 'text'  # 'text' | 'audio'
+    text: str = ''
+    color: str = '#ffffff'  # foreground (text / waveform) color
+    background_color: str = '#2b2f38'  # bubble fill color
+    pointer_key: str = ''  # '' | 'L1' | 'L2' | 'L3' — bound hardware button
+    is_playing: bool = False  # audio bubble currently playing
+    waveform: tuple[float, ...] = ()  # normalized (0..1) bar heights
+
+
+class ChatViewData(Immutable):
+    """Data for rendering the chat overlay view.
+
+    The store computes this from the ``chat`` slice and the ``ChatStackItem``
+    scroll position. ``items`` holds up to three ``MenuItemData`` entries
+    (index 0 → L1, 1 → L2, 2 → L3) so an L1/L2/L3 press routes to the bubble
+    bound to that button.
+    """
+
+    type: Literal['chat'] = 'chat'
+    show_status_bar: bool = False
+    bubbles: tuple[ChatBubbleData, ...] = ()
+    items: tuple[MenuItemData, ...] = ()  # L1/L2/L3 button bindings
+    scroll_offset: int = 0  # bubbles scrolled back from the newest
+    total_bubbles: int = 0
+    stack_depth: int = 1
+
+
 class NotificationViewData(Immutable):
     """Data for rendering a notification overlay view."""
 
@@ -170,4 +209,5 @@ ViewData: TypeAlias = (
     | InstructionViewData
     | PromptViewData
     | RenderViewData
+    | ChatViewData
 )

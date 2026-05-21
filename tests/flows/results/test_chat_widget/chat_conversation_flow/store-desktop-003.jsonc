@@ -1,0 +1,60 @@
+// store-desktop-003
+{
+  "bubbles": [
+    {
+      "alignment": "left",
+      "is_playing": false,
+      "kind": "text",
+      "pointer_key": "",
+      "role": "assistant"
+    },
+    {
+      "alignment": "right",
+      "is_playing": false,
+      "kind": "text",
+      "pointer_key": "",
+      "role": "user"
+    },
+    {
+      "alignment": "left",
+      "is_playing": false,
+      "kind": "text",
+      "pointer_key": "",
+      "role": "assistant"
+    }
+  ],
+  "current_view_type": "ChatViewData",
+  "is_active": true,
+  "messages": [
+    {
+      "audio_id": "",
+      "id": "msg-1",
+      "is_playing": false,
+      "kind": "text",
+      "role": "assistant",
+      "text": "dolore magna aliqua. ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+    },
+    {
+      "audio_id": "",
+      "id": "msg-2",
+      "is_playing": false,
+      "kind": "text",
+      "role": "user",
+      "text": "what is the population of latin american countries combined?"
+    },
+    {
+      "audio_id": "",
+      "id": "msg-3",
+      "is_playing": false,
+      "kind": "text",
+      "role": "assistant",
+      "text": "Around 660 million people live in Latin America."
+    }
+  ],
+  "scroll_offset": 0,
+  "session_id": "chat-test",
+  "stack": [
+    "MenuStackItem",
+    "ChatStackItem"
+  ]
+}
