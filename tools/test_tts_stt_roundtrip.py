@@ -1,19 +1,23 @@
 # ruff: noqa
-"""Disposable end-to-end test: TTS -> STT round-trip over gRPC.
+"""Disposable end-to-end test: TTS/STT round-trip + LLM completion over gRPC.
 
-Boots the ubo app, waits for the assistant service to come up, then:
+Boots the ubo app, waits for the assistant service to come up, then runs a set
+of scenarios against the gRPC API:
 
-  1. sends a sentence to the TTS engine (Piper) and collects the synthesized audio,
-  2. feeds that audio to the STT engine (Vosk) and collects the transcription,
-  3. fuzzy-compares + keyword-matches the transcription against the original text.
+  1. TTS -> STT round-trip: synthesize a sentence with Piper, feed the audio to
+     Vosk, fuzzy- + keyword-compare the transcription against the original.
+  2. LLM completion for each configured provider (openai, anthropic, ...),
+     selecting the provider per-request over the gRPC API — this also exercises
+     programmatic provider selection / service switching.
 
-This is a standalone scratch script — NOT wired into the pytest suite or any test
-fixtures. Run it from the repo root:
+This is a standalone scratch script — NOT wired into the pytest suite or any
+test fixtures. Run it from the repo root:
 
     uv run python tools/test_tts_stt_roundtrip.py
 
-Exit code 0 = pass, 1 = fail. The app's output is teed to ./ubo-app-roundtrip.log
-and the synthesized audio is written to /tmp/ubo-roundtrip-tts.wav for inspection.
+Exit code 0 = all scenarios passed, 1 = at least one failed. The app's output
+is teed to ./ubo-app-roundtrip.log and the synthesized audio is written to
+/tmp/ubo-roundtrip-tts.wav for inspection.
 """
 
 from __future__ import annotations
@@ -38,7 +42,9 @@ from pathlib import Path
 from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
     Action,
+    AssistantCompleteAction,
     AssistantHandleReportEvent,
+    AssistantLlmName,
     AssistantSttName,
     AssistantSynthesizeAction,
     AssistantTranscribeAction,
@@ -56,22 +62,47 @@ GRPC_PORT = int(os.environ.get('UBO_GRPC_LISTEN_PORT', '50051'))
 
 TEST_SENTENCE = 'the quick brown fox jumps over the lazy dog'
 
-# Local providers — no API keys needed.
+# Local providers for the TTS->STT round-trip — no API keys needed.
 TTS_PROVIDER = AssistantTtsName.PIPER
 STT_PROVIDER = AssistantSttName.VOSK
+
+# LLM engines to exercise. Each is selected per-request over the gRPC API; an
+# engine that is not configured comes back as an error frame and fails its
+# scenario. Edit this list to match what is set up on the machine.
+LLM_PROVIDERS = ['openai', 'anthropic']
+LLM_QUESTION = 'What is the capital of France? Reply with only the city name.'
+LLM_SYSTEM_PROMPT = 'You are a terse assistant. Answer in as few words as possible.'
+LLM_EXPECTED_KEYWORD = 'paris'
 
 GRPC_UP_TIMEOUT = 120.0  # seconds to wait for the core gRPC server
 ASSISTANT_UP_BUDGET = 240.0  # total seconds to keep retrying for the assistant
 SYNTHESIS_TIMEOUT = 45.0  # per-attempt seconds to wait for TTS output
 TRANSCRIPTION_TIMEOUT = 60.0  # seconds to wait for STT output
+LLM_TIMEOUT = 90.0  # seconds to wait for an LLM completion
 
 APP_LOG_PATH = REPO_ROOT / 'ubo-app-roundtrip.log'
-TTS_WAV_PATH = Path('/tmp/ubo-roundtrip-tts.wav')  # noqa: S108
+TTS_WAV_PATH = Path('/tmp/ubo-roundtrip-tts.wav')
 
-# Pass thresholds — STT is lossy, so be lenient and lean on keyword coverage.
+# Pass thresholds for STT — it is lossy, so lean on keyword coverage.
 MIN_SIMILARITY_RATIO = 0.6
 MIN_KEYWORD_COVERAGE = 0.5
 _KEYWORD_MIN_LEN = 4
+
+# betterproto enum member (lower-cased) -> enum value, for selecting providers.
+_LLM_PROVIDER_BY_NAME = {
+    member.name.lower(): member
+    for member in AssistantLlmName.__members__.values()
+    if member.value != 0
+}
+
+
+@dataclass
+class ScenarioResult:
+    """Outcome of one test scenario."""
+
+    name: str
+    passed: bool
+    detail: str
 
 
 # --- app lifecycle -----------------------------------------------------------
@@ -89,7 +120,7 @@ def launch_app() -> subprocess.Popen:
 
     logger.info('Launching app: %s (logs -> %s)', ' '.join(LAUNCH_COMMAND), APP_LOG_PATH)
     log_file = APP_LOG_PATH.open('wb')
-    return subprocess.Popen(  # noqa: S603
+    return subprocess.Popen(
         LAUNCH_COMMAND,
         cwd=REPO_ROOT,
         env=env,
@@ -111,7 +142,7 @@ def terminate_app(process: subprocess.Popen) -> None:
             os.killpg(os.getpgid(process.pid), signal.SIGKILL)
     # The assistant subprocess starts its own session — kill any stragglers.
     with contextlib.suppress(Exception):
-        subprocess.run(['pkill', '-f', 'ubo-assistant'], check=False)  # noqa: S603, S607
+        subprocess.run(['pkill', '-f', 'ubo-assistant'], check=False)
 
 
 def wait_for_grpc(host: str, port: int, timeout: float) -> bool:
@@ -166,6 +197,16 @@ class _SessionCollector:
             self.done.set()
 
 
+def _new_session(sessions: dict[str, _SessionCollector], prefix: str) -> _SessionCollector:
+    collector = _SessionCollector(
+        session_id=f'{prefix}-{uuid.uuid4().hex}',
+        done=asyncio.Event(),
+    )
+    sessions[collector.session_id] = collector
+    return collector
+
+
+# --- request helpers ---------------------------------------------------------
 async def _synthesize(client: UboRPCClient, collector: _SessionCollector) -> None:
     """Dispatch a TTS request and wait for the synthesized audio."""
     client.dispatch(
@@ -204,6 +245,27 @@ async def _transcribe(
         await asyncio.wait_for(collector.done.wait(), timeout=TRANSCRIPTION_TIMEOUT)
 
 
+async def _complete(
+    client: UboRPCClient,
+    collector: _SessionCollector,
+    provider: AssistantLlmName,
+) -> None:
+    """Dispatch an LLM completion request and wait for the response."""
+    client.dispatch(
+        action=Action(
+            assistant_complete_action=AssistantCompleteAction(
+                text=LLM_QUESTION,
+                session_id=collector.session_id,
+                llm_provider=provider,
+                system_prompt=LLM_SYSTEM_PROMPT,
+                enable_tools=False,
+            ),
+        ),
+    )
+    with contextlib.suppress(TimeoutError):
+        await asyncio.wait_for(collector.done.wait(), timeout=LLM_TIMEOUT)
+
+
 # --- comparison --------------------------------------------------------------
 def _normalize(text: str) -> list[str]:
     """Lowercase, strip punctuation, split into words."""
@@ -239,9 +301,88 @@ def _write_wav(path: Path, pcm: bytes, sample_rate: int, num_channels: int) -> N
         wav.writeframes(pcm)
 
 
+# --- scenarios ---------------------------------------------------------------
+async def _scenario_tts_stt(
+    client: UboRPCClient,
+    sessions: dict[str, _SessionCollector],
+) -> ScenarioResult:
+    """TTS -> STT round-trip, retried until the assistant subprocess is up."""
+    name = 'tts-stt-roundtrip'
+    logger.info('[%s] waiting for the assistant service and synthesizing...', name)
+    deadline = time.monotonic() + ASSISTANT_UP_BUDGET
+    tts: _SessionCollector | None = None
+    while time.monotonic() < deadline:
+        collector = _new_session(sessions, 'roundtrip-tts')
+        await _synthesize(client, collector)
+        if collector.error:
+            return ScenarioResult(name, False, f'TTS error: {collector.error}')
+        if collector.audio:
+            tts = collector
+            break
+        logger.info('  no audio yet — assistant still starting, retrying...')
+
+    if tts is None or not tts.audio:
+        return ScenarioResult(name, False, f'no TTS audio within {ASSISTANT_UP_BUDGET}s')
+
+    pcm = bytes(tts.audio)
+    logger.info(
+        '[%s] TTS produced %d bytes (rate=%d, channels=%d)',
+        name,
+        len(pcm),
+        tts.sample_rate,
+        tts.num_channels,
+    )
+    _write_wav(TTS_WAV_PATH, pcm, tts.sample_rate, tts.num_channels)
+
+    stt = _new_session(sessions, 'roundtrip-stt')
+    await _transcribe(client, stt, pcm, tts.sample_rate or 16000, tts.num_channels or 1)
+    if stt.error:
+        return ScenarioResult(name, False, f'STT error: {stt.error}')
+
+    transcription = ' '.join(stt.text_parts).strip()
+    logger.info('[%s] original:    %r', name, TEST_SENTENCE)
+    logger.info('[%s] transcribed: %r', name, transcription)
+    if not transcription:
+        return ScenarioResult(name, False, 'STT produced no transcription')
+
+    ratio, coverage, passed = compare(TEST_SENTENCE, transcription)
+    return ScenarioResult(
+        name,
+        passed,
+        f'ratio={ratio:.2f} coverage={coverage:.2f} -> {transcription!r}',
+    )
+
+
+async def _scenario_llm(
+    client: UboRPCClient,
+    sessions: dict[str, _SessionCollector],
+    provider_name: str,
+) -> ScenarioResult:
+    """LLM completion for one provider, selected per-request over gRPC."""
+    name = f'llm-{provider_name}'
+    provider = _LLM_PROVIDER_BY_NAME.get(provider_name)
+    if provider is None:
+        return ScenarioResult(name, False, f'unknown LLM provider id: {provider_name}')
+
+    logger.info('[%s] asking %r ...', name, LLM_QUESTION)
+    collector = _new_session(sessions, f'roundtrip-llm-{provider_name}')
+    await _complete(client, collector, provider)
+    if collector.error:
+        return ScenarioResult(name, False, f'LLM error: {collector.error}')
+
+    response = ' '.join(collector.text_parts).strip()
+    logger.info('[%s] response: %r', name, response)
+    if not response:
+        return ScenarioResult(name, False, 'LLM produced no response')
+
+    passed = LLM_EXPECTED_KEYWORD in response.lower()
+    detail = f'{response!r} (expected keyword {LLM_EXPECTED_KEYWORD!r})'
+    return ScenarioResult(name, passed, detail)
+
+
 # --- orchestration -----------------------------------------------------------
-async def _round_trip(client: UboRPCClient) -> bool:
-    """Run the TTS -> STT round-trip; return True on pass."""
+async def _run_scenarios(client: UboRPCClient) -> list[ScenarioResult]:
+    """Subscribe to report events and run every scenario."""
     sessions: dict[str, _SessionCollector] = {}
 
     def on_report(event: Event) -> None:
@@ -263,92 +404,39 @@ async def _round_trip(client: UboRPCClient) -> bool:
         callback=on_report,
     )
 
+    results: list[ScenarioResult] = []
     try:
-        # --- 1. TTS, retried until the assistant subprocess is up ------------
-        logger.info('Waiting for the assistant service and synthesizing speech...')
-        deadline = time.monotonic() + ASSISTANT_UP_BUDGET
-        tts: _SessionCollector | None = None
-        while time.monotonic() < deadline:
-            collector = _SessionCollector(
-                session_id=f'roundtrip-tts-{uuid.uuid4().hex}',
-                done=asyncio.Event(),
-            )
-            sessions[collector.session_id] = collector
-            await _synthesize(client, collector)
-            if collector.error:
-                logger.error('TTS error: %s', collector.error)
-                return False
-            if collector.audio:
-                tts = collector
-                break
-            logger.info('  no audio yet — assistant still starting, retrying...')
-
-        if tts is None or not tts.audio:
-            logger.error('TTS produced no audio within %ss', ASSISTANT_UP_BUDGET)
-            return False
-
-        pcm = bytes(tts.audio)
-        logger.info(
-            'TTS produced %d bytes (rate=%d, channels=%d)',
-            len(pcm),
-            tts.sample_rate,
-            tts.num_channels,
-        )
-        _write_wav(TTS_WAV_PATH, pcm, tts.sample_rate, tts.num_channels)
-        logger.info('Wrote synthesized audio to %s', TTS_WAV_PATH)
-
-        # --- 2. STT ----------------------------------------------------------
-        logger.info('Transcribing the synthesized audio...')
-        stt = _SessionCollector(
-            session_id=f'roundtrip-stt-{uuid.uuid4().hex}',
-            done=asyncio.Event(),
-        )
-        sessions[stt.session_id] = stt
-        await _transcribe(
-            client,
-            stt,
-            pcm,
-            tts.sample_rate or 16000,
-            tts.num_channels or 1,
-        )
-        if stt.error:
-            logger.error('STT error: %s', stt.error)
-            return False
-
-        transcription = ' '.join(stt.text_parts).strip()
-        logger.info('Original:     %r', TEST_SENTENCE)
-        logger.info('Transcribed:  %r', transcription)
-
-        if not transcription:
-            logger.error('STT produced no transcription')
-            return False
-
-        # --- 3. compare ------------------------------------------------------
-        ratio, coverage, passed = compare(TEST_SENTENCE, transcription)
-        logger.info(
-            'similarity ratio = %.2f (>= %.2f), keyword coverage = %.2f (>= %.2f)',
-            ratio,
-            MIN_SIMILARITY_RATIO,
-            coverage,
-            MIN_KEYWORD_COVERAGE,
-        )
+        # The first scenario doubles as the wait-for-assistant-startup loop.
+        results.append(await _scenario_tts_stt(client, sessions))
+        for provider_name in LLM_PROVIDERS:
+            results.append(await _scenario_llm(client, sessions, provider_name))
     finally:
         unsubscribe()
 
-    return passed
+    return results
 
 
 async def _main_async() -> int:
     client = UboRPCClient(GRPC_HOST, GRPC_PORT)
     try:
-        passed = await _round_trip(client)
+        results = await _run_scenarios(client)
     finally:
         client.close()
-    return 0 if passed else 1
+
+    failed = [r for r in results if not r.passed]
+    logger.info('=== SCENARIO RESULTS ===')
+    for result in results:
+        logger.info(
+            '  [%s] %-22s : %s',
+            'PASS' if result.passed else 'FAIL',
+            result.name,
+            result.detail,
+        )
+    return 0 if not failed else 1
 
 
 def main() -> int:
-    """Boot the app, run the round-trip, tear the app down."""
+    """Boot the app, run the scenarios, tear the app down."""
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -373,10 +461,7 @@ def main() -> int:
         if app is not None:
             terminate_app(app)
 
-    if exit_code == 0:
-        logger.info('RESULT: PASS')
-    else:
-        logger.error('RESULT: FAIL')
+    logger.info('RESULT: %s', 'PASS' if exit_code == 0 else 'FAIL')
     return exit_code
 
 
