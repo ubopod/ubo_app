@@ -24,9 +24,9 @@ from pipecat.frames.frames import (
     InputAudioRawFrame,
     LLMRunFrame,
     LLMTextFrame,
-    TextFrame,
     TranscriptionFrame,
     TTSAudioRawFrame,
+    TTSSpeakFrame,
 )
 from pipecat.processors.aggregators.llm_context import (
     LLMContext,
@@ -214,8 +214,10 @@ def _build_input_frames(
         # The user message is seeded into the LLMContext; trigger a completion.
         return [LLMRunFrame()]
 
-    # TTS-first chain.
-    return [TextFrame(text=event.text)]
+    # TTS-first chain. TTSSpeakFrame (not a bare TextFrame) is the Pipecat 1.0
+    # frame for standalone synthesis — a bare TextFrame's audio is dropped
+    # ("unable to append audio to context") without an active LLM turn context.
+    return [TTSSpeakFrame(text=event.text)]
 
 
 async def _run_request(
