@@ -15,9 +15,11 @@ from redux.basic_types import InitAction
 
 from ubo_app.logger import logger
 from ubo_app.store.services.assistant import (
+    DEFAULT_MODELS,
     AssistantAction,
     AssistantAddMcpServerAction,
     AssistantAddMcpServerEvent,
+    AssistantCompleteAction,
     AssistantDeleteMcpServerAction,
     AssistantDeleteMcpServerEvent,
     AssistantDownloadKokoroAction,
@@ -30,9 +32,13 @@ from ubo_app.store.services.assistant import (
     AssistantDownloadVoskModelEvent,
     AssistantEvent,
     AssistantHandleReportEvent,
+    AssistantLLMName,
     AssistantModelChangedEvent,
     AssistantOllamaThinkingChangedEvent,
+    AssistantPipelineStage,
     AssistantReportAction,
+    AssistantRunPipelineAction,
+    AssistantRunPipelineEvent,
     AssistantSetIsActiveAction,
     AssistantSetKokoroDownloadedAction,
     AssistantSetMcpServersAction,
@@ -54,11 +60,15 @@ from ubo_app.store.services.assistant import (
     AssistantStopListeningAction,
     AssistantStopTalkingAction,
     AssistantStopTalkingEvent,
+    AssistantSTTName,
     AssistantSyncMcpServersAction,
     AssistantSyncMcpServersEvent,
+    AssistantSynthesizeAction,
     AssistantToggleListeningAction,
     AssistantToggleMcpServerAction,
     AssistantToggleMcpServerEvent,
+    AssistantTranscribeAction,
+    AssistantTTSName,
     AssistantUpdateProvidersAction,
     EnabledMcpServersWithMetadata,
     StopTalkingPhraseStopReason,
@@ -89,6 +99,42 @@ if TYPE_CHECKING:
 
     from ubo_app.store.services.notifications import NotificationsAction
     from ubo_app.store.services.rgb_ring import RgbRingAction
+
+
+def _make_run_pipeline_event(  # noqa: PLR0913
+    state: AssistantState,
+    *,
+    session_id: str,
+    stages: list[AssistantPipelineStage],
+    audio: bytes = b'',
+    text: str = '',
+    sample_rate: int = 16000,
+    num_channels: int = 1,
+    stt_provider: AssistantSTTName | None = None,
+    llm_provider: AssistantLLMName | None = None,
+    tts_provider: AssistantTTSName | None = None,
+    llm_model: str | None = None,
+    system_prompt: str | None = None,
+    enable_tools: bool = False,
+) -> AssistantRunPipelineEvent:
+    """Build the canonical run-pipeline event, resolving providers/model from state."""
+    resolved_llm = llm_provider if llm_provider is not None else state.selected_llm
+    return AssistantRunPipelineEvent(
+        session_id=session_id,
+        stages=stages,
+        audio=audio,
+        text=text,
+        sample_rate=sample_rate,
+        num_channels=num_channels,
+        stt_provider=stt_provider if stt_provider is not None else state.selected_stt,
+        llm_provider=resolved_llm,
+        tts_provider=tts_provider if tts_provider is not None else state.selected_tts,
+        llm_model=llm_model
+        if llm_model is not None
+        else state.selected_models.get(resolved_llm, DEFAULT_MODELS[resolved_llm]),
+        system_prompt=system_prompt,
+        enable_tools=enable_tools,
+    )
 
 
 def reducer(
@@ -491,6 +537,74 @@ def reducer(
                 mcp_servers=mcp_servers,
                 enabled_mcp_servers=enabled_servers,
                 enabled_mcp_servers_with_metadata=enabled_with_metadata,
+            )
+
+        case AssistantTranscribeAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    _make_run_pipeline_event(
+                        state,
+                        session_id=action.session_id,
+                        stages=[AssistantPipelineStage.STT],
+                        audio=action.audio,
+                        sample_rate=action.sample_rate,
+                        num_channels=action.num_channels,
+                        stt_provider=action.stt_provider,
+                    ),
+                ],
+            )
+
+        case AssistantSynthesizeAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    _make_run_pipeline_event(
+                        state,
+                        session_id=action.session_id,
+                        stages=[AssistantPipelineStage.TTS],
+                        text=action.text,
+                        tts_provider=action.tts_provider,
+                    ),
+                ],
+            )
+
+        case AssistantCompleteAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    _make_run_pipeline_event(
+                        state,
+                        session_id=action.session_id,
+                        stages=[AssistantPipelineStage.LLM],
+                        text=action.text,
+                        llm_provider=action.llm_provider,
+                        system_prompt=action.system_prompt,
+                        enable_tools=action.enable_tools,
+                    ),
+                ],
+            )
+
+        case AssistantRunPipelineAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    _make_run_pipeline_event(
+                        state,
+                        session_id=action.session_id,
+                        stages=action.stages,
+                        audio=action.audio,
+                        text=action.text,
+                        sample_rate=action.sample_rate,
+                        num_channels=action.num_channels,
+                        stt_provider=action.stt_provider,
+                        llm_provider=action.llm_provider,
+                        tts_provider=action.tts_provider,
+                        llm_model=action.llm_model,
+                        system_prompt=action.system_prompt,
+                        enable_tools=action.enable_tools,
+                    ),
+                ],
             )
 
         case _:

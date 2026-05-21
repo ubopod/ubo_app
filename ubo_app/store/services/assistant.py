@@ -165,6 +165,17 @@ class AssistantImageGeneratorName(StrEnum):
     OPENAI = 'openai'
 
 
+class AssistantPipelineStage(StrEnum):
+    """A stage in the assistant pipeline.
+
+    A programmatic request runs a *contiguous* sub-chain of these, in this order.
+    """
+
+    STT = 'stt'
+    LLM = 'llm'
+    TTS = 'tts'
+
+
 class McpServerType(StrEnum):
     """MCP server types."""
 
@@ -577,12 +588,16 @@ class AssistanceFrame(Immutable):
     timestamp: float
     id: str
     index: int
+    # Correlation id for programmatic pipeline requests; empty for live output.
+    session_id: str = ''
 
 
 class AssistanceTextFrame(AssistanceFrame):
     """A text assistance frame."""
 
     text: str
+    # Originating pipeline stage for programmatic requests (stt/llm/tts).
+    source: str = ''
 
 
 class AssistanceAudioFrame(AssistanceFrame):
@@ -601,8 +616,17 @@ class AssistanceImageFrame(AssistanceFrame):
     metadata: dict[str, str]
 
 
+class AssistanceErrorFrame(AssistanceFrame):
+    """An error assistance frame."""
+
+    error: str
+
+
 AcceptableAssistanceFrame: TypeAlias = (
-    AssistanceTextFrame | AssistanceAudioFrame | AssistanceImageFrame
+    AssistanceTextFrame
+    | AssistanceAudioFrame
+    | AssistanceImageFrame
+    | AssistanceErrorFrame
 )
 
 
@@ -698,6 +722,56 @@ class AssistantStopTalkingAction(AssistantAction):
     this action stops the in-flight TTS playback and LLM response but does
     NOT start a new listening session — the user explicitly asked for quiet.
     """
+
+
+class AssistantTranscribeAction(AssistantAction):
+    """Shortcut action to request a one-shot transcription (STT-only)."""
+
+    audio: bytes
+    session_id: str
+    sample_rate: int = 16000
+    num_channels: int = 1
+    stt_provider: AssistantSTTName | None = None
+
+
+class AssistantSynthesizeAction(AssistantAction):
+    """Shortcut action to request one-shot speech synthesis (TTS-only)."""
+
+    text: str
+    session_id: str
+    tts_provider: AssistantTTSName | None = None
+
+
+class AssistantCompleteAction(AssistantAction):
+    """Shortcut action to request a one-shot LLM completion (LLM-only)."""
+
+    text: str
+    session_id: str
+    llm_provider: AssistantLLMName | None = None
+    system_prompt: str | None = None
+    enable_tools: bool = False
+
+
+class AssistantRunPipelineAction(AssistantAction):
+    """Action to run a parametrized assistant pipeline.
+
+    ``stages`` must be a contiguous sub-chain of ``[STT, LLM, TTS]``. The
+    discrete ``AssistantTranscribe/Synthesize/CompleteAction``s are shortcuts
+    the reducer maps onto the same canonical ``AssistantRunPipelineEvent``.
+    """
+
+    session_id: str
+    stages: list[AssistantPipelineStage]
+    audio: bytes = b''
+    text: str = ''
+    sample_rate: int = 16000
+    num_channels: int = 1
+    stt_provider: AssistantSTTName | None = None
+    llm_provider: AssistantLLMName | None = None
+    tts_provider: AssistantTTSName | None = None
+    llm_model: str | None = None
+    system_prompt: str | None = None
+    enable_tools: bool = False
 
 
 class AssistantEvent(BaseEvent):
@@ -814,6 +888,29 @@ class AssistantSyncMcpServersEvent(AssistantEvent):
     the assistant service reads the on-disk configs and dispatches
     ``AssistantSetMcpServersAction`` with the result.
     """
+
+
+class AssistantRunPipelineEvent(AssistantEvent):
+    """Event for the assistant service to run a parametrized pipeline.
+
+    All provider/model fields are resolved — ``None`` action fields are filled
+    in by the reducer from the current ``AssistantState`` selections. The
+    discrete shortcut actions and ``AssistantRunPipelineAction`` all funnel
+    into this one canonical event.
+    """
+
+    session_id: str
+    stages: list[AssistantPipelineStage]
+    audio: bytes
+    text: str
+    sample_rate: int
+    num_channels: int
+    stt_provider: AssistantSTTName
+    llm_provider: AssistantLLMName
+    tts_provider: AssistantTTSName
+    llm_model: str
+    system_prompt: str | None
+    enable_tools: bool
 
 
 class AssistantState(Immutable):
