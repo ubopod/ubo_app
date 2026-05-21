@@ -317,6 +317,24 @@ class GUIClient:
         )
         self._client.dispatch(action=action)
 
+    def dispatch_chat_toggle_audio(self, message_id: str) -> None:
+        """Toggle play/stop on a chat audio bubble."""
+        from ubo_bindings.ubo.v1 import Action, ChatToggleAudioPlaybackAction
+
+        if not self._client:
+            return
+
+        logger.debug(
+            '[GUIClient] dispatch_chat_toggle_audio: message_id=%s',
+            message_id,
+        )
+        action = Action(
+            chat_toggle_audio_playback_action=ChatToggleAudioPlaybackAction(
+                message_id=message_id,
+            ),
+        )
+        self._client.dispatch(action=action)
+
     def dispatch_close_application(self, instance_id: str) -> None:
         """Close an application by instance ID."""
         from ubo_bindings.ubo.v1 import Action, CloseApplicationAction

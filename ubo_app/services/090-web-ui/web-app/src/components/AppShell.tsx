@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { ApplicationView } from "./ApplicationView";
 import { BackButton } from "./BackButton";
 import { Breadcrumb } from "./Breadcrumb";
+import { ChatView } from "./ChatView";
 import { InstructionView } from "./InstructionView";
 import { NotificationOverlay } from "./NotificationOverlay";
 import { PromptView } from "./PromptView";
@@ -69,6 +70,9 @@ function AppContent({ store }: { store: StoreServiceClient }) {
     if (currentView.promptViewData) {
       const text = currentView.promptViewData.title ?? "Confirm";
       return { currentTitle: text, currentTitleIcon: "", currentTitleText: text };
+    }
+    if (currentView.chatViewData) {
+      return { currentTitle: "Chat", currentTitleIcon: "", currentTitleText: "Chat" };
     }
     return { currentTitle: "", currentTitleIcon: "", currentTitleText: "" };
   })();
@@ -144,6 +148,10 @@ function AppContent({ store }: { store: StoreServiceClient }) {
 
     if (currentView.promptViewData) {
       return <PromptView data={currentView.promptViewData} store={store} />;
+    }
+
+    if (currentView.chatViewData) {
+      return <ChatView data={currentView.chatViewData} store={store} />;
     }
 
     return (

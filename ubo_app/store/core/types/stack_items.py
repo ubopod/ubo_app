@@ -76,6 +76,30 @@ class RenderStackItem(Immutable):
     stream_id: str = ''
 
 
+class ChatStackItem(Immutable):
+    """Redux representation of the chat overlay in the navigation stack.
+
+    The conversation itself lives in the ``chat`` slice — this item only
+    references the session and holds the scroll position, exactly how
+    ``NotificationStackItem`` references ``state.notifications``.
+
+    Attributes
+    ----------
+    id : str
+        Unique identifier for this stack item instance.
+    session_id : str
+        ID of the chat session being displayed.
+    scroll_offset : int
+        How many bubbles the view is scrolled back from the newest (0 =
+        newest message bound to L3).
+
+    """
+
+    id: str
+    session_id: str = ''
+    scroll_offset: int = 0
+
+
 class NotificationStackItem(Immutable):
     """Redux representation of a notification overlay in the navigation stack.
 
@@ -130,4 +154,5 @@ StackItemType: TypeAlias = (
     | NotificationStackItem
     | InstructionStackItem
     | PromptStackItem
+    | ChatStackItem
 )

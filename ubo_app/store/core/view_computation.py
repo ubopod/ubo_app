@@ -23,6 +23,8 @@ from ubo_app.store.core.constants import (
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
+    ChatStackItem,
+    ChatViewData,
     HomeViewData,
     InstructionStackItem,
     InstructionViewData,
@@ -104,11 +106,18 @@ __all__ = [
     'PAGE_SIZE',
     'compute_status_bar_data',
     'compute_view_from_root_state',
+    'get_chat_view_data',
     'get_notification_view_data',
     'release_view_autorun',
     'setup_dynamic_view_autorun',
     'suppress_view_autorun',
 ]
+
+# Chat bubble styling — owned by the store (UI logic), not the renderer.
+_CHAT_ASSISTANT_BACKGROUND = '#ededed'
+_CHAT_ASSISTANT_FOREGROUND = '#1a1d23'
+_CHAT_USER_BACKGROUND = '#4f93e0'
+_CHAT_USER_FOREGROUND = '#ffffff'
 
 # Gate to suppress redundant view computations during startup (service
 # reducer registration burst).  When suppressed, autorun callbacks mark
@@ -254,6 +263,71 @@ def get_notification_view_data(
     )
 
 
+def get_chat_view_data(
+    state: RootState,
+    stack_item: ChatStackItem,
+    *,
+    stack_depth: int = 1,
+) -> ChatViewData:
+    """Build ChatViewData from the chat slice and the stack scroll position.
+
+    The store owns the *conversation* — message history, who said what,
+    bubble styling, audio data and the integer scroll offset. The L1/L2/L3
+    pointer binding is deliberately *not* computed here: which bubble lines
+    up with which hardware-button row depends on rendered bubble heights, a
+    pure layout concern the GUI renderer owns (see ``ChatWidget``).
+
+    Args:
+        state: The full Redux RootState.
+        stack_item: The chat stack item (holds the scroll offset).
+        stack_depth: Navigation stack depth for transition animation hints.
+
+    Returns:
+        ChatViewData with fully-styled bubbles and the scroll position.
+
+    """
+    from ubo_app.store.core.types import ChatBubbleData
+    from ubo_app.store.services.chat import ChatRole
+
+    messages = list(state.chat.messages) if hasattr(state, 'chat') else []
+    total = len(messages)
+
+    # Clamp the scroll offset to the available history.
+    scroll_offset = min(max(stack_item.scroll_offset, 0), max(0, total - 1))
+
+    bubbles: list[ChatBubbleData] = []
+    for message in messages:
+        is_user = message.role == ChatRole.USER
+        bubbles.append(
+            ChatBubbleData(
+                message_id=message.id,
+                role=message.role.value,
+                alignment='right' if is_user else 'left',
+                kind=message.kind.value,
+                text=message.text,
+                color=(
+                    _CHAT_USER_FOREGROUND
+                    if is_user
+                    else _CHAT_ASSISTANT_FOREGROUND
+                ),
+                background_color=(
+                    _CHAT_USER_BACKGROUND
+                    if is_user
+                    else _CHAT_ASSISTANT_BACKGROUND
+                ),
+                is_playing=message.is_playing,
+                waveform=tuple(message.waveform),
+            ),
+        )
+
+    return ChatViewData(
+        bubbles=tuple(bubbles),
+        scroll_offset=scroll_offset,
+        total_bubbles=total,
+        stack_depth=stack_depth,
+    )
+
+
 def compute_status_bar_data(state: RootState) -> StatusBarData:
     """Compute StatusBarData from the full Redux state.
 
@@ -361,6 +435,30 @@ def _notification_view_dependency(notification: object) -> tuple[object, ...]:
     )
 
 
+def _chat_view_dependency(state: RootState) -> tuple[object, ...]:
+    """Return chat-slice fields that affect ChatViewData.
+
+    Added to the view autorun selector so adding a message (which changes
+    ``state.chat`` but not ``state.main.stack``) still triggers a view
+    recomputation.
+    """
+    messages = (
+        state.chat.messages if hasattr(state, 'chat') else ()
+    )
+    return tuple(
+        (
+            message.id,
+            message.role,
+            message.kind,
+            message.text,
+            message.audio_id,
+            message.is_playing,
+            tuple(message.waveform),
+        )
+        for message in messages
+    )
+
+
 def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901, PLR0912
     """Compute ViewData from the full RootState, using dynamic menus.
 
@@ -412,6 +510,14 @@ def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901, P
             props=dict(top_item.props),
             items=top_item.items,
             stream_id=top_item.stream_id,
+            stack_depth=len(stack),
+        )
+
+    # Handle chat overlay views
+    if isinstance(top_item, ChatStackItem):
+        return get_chat_view_data(
+            state,
+            top_item,
             stack_depth=len(stack),
         )
 
@@ -662,6 +768,7 @@ def setup_dynamic_view_autorun() -> None:
                     else ()
                 )
             ),
+            _chat_view_dependency(state),
             get_registered_dependencies(state),
         ),
         options=AutorunOptions(default_value=None),

@@ -202,6 +202,24 @@ class StackPopNotificationAction(StackAction):
     notification_id: str
 
 
+class StackPushChatAction(StackAction):
+    """Push the chat overlay onto the navigation stack.
+
+    Idempotent: if a ``ChatStackItem`` is already on the stack, the reducer
+    leaves it in place rather than pushing a duplicate.
+    """
+
+    session_id: str = ''
+
+
+class StackPopChatAction(StackAction):
+    """Pop the chat overlay from the navigation stack.
+
+    Removes the ``ChatStackItem``. No-op when the chat overlay isn't on the
+    stack.
+    """
+
+
 class StackPopAction(StackAction):
     """Pop the top item from the navigation stack.
 

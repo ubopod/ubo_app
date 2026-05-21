@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Literal
 
-from kivy.clock import mainthread
+from kivy.clock import Clock, mainthread
 from ubo_gui.menu.types import ActionItem, HeadlessMenu
 
 from ubo_gui_client.constants import DEBUG_MENU
@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 ViewType = Literal[
     'home', 'menu', 'notification', 'application', 'instruction', 'prompt',
+    'chat',
 ]
 
 
@@ -315,6 +316,9 @@ class ViewRenderer:
             ApplicationViewData as ProtoApplicationViewData,
         )
         from ubo_bindings.ubo.v1 import (
+            ChatViewData as ProtoChatViewData,
+        )
+        from ubo_bindings.ubo.v1 import (
             HomeViewData as ProtoHomeViewData,
         )
         from ubo_bindings.ubo.v1 import (
@@ -345,6 +349,10 @@ class ViewRenderer:
             else 'None',
         )
 
+        # The chat overlay owns the full screen — hide the header/footer
+        # status bar while it is shown, restore them when leaving chat.
+        self._apply_enclosure_visibility(view)
+
         if isinstance(view, ProtoHomeViewData):
             self._render_home_view(view)
         elif isinstance(view, ProtoMenuViewData):
@@ -359,6 +367,8 @@ class ViewRenderer:
             self._render_prompt_view(view)
         elif isinstance(view, ProtoRenderViewData):
             self._render_render_view(view)
+        elif isinstance(view, ProtoChatViewData):
+            self._render_chat_view(view)
         else:
             logger.warning(
                 '[ViewRenderer] Unknown view type: %s (#%d)',
@@ -704,6 +714,80 @@ class ViewRenderer:
                     _on_frame,
                 )
 
+
+    def _apply_enclosure_visibility(self, view: object) -> None:
+        """Hide the header/footer for the chat overlay, restore when leaving."""
+        from ubo_bindings.ubo.v1 import ChatViewData as ProtoChatViewData
+
+        if isinstance(view, ProtoChatViewData):
+            self._set_enclosures_visible(visible=False)
+        elif self._current_view_type == 'chat':
+            self._set_enclosures_visible(visible=True)
+
+    def _set_enclosures_visible(self, *, visible: bool) -> None:
+        """Show or hide the header & footer status bar.
+
+        The chat overlay owns the full screen, so the header/footer must be
+        hidden while it is shown (otherwise the clock/icons overlap the
+        conversation) and restored when leaving chat.
+        """
+        for attr in (
+            'handle_is_header_visible_change',
+            'handle_is_footer_visible_change',
+        ):
+            handler = getattr(self.app, attr, None)
+            if callable(handler):
+                handler(visible)
+
+    def _render_chat_view(self, view: object) -> None:
+        """Render the chat overlay from ChatViewData.
+
+        Updates the existing ChatWidget in place when one is already shown
+        so adding a message does not trigger a swap animation.
+        """
+        from ubo_gui_client.widgets.chat import ChatWidget
+
+        bubbles_wrapper = getattr(view, 'bubbles', None)
+        bubbles = (
+            list(getattr(bubbles_wrapper, 'items', []) or [])
+            if bubbles_wrapper is not None
+            else []
+        )
+        scroll_offset = int(getattr(view, 'scroll_offset', 0) or 0)
+
+        current = self.menu_widget.current_application
+        if self._current_view_type == 'chat' and isinstance(current, ChatWidget):
+            current.toggle_audio_callback = self.client.dispatch_chat_toggle_audio
+            current.set_view_data(bubbles, scroll_offset)
+            logger.info(
+                '[ViewRenderer] Chat: update in place (bubbles=%d)',
+                len(bubbles),
+            )
+        else:
+            widget = ChatWidget()
+            widget.toggle_audio_callback = self.client.dispatch_chat_toggle_audio
+            widget.set_view_data(bubbles, scroll_offset)
+            logger.info(
+                '[ViewRenderer] Chat: from %s (depth=%d, bubbles=%d)',
+                self._current_view_type,
+                self.menu_widget.depth,
+                len(bubbles),
+            )
+            self.menu_widget.replace_top_with_application(widget, animated=True)
+
+        self._current_view_type = 'chat'
+        self._last_menu_page_index = None
+        stack_depth = getattr(view, 'stack_depth', None)
+        if stack_depth is not None:
+            self._last_stack_depth = stack_depth
+
+        # Re-assert hidden enclosures after the transition — the menu's
+        # page-index-driven enclosure logic may re-show them mid-swap.
+        self._set_enclosures_visible(visible=False)
+        Clock.schedule_once(
+            lambda _: self._set_enclosures_visible(visible=False),
+            0,
+        )
 
     def _render_notification_view(self, view: NotificationViewData) -> None:
         """Render a notification view by opening a NotificationWidget."""

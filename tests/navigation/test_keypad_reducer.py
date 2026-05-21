@@ -64,12 +64,14 @@ class TestContextMirror:
             KeypadReportContextAction(
                 depth=3,
                 is_on_notification=True,
+                is_on_chat=True,
                 is_display_blanked=True,
             ),
         )
         assert isinstance(result, KeypadState)
         assert result.depth == 3
         assert result.is_on_notification is True
+        assert result.is_on_chat is True
         assert result.is_display_blanked is True
 
 
@@ -101,7 +103,11 @@ class TestScreenWake:
         """When blanked, a press emits DisplayUnblankAction and is consumed."""
         result = reducer(KeypadState(is_display_blanked=True), _press(Key.L1))
         assert isinstance(result, CompleteReducerResult)
-        assert result.actions == [DisplayUnblankAction()]
+        # ``DisplayUnblankAction`` carries a non-deterministic ``timestamp`` field, so
+        # assert on the action type rather than equality with a freshly-stamped instance.
+        assert result.actions is not None
+        assert len(result.actions) == 1
+        assert isinstance(result.actions[0], DisplayUnblankAction)
         assert isinstance(result.state, KeypadState)
         assert result.state.is_consumed is True
 

@@ -420,6 +420,10 @@ def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
         _handle_notification_choose_by_index(top.notification_id, event.index)
         return
 
+    # Chat L1/L2/L3 presses are handled GUI-side: which bubble lines up
+    # with which button row depends on rendered heights, so ChatWidget
+    # owns that mapping (see ChatWidget.get_item).
+
     # Route to view-type-specific handler
     current_view = state.main.current_view
     if isinstance(current_view, HomeViewData):
