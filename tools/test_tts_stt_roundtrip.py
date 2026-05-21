@@ -45,6 +45,8 @@ from ubo_bindings.ubo.v1 import (
     AssistantCompleteAction,
     AssistantHandleReportEvent,
     AssistantLlmName,
+    AssistantPipelineStage,
+    AssistantRunPipelineAction,
     AssistantSttName,
     AssistantSynthesizeAction,
     AssistantTranscribeAction,
@@ -70,15 +72,19 @@ STT_PROVIDER = AssistantSttName.VOSK
 # engine that is not configured comes back as an error frame and fails its
 # scenario. Edit this list to match what is set up on the machine.
 LLM_PROVIDERS = ['openai', 'anthropic']
-LLM_QUESTION = 'What is the capital of France? Reply with only the city name.'
-LLM_SYSTEM_PROMPT = 'You are a terse assistant. Answer in as few words as possible.'
-LLM_EXPECTED_KEYWORD = 'paris'
+# A question whose words — and whose answer — the small Vosk model transcribes
+# reliably. Proper nouns (e.g. "Paris"/"France") do not survive a TTS->STT round
+# trip with the small model, so the LLM-in-a-chain scenarios use plain words.
+LLM_QUESTION = 'What color is the sky?'
+LLM_SYSTEM_PROMPT = 'Answer the question in one short, plain English sentence.'
+LLM_EXPECTED_KEYWORD = 'blue'
 
 GRPC_UP_TIMEOUT = 120.0  # seconds to wait for the core gRPC server
 ASSISTANT_UP_BUDGET = 240.0  # total seconds to keep retrying for the assistant
 SYNTHESIS_TIMEOUT = 45.0  # per-attempt seconds to wait for TTS output
 TRANSCRIPTION_TIMEOUT = 60.0  # seconds to wait for STT output
 LLM_TIMEOUT = 90.0  # seconds to wait for an LLM completion
+CHAIN_TIMEOUT = 90.0  # seconds to wait for a multi-stage chain (STT/LLM/TTS)
 
 APP_LOG_PATH = REPO_ROOT / 'ubo-app-roundtrip.log'
 TTS_WAV_PATH = Path('/tmp/ubo-roundtrip-tts.wav')
@@ -130,8 +136,31 @@ def launch_app() -> subprocess.Popen:
     )
 
 
+def kill_stale_ubo_processes() -> None:
+    """Best-effort: kill leftover ubo processes from a previous (crashed) run.
+
+    A run whose teardown did not complete (e.g. the script was killed) leaves a
+    core holding the gRPC port; the next run would then silently talk to that
+    zombie. This clears the slate.
+    """
+    for pattern in ('ubo-assistant', 'ubo_app.main', 'uv run ubo', 'ubo_gui_client'):
+        with contextlib.suppress(Exception):
+            subprocess.run(['pkill', '-9', '-f', pattern], check=False)  # noqa: S603, S607
+    # Free the gRPC port if a zombie still holds it.
+    with contextlib.suppress(Exception):
+        result = subprocess.run(  # noqa: S603, S607
+            ['lsof', '-ti', f'tcp:{GRPC_PORT}'],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        for pid in result.stdout.split():
+            with contextlib.suppress(Exception):
+                os.kill(int(pid), signal.SIGKILL)
+
+
 def terminate_app(process: subprocess.Popen) -> None:
-    """Stop the app and best-effort clean up the assistant subprocess."""
+    """Stop the app and best-effort clean up its subprocesses."""
     logger.info('Stopping the app (pid=%d)', process.pid)
     with contextlib.suppress(ProcessLookupError):
         process.send_signal(signal.SIGTERM)
@@ -140,9 +169,8 @@ def terminate_app(process: subprocess.Popen) -> None:
     except subprocess.TimeoutExpired:
         with contextlib.suppress(ProcessLookupError):
             os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-    # The assistant subprocess starts its own session — kill any stragglers.
-    with contextlib.suppress(Exception):
-        subprocess.run(['pkill', '-f', 'ubo-assistant'], check=False)
+    # The assistant/GUI subprocesses start their own sessions — sweep them too.
+    kill_stale_ubo_processes()
 
 
 def wait_for_grpc(host: str, port: int, timeout: float) -> bool:
@@ -266,6 +294,47 @@ async def _complete(
         await asyncio.wait_for(collector.done.wait(), timeout=LLM_TIMEOUT)
 
 
+async def _run_pipeline(
+    client: UboRPCClient,
+    collector: _SessionCollector,
+    *,
+    stages: list[AssistantPipelineStage],
+    timeout: float,
+    text: str = '',
+    audio: bytes = b'',
+    sample_rate: int = 16000,
+    num_channels: int = 1,
+    stt_provider: AssistantSttName | None = None,
+    llm_provider: AssistantLlmName | None = None,
+    tts_provider: AssistantTtsName | None = None,
+    system_prompt: str = '',
+) -> None:
+    """Dispatch a parametrized AssistantRunPipelineAction and wait for completion."""
+    kwargs: dict = {
+        'session_id': collector.session_id,
+        'stages': stages,
+        'text': text,
+        'audio': audio,
+        'sample_rate': sample_rate,
+        'num_channels': num_channels,
+    }
+    if stt_provider is not None:
+        kwargs['stt_provider'] = stt_provider
+    if llm_provider is not None:
+        kwargs['llm_provider'] = llm_provider
+    if tts_provider is not None:
+        kwargs['tts_provider'] = tts_provider
+    if system_prompt:
+        kwargs['system_prompt'] = system_prompt
+    client.dispatch(
+        action=Action(
+            assistant_run_pipeline_action=AssistantRunPipelineAction(**kwargs),
+        ),
+    )
+    with contextlib.suppress(TimeoutError):
+        await asyncio.wait_for(collector.done.wait(), timeout=timeout)
+
+
 # --- comparison --------------------------------------------------------------
 def _normalize(text: str) -> list[str]:
     """Lowercase, strip punctuation, split into words."""
@@ -380,6 +449,118 @@ async def _scenario_llm(
     return ScenarioResult(name, passed, detail)
 
 
+async def _scenario_llm_tts(
+    client: UboRPCClient,
+    sessions: dict[str, _SessionCollector],
+    provider_name: str,
+) -> ScenarioResult:
+    """text -> LLM -> TTS chain; the spoken answer is fed to STT to verify it."""
+    name = f'llm-tts-{provider_name}'
+    provider = _LLM_PROVIDER_BY_NAME.get(provider_name)
+    if provider is None:
+        return ScenarioResult(name, False, f'unknown LLM provider id: {provider_name}')
+
+    # text -> LLM -> TTS  =>  audio of the assistant speaking its answer
+    logger.info('[%s] running text -> LLM -> TTS ...', name)
+    spoken = _new_session(sessions, f'roundtrip-llmtts-{provider_name}')
+    await _run_pipeline(
+        client,
+        spoken,
+        stages=[AssistantPipelineStage.LLM, AssistantPipelineStage.TTS],
+        text=LLM_QUESTION,
+        llm_provider=provider,
+        tts_provider=TTS_PROVIDER,
+        system_prompt=LLM_SYSTEM_PROMPT,
+        timeout=CHAIN_TIMEOUT,
+    )
+    if spoken.error:
+        return ScenarioResult(name, False, f'LLM->TTS error: {spoken.error}')
+    if not spoken.audio:
+        return ScenarioResult(name, False, 'LLM->TTS produced no audio')
+
+    # audio -> STT  =>  transcription of the spoken answer, for assertion
+    heard = _new_session(sessions, f'roundtrip-llmtts-stt-{provider_name}')
+    await _run_pipeline(
+        client,
+        heard,
+        stages=[AssistantPipelineStage.STT],
+        audio=bytes(spoken.audio),
+        sample_rate=spoken.sample_rate or 16000,
+        num_channels=spoken.num_channels or 1,
+        stt_provider=STT_PROVIDER,
+        timeout=TRANSCRIPTION_TIMEOUT,
+    )
+    if heard.error:
+        return ScenarioResult(name, False, f'STT error: {heard.error}')
+
+    transcription = ' '.join(heard.text_parts).strip()
+    logger.info('[%s] spoken answer transcribed back as: %r', name, transcription)
+    passed = LLM_EXPECTED_KEYWORD in transcription.lower()
+    return ScenarioResult(
+        name,
+        passed,
+        f'{transcription!r} (expected keyword {LLM_EXPECTED_KEYWORD!r})',
+    )
+
+
+async def _scenario_stt_llm(
+    client: UboRPCClient,
+    sessions: dict[str, _SessionCollector],
+    provider_name: str,
+) -> ScenarioResult:
+    """STT -> LLM -> text chain; the input audio is TTS-generated from a question."""
+    name = f'stt-llm-{provider_name}'
+    provider = _LLM_PROVIDER_BY_NAME.get(provider_name)
+    if provider is None:
+        return ScenarioResult(name, False, f'unknown LLM provider id: {provider_name}')
+
+    # TTS-generate the spoken question — input audio for the STT -> LLM chain
+    logger.info('[%s] synthesizing the spoken question ...', name)
+    question = _new_session(sessions, f'roundtrip-sttllm-tts-{provider_name}')
+    await _run_pipeline(
+        client,
+        question,
+        stages=[AssistantPipelineStage.TTS],
+        text=LLM_QUESTION,
+        tts_provider=TTS_PROVIDER,
+        timeout=SYNTHESIS_TIMEOUT,
+    )
+    if question.error:
+        return ScenarioResult(name, False, f'question TTS error: {question.error}')
+    if not question.audio:
+        return ScenarioResult(name, False, 'question TTS produced no audio')
+
+    # audio -> STT -> LLM  =>  the assistant's text answer
+    logger.info('[%s] running STT -> LLM ...', name)
+    answer = _new_session(sessions, f'roundtrip-sttllm-{provider_name}')
+    await _run_pipeline(
+        client,
+        answer,
+        stages=[AssistantPipelineStage.STT, AssistantPipelineStage.LLM],
+        audio=bytes(question.audio),
+        sample_rate=question.sample_rate or 16000,
+        num_channels=question.num_channels or 1,
+        stt_provider=STT_PROVIDER,
+        llm_provider=provider,
+        system_prompt=LLM_SYSTEM_PROMPT,
+        timeout=CHAIN_TIMEOUT,
+    )
+    if answer.error:
+        return ScenarioResult(name, False, f'STT->LLM error: {answer.error}')
+
+    response = ' '.join(answer.text_parts).strip()
+    logger.info('[%s] answer: %r', name, response)
+    if not response:
+        return ScenarioResult(name, False, 'STT->LLM produced no response')
+
+    passed = LLM_EXPECTED_KEYWORD in response.lower()
+    return ScenarioResult(
+        name,
+        passed,
+        f'{response!r} (expected keyword {LLM_EXPECTED_KEYWORD!r})',
+    )
+
+
 # --- orchestration -----------------------------------------------------------
 async def _run_scenarios(client: UboRPCClient) -> list[ScenarioResult]:
     """Subscribe to report events and run every scenario."""
@@ -410,6 +591,8 @@ async def _run_scenarios(client: UboRPCClient) -> list[ScenarioResult]:
         results.append(await _scenario_tts_stt(client, sessions))
         for provider_name in LLM_PROVIDERS:
             results.append(await _scenario_llm(client, sessions, provider_name))
+            results.append(await _scenario_llm_tts(client, sessions, provider_name))
+            results.append(await _scenario_stt_llm(client, sessions, provider_name))
     finally:
         unsubscribe()
 
@@ -448,6 +631,20 @@ def main() -> int:
 
     app: subprocess.Popen | None = None
     if not args.no_launch:
+        # A previous crashed run can leave a core holding the gRPC port; clear
+        # it so this run does not silently talk to a zombie.
+        kill_stale_ubo_processes()
+        time.sleep(1.0)
+        port_in_use = False
+        with contextlib.suppress(OSError):
+            with socket.create_connection((GRPC_HOST, GRPC_PORT), timeout=1):
+                port_in_use = True
+        if port_in_use:
+            logger.error(
+                'port %d still in use after cleanup — aborting (kill it manually)',
+                GRPC_PORT,
+            )
+            return 1
         app = launch_app()
 
     try:
