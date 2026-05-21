@@ -35,6 +35,7 @@ from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.logging import setup_file_logging
 from ubo_assistant.pipecat_debug import attach_whisker_observer
 from ubo_assistant.policy_watcher import PolicyWatcher
+from ubo_assistant.request_handler import setup_request_handler
 from ubo_assistant.silence_user_turn_stop import (
     UboPolicyAwareUserTurnStopStrategy,
 )
@@ -270,6 +271,10 @@ class Assistant:
             openai_api_key=openai_api_key,
             selector='state.assistant.selected_image_generator',
         )
+
+        # Handle decoupled programmatic STT/LLM/TTS pipeline requests, isolated
+        # from the live conversation pipeline below.
+        setup_request_handler(self.client)
 
         async def is_image_gen_frame(frame: Frame) -> bool:
             return isinstance(frame, ImageGenFrame)
