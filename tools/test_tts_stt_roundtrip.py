@@ -248,8 +248,13 @@ async def _round_trip(client: UboRPCClient) -> bool:
         report = event.assistant_handle_report_event
         if not report:
             return
-        session_id = getattr(report.data, 'session_id', '')
-        collector = sessions.get(session_id)
+        # `session_id` lives on the inner Assistance*Frame, not on the
+        # AcceptableAssistanceFrame oneof wrapper.
+        field_name = _active_field(report.data)
+        if field_name is None:
+            return
+        inner = getattr(report.data, field_name)
+        collector = sessions.get(getattr(inner, 'session_id', ''))
         if collector is not None:
             collector.handle(report.data)
 
