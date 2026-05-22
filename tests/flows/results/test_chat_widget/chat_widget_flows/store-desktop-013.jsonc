@@ -1,0 +1,45 @@
+// store-desktop-013
+{
+  "bubbles": [
+    {
+      "alignment": "right",
+      "is_playing": false,
+      "kind": "text",
+      "pointer_key": "",
+      "role": "user"
+    },
+    {
+      "alignment": "left",
+      "is_playing": false,
+      "kind": "text",
+      "pointer_key": "",
+      "role": "assistant"
+    }
+  ],
+  "current_view_type": "ChatViewData",
+  "is_active": true,
+  "messages": [
+    {
+      "audio_id": "",
+      "id": "e443df789558867f5ba91faf7a024204",
+      "is_playing": false,
+      "kind": "text",
+      "role": "user",
+      "text": "hello there"
+    },
+    {
+      "audio_id": "",
+      "id": "23a7711a8133287637ebdcd9e87a1613",
+      "is_playing": false,
+      "kind": "text",
+      "role": "assistant",
+      "text": "echo=> hello there"
+    }
+  ],
+  "scroll_offset": 0,
+  "session_id": "chat-echo",
+  "stack": [
+    "MenuStackItem",
+    "ChatStackItem"
+  ]
+}

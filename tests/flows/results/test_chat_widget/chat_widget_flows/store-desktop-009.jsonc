@@ -1,4 +1,4 @@
-// store-desktop-003
+// store-desktop-009
 {
   "bubbles": [
     {
@@ -33,7 +33,7 @@
       "is_playing": false,
       "kind": "text",
       "role": "assistant",
-      "text": "Latin America is home to roughly 660 million people across 20 countries."
+      "text": "Latin America is home to"
     }
   ],
   "scroll_offset": 0,

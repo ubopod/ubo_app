@@ -1,4 +1,4 @@
-// store-desktop-001
+// store-desktop-008
 {
   "bubbles": [
     {
@@ -33,7 +33,7 @@
       "is_playing": false,
       "kind": "text",
       "role": "assistant",
-      "text": "Latin America is home to"
+      "text": ""
     }
   ],
   "scroll_offset": 0,

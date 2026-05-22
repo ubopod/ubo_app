@@ -753,12 +753,11 @@ class ViewRenderer:
             if bubbles_wrapper is not None
             else []
         )
-        scroll_offset = int(getattr(view, 'scroll_offset', 0) or 0)
 
         current = self.menu_widget.current_application
         if self._current_view_type == 'chat' and isinstance(current, ChatWidget):
             current.toggle_audio_callback = self.client.dispatch_chat_toggle_audio
-            current.set_view_data(bubbles, scroll_offset)
+            current.set_view_data(bubbles)
             logger.info(
                 '[ViewRenderer] Chat: update in place (bubbles=%d)',
                 len(bubbles),
@@ -766,7 +765,7 @@ class ViewRenderer:
         else:
             widget = ChatWidget()
             widget.toggle_audio_callback = self.client.dispatch_chat_toggle_audio
-            widget.set_view_data(bubbles, scroll_offset)
+            widget.set_view_data(bubbles)
             logger.info(
                 '[ViewRenderer] Chat: from %s (depth=%d, bubbles=%d)',
                 self._current_view_type,

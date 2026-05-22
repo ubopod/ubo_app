@@ -1,11 +1,11 @@
-// store-desktop-000
+// store-desktop-012
 {
   "bubbles": [],
   "current_view_type": "ChatViewData",
   "is_active": true,
   "messages": [],
   "scroll_offset": 0,
-  "session_id": "chat-test",
+  "session_id": "chat-echo",
   "stack": [
     "MenuStackItem",
     "ChatStackItem"

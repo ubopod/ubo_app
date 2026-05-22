@@ -4,13 +4,13 @@ This is a *pure renderer*. It receives a fully-resolved ``ChatViewData`` (a
 list of bubbles) and only draws it. All conversation logic — history,
 who-said-what, styling, audio data — lives in the Redux store.
 
-Layout model: the L1/L2/L3 pointer arrows live at three *fixed* screen
-rows — the same rows the home-menu items occupy. Each visible bubble is
-centered on one arrow row (newest on L3, then L2, then L1), so the arrow
-always lands in the bubble's flat middle, above its rounded corners, and
-every bubble touches an arrow. A bubble taller than the row pitch consumes
-extra rows; the next bubble skips up to the first free row. Scrolling
-shifts which bubbles are assigned — discrete, one bubble per step.
+Layout: every bubble's *center* is pinned to the L1/L2/L3 button-row grid
+(rows 59px apart, matching the home menu). A taller neighbour pushes the
+next bubble up by extra whole rows so they never overlap. The renderer
+owns the scroll offset — ↑/↓ pan the column by one whole row at a time, so
+the centers stay on the grid and every on-screen bubble keeps an arrow at
+a fixed button row. A message taller than the screen pans fully into view
+across several steps.
 """
 
 from __future__ import annotations
@@ -20,7 +20,14 @@ import math
 from typing import TYPE_CHECKING
 
 from kivy.clock import Clock
-from kivy.graphics import Color, Line, Rectangle, RoundedRectangle, Triangle
+from kivy.graphics import (
+    Color,
+    Ellipse,
+    Line,
+    Rectangle,
+    RoundedRectangle,
+    Triangle,
+)
 from kivy.metrics import dp
 from kivy.properties import (
     BooleanProperty,
@@ -53,7 +60,7 @@ _POINTER_HEIGHT = dp(12)
 _BUBBLE_RADIUS = dp(9)
 _BUBBLE_PADDING_X = dp(8)
 _BUBBLE_PADDING_Y = dp(6)
-_MIN_BUBBLE_GAP = dp(6)  # minimum vertical gap between stacked bubbles
+_MIN_BUBBLE_GAP = dp(6)  # minimum gap kept between stacked bubbles
 _WAVEFORM_HEIGHT = dp(26)
 _SCROLLBAR_WIDTH = dp(4)
 _SCROLLBAR_COLOR = '#5b9bd5'
@@ -69,6 +76,7 @@ _BUTTON_GAP = dp(7)
 _ROW_PITCH = _BUTTON_ITEM_H + _BUTTON_GAP  # vertical distance between rows
 _SLOT0_CENTER = _BUTTON_FOOTER_H + _BUTTON_ITEM_H / 2  # L3 (bottom) row center
 _VISIBLE_SLOTS = 3  # L3, L2, L1
+_SCROLL_STEP = _ROW_PITCH  # one whole row panned per ↑/↓ press
 
 
 def _hex_to_rgba(
@@ -145,7 +153,7 @@ class ChatWaveform(Widget):
 class ChatBubble(BoxLayout):
     """A single speech bubble (text or audio).
 
-    A fixed-width rounded box that hugs its content. The parent
+    A fixed-width rounded box that hugs its content; the parent
     ``ChatWidget`` positions it. ``text``, ``is_playing`` and ``waveform``
     are reactive — setting them updates the bubble in place so streamed
     text grows it smoothly.
@@ -169,8 +177,10 @@ class ChatBubble(BoxLayout):
             padding=(_BUBBLE_PADDING_X, _BUBBLE_PADDING_Y),
             **kwargs,
         )
-        # The L1/L2/L3 slot assigned by the parent ChatWidget (-1 = none).
-        self.assigned_slot: int = -1
+        # Button-row index this bubble's center sits on (may be off-screen),
+        # and the L1/L2/L3 slot its arrow is drawn at (-1 = none).
+        self.center_slot: int = 0
+        self.arrow_slot: int = -1
 
         if self.kind == 'audio':
             waveform = ChatWaveform(
@@ -233,7 +243,7 @@ class ChatBubble(BoxLayout):
 
 
 class ChatWidget(UboPageWidget):
-    """The chat overlay — bubbles pinned to the fixed L1/L2/L3 arrow rows.
+    """The chat overlay — bubbles pinned to the L1/L2/L3 row grid, scrollable.
 
     ``UboPageWidget`` is a Kivy ``Screen`` (a ``RelativeLayout``), so all
     children and canvas drawing live inside a single ``FloatLayout`` root
@@ -241,14 +251,18 @@ class ChatWidget(UboPageWidget):
     manually so pointer placement always reads up-to-date geometry.
     """
 
-    scroll_offset: int = NumericProperty(0)
     total_bubbles: int = NumericProperty(0)
 
     def __init__(self, **kwargs: object) -> None:
         """Initialize the chat overlay frame."""
         super().__init__(**kwargs)
         self._bubbles: list[ChatBubble] = []
-        self._content_height = 0.0
+        # Pixel scroll offset (always a whole number of row pitches).
+        self._scroll = 0.0
+        self._scroll_min = 0.0
+        self._scroll_max = 0.0
+        # While pinned, every relayout snaps to the newest message's end.
+        self._pin_bottom = True
         # Set by the view renderer — dispatches ChatToggleAudioPlaybackAction.
         self.toggle_audio_callback: Callable[[str], None] | None = None
 
@@ -270,14 +284,14 @@ class ChatWidget(UboPageWidget):
 
     # -- public API used by the view renderer --------------------------------
 
-    def set_view_data(self, bubbles: Iterable[object], scroll_offset: int) -> None:
+    def set_view_data(self, bubbles: Iterable[object]) -> None:
         """Render the bubbles from a ``ChatViewData``.
 
         When the message set is unchanged (streaming text, toggling audio)
         existing bubbles are updated in place so the widget tree is not
-        rebuilt — keeping streaming smooth.
+        rebuilt — keeping streaming smooth. Any store update snaps the view
+        back to the end of the newest message.
         """
-        self.scroll_offset = scroll_offset
         sources = list(bubbles)
 
         reusable = len(sources) == len(self._bubbles) and all(
@@ -296,18 +310,31 @@ class ChatWidget(UboPageWidget):
                 self._viewport.add_widget(widget)
 
         self.total_bubbles = len(self._bubbles)
+        self._pin_bottom = True  # snap to the newest message
         Clock.schedule_once(self._relayout, 0)
+
+    def go_up(self) -> None:
+        """Scroll toward older content (↑ key)."""
+        self._pin_bottom = False
+        self._scroll += _SCROLL_STEP
+        self._relayout()
+
+    def go_down(self) -> None:
+        """Scroll toward newer content (↓ key)."""
+        self._pin_bottom = False
+        self._scroll -= _SCROLL_STEP
+        self._relayout()
 
     def get_item(self, index: int) -> ActionItem | None:
         """Return the L1/L2/L3 action for a button press.
 
-        ``index`` 0/1/2 maps to L1/L2/L3. An audio bubble pinned to that
-        button's row returns an action that toggles its playback; every
-        other case returns ``None`` (the press is inert).
+        ``index`` 0/1/2 maps to L1/L2/L3. An audio bubble whose arrow is at
+        that button's row returns an action that toggles its playback;
+        every other case returns ``None`` (the press is inert).
         """
         slot = (_VISIBLE_SLOTS - 1) - index  # L1→top slot, L3→bottom slot
         for bubble in self._bubbles:
-            if bubble.assigned_slot != slot:
+            if bubble.arrow_slot != slot:
                 continue
             if bubble.kind != 'audio':
                 return None
@@ -346,82 +373,160 @@ class ChatWidget(UboPageWidget):
         return self._root.y + _SLOT0_CENTER + slot * _ROW_PITCH
 
     def _relayout(self, *_: object) -> None:
-        """Pin each bubble to its fixed arrow row — fully synchronous.
-
-        The newest visible bubble is centered on the L3 row; each older
-        bubble is centered on the lowest row that clears the bubble below
-        it (a tall bubble pushes the next one up by more than one row).
-        """
+        """Pin bubble centers to the row grid, apply scroll, draw overlays."""
         self._bg_rect.pos = self._root.pos
         self._bg_rect.size = self._root.size
 
         for bubble in self._bubbles:
-            bubble.assigned_slot = -1
+            bubble.arrow_slot = -1
+            bubble.center_slot = 0
 
+        viewport_h = self._viewport.height
         total = len(self._bubbles)
-        if total:
-            slot0_index = min(max(total - 1 - self.scroll_offset, 0), total - 1)
+        if total and viewport_h > 0:
+            # Grid offset (whole rows above the newest) for each center: a
+            # taller neighbour bumps the next bubble up by extra rows.
+            grid = [0] * total
+            for index in range(total - 2, -1, -1):
+                needed = (
+                    self._bubbles[index].height
+                    + self._bubbles[index + 1].height
+                ) / 2 + _MIN_BUBBLE_GAP
+                grid[index] = grid[index + 1] + max(
+                    1,
+                    math.ceil(needed / _ROW_PITCH),
+                )
 
-            # Older bubbles (slot-0 and up): centered on consecutive rows,
-            # skipping rows a taller neighbour already covers.
-            slot = 0
-            previous_top: float | None = None
-            previous_height = 0.0
-            for index in range(slot0_index, -1, -1):
-                bubble = self._bubbles[index]
-                if previous_top is not None:
-                    needed = (
-                        (previous_height + bubble.height) / 2 + _MIN_BUBBLE_GAP
+            base = self._root.y + _SLOT0_CENTER  # newest center at scroll 0
+            newest_half = self._bubbles[-1].height / 2
+            oldest_half = self._bubbles[0].height / 2
+            # Scroll bounds snapped to whole rows so centers stay on grid.
+            self._scroll_min = min(
+                0.0,
+                math.floor((_SLOT0_CENTER - newest_half) / _ROW_PITCH)
+                * _ROW_PITCH,
+            )
+            self._scroll_max = max(
+                0.0,
+                math.ceil(
+                    (
+                        _SLOT0_CENTER
+                        + grid[0] * _ROW_PITCH
+                        + oldest_half
+                        - viewport_h
                     )
-                    slot += max(1, math.ceil(needed / _ROW_PITCH))
-                center_y = self._arrow_y(slot)
-                self._place_bubble(bubble, center_y)
-                if 0 <= slot < _VISIBLE_SLOTS:
-                    bubble.assigned_slot = slot
-                previous_top = center_y + bubble.height / 2
-                previous_height = bubble.height
+                    / _ROW_PITCH,
+                )
+                * _ROW_PITCH,
+            )
+            if self._pin_bottom:
+                self._scroll = self._scroll_min
+            self._scroll = min(
+                max(self._scroll, self._scroll_min),
+                self._scroll_max,
+            )
 
-            # Newer (scrolled-away) bubbles stack off the bottom of L3.
-            cursor = self._bubbles[slot0_index].y
-            for index in range(slot0_index + 1, total):
-                bubble = self._bubbles[index]
-                center_y = cursor - _MIN_BUBBLE_GAP - bubble.height / 2
-                self._place_bubble(bubble, center_y)
-                cursor = center_y - bubble.height / 2
+            scroll_steps = round(self._scroll / _ROW_PITCH)
+            for index, bubble in enumerate(self._bubbles):
+                bubble.center_slot = grid[index] - scroll_steps
+                bubble.center_y = base + bubble.center_slot * _ROW_PITCH
+                if bubble.alignment == 'right':
+                    bubble.right = self._viewport.right - _SCROLLBAR_GUTTER
+                else:
+                    bubble.x = self._viewport.x + _LEFT_GUTTER
 
-            self._content_height = sum(
-                bubble.height for bubble in self._bubbles
-            ) + _MIN_BUBBLE_GAP * (total - 1)
+            self._assign_arrows()
         else:
-            self._content_height = 0.0
+            self._scroll_min = 0.0
+            self._scroll_max = 0.0
 
         self._draw_overlays()
 
-    def _place_bubble(self, bubble: ChatBubble, center_y: float) -> None:
-        """Center a bubble on ``center_y`` and align it left or right."""
-        bubble.center_y = center_y
-        if bubble.alignment == 'right':
-            bubble.right = self._viewport.right - _SCROLLBAR_GUTTER
-        else:
-            bubble.x = self._viewport.x + _LEFT_GUTTER
+    def _assign_arrows(self) -> None:
+        """Give each on-screen bubble one arrow at a fixed L1/L2/L3 row.
+
+        A bubble whose center is on screen sits exactly on a button row —
+        its arrow goes there. A bubble taller than the screen (center
+        off-screen) keeps an arrow at the nearest on-screen row its body
+        still covers, so it never loses its pointer while being scrolled.
+        """
+        margin = _BUBBLE_RADIUS + _POINTER_HEIGHT / 2
+        for bubble in self._bubbles:
+            slot = bubble.center_slot
+            if 0 <= slot < _VISIBLE_SLOTS:
+                bubble.arrow_slot = slot
+                continue
+            covered = [
+                candidate
+                for candidate in range(_VISIBLE_SLOTS)
+                if bubble.y + margin
+                <= self._arrow_y(candidate)
+                <= bubble.top - margin
+            ]
+            if covered:
+                bubble.arrow_slot = min(
+                    covered,
+                    key=lambda candidate: abs(candidate - slot),
+                )
 
     def _draw_overlays(self) -> None:
-        """Draw the L1/L2/L3 pointer arrows and the scrollbar."""
+        """Draw the pointer arrows + scrollbar, or the empty placeholder."""
         self._root.canvas.after.clear()
-        self._draw_pointers()
-        self._draw_scrollbar()
+        if self._bubbles:
+            self._draw_pointers()
+            self._draw_scrollbar()
+        else:
+            self._draw_empty_placeholder()
+
+    def _draw_empty_placeholder(self) -> None:
+        """Draw a large chat-bubble icon while the conversation is empty.
+
+        A fresh session has no bubbles yet; without this the screen is just
+        black, which reads as broken rather than "waiting for a message".
+        """
+        center_x = self._root.center_x
+        center_y = self._root.center_y
+        width = dp(104)
+        height = dp(72)
+        tail = dp(15)
+        left = center_x - width / 2
+        bottom = center_y - height / 2 + tail / 2
+        with self._root.canvas.after:
+            Color(0.26, 0.28, 0.34, 1)
+            RoundedRectangle(
+                pos=(left, bottom),
+                size=(width, height),
+                radius=[dp(16)],
+            )
+            # Tail pointing down-left, overlapping the body so it joins it.
+            Triangle(
+                points=[
+                    left + dp(20),
+                    bottom + dp(4),
+                    left + dp(44),
+                    bottom + dp(4),
+                    left + dp(8),
+                    bottom - tail,
+                ],
+            )
+            # Three dots — the universal "chat / waiting" glyph.
+            Color(0.52, 0.54, 0.60, 1)
+            dot = dp(12)
+            spacing = dp(22)
+            dot_y = bottom + height / 2 - dot / 2
+            for offset in (-spacing, 0.0, spacing):
+                Ellipse(
+                    pos=(center_x + offset - dot / 2, dot_y),
+                    size=(dot, dot),
+                )
 
     def _draw_pointers(self) -> None:
-        """Draw a pointer arrow for each bubble pinned to a fixed row.
-
-        The arrow sits on the bubble's left edge at its row center — the
-        bubble's flat middle — so it stays clear of the rounded corners.
-        """
+        """Draw each bubble's pointer arrow at its assigned fixed row."""
         with self._root.canvas.after:
             for bubble in self._bubbles:
-                if not 0 <= bubble.assigned_slot < _VISIBLE_SLOTS:
+                if bubble.arrow_slot < 0:
                     continue
-                center_y = self._arrow_y(bubble.assigned_slot)
+                center_y = self._arrow_y(bubble.arrow_slot)
                 tip_x = bubble.x - _POINTER_WIDTH
                 base_x = bubble.x + dp(1)
                 Color(*bubble.bubble_color)
@@ -437,20 +542,18 @@ class ChatWidget(UboPageWidget):
                 )
 
     def _draw_scrollbar(self) -> None:
-        if self._content_height <= self._viewport.height or not self._bubbles:
+        span = self._scroll_max - self._scroll_min
+        if span <= 0 or not self._bubbles:
             return
         track_x = self._root.right - _SIDE_MARGIN - _SCROLLBAR_WIDTH
         track_top = self._root.top - _SIDE_MARGIN
         track_bottom = self._root.y + _SIDE_MARGIN
         track_height = track_top - track_bottom
-        visible_fraction = min(
-            1.0,
-            self._viewport.height / self._content_height,
-        )
+        viewport_h = self._viewport.height
+        visible_fraction = min(1.0, viewport_h / (viewport_h + span))
         thumb_height = max(dp(14), track_height * visible_fraction)
-        max_offset = max(1, self.total_bubbles - 1)
-        # scroll_offset 0 → newest → thumb at the bottom.
-        progress = 1.0 - min(1.0, self.scroll_offset / max_offset)
+        # scroll at min → newest end shown → thumb at the bottom.
+        progress = (self._scroll - self._scroll_min) / span
         thumb_y = track_bottom + progress * (track_height - thumb_height)
         with self._root.canvas.after:
             Color(1, 1, 1, 0.18)
@@ -469,11 +572,3 @@ class ChatWidget(UboPageWidget):
                 size=(_SCROLLBAR_WIDTH, thumb_height),
                 radius=[_SCROLLBAR_WIDTH / 2],
             )
-
-    # -- PageWidget hooks ----------------------------------------------------
-
-    def go_up(self) -> None:
-        """No-op — chat scrolling is store-driven (see core MenuScrollAction)."""
-
-    def go_down(self) -> None:
-        """No-op — chat scrolling is store-driven (see core MenuScrollAction)."""

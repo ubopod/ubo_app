@@ -90,6 +90,16 @@ class ChatAppendToMessageAction(ChatAction):
     chunk: str
 
 
+class ChatSendUserMessageAction(ChatAction):
+    """A user composed and sent a text message.
+
+    The reducer turns this into a USER ``ChatMessage`` and emits
+    ``ChatUserMessageSentEvent`` — the seam a responder listens on.
+    """
+
+    text: str
+
+
 class ChatToggleAudioPlaybackAction(ChatAction):
     """Toggle play/stop on an audio message bubble."""
 
@@ -123,3 +133,14 @@ class ChatAudioPlaybackToggledEvent(ChatEvent):
 
     message_id: str
     is_playing: bool
+
+
+class ChatUserMessageSentEvent(ChatEvent):
+    """Emitted after a user message is appended to the conversation.
+
+    A responder listens on this to reply — the echo handler now, the
+    assistant service in phase 2.
+    """
+
+    text: str
+    message_id: str

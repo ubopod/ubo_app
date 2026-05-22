@@ -1,4 +1,4 @@
-// store-desktop-000
+// store-desktop-010
 {
   "bubbles": [
     {
@@ -33,7 +33,7 @@
       "is_playing": false,
       "kind": "text",
       "role": "assistant",
-      "text": ""
+      "text": "Latin America is home to roughly 660 million people acro"
     }
   ],
   "scroll_offset": 0,

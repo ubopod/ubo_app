@@ -1,9 +1,10 @@
-import { Box, Stack } from "@mui/material";
-import { useEffect, useRef } from "react";
+import { Send } from "@mui/icons-material";
+import { Box, IconButton, Stack, TextField } from "@mui/material";
+import { useEffect, useRef, useState } from "react";
 
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type { ChatBubbleData, ChatViewData } from "../bindings/ubo/v1/ubo_pb";
-import { toggleChatAudio } from "../store/action-dispatcher";
+import { sendChatMessage, toggleChatAudio } from "../store/action-dispatcher";
 
 interface ChatViewProps {
   data: ChatViewData.AsObject;
@@ -108,22 +109,62 @@ function ChatBubble({
 export function ChatView({ data, store }: ChatViewProps) {
   const bubbles = data.bubbles?.itemsList ?? [];
   const endRef = useRef<HTMLDivElement>(null);
+  const [draft, setDraft] = useState("");
 
   // Keep the newest message in view as the conversation grows.
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
   }, [bubbles.length]);
 
+  const send = () => {
+    const text = draft.trim();
+    if (!text) return;
+    sendChatMessage(store, text);
+    setDraft("");
+  };
+
   return (
-    <Stack spacing={1} sx={{ width: "100%" }}>
-      {bubbles.map((bubble, index) => (
-        <ChatBubble
-          key={bubble.messageId || `bubble-${index}`}
-          bubble={bubble}
-          store={store}
+    // Natural-height column: a capped, scrollable bubble list above a
+    // fixed input row. Not height:100% — the content area also holds the
+    // "← Chat" title block, so a full-height column would push the input
+    // off the bottom of the viewport.
+    <Box sx={{ display: "flex", flexDirection: "column", width: "100%" }}>
+      <Stack
+        spacing={1}
+        sx={{ maxHeight: "60vh", overflowY: "auto", mb: 1.5 }}
+      >
+        {bubbles.map((bubble, index) => (
+          <ChatBubble
+            key={bubble.messageId || `bubble-${index}`}
+            bubble={bubble}
+            store={store}
+          />
+        ))}
+        <div ref={endRef} />
+      </Stack>
+      <Box sx={{ display: "flex", gap: 1 }}>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="Type a message…"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              send();
+            }
+          }}
         />
-      ))}
-      <div ref={endRef} />
-    </Stack>
+        <IconButton
+          color="primary"
+          onClick={send}
+          disabled={draft.trim().length === 0}
+          aria-label="Send message"
+        >
+          <Send />
+        </IconButton>
+      </Box>
+    </Box>
   );
 }

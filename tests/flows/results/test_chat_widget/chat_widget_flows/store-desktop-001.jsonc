@@ -1,4 +1,4 @@
-// store-desktop-002
+// store-desktop-001
 {
   "bubbles": [
     {
@@ -7,13 +7,6 @@
       "kind": "text",
       "pointer_key": "",
       "role": "assistant"
-    },
-    {
-      "alignment": "right",
-      "is_playing": false,
-      "kind": "text",
-      "pointer_key": "",
-      "role": "user"
     }
   ],
   "current_view_type": "ChatViewData",
@@ -26,18 +19,10 @@
       "kind": "text",
       "role": "assistant",
       "text": "dolore magna aliqua. ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
-    },
-    {
-      "audio_id": "",
-      "id": "msg-2",
-      "is_playing": false,
-      "kind": "text",
-      "role": "user",
-      "text": "what is the population of latin american countries combined?"
     }
   ],
   "scroll_offset": 0,
-  "session_id": "chat-test",
+  "session_id": "chat-conversation",
   "stack": [
     "MenuStackItem",
     "ChatStackItem"

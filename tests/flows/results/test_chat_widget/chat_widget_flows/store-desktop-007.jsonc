@@ -1,37 +1,8 @@
-// store-desktop-006
+// store-desktop-007
 {
-  "bubbles": [
-    {
-      "alignment": "left",
-      "is_playing": false,
-      "kind": "text",
-      "pointer_key": "",
-      "role": "assistant"
-    },
-    {
-      "alignment": "right",
-      "is_playing": false,
-      "kind": "text",
-      "pointer_key": "",
-      "role": "user"
-    },
-    {
-      "alignment": "left",
-      "is_playing": false,
-      "kind": "text",
-      "pointer_key": "",
-      "role": "assistant"
-    },
-    {
-      "alignment": "right",
-      "is_playing": true,
-      "kind": "audio",
-      "pointer_key": "",
-      "role": "user"
-    }
-  ],
-  "current_view_type": "ChatViewData",
-  "is_active": true,
+  "bubbles": [],
+  "current_view_type": "HomeViewData",
+  "is_active": false,
   "messages": [
     {
       "audio_id": "",
@@ -66,10 +37,9 @@
       "text": ""
     }
   ],
-  "scroll_offset": 1,
-  "session_id": "chat-test",
+  "scroll_offset": null,
+  "session_id": "chat-conversation",
   "stack": [
-    "MenuStackItem",
-    "ChatStackItem"
+    "MenuStackItem"
   ]
 }
