@@ -1,0 +1,30 @@
+// store-desktop-017
+{
+  "bubbles": [
+    {
+      "alignment": "left",
+      "is_playing": false,
+      "kind": "text",
+      "pointer_key": "",
+      "role": "assistant"
+    }
+  ],
+  "current_view_type": "ChatViewData",
+  "is_active": true,
+  "messages": [
+    {
+      "audio_id": "",
+      "id": "long",
+      "is_playing": false,
+      "kind": "text",
+      "role": "assistant",
+      "text": "Latin America spans from Mexico down to the southern tip of Argentina and Chile, covering twenty sovereign countries plus several territories. The region is home to roughly six hundred and sixty million people who speak mostly Spanish and Portuguese, alongside hundreds of indigenous languages still in daily use. Its geography ranges from the Amazon rainforest and the Andes mountains to vast grasslands, high deserts, and long coastlines on both the Atlantic and Pacific oceans. The economies, cultures, and climates vary enormously from one country to the next."
+    }
+  ],
+  "scroll_offset": 0,
+  "session_id": "chat-scroll",
+  "stack": [
+    "MenuStackItem",
+    "ChatStackItem"
+  ]
+}

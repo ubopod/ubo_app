@@ -54,11 +54,13 @@ def _import_store_types_and_reducer() -> tuple[Any, Callable[..., Any]]:
             'ChatMessage',
             'ChatMessageKind',
             'ChatRole',
+            'ChatSendUserMessageAction',
             'ChatSessionEndedEvent',
             'ChatSessionStartedEvent',
             'ChatStartSessionAction',
             'ChatState',
             'ChatToggleAudioPlaybackAction',
+            'ChatUserMessageSentEvent',
         )
     }
     namespace['StackPushChatAction'] = core_types.StackPushChatAction
@@ -201,6 +203,30 @@ def test_append_to_message_streams_text() -> None:
         _TYPES['ChatAppendToMessageAction'](message_id='nope', chunk='!'),
     )
     assert unchanged.messages[0].text == 'Hello'
+
+
+def test_send_user_message_appends_and_emits_event() -> None:
+    """ChatSendUserMessageAction adds a user bubble and notifies responders."""
+    state = _TYPES['ChatState']()
+
+    result = reducer(
+        state,
+        _TYPES['ChatSendUserMessageAction'](text='hello there'),
+    )
+    assert isinstance(result, CompleteReducerResult)
+    assert len(result.state.messages) == 1
+    message = result.state.messages[0]
+    assert message.role == _TYPES['ChatRole'].USER
+    assert message.kind == _TYPES['ChatMessageKind'].TEXT
+    assert message.text == 'hello there'
+
+    events = list(result.events or [])
+    assert any(
+        isinstance(event, _TYPES['ChatUserMessageSentEvent'])
+        and event.text == 'hello there'
+        and event.message_id == message.id
+        for event in events
+    )
 
 
 def test_clear_action_empties_messages() -> None:

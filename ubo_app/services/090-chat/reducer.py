@@ -21,12 +21,16 @@ from ubo_app.store.services.chat import (
     ChatClearAction,
     ChatEndSessionAction,
     ChatEvent,
+    ChatMessage,
     ChatMessageKind,
+    ChatRole,
+    ChatSendUserMessageAction,
     ChatSessionEndedEvent,
     ChatSessionStartedEvent,
     ChatStartSessionAction,
     ChatState,
     ChatToggleAudioPlaybackAction,
+    ChatUserMessageSentEvent,
 )
 
 Action = InitAction | ChatAction
@@ -89,6 +93,23 @@ def reducer(
                     waveform=_waveform_for(message.audio_id or message.id),
                 )
             return replace(state, messages=(*state.messages, message))
+
+        case ChatSendUserMessageAction():
+            # Turn a sent message into a USER bubble and notify responders.
+            message = ChatMessage(
+                role=ChatRole.USER,
+                kind=ChatMessageKind.TEXT,
+                text=action.text,
+            )
+            return CompleteReducerResult(
+                state=replace(state, messages=(*state.messages, message)),
+                events=[
+                    ChatUserMessageSentEvent(
+                        text=action.text,
+                        message_id=message.id,
+                    ),
+                ],
+            )
 
         case ChatAppendToMessageAction():
             # Stream a text chunk into an existing bubble.

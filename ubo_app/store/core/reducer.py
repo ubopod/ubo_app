@@ -37,7 +37,6 @@ from ubo_app.store.core.types import (
     ApplicationScrollEvent,
     ApplicationStackItem,
     ApplicationViewData,
-    ChatStackItem,
     ChatViewData,
     CloseApplicationAction,
     CloseInstructionAction,
@@ -165,28 +164,14 @@ def reducer(
         case MenuScrollAction():
             current_view = state.current_view
             total_pages = 1
-            if isinstance(current_view, ChatViewData):
-                # Chat scroll lives in the store: ↑/↓ shift the
-                # ChatStackItem's scroll_offset, the view is recomputed,
-                # and get_chat_view_data reassigns the L1/L2/L3 pointer
-                # bindings. The renderer stays a pure renderer.
-                top = state.stack[-1] if state.stack else None
-                if not isinstance(top, ChatStackItem):
-                    return state
-                max_offset = max(0, current_view.total_bubbles - 1)
-                if action.direction == MenuScrollDirection.UP:
-                    new_offset = min(top.scroll_offset + 1, max_offset)
-                else:
-                    new_offset = max(top.scroll_offset - 1, 0)
-                if new_offset == top.scroll_offset:
-                    return state
-                new_top = replace(top, scroll_offset=new_offset)
-                new_stack = (*state.stack[:-1], new_top)
-                return CompleteReducerResult(
-                    state=replace(state, stack=new_stack),
-                    events=[StackChangedEvent(stack=new_stack)],
-                )
-            if isinstance(current_view, (ApplicationViewData, RenderViewData)):
+            if isinstance(
+                current_view,
+                (ApplicationViewData, RenderViewData, ChatViewData),
+            ):
+                # The chat overlay scrolls like an application view: the
+                # GUI client owns the pixel scroll offset (it needs
+                # rendered bubble heights), so ↑/↓ just emit a scroll
+                # event for the renderer to pan its content.
                 direction = (
                     'up'
                     if action.direction == MenuScrollDirection.UP

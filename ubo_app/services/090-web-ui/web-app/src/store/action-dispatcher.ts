@@ -15,6 +15,7 @@ import {
   AudioSetMuteStatusAction,
   AudioSetVolumeAction,
   AudioToggleMuteStatusAction,
+  ChatSendUserMessageAction,
   ChatToggleAudioPlaybackAction,
   ExecuteMenuActionAction,
   MenuChooseByIndexAction,
@@ -119,6 +120,17 @@ export function toggleChatAudio(
   toggle.setMessageId(messageId);
   const action = new Action();
   action.setChatToggleAudioPlaybackAction(toggle);
+  dispatch(store, action);
+}
+
+export function sendChatMessage(
+  store: StoreServiceClient,
+  text: string,
+): void {
+  const send = new ChatSendUserMessageAction();
+  send.setText(text);
+  const action = new Action();
+  action.setChatSendUserMessageAction(send);
   dispatch(store, action);
 }
 

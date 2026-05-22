@@ -1,4 +1,4 @@
-// store-desktop-005
+// store-desktop-006
 {
   "bubbles": [
     {
@@ -67,7 +67,7 @@
     }
   ],
   "scroll_offset": 0,
-  "session_id": "chat-test",
+  "session_id": "chat-conversation",
   "stack": [
     "MenuStackItem",
     "ChatStackItem"

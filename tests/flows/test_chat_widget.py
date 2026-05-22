@@ -1,17 +1,20 @@
 """Chat widget window-snapshot test harness.
 
-Boots a minimal app (the ``chat`` + ``keypad`` services only) and drives a
-deterministic conversation through the Redux store — mock assistant/user
-text bubbles and an audio bubble — capturing window + store snapshots at
-every milestone.
+Boots a minimal app (the ``chat`` + ``keypad`` services only) **once** and
+drives every chat-widget scenario through it — a full conversation, text
+streaming, the echo round-trip, and long-message scrolling — capturing
+window + store snapshots at every milestone. Booting is expensive (~45s
+plus the first-capture cost), so all scenarios share a single session;
+each begins with ``ChatStartSessionAction``, which fully resets the chat
+state, keeping them independent. Snapshot titles are prefixed per scenario.
 
 Phase 1: run locally with ``--override-window-snapshots --make-screenshots
 --override-store-snapshots`` to produce reviewable PNG screenshots under
 ``tests/flows/results/test_chat_widget/`` and check them against the mock-up.
 Then run in Docker to generate the ``rpi`` hash baselines.
 
-Button input (L3 to toggle audio, UP to scroll) goes through *real gRPC
-keypad presses* via the ``dispatcher`` fixture — never a direct
+Button input (L3 to toggle audio, UP/DOWN to scroll) goes through *real
+gRPC keypad presses* via the ``dispatcher`` fixture — never a direct
 ``store.dispatch`` — so the test exercises the same path as the hardware.
 """
 
@@ -40,6 +43,19 @@ _ASSISTANT_TEXT = (
     'exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'
 )
 _USER_TEXT = 'what is the population of latin american countries combined?'
+
+# A reply far taller than the 240px screen, to exercise scrolling.
+_LONG_TEXT = (
+    'Latin America spans from Mexico down to the southern tip of '
+    'Argentina and Chile, covering twenty sovereign countries plus '
+    'several territories. The region is home to roughly six hundred and '
+    'sixty million people who speak mostly Spanish and Portuguese, '
+    'alongside hundreds of indigenous languages still in daily use. Its '
+    'geography ranges from the Amazon rainforest and the Andes mountains '
+    'to vast grasslands, high deserts, and long coastlines on both the '
+    'Atlantic and Pacific oceans. The economies, cultures, and climates '
+    'vary enormously from one country to the next.'
+)
 
 
 def _normalize_chat(state: RootState) -> dict[str, Any]:
@@ -107,8 +123,8 @@ async def _boot_minimal_app(
     return unload_waiter
 
 
-@pytest.mark.timeout(200)
-async def test_chat_conversation_flow(
+@pytest.mark.timeout(400)
+async def test_chat_widget_flows(
     app_context: AppContext,
     window_snapshot: WindowSnapshot,
     store_snapshot: StoreSnapshot[RootState],
@@ -117,19 +133,23 @@ async def test_chat_conversation_flow(
     wait_for: WaitFor,
     dispatcher: Dispatcher,
 ) -> None:
-    """Drive a full chat session: text bubbles, an audio bubble, scroll.
+    """Every chat-widget scenario, driven through one shared app boot.
 
-    Captures a window + store snapshot at each milestone. Pressing L3
-    toggles the audio bubble; pressing UP scrolls back into history — both
-    via real gRPC keypad presses.
+    Scenarios run back to back — a full conversation, character streaming,
+    the echo round-trip, and long-message scrolling. Each starts with
+    ``ChatStartSessionAction`` (a full chat reset), so they stay
+    independent despite sharing the session. Window + store snapshots are
+    captured at each milestone with a per-scenario title prefix.
     """
     from ubo_app.store.main import store
     from ubo_app.store.services.chat import (
         ChatAddMessageAction,
+        ChatAppendToMessageAction,
         ChatEndSessionAction,
         ChatMessage,
         ChatMessageKind,
         ChatRole,
+        ChatSendUserMessageAction,
         ChatStartSessionAction,
     )
     from ubo_app.store.services.keypad import Key
@@ -140,12 +160,13 @@ async def test_chat_conversation_flow(
         window_snapshot.take(title=title)
         store_snapshot.take(selector=_normalize_chat)
 
-    # --- Stage 1: open an empty chat overlay -----------------------------
-    store.dispatch(ChatStartSessionAction(session_id='chat-test'))
+    # ================================================================
+    # Scenario 1 — a full conversation: text bubbles, audio, scroll.
+    # ================================================================
+    store.dispatch(ChatStartSessionAction(session_id='chat-conversation'))
     await stability(initial_wait=4)
-    snap('01-empty')
+    snap('conversation-01-empty')
 
-    # --- Stage 2: assistant text bubble ----------------------------------
     store.dispatch(
         ChatAddMessageAction(
             message=ChatMessage(
@@ -158,9 +179,8 @@ async def test_chat_conversation_flow(
         ),
     )
     await stability(initial_wait=2)
-    snap('02-assistant-text')
+    snap('conversation-02-assistant-text')
 
-    # --- Stage 3: user text bubble ---------------------------------------
     store.dispatch(
         ChatAddMessageAction(
             message=ChatMessage(
@@ -173,9 +193,8 @@ async def test_chat_conversation_flow(
         ),
     )
     await stability(initial_wait=2)
-    snap('03-user-text')
+    snap('conversation-03-user-text')
 
-    # --- Stage 4: assistant reply ----------------------------------------
     store.dispatch(
         ChatAddMessageAction(
             message=ChatMessage(
@@ -188,9 +207,8 @@ async def test_chat_conversation_flow(
         ),
     )
     await stability(initial_wait=2)
-    snap('04-assistant-reply')
+    snap('conversation-04-assistant-reply')
 
-    # --- Stage 5: user audio bubble (bound to L3) ------------------------
     store.dispatch(
         ChatAddMessageAction(
             message=ChatMessage(
@@ -203,58 +221,26 @@ async def test_chat_conversation_flow(
         ),
     )
     await stability(initial_wait=2)
-    snap('05-audio-bubble')
+    snap('conversation-05-audio-bubble')
 
-    # --- Stage 6: press L3 → audio bubble starts "playing" ---------------
+    # Press L3 → the audio bubble starts "playing".
     await dispatcher.send_key(Key.L3)
     await stability(initial_wait=2)
-    snap('06-audio-playing')
+    snap('conversation-06-audio-playing')
 
-    # --- Stage 7: press UP → scroll back into history --------------------
+    # Press UP → scroll back into history.
     await dispatcher.send_key(Key.UP)
     await stability(initial_wait=2)
-    snap('07-scrolled')
+    snap('conversation-07-scrolled')
 
-    # --- Stage 8: end the session → overlay closes -----------------------
+    # End the session → the overlay closes.
     store.dispatch(ChatEndSessionAction())
     await stability(initial_wait=2)
-    snap('08-closed')
+    snap('conversation-08-closed')
 
-    await unload_waiter()
-
-
-@pytest.mark.timeout(200)
-async def test_chat_text_streaming(
-    app_context: AppContext,
-    window_snapshot: WindowSnapshot,
-    store_snapshot: StoreSnapshot[RootState],
-    load_services: LoadServices,
-    stability: Stability,
-    wait_for: WaitFor,
-) -> None:
-    """Stream an assistant reply into a bubble one character at a time.
-
-    Proves the chat widget renders streamed text: an empty assistant bubble
-    is created, then ``ChatAppendToMessageAction`` chunks arrive character
-    by character. The bubble wraps and grows to fit as the text lengthens.
-    """
-    from ubo_app.store.main import store
-    from ubo_app.store.services.chat import (
-        ChatAddMessageAction,
-        ChatAppendToMessageAction,
-        ChatMessage,
-        ChatMessageKind,
-        ChatRole,
-        ChatStartSessionAction,
-    )
-
-    unload_waiter = await _boot_minimal_app(app_context, load_services, wait_for)
-
-    def snap(title: str) -> None:
-        window_snapshot.take(title=title)
-        store_snapshot.take(selector=_normalize_chat)
-
-    # --- A user question, then an empty assistant bubble to stream into --
+    # ================================================================
+    # Scenario 2 — stream an assistant reply character by character.
+    # ================================================================
     store.dispatch(ChatStartSessionAction(session_id='chat-stream'))
     store.dispatch(
         ChatAddMessageAction(
@@ -278,15 +264,14 @@ async def test_chat_text_streaming(
             ),
         ),
     )
-    await stability(initial_wait=4)
-    snap('01-empty-reply')
+    await stability(initial_wait=2)
+    snap('streaming-01-empty-reply')
 
-    # --- Stream the reply character by character -------------------------
     reply = (
         'Latin America is home to roughly 660 million people '
         'across 20 countries.'
     )
-    checkpoints = {24: '02-streaming-early', 56: '03-streaming-mid'}
+    checkpoints = {24: 'streaming-02-streaming-early', 56: 'streaming-03-mid'}
     for index, character in enumerate(reply, start=1):
         store.dispatch(
             ChatAppendToMessageAction(message_id='msg-stream', chunk=character),
@@ -297,6 +282,71 @@ async def test_chat_text_streaming(
             snap(checkpoints[index])
 
     await stability(initial_wait=2)
-    snap('04-streaming-complete')
+    snap('streaming-04-complete')
+
+    # ================================================================
+    # Scenario 3 — a sent user message is echoed back by the service.
+    # ================================================================
+    store.dispatch(ChatStartSessionAction(session_id='chat-echo'))
+    await stability(initial_wait=2)
+    snap('echo-01-opened')
+
+    store.dispatch(ChatSendUserMessageAction(text='hello there'))
+    await stability(initial_wait=2)
+    snap('echo-02-echoed')
+
+    state = store._state  # noqa: SLF001
+    assert state is not None
+    conversation = [
+        (message.role.value, message.text)
+        for message in state.chat.messages
+    ]
+    assert conversation == [
+        ('user', 'hello there'),
+        ('assistant', 'echo=> hello there'),
+    ]
+
+    # ================================================================
+    # Scenario 4 — a message taller than the screen scrolls fully.
+    # ================================================================
+    store.dispatch(ChatStartSessionAction(session_id='chat-scroll'))
+    store.dispatch(
+        ChatAddMessageAction(
+            message=ChatMessage(
+                id='long',
+                role=ChatRole.ASSISTANT,
+                kind=ChatMessageKind.TEXT,
+                text=_LONG_TEXT,
+                timestamp=0,
+            ),
+        ),
+    )
+    # Bottom-anchored by default — the end of the message is visible.
+    await stability(initial_wait=2)
+    snap('scroll-01-bottom')
+    hash_bottom = window_snapshot.hash
+
+    # Press UP — pan toward the start of the message.
+    await dispatcher.send_key(Key.UP)
+    await stability(initial_wait=2)
+    snap('scroll-02-scrolled-up')
+    hash_up = window_snapshot.hash
+    assert hash_up != hash_bottom, 'pressing UP must scroll the long message'
+
+    # Keep scrolling up toward the very start.
+    for _ in range(5):
+        await dispatcher.send_key(Key.UP)
+    await stability(initial_wait=2)
+    snap('scroll-03-near-top')
+    assert window_snapshot.hash != hash_up, 'further UP presses must keep scrolling'
+
+    # Scroll all the way back down — returns to the end.
+    for _ in range(10):
+        await dispatcher.send_key(Key.DOWN)
+    await stability(initial_wait=2)
+    snap('scroll-04-back-at-bottom')
+    assert window_snapshot.hash == hash_bottom, (
+        'scrolling back down must return to the end of the message'
+    )
 
     await unload_waiter()
