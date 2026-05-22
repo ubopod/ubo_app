@@ -1,4 +1,3 @@
-# ruff: noqa
 """Disposable end-to-end test for the assistant's gRPC pipeline.
 
 Boots the ubo app, waits for the assistant service to come up, then runs one
@@ -101,7 +100,7 @@ LLM_TIMEOUT = 90.0  # seconds to wait for an LLM completion
 CHAIN_TIMEOUT = 90.0  # seconds to wait for a multi-stage chain (STT/LLM/TTS)
 
 APP_LOG_PATH = REPO_ROOT / 'ubo-app-roundtrip.log'
-TTS_WAV_PATH = Path('/tmp/ubo-roundtrip-tts.wav')
+TTS_WAV_PATH = Path('/tmp/ubo-roundtrip-tts.wav')  # noqa: S108
 
 # Pass thresholds for STT — it is lossy, so lean on keyword coverage.
 MIN_SIMILARITY_RATIO = 0.6
@@ -157,9 +156,13 @@ def launch_app() -> subprocess.Popen:
     env.pop('VIRTUAL_ENV', None)
     env.pop('UV_PROJECT_ENVIRONMENT', None)
 
-    logger.info('Launching app: %s (logs -> %s)', ' '.join(LAUNCH_COMMAND), APP_LOG_PATH)
+    logger.info(
+        'Launching app: %s (logs -> %s)',
+        ' '.join(LAUNCH_COMMAND),
+        APP_LOG_PATH,
+    )
     log_file = APP_LOG_PATH.open('wb')
-    return subprocess.Popen(
+    return subprocess.Popen(  # noqa: S603
         LAUNCH_COMMAND,
         cwd=REPO_ROOT,
         env=env,
@@ -181,8 +184,8 @@ def kill_stale_ubo_processes() -> None:
             subprocess.run(['pkill', '-9', '-f', pattern], check=False)  # noqa: S603, S607
     # Free the gRPC port if a zombie still holds it.
     with contextlib.suppress(Exception):
-        result = subprocess.run(  # noqa: S603, S607
-            ['lsof', '-ti', f'tcp:{GRPC_PORT}'],
+        result = subprocess.run(  # noqa: S603
+            ['lsof', '-ti', f'tcp:{GRPC_PORT}'],  # noqa: S607
             capture_output=True,
             text=True,
             check=False,
@@ -210,7 +213,10 @@ def wait_for_grpc(host: str, port: int, timeout: float) -> bool:
     """Block until the gRPC TCP port accepts connections, or the timeout elapses."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        with contextlib.suppress(OSError), socket.create_connection((host, port), timeout=2):
+        with (
+            contextlib.suppress(OSError),
+            socket.create_connection((host, port), timeout=2),
+        ):
             return True
         time.sleep(1.0)
     return False
@@ -258,7 +264,10 @@ class _SessionCollector:
             self.done.set()
 
 
-def _new_session(sessions: dict[str, _SessionCollector], prefix: str) -> _SessionCollector:
+def _new_session(
+    sessions: dict[str, _SessionCollector],
+    prefix: str,
+) -> _SessionCollector:
     collector = _SessionCollector(
         session_id=f'{prefix}-{uuid.uuid4().hex}',
         done=asyncio.Event(),
@@ -332,7 +341,7 @@ async def _run_pipeline(
     collector: _SessionCollector,
     *,
     stages: list[AssistantPipelineStage],
-    timeout: float,
+    timeout: float,  # noqa: ASYNC109
     text: str = '',
     audio: bytes = b'',
     sample_rate: int = 16000,
@@ -494,7 +503,7 @@ async def _scenario_llm_tts(
     sessions: dict[str, _SessionCollector],
     provider_name: str,
 ) -> ScenarioResult:
-    """text -> LLM -> TTS chain; the spoken output is fed to STT to verify it.
+    """Text -> LLM -> TTS chain; the spoken output is fed to STT to verify it.
 
     The LLM is asked to echo a fixed, STT-robust sentence so the assertion does
     not hinge on Vosk transcribing a short, free-form answer.
@@ -688,9 +697,11 @@ def main() -> int:
         kill_stale_ubo_processes()
         time.sleep(1.0)
         port_in_use = False
-        with contextlib.suppress(OSError):
-            with socket.create_connection((GRPC_HOST, GRPC_PORT), timeout=1):
-                port_in_use = True
+        with (
+            contextlib.suppress(OSError),
+            socket.create_connection((GRPC_HOST, GRPC_PORT), timeout=1),
+        ):
+            port_in_use = True
         if port_in_use:
             logger.error(
                 'port %d still in use after cleanup — aborting (kill it manually)',
