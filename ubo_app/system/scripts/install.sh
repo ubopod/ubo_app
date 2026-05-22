@@ -178,7 +178,7 @@ fi
 echo "Adding user $USERNAME to required groups..."
 usermod -aG adm,audio,video,i2c,kmem,render "$USERNAME"
 if [ "$IS_RPI" = true ]; then
-  usermod -aG gpio,spi "$USERNAME"
+  usermod -aG gpio,spi,bluetooth "$USERNAME"
 fi
 
 if grep -q "XDG_RUNTIME_DIR" "/home/$USERNAME/.bashrc"; then

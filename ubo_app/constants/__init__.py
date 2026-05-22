@@ -96,6 +96,7 @@ NOTIFICATIONS_FLASH_TIME = 4
 CORE_SERVICE_IDS = [
     'assistant',
     'audio',
+    'bluetooth',
     'camera',
     'display',
     'docker',

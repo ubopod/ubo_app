@@ -151,6 +151,12 @@
     "playback_volume": 0.15,
     "recording": null
   },
+  "bluetooth": {
+    "_type": "BluetoothState",
+    "devices": [],
+    "is_powered": false,
+    "is_scanning": false
+  },
   "camera": {
     "_type": "CameraState",
     "available_cameras": [],
@@ -487,6 +493,17 @@
         "key": "assistant:tts",
         "label": "Speech Synthesis",
         "priority": 30
+      },
+      "bluetooth:": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Network",
+        "icon": "󰂯",
+        "key": "bluetooth:",
+        "label": "Bluetooth",
+        "priority": 1
       },
       "camera:": {
         "_type": "RegisteredAppEntry",
@@ -837,6 +854,7 @@
       "assistant:providers": 10,
       "assistant:stt": 50,
       "assistant:tts": 30,
+      "bluetooth:": 1,
       "camera:": 1,
       "display:": 10,
       "docker:registries": 2,
@@ -869,6 +887,11 @@
           "_type": "StatusIconData",
           "color": "white",
           "symbol": "󰍭"
+        },
+        {
+          "_type": "StatusIconData",
+          "color": "white",
+          "symbol": "󰂲"
         },
         {
           "_type": "StatusIconData",
@@ -946,6 +969,16 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Audio",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
+      "bluetooth": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "bluetooth",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "Bluetooth",
         "log_level": 20,
         "should_auto_restart": false
       },
@@ -1091,7 +1124,13 @@
       },
       "speech_recognition": {
         "_type": "ServiceState",
-        "errors": [],
+        "errors": [
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/ubo-app/ubo_app/store/main.py\", line 585, in wrapper\n    super_.call(*args, **kwargs)\n  File \"/venv/lib/python3.11/site-packages/redux/autorun.py\", line 271, in call\n    value: ReturnType = call_func(\n                        ^^^^^^^^^^\n  File \"/venv/lib/python3.11/site-packages/redux/utils.py\", line 49, in call_func\n    return func(*injecting_args, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/services/090-speech-recognition/setup.py\", line 203, in recognition_engine_items\n    register_action(action_id, engine.setup)\n  File \"/ubo-app/ubo_app/store/core/action_registry.py\", line 52, in register_action\n    return _registry.register(action_id, handler, allow_reregister=allow_reregister)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/store/core/handler_registry.py\", line 91, in register\n    raise ValueError(msg)\nValueError: Action 'speech-recognition:setup-engine:vosk' is already registered\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/root/.local/share/uv/python/cpython-3.11.15-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/.local/share/uv/python/cpython-3.11.15-linux-aarch64-gnu/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/store/main.py\", line 595, in wrapper\n    report_service_error()\n  File \"/ubo-app/ubo_app/utils/error_handlers.py\", line 225, in report_service_error\n    service_id = get_service().service_id\n                 ^^^^^^^^^^^^^\n  File \"/ubo-app/ubo_app/utils/service.py\", line 47, in get_service\n    raise ServiceUnavailableError(msg)\nubo_app.utils.service.ServiceUnavailableError: Service is not available.\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] Service is not available.\n\n[b]future:[/b] <Task finished name='Task-1336' coro=<to_thread() done, defined at /root/.local/share/uv/python/cpython-3.11.15-linux-aarch64-gnu/lib/python3.11/asyncio/threads.py:12> exception=ServiceUnavailableError('Service is not available.')>",
+            "timestamp": 1672531200.0
+          }
+        ],
         "id": "speech_recognition",
         "is_active": true,
         "is_enabled": true,
@@ -1374,6 +1413,14 @@
         "priority": -20,
         "service_id": "audio",
         "symbol": "󰍭"
+      },
+      {
+        "_type": "IconState",
+        "color": "white",
+        "id": "bluetooth:state",
+        "priority": -13,
+        "service_id": "bluetooth",
+        "symbol": "󰂲"
       },
       {
         "_type": "IconState",

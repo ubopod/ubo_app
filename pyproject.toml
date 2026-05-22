@@ -289,6 +289,10 @@ root = "ubo_app/services/020-keyboard"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/030-bluetooth"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/030-ethernet"
 extraPaths = ["."]
 

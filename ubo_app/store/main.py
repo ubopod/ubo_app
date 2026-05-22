@@ -91,6 +91,11 @@ if TYPE_CHECKING:
         AssistantState,
     )
     from ubo_app.store.services.audio import AudioAction, AudioEvent, AudioState
+    from ubo_app.store.services.bluetooth import (
+        BluetoothAction,
+        BluetoothEvent,
+        BluetoothState,
+    )
     from ubo_app.store.services.camera import CameraAction, CameraEvent, CameraState
     from ubo_app.store.services.display import DisplayAction, DisplayEvent, DisplayState
     from ubo_app.store.services.docker import DockerAction, DockerState
@@ -151,6 +156,7 @@ UboAction: TypeAlias = Union[
     # Services Actions
     'AssistantAction',
     'AudioAction',
+    'BluetoothAction',
     'CameraAction',
     'DisplayAction',
     'DockerAction',
@@ -179,6 +185,7 @@ UboEvent: TypeAlias = Union[
     # Services Events
     'AssistantEvent',
     'AudioEvent',
+    'BluetoothEvent',
     'CameraEvent',
     'DisplayEvent',
     'FileSystemEvent',
@@ -205,6 +212,7 @@ class RootState(BaseCombineReducerState):
 
     assistant: AssistantState
     audio: AudioState
+    bluetooth: BluetoothState
     camera: CameraState
     display: DisplayState
     docker: DockerState
