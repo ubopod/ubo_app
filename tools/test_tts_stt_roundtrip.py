@@ -1,23 +1,29 @@
 # ruff: noqa
-"""Disposable end-to-end test: TTS/STT round-trip + LLM completion over gRPC.
+"""Disposable end-to-end test for the assistant's gRPC pipeline.
 
-Boots the ubo app, waits for the assistant service to come up, then runs a set
-of scenarios against the gRPC API:
+Boots the ubo app, waits for the assistant service to come up, then runs one
+scenario per pipeline shape against the gRPC API:
 
-  1. TTS -> STT round-trip: synthesize a sentence with Piper, feed the audio to
-     Vosk, fuzzy- + keyword-compare the transcription against the original.
-  2. LLM completion for each configured provider (openai, anthropic, ...),
-     selecting the provider per-request over the gRPC API — this also exercises
-     programmatic provider selection / service switching.
+  - tts-stt-roundtrip  — synthesize a sentence, transcribe it back, fuzzy-match.
+  - llm-<provider>     — LLM completion, provider selected per-request over gRPC
+    (exercises programmatic provider selection / service switching).
+  - llm-tts-<provider> — text -> LLM -> TTS; the LLM echoes a fixed sentence and
+    the spoken output is fed back through STT and fuzzy-matched.
+  - stt-llm-<provider> — STT -> LLM -> text; the input audio is TTS-generated.
 
-This is a standalone scratch script — NOT wired into the pytest suite or any
-test fixtures. Run it from the repo root:
+This is a standalone manual test — NOT wired into the pytest suite or CI (see
+tools/test_tts_stt_roundtrip.md for the deferred CI/CD integration plan). Run it
+from the repo root on a machine where the providers are set up:
 
     uv run python tools/test_tts_stt_roundtrip.py
 
-Exit code 0 = all scenarios passed, 1 = at least one failed. The app's output
-is teed to ./ubo-app-roundtrip.log and the synthesized audio is written to
-/tmp/ubo-roundtrip-tts.wav for inspection.
+A scenario whose STT/TTS/LLM provider is not set up is SKIPPED with an explicit
+message — not failed — so the test degrades gracefully. Point TTS_PROVIDER /
+STT_PROVIDER / LLM_PROVIDERS at whatever is available on this machine.
+
+Exit code 0 = nothing failed (skips are fine), 1 = at least one scenario failed.
+The app's output is teed to ./ubo-app-roundtrip.log and the synthesized audio
+to /tmp/ubo-roundtrip-tts.wav for inspection.
 """
 
 from __future__ import annotations
@@ -78,6 +84,14 @@ LLM_PROVIDERS = ['openai', 'anthropic']
 LLM_QUESTION = 'What color is the sky?'
 LLM_SYSTEM_PROMPT = 'Answer the question in one short, plain English sentence.'
 LLM_EXPECTED_KEYWORD = 'blue'
+# The llm-tts chain feeds the LLM's *spoken* output through STT, so it must be a
+# long, STT-robust phrase — a short free-form answer ("The sky is blue.") gets
+# mangled by the small Vosk model. The LLM is asked to echo TEST_SENTENCE
+# verbatim, and the transcription is fuzzy-matched against it.
+LLM_ECHO_PROMPT = (
+    'Repeat the user message back to me exactly, word for word, with no '
+    'additions, preface, or commentary.'
+)
 
 GRPC_UP_TIMEOUT = 120.0  # seconds to wait for the core gRPC server
 ASSISTANT_UP_BUDGET = 240.0  # total seconds to keep retrying for the assistant
@@ -104,11 +118,30 @@ _LLM_PROVIDER_BY_NAME = {
 
 @dataclass
 class ScenarioResult:
-    """Outcome of one test scenario."""
+    """Outcome of one test scenario — status is 'PASS', 'FAIL' or 'SKIP'."""
 
     name: str
-    passed: bool
+    status: str
     detail: str
+
+
+# Error-frame messages from the request handler that mean a provider is simply
+# not set up on this machine (vs. a genuine failure). These turn a scenario into
+# SKIP rather than FAIL — see _resolve_stage_services in request_handler.py.
+_UNAVAILABLE_MARKERS = ('not available', 'not configured', 'unknown ')
+
+
+def _is_provider_unavailable(error: str) -> bool:
+    """Whether an error-frame message means a provider is not set up."""
+    low = error.lower()
+    return any(marker in low for marker in _UNAVAILABLE_MARKERS)
+
+
+def _from_error(name: str, error: str) -> ScenarioResult:
+    """Classify an error-frame message into a SKIP (not set up) or FAIL result."""
+    if _is_provider_unavailable(error):
+        return ScenarioResult(name, 'SKIP', f'provider not set up: {error}')
+    return ScenarioResult(name, 'FAIL', error)
 
 
 # --- app lifecycle -----------------------------------------------------------
@@ -383,15 +416,22 @@ async def _scenario_tts_stt(
     while time.monotonic() < deadline:
         collector = _new_session(sessions, 'roundtrip-tts')
         await _synthesize(client, collector)
+        # An error frame means the assistant IS up — it just can't serve this
+        # provider (skip) or hit a real failure (fail).
         if collector.error:
-            return ScenarioResult(name, False, f'TTS error: {collector.error}')
+            return _from_error(name, collector.error)
         if collector.audio:
             tts = collector
             break
         logger.info('  no audio yet — assistant still starting, retrying...')
 
     if tts is None or not tts.audio:
-        return ScenarioResult(name, False, f'no TTS audio within {ASSISTANT_UP_BUDGET}s')
+        # No response at all within the budget — the assistant never came up.
+        return ScenarioResult(
+            name,
+            'FAIL',
+            f'assistant produced no response within {ASSISTANT_UP_BUDGET}s',
+        )
 
     pcm = bytes(tts.audio)
     logger.info(
@@ -406,18 +446,18 @@ async def _scenario_tts_stt(
     stt = _new_session(sessions, 'roundtrip-stt')
     await _transcribe(client, stt, pcm, tts.sample_rate or 16000, tts.num_channels or 1)
     if stt.error:
-        return ScenarioResult(name, False, f'STT error: {stt.error}')
+        return _from_error(name, stt.error)
 
     transcription = ' '.join(stt.text_parts).strip()
     logger.info('[%s] original:    %r', name, TEST_SENTENCE)
     logger.info('[%s] transcribed: %r', name, transcription)
     if not transcription:
-        return ScenarioResult(name, False, 'STT produced no transcription')
+        return ScenarioResult(name, 'FAIL', 'STT produced no transcription')
 
     ratio, coverage, passed = compare(TEST_SENTENCE, transcription)
     return ScenarioResult(
         name,
-        passed,
+        'PASS' if passed else 'FAIL',
         f'ratio={ratio:.2f} coverage={coverage:.2f} -> {transcription!r}',
     )
 
@@ -431,22 +471,22 @@ async def _scenario_llm(
     name = f'llm-{provider_name}'
     provider = _LLM_PROVIDER_BY_NAME.get(provider_name)
     if provider is None:
-        return ScenarioResult(name, False, f'unknown LLM provider id: {provider_name}')
+        return ScenarioResult(name, 'FAIL', f'unknown LLM provider id: {provider_name}')
 
     logger.info('[%s] asking %r ...', name, LLM_QUESTION)
     collector = _new_session(sessions, f'roundtrip-llm-{provider_name}')
     await _complete(client, collector, provider)
     if collector.error:
-        return ScenarioResult(name, False, f'LLM error: {collector.error}')
+        return _from_error(name, collector.error)
 
     response = ' '.join(collector.text_parts).strip()
     logger.info('[%s] response: %r', name, response)
     if not response:
-        return ScenarioResult(name, False, 'LLM produced no response')
+        return ScenarioResult(name, 'FAIL', 'LLM produced no response')
 
-    passed = LLM_EXPECTED_KEYWORD in response.lower()
+    status = 'PASS' if LLM_EXPECTED_KEYWORD in response.lower() else 'FAIL'
     detail = f'{response!r} (expected keyword {LLM_EXPECTED_KEYWORD!r})'
-    return ScenarioResult(name, passed, detail)
+    return ScenarioResult(name, status, detail)
 
 
 async def _scenario_llm_tts(
@@ -454,29 +494,33 @@ async def _scenario_llm_tts(
     sessions: dict[str, _SessionCollector],
     provider_name: str,
 ) -> ScenarioResult:
-    """text -> LLM -> TTS chain; the spoken answer is fed to STT to verify it."""
+    """text -> LLM -> TTS chain; the spoken output is fed to STT to verify it.
+
+    The LLM is asked to echo a fixed, STT-robust sentence so the assertion does
+    not hinge on Vosk transcribing a short, free-form answer.
+    """
     name = f'llm-tts-{provider_name}'
     provider = _LLM_PROVIDER_BY_NAME.get(provider_name)
     if provider is None:
-        return ScenarioResult(name, False, f'unknown LLM provider id: {provider_name}')
+        return ScenarioResult(name, 'FAIL', f'unknown LLM provider id: {provider_name}')
 
-    # text -> LLM -> TTS  =>  audio of the assistant speaking its answer
+    # text -> LLM -> TTS  =>  audio of the assistant speaking the echoed sentence
     logger.info('[%s] running text -> LLM -> TTS ...', name)
     spoken = _new_session(sessions, f'roundtrip-llmtts-{provider_name}')
     await _run_pipeline(
         client,
         spoken,
         stages=[AssistantPipelineStage.LLM, AssistantPipelineStage.TTS],
-        text=LLM_QUESTION,
+        text=TEST_SENTENCE,
         llm_provider=provider,
         tts_provider=TTS_PROVIDER,
-        system_prompt=LLM_SYSTEM_PROMPT,
+        system_prompt=LLM_ECHO_PROMPT,
         timeout=CHAIN_TIMEOUT,
     )
     if spoken.error:
-        return ScenarioResult(name, False, f'LLM->TTS error: {spoken.error}')
+        return _from_error(name, spoken.error)
     if not spoken.audio:
-        return ScenarioResult(name, False, 'LLM->TTS produced no audio')
+        return ScenarioResult(name, 'FAIL', 'LLM->TTS produced no audio')
 
     # audio -> STT  =>  transcription of the spoken answer, for assertion
     heard = _new_session(sessions, f'roundtrip-llmtts-stt-{provider_name}')
@@ -491,15 +535,15 @@ async def _scenario_llm_tts(
         timeout=TRANSCRIPTION_TIMEOUT,
     )
     if heard.error:
-        return ScenarioResult(name, False, f'STT error: {heard.error}')
+        return _from_error(name, heard.error)
 
     transcription = ' '.join(heard.text_parts).strip()
-    logger.info('[%s] spoken answer transcribed back as: %r', name, transcription)
-    passed = LLM_EXPECTED_KEYWORD in transcription.lower()
+    logger.info('[%s] echoed sentence transcribed back as: %r', name, transcription)
+    ratio, coverage, passed = compare(TEST_SENTENCE, transcription)
     return ScenarioResult(
         name,
-        passed,
-        f'{transcription!r} (expected keyword {LLM_EXPECTED_KEYWORD!r})',
+        'PASS' if passed else 'FAIL',
+        f'ratio={ratio:.2f} coverage={coverage:.2f} -> {transcription!r}',
     )
 
 
@@ -512,7 +556,7 @@ async def _scenario_stt_llm(
     name = f'stt-llm-{provider_name}'
     provider = _LLM_PROVIDER_BY_NAME.get(provider_name)
     if provider is None:
-        return ScenarioResult(name, False, f'unknown LLM provider id: {provider_name}')
+        return ScenarioResult(name, 'FAIL', f'unknown LLM provider id: {provider_name}')
 
     # TTS-generate the spoken question — input audio for the STT -> LLM chain
     logger.info('[%s] synthesizing the spoken question ...', name)
@@ -526,9 +570,9 @@ async def _scenario_stt_llm(
         timeout=SYNTHESIS_TIMEOUT,
     )
     if question.error:
-        return ScenarioResult(name, False, f'question TTS error: {question.error}')
+        return _from_error(name, question.error)
     if not question.audio:
-        return ScenarioResult(name, False, 'question TTS produced no audio')
+        return ScenarioResult(name, 'FAIL', 'question TTS produced no audio')
 
     # audio -> STT -> LLM  =>  the assistant's text answer
     logger.info('[%s] running STT -> LLM ...', name)
@@ -546,17 +590,17 @@ async def _scenario_stt_llm(
         timeout=CHAIN_TIMEOUT,
     )
     if answer.error:
-        return ScenarioResult(name, False, f'STT->LLM error: {answer.error}')
+        return _from_error(name, answer.error)
 
     response = ' '.join(answer.text_parts).strip()
     logger.info('[%s] answer: %r', name, response)
     if not response:
-        return ScenarioResult(name, False, 'STT->LLM produced no response')
+        return ScenarioResult(name, 'FAIL', 'STT->LLM produced no response')
 
-    passed = LLM_EXPECTED_KEYWORD in response.lower()
+    status = 'PASS' if LLM_EXPECTED_KEYWORD in response.lower() else 'FAIL'
     return ScenarioResult(
         name,
-        passed,
+        status,
         f'{response!r} (expected keyword {LLM_EXPECTED_KEYWORD!r})',
     )
 
@@ -606,14 +650,22 @@ async def _main_async() -> int:
     finally:
         client.close()
 
-    failed = [r for r in results if not r.passed]
+    failed = [r for r in results if r.status == 'FAIL']
+    skipped = [r for r in results if r.status == 'SKIP']
+    passed = [r for r in results if r.status == 'PASS']
     logger.info('=== SCENARIO RESULTS ===')
     for result in results:
+        logger.info('  [%s] %-22s : %s', result.status, result.name, result.detail)
+    logger.info(
+        'summary: %d passed, %d skipped, %d failed',
+        len(passed),
+        len(skipped),
+        len(failed),
+    )
+    if skipped:
         logger.info(
-            '  [%s] %-22s : %s',
-            'PASS' if result.passed else 'FAIL',
-            result.name,
-            result.detail,
+            'skipped scenarios need an STT/TTS/LLM provider that is not set up '
+            'here — expected, not a failure.',
         )
     return 0 if not failed else 1
 
