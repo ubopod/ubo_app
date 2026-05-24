@@ -147,6 +147,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'ChatSendUserMessageAction': 'ubo_app.store.services.chat',
     'ChatSessionEndedEvent': 'ubo_app.store.services.chat',
     'ChatSessionStartedEvent': 'ubo_app.store.services.chat',
+    'ChatSetMessageTextAction': 'ubo_app.store.services.chat',
     'ChatStackItem': 'ubo_app.store.core.types.stack_items',
     'ChatStartSessionAction': 'ubo_app.store.services.chat',
     'ChatState': 'ubo_app.store.services.chat',
