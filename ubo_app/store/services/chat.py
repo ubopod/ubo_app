@@ -58,6 +58,23 @@ class ChatState(Immutable):
     messages: Sequence[ChatMessage] = ()
     session_id: str = ''
     is_active: bool = False
+    # Timestamp of the most recent activity that should keep the chat
+    # overlay open: chat actions and pipecat audio playback-done. The
+    # chat service's idle-dismiss task compares this against ``now``
+    # and dispatches ``ChatEndSessionAction`` after the timeout. Same
+    # pattern as ``DisplayState.last_activity_time``.
+    last_activity_time: float | None = None
+    # True between the first pipecat ``AudioPlayAudioSequenceAction``
+    # landing on the bus and the matching ``AudioPlaybackDoneAction``
+    # — i.e. while the speaker is *actually* talking. The dismiss task
+    # refuses to fire while this is True, because ``AudioPlayAudioSequenceAction``
+    # chunks are queued faster than they play (often the entire reply
+    # is queued in ~1 s for a 30 s utterance), so timing dismiss off
+    # the *queue* timestamp would close the chat mid-utterance. Pipecat
+    # doesn't interleave TTS streams, so a plain bool is enough; the
+    # audio service's play loop fires the matching done event once its
+    # buffer fully drains.
+    is_audio_playing: bool = False
 
 
 class ChatAction(BaseAction): ...
@@ -88,6 +105,19 @@ class ChatAppendToMessageAction(ChatAction):
 
     message_id: str
     chunk: str
+
+
+class ChatSetMessageTextAction(ChatAction):
+    """Replace an existing message's text wholesale.
+
+    Used for cumulative updates where each frame carries the full text so
+    far (e.g. STT interim hypotheses, which the recognizer may revise) —
+    not deltas. LLM streaming, which is delta-based, continues to use
+    ``ChatAppendToMessageAction``.
+    """
+
+    message_id: str
+    text: str
 
 
 class ChatSendUserMessageAction(ChatAction):

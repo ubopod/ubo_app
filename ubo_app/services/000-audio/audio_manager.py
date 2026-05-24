@@ -278,7 +278,7 @@ class AudioManager:
             )
             return
 
-    async def play_sequence(  # noqa: C901
+    async def play_sequence(  # noqa: C901, PLR0915
         self,
         sample: AudioSample | None,
         *,
@@ -378,14 +378,32 @@ class AudioManager:
             async def play(sample: AudioSample) -> None:
                 stream.write(sample.data)
 
+        # Grace period between the last buffered chunk being played and
+        # declaring playback finished. Producers that explicitly mark
+        # end-of-stream (e.g. ``010-speech-synthesis`` enqueueing a
+        # ``sample=None`` action) short-circuit this via the ``None`` arm
+        # below; producers that don't (e.g. the pipecat assistant
+        # subprocess) rely on this timeout so ``AudioPlaybackDoneAction``
+        # still fires reliably once the speaker actually goes quiet. One
+        # second is well above pipecat's intra-utterance chunk gaps.
+        _empty_buffer_grace_seconds = 1.0
+        _poll_interval_seconds = 0.05
+        _max_empty_polls = int(_empty_buffer_grace_seconds / _poll_interval_seconds)
+        empty_polls = 0
         while id in self.audio_heads:
             head_sample = buffer.get(self.audio_heads.get(id, -1), not_provided)
             if head_sample is None:
                 # None signals end-of-stream
                 break
             if isinstance(head_sample, NotProvided):
-                await asyncio.sleep(0.05)
+                empty_polls += 1
+                if empty_polls >= _max_empty_polls:
+                    # Buffer empty past the grace window — assume the
+                    # producer has finished sending chunks.
+                    break
+                await asyncio.sleep(_poll_interval_seconds)
                 continue
+            empty_polls = 0
             head_index = self.audio_heads[id]
             await play(head_sample)
             buffer.pop(head_index, None)

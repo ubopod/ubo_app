@@ -37,6 +37,7 @@ from ubo_app.store.core.types import (
     ApplicationScrollEvent,
     ApplicationStackItem,
     ApplicationViewData,
+    ChatStackItem,
     ChatViewData,
     CloseApplicationAction,
     CloseInstructionAction,
@@ -105,6 +106,7 @@ from ubo_app.store.core.types import (
     UpdateRenderPropsAction,
     ViewChangedEvent,
 )
+from ubo_app.store.services.chat import ChatEndSessionAction
 from ubo_app.store.services.keypad import KeypadAction
 from ubo_app.store.services.notifications import NotificationsClearByIdAction
 from ubo_app.store.settings.types import SettingsServiceSetStatusAction
@@ -115,7 +117,7 @@ def reducer(
     action: MainAction,
 ) -> ReducerResult[
     MainState,
-    NotificationsClearByIdAction,
+    NotificationsClearByIdAction | ChatEndSessionAction,
     InitEvent | MainEvent,
 ]:
     if state is None:
@@ -592,7 +594,11 @@ def _complete_stack_pop_result(
     fallback: MainState,
 ) -> (
     MainState
-    | CompleteReducerResult[MainState, NotificationsClearByIdAction, MainEvent]
+    | CompleteReducerResult[
+        MainState,
+        NotificationsClearByIdAction | ChatEndSessionAction,
+        MainEvent,
+    ]
 ):
     """Return a stack-pop result, clearing notifications removed from the stack.
 
@@ -610,6 +616,17 @@ def _complete_stack_pop_result(
     The dedicated ``NotificationsClearAction`` / ``ClearByIdAction``
     paths don't use this helper — they already update
     ``state.notifications`` before dispatching their stack pop.
+
+    Same idea for the chat overlay: a generic pop (e.g. ``MenuGoBack``)
+    removes the ``ChatStackItem`` but leaves ``ChatState.is_active``
+    True and the chat service's in-flight dismiss timer running.
+    Dispatching ``ChatEndSessionAction`` here fires
+    ``ChatSessionEndedEvent``, which the chat service's voice handler
+    uses to cancel its dismiss timer and (when the dismiss is *not*
+    self-initiated by its own timer) stop the assistant — so "Back"
+    cleanly tears down the whole conversation. The chat overlay is a
+    singleton on the stack, so this collapses to a single boolean
+    check.
     """
     if state is None:
         return fallback
@@ -622,11 +639,19 @@ def _complete_stack_pop_result(
         for item in state.stack
         if isinstance(item, NotificationStackItem)
     }
+    had_chat = any(
+        isinstance(item, ChatStackItem) for item in fallback.stack
+    ) and not any(
+        isinstance(item, ChatStackItem) for item in state.stack
+    )
+    actions: list[NotificationsClearByIdAction | ChatEndSessionAction] = [
+        NotificationsClearByIdAction(id=notification_id)
+        for notification_id in removed_notification_ids
+    ]
+    if had_chat:
+        actions.append(ChatEndSessionAction())
     return CompleteReducerResult(
         state=state,
-        actions=[
-            NotificationsClearByIdAction(id=notification_id)
-            for notification_id in removed_notification_ids
-        ],
+        actions=actions,
         events=[StackChangedEvent(stack=state.stack)],
     )

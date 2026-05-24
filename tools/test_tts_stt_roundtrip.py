@@ -111,7 +111,7 @@ _KEYWORD_MIN_LEN = 4
 _LLM_PROVIDER_BY_NAME = {
     member.name.lower(): member
     for member in AssistantLlmName.__members__.values()
-    if member.value != 0
+    if member.value != 0 and member.name is not None
 }
 
 

@@ -57,6 +57,7 @@ def _import_store_types_and_reducer() -> tuple[Any, Callable[..., Any]]:
             'ChatSendUserMessageAction',
             'ChatSessionEndedEvent',
             'ChatSessionStartedEvent',
+            'ChatSetMessageTextAction',
             'ChatStartSessionAction',
             'ChatState',
             'ChatToggleAudioPlaybackAction',
@@ -65,6 +66,16 @@ def _import_store_types_and_reducer() -> tuple[Any, Callable[..., Any]]:
     }
     namespace['StackPushChatAction'] = core_types.StackPushChatAction
     namespace['StackPopChatAction'] = core_types.StackPopChatAction
+
+    # Cross-service action types the chat reducer now observes to stamp
+    # ``last_activity_time`` (mirrors the display-blank-timer pattern).
+    from ubo_app.store.services import audio as audio_module
+
+    namespace['AudioPlayAudioSequenceAction'] = (
+        audio_module.AudioPlayAudioSequenceAction
+    )
+    namespace['AudioPlaybackDoneAction'] = audio_module.AudioPlaybackDoneAction
+    namespace['AudioSample'] = audio_module.AudioSample
 
     for mod in set(sys.modules) - modules_before:
         del sys.modules[mod]
@@ -205,6 +216,42 @@ def test_append_to_message_streams_text() -> None:
     assert unchanged.messages[0].text == 'Hello'
 
 
+def test_set_message_text_replaces_wholesale() -> None:
+    """ChatSetMessageTextAction overwrites a message's text (STT cumulative)."""
+    message = _TYPES['ChatMessage'](
+        id='u1',
+        role=_TYPES['ChatRole'].USER,
+        kind=_TYPES['ChatMessageKind'].TEXT,
+        text='hel',
+    )
+    state = _TYPES['ChatState'](messages=(message,))
+
+    # Cumulative STT frame revises the partial hypothesis — replace, don't
+    # append.
+    state = reducer(
+        state,
+        _TYPES['ChatSetMessageTextAction'](message_id='u1', text='hello'),
+    )
+    assert state.messages[0].text == 'hello'
+
+    # A second revision overwrites the first.
+    state = reducer(
+        state,
+        _TYPES['ChatSetMessageTextAction'](
+            message_id='u1',
+            text='hello there',
+        ),
+    )
+    assert state.messages[0].text == 'hello there'
+
+    # An unknown message id is a no-op.
+    unchanged = reducer(
+        state,
+        _TYPES['ChatSetMessageTextAction'](message_id='nope', text='x'),
+    )
+    assert unchanged.messages[0].text == 'hello there'
+
+
 def test_send_user_message_appends_and_emits_event() -> None:
     """ChatSendUserMessageAction adds a user bubble and notifies responders."""
     state = _TYPES['ChatState']()
@@ -236,3 +283,211 @@ def test_clear_action_empties_messages() -> None:
     )
     new_state = reducer(state, _TYPES['ChatClearAction']())
     assert new_state.messages == ()
+
+
+def _state_for_activity() -> Any:  # noqa: ANN401
+    """Active session with a known stale ``last_activity_time``."""
+    return _TYPES['ChatState'](
+        session_id='s1',
+        is_active=True,
+        last_activity_time=0.0,  # ancient; should be bumped by activity
+    )
+
+
+def test_start_session_stamps_last_activity_time() -> None:
+    """``ChatStartSessionAction`` initialises ``last_activity_time``."""
+    result = reducer(None, InitAction())
+    result = reducer(result, _TYPES['ChatStartSessionAction'](session_id='s1'))
+    state = result.state if isinstance(result, CompleteReducerResult) else result
+    assert state.last_activity_time is not None
+    assert state.last_activity_time > 0.0
+
+
+def test_end_session_clears_last_activity_time() -> None:
+    """``ChatEndSessionAction`` clears ``last_activity_time``."""
+    state = _state_for_activity()
+    state = state.__class__(
+        messages=state.messages,
+        session_id=state.session_id,
+        is_active=True,
+        last_activity_time=12345.6,
+    )
+    result = reducer(state, _TYPES['ChatEndSessionAction']())
+    new_state = result.state if isinstance(result, CompleteReducerResult) else result
+    assert new_state.last_activity_time is None
+
+
+def test_add_message_bumps_last_activity_time() -> None:
+    """``ChatAddMessageAction`` bumps ``last_activity_time`` past its old value."""
+    state = _state_for_activity()
+    message = _TYPES['ChatMessage'](
+        role=_TYPES['ChatRole'].USER,
+        kind=_TYPES['ChatMessageKind'].TEXT,
+        text='hi',
+    )
+    new_state = reducer(state, _TYPES['ChatAddMessageAction'](message=message))
+    assert new_state.last_activity_time is not None
+    assert new_state.last_activity_time > 0.0
+
+
+def test_append_to_message_bumps_last_activity_time() -> None:
+    """Streaming-chunk action bumps ``last_activity_time``."""
+    state = _state_for_activity()
+    state = state.__class__(
+        messages=(
+            _TYPES['ChatMessage'](
+                id='m1',
+                role=_TYPES['ChatRole'].ASSISTANT,
+                kind=_TYPES['ChatMessageKind'].TEXT,
+                text='hi',
+            ),
+        ),
+        session_id=state.session_id,
+        is_active=True,
+        last_activity_time=0.0,
+    )
+    new_state = reducer(
+        state,
+        _TYPES['ChatAppendToMessageAction'](message_id='m1', chunk='!'),
+    )
+    assert new_state.last_activity_time is not None
+    assert new_state.last_activity_time > 0.0
+
+
+def test_pipecat_audio_sequence_flips_is_audio_playing() -> None:
+    """First pipecat chunk queued sets ``is_audio_playing`` True without bumping time.
+
+    Chunks are queued faster than they play out, so timing the dismiss
+    off the queue timestamp would close the chat mid-utterance. The flag
+    keeps the dismiss loop suppressed; ``last_activity_time`` gets
+    anchored later by ``AudioPlaybackDoneAction``.
+    """
+    state = _state_for_activity()
+    sample = _TYPES['AudioSample'](
+        data=b'\x00' * 32,
+        channels=1,
+        rate=16000,
+        width=2,
+    )
+    new_state = reducer(
+        state,
+        _TYPES['AudioPlayAudioSequenceAction'](
+            sample=sample,
+            id='assistant:pipecat:turn-1',
+            index=0,
+        ),
+    )
+    assert new_state.is_audio_playing is True
+    # Crucially, ``last_activity_time`` did NOT move forward on the play
+    # action — only playback-done can advance the dismiss countdown.
+    assert new_state.last_activity_time == 0.0
+
+
+def test_subsequent_pipecat_chunks_keep_is_audio_playing(
+) -> None:
+    """Follow-up chunks while already playing are no-ops on state shape."""
+    state = _TYPES['ChatState'](
+        session_id='s1',
+        is_active=True,
+        last_activity_time=0.0,
+        is_audio_playing=True,
+    )
+    sample = _TYPES['AudioSample'](
+        data=b'\x00' * 32,
+        channels=1,
+        rate=16000,
+        width=2,
+    )
+    new_state = reducer(
+        state,
+        _TYPES['AudioPlayAudioSequenceAction'](
+            sample=sample,
+            id='assistant:pipecat:turn-1',
+            index=5,
+        ),
+    )
+    assert new_state.is_audio_playing is True
+    assert new_state.last_activity_time == 0.0
+
+
+def test_non_pipecat_audio_sequence_does_not_set_is_audio_playing() -> None:
+    """Audio chunks from chimes / file-system playback don't keep chat open."""
+    state = _state_for_activity()
+    sample = _TYPES['AudioSample'](
+        data=b'\x00' * 32,
+        channels=1,
+        rate=16000,
+        width=2,
+    )
+    new_state = reducer(
+        state,
+        _TYPES['AudioPlayAudioSequenceAction'](
+            sample=sample,
+            id='assistant:assistant_request:foo',  # not pipecat
+            index=0,
+        ),
+    )
+    assert new_state.is_audio_playing is False
+    assert new_state.last_activity_time == 0.0
+
+
+def test_pipecat_audio_playback_done_clears_flag_and_bumps_activity() -> None:
+    """``AudioPlaybackDoneAction`` for pipecat is the authoritative "quiet" signal.
+
+    The audio service dispatches it once its play loop exits because the
+    buffer fully drained — only at *this* moment should the 7 s idle
+    countdown start.
+    """
+    state = _TYPES['ChatState'](
+        session_id='s1',
+        is_active=True,
+        last_activity_time=0.0,
+        is_audio_playing=True,
+    )
+    new_state = reducer(
+        state,
+        _TYPES['AudioPlaybackDoneAction'](id='assistant:pipecat:turn-1'),
+    )
+    assert new_state.is_audio_playing is False
+    assert new_state.last_activity_time is not None
+    assert new_state.last_activity_time > 0.0
+
+
+def test_non_pipecat_audio_playback_done_is_noop() -> None:
+    """Playback-done for unrelated audio leaves the chat state alone."""
+    state = _TYPES['ChatState'](
+        session_id='s1',
+        is_active=True,
+        last_activity_time=0.0,
+        is_audio_playing=True,
+    )
+    new_state = reducer(
+        state,
+        _TYPES['AudioPlaybackDoneAction'](id='chime:wifi-connected'),
+    )
+    assert new_state.is_audio_playing is True
+    assert new_state.last_activity_time == 0.0
+
+
+def test_audio_actions_inactive_session_is_noop() -> None:
+    """Audio activity does not revive a closed chat session."""
+    state = _TYPES['ChatState'](session_id='s1', is_active=False)
+    new_state = reducer(
+        state,
+        _TYPES['AudioPlaybackDoneAction'](id='assistant:pipecat:turn-1'),
+    )
+    assert new_state.is_audio_playing is False
+    assert new_state.last_activity_time is None
+
+
+def test_end_session_clears_audio_playing_flag() -> None:
+    """``ChatEndSessionAction`` resets ``is_audio_playing`` for cleanliness."""
+    state = _TYPES['ChatState'](
+        session_id='s1',
+        is_active=True,
+        last_activity_time=12345.6,
+        is_audio_playing=True,
+    )
+    result = reducer(state, _TYPES['ChatEndSessionAction']())
+    new_state = result.state if isinstance(result, CompleteReducerResult) else result
+    assert new_state.is_audio_playing is False

@@ -21,6 +21,7 @@ from ubo_app.store.core.types import (
     ApplicationScrollEvent,
     ApplicationStackItem,
     ApplicationViewData,
+    ChatStackItem,
     CloseApplicationAction,
     MainAction,
     MainState,
@@ -68,14 +69,25 @@ from ubo_app.store.core.types import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from ubo_app.store.services.chat import (
+        ChatEndSessionAction as _ChatEndSessionAction,
+    )
 
-def _import_reducer() -> Callable:
-    """Import the reducer, working around the circular import.
 
-    reducer.py -> menus.py -> store.main -> reducer.py is circular.
-    We pre-populate sys.modules with a fake menus module,
-    import the reducer, then clean up ALL newly loaded modules so they don't
-    interfere with integration tests.
+def _import_reducer() -> tuple[Callable, type[_ChatEndSessionAction]]:
+    """Import the reducer (+ ``ChatEndSessionAction``), avoiding pre-load.
+
+    Pulls in both: the core reducer (workaround for the circular import via
+    menus.py) and ``ChatEndSessionAction`` from the chat store. Both need
+    to load *here* — never at module-top — because importing
+    ``ubo_app.store.services.chat`` at collection time pre-binds
+    ``chat.py``'s ``from uuid import uuid4`` to the unpatched ``uuid4``,
+    which then leaks into later flow tests whose snapshots depend on
+    ``mock_environment``'s patched uuid (see the comment in
+    ``tests/fixtures/mock_environment.py``).
+
+    Everything newly loaded is dropped from ``sys.modules`` so subsequent
+    integration tests get a fresh import.
     """
     menus_key = 'ubo_app.store.core.menus'
     already_loaded = menus_key in sys.modules
@@ -88,6 +100,9 @@ def _import_reducer() -> Callable:
         sys.modules[menus_key] = fake_menus
 
     from ubo_app.store.core.reducer import reducer as _reducer
+    from ubo_app.store.services.chat import (
+        ChatEndSessionAction as _ChatEndSessionAction_cls,
+    )
 
     # Clean up: remove modules loaded during this import so they don't
     # interfere with integration tests that need real modules. Preserve the
@@ -101,10 +116,10 @@ def _import_reducer() -> Callable:
                 continue
             del sys.modules[mod]
 
-    return _reducer
+    return _reducer, _ChatEndSessionAction_cls
 
 
-reducer = _import_reducer()
+reducer, ChatEndSessionAction = _import_reducer()
 
 # Bind the keypad classes right after the reducer import so both reference the
 # same module generation that ``_import_reducer`` left in ``sys.modules`` — the
@@ -137,6 +152,13 @@ def _get_events(result: object) -> list:
     """Extract events from reducer result."""
     if isinstance(result, CompleteReducerResult):
         return list(result.events or ())  # pyright: ignore[reportAttributeAccessIssue]
+    return []
+
+
+def _get_actions(result: object) -> list:
+    """Extract queued actions from reducer result."""
+    if isinstance(result, CompleteReducerResult):
+        return list(result.actions or ())  # pyright: ignore[reportAttributeAccessIssue]
     return []
 
 
@@ -444,6 +466,58 @@ class TestStackPopActions:
         new_state = _get_state(result)
         assert new_state.stack == state.stack
         assert _get_events(result) == []
+
+
+class TestChatOverlayReconciliation:
+    """Back over the chat overlay must dispatch ``ChatEndSessionAction``.
+
+    A generic pop (``MenuGoBack``) removes the ``ChatStackItem`` but leaves
+    ``ChatState.is_active=True`` and any in-flight dismiss timer running.
+    ``_complete_stack_pop_result`` reconciles by dispatching
+    ``ChatEndSessionAction`` so the voice handler can stop the assistant and
+    cancel its timer — mirroring how ``NotificationStackItem`` removal
+    dispatches ``NotificationsClearByIdAction``.
+    """
+
+    def _state_with_chat_overlay(self) -> MainState:
+        state = _init_state()
+        chat_item = ChatStackItem(id='chat-1', session_id='s1')
+        return replace(state, stack=(*state.stack, chat_item))
+
+    def test_go_back_over_chat_dispatches_end_session(self) -> None:
+        """Popping a ``ChatStackItem`` via Back emits ``ChatEndSessionAction``.
+
+        The chat service's voice handler then picks up the resulting
+        ``ChatSessionEndedEvent`` and — since this dismiss is *external*
+        (its ``timer_initiated_dismiss`` flag is False) — dispatches the
+        assistant stop actions itself. The core reducer stays free of any
+        assistant-store import.
+        """
+        state = self._state_with_chat_overlay()
+        result = reducer(state, MenuGoBackAction())
+
+        new_state = _get_state(result)
+        assert all(
+            not isinstance(item, ChatStackItem) for item in new_state.stack
+        )
+
+        actions = _get_actions(result)
+        assert any(isinstance(a, ChatEndSessionAction) for a in actions)
+
+    def test_go_back_without_chat_dispatches_no_chat_end(self) -> None:
+        """No ``ChatStackItem`` on the stack → no ``ChatEndSessionAction``."""
+        state = _init_state()
+        state = _get_state(reducer(state, StackPushMenuAction(menu_key='main')))
+        result = reducer(state, MenuGoBackAction())
+        actions = _get_actions(result)
+        assert not any(isinstance(a, ChatEndSessionAction) for a in actions)
+
+    def test_pop_to_root_over_chat_dispatches_end_session(self) -> None:
+        """Same reconciliation kicks in for ``StackPopToRoot``."""
+        state = self._state_with_chat_overlay()
+        result = reducer(state, StackPopToRootAction())
+        actions = _get_actions(result)
+        assert any(isinstance(a, ChatEndSessionAction) for a in actions)
 
 
 class TestSetPageIndex:

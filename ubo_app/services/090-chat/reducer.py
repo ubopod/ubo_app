@@ -1,6 +1,7 @@
 # ruff: noqa: D100, D103
 from __future__ import annotations
 
+import datetime
 import hashlib
 from dataclasses import replace
 
@@ -13,6 +14,10 @@ from redux import (
 )
 
 from ubo_app.store.core.types import StackPopChatAction, StackPushChatAction
+from ubo_app.store.services.audio import (
+    AudioPlayAudioSequenceAction,
+    AudioPlaybackDoneAction,
+)
 from ubo_app.store.services.chat import (
     ChatAction,
     ChatAddMessageAction,
@@ -27,16 +32,35 @@ from ubo_app.store.services.chat import (
     ChatSendUserMessageAction,
     ChatSessionEndedEvent,
     ChatSessionStartedEvent,
+    ChatSetMessageTextAction,
     ChatStartSessionAction,
     ChatState,
     ChatToggleAudioPlaybackAction,
     ChatUserMessageSentEvent,
 )
 
-Action = InitAction | ChatAction
+# Action types we observe to bump ``last_activity_time`` even though the
+# chat reducer doesn't own them — pipecat's TTS chunks land on the bus
+# faster than they play, and the matching ``AudioPlaybackDoneAction``
+# is the only authoritative "speaker has actually gone quiet" signal.
+Action = (
+    InitAction
+    | ChatAction
+    | AudioPlayAudioSequenceAction
+    | AudioPlaybackDoneAction
+)
 ResultAction = StackPushChatAction | StackPopChatAction
 
 _WAVEFORM_BAR_COUNT = 28
+
+# The assistant service's ``_communicate`` handler namespaces pipecat TTS
+# audio sequences as ``assistant:pipecat:{frame.id}`` — match this prefix
+# to filter out unrelated audio (chimes, file-system playback, etc.).
+_PIPECAT_AUDIO_ID_PREFIX = 'assistant:pipecat:'
+
+
+def _now() -> float:
+    return datetime.datetime.now(tz=datetime.UTC).timestamp()
 
 
 def _waveform_for(audio_id: str) -> tuple[float, ...]:
@@ -70,6 +94,8 @@ def reducer(
                     messages=(),
                     session_id=action.session_id,
                     is_active=True,
+                    last_activity_time=_now(),
+                    is_audio_playing=False,
                 ),
                 actions=[StackPushChatAction(session_id=action.session_id)],
                 events=[ChatSessionStartedEvent(session_id=action.session_id)],
@@ -77,7 +103,12 @@ def reducer(
 
         case ChatEndSessionAction():
             return CompleteReducerResult(
-                state=replace(state, is_active=False),
+                state=replace(
+                    state,
+                    is_active=False,
+                    last_activity_time=None,
+                    is_audio_playing=False,
+                ),
                 actions=[StackPopChatAction()],
                 events=[ChatSessionEndedEvent(session_id=state.session_id)],
             )
@@ -92,7 +123,11 @@ def reducer(
                     message,
                     waveform=_waveform_for(message.audio_id or message.id),
                 )
-            return replace(state, messages=(*state.messages, message))
+            return replace(
+                state,
+                messages=(*state.messages, message),
+                last_activity_time=_now(),
+            )
 
         case ChatSendUserMessageAction():
             # Turn a sent message into a USER bubble and notify responders.
@@ -102,7 +137,11 @@ def reducer(
                 text=action.text,
             )
             return CompleteReducerResult(
-                state=replace(state, messages=(*state.messages, message)),
+                state=replace(
+                    state,
+                    messages=(*state.messages, message),
+                    last_activity_time=_now(),
+                ),
                 events=[
                     ChatUserMessageSentEvent(
                         text=action.text,
@@ -119,7 +158,25 @@ def reducer(
                 else message
                 for message in state.messages
             )
-            return replace(state, messages=new_messages)
+            return replace(
+                state,
+                messages=new_messages,
+                last_activity_time=_now(),
+            )
+
+        case ChatSetMessageTextAction():
+            # Replace an existing bubble's text wholesale (cumulative STT).
+            new_messages = tuple(
+                replace(message, text=action.text)
+                if message.id == action.message_id
+                else message
+                for message in state.messages
+            )
+            return replace(
+                state,
+                messages=new_messages,
+                last_activity_time=_now(),
+            )
 
         case ChatToggleAudioPlaybackAction():
             target = next(
@@ -153,6 +210,33 @@ def reducer(
 
         case ChatClearAction():
             return replace(state, messages=())
+
+        # Cross-service activity signals from the audio service. Only the
+        # live pipecat pipeline drives the chat overlay; one-shot
+        # programmatic requests (transcribe/synthesize/complete) share the
+        # bus but should not keep the chat open.
+        case AudioPlayAudioSequenceAction() if (
+            state.is_active and action.id.startswith(_PIPECAT_AUDIO_ID_PREFIX)
+        ):
+            # First chunk queued — speaker is about to talk. Don't bump
+            # ``last_activity_time``: chunks are queued faster than they
+            # play, so the timestamp would race ahead of real playback.
+            # The dismiss task gates on ``is_audio_playing``.
+            if state.is_audio_playing:
+                return state
+            return replace(state, is_audio_playing=True)
+
+        case AudioPlaybackDoneAction() if (
+            state.is_active and action.id.startswith(_PIPECAT_AUDIO_ID_PREFIX)
+        ):
+            # Speaker has actually gone quiet (audio service's play loop
+            # exited — buffer fully drained). Now anchor the 7 s idle
+            # countdown to *this* moment.
+            return replace(
+                state,
+                is_audio_playing=False,
+                last_activity_time=_now(),
+            )
 
         case FinishAction():
             return ChatState()
