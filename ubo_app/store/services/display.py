@@ -1,11 +1,13 @@
 # ruff: noqa: D100, D101
 from __future__ import annotations
 
+from dataclasses import field
 from enum import StrEnum
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
+from ubo_app.utils.clock import default_now
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 
@@ -62,10 +64,14 @@ class DisplayRedrawAction(DisplayAction): ...
 class DisplayBlankAction(DisplayAction): ...
 
 
-class DisplayUnblankAction(DisplayAction): ...
+class DisplayUnblankAction(DisplayAction):
+    # Stamps ``DisplayState.last_activity_time`` — sampled by the dispatcher
+    # so the reducer stays a pure function (see ``ubo_app/utils/clock.py``).
+    timestamp: float = field(default_factory=default_now)
 
 
-class DisplayUpdateActivityAction(DisplayAction): ...
+class DisplayUpdateActivityAction(DisplayAction):
+    timestamp: float = field(default_factory=default_now)
 
 
 class DisplaySetBlankTimeoutAction(DisplayAction):

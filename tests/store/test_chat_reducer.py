@@ -76,6 +76,7 @@ def _import_store_types_and_reducer() -> tuple[Any, Callable[..., Any]]:
     )
     namespace['AudioPlaybackDoneAction'] = audio_module.AudioPlaybackDoneAction
     namespace['AudioSample'] = audio_module.AudioSample
+    namespace['AudioSequenceSource'] = audio_module.AudioSequenceSource
 
     for mod in set(sys.modules) - modules_before:
         del sys.modules[mod]
@@ -285,6 +286,57 @@ def test_clear_action_empties_messages() -> None:
     assert new_state.messages == ()
 
 
+def test_no_reducer_path_populates_audio_data() -> None:
+    """Regression guard: ``ChatMessage.audio_data`` stays empty on every reducer path.
+
+    Bytes belong in the audio service's per-id cache (phase-2 plan in
+    ``ubo_app/store/services/chat.py``), not on the Redux ``ChatMessage``
+    — otherwise every snapshot and gRPC ``ChatState`` push carries the
+    full audio payload.
+    """
+    add_message_action = _TYPES['ChatAddMessageAction'](
+        message=_TYPES['ChatMessage'](
+            role=_TYPES['ChatRole'].ASSISTANT,
+            kind=_TYPES['ChatMessageKind'].AUDIO,
+            audio_id='clip-x',
+        ),
+    )
+    state = reducer(_TYPES['ChatState'](), add_message_action)
+    assert all(message.audio_data == b'' for message in state.messages)
+
+    send_action = _TYPES['ChatSendUserMessageAction'](text='hi')
+    result = reducer(state, send_action)
+    new_messages = (
+        result.state.messages
+        if isinstance(result, CompleteReducerResult)
+        else result.messages
+    )
+    assert all(message.audio_data == b'' for message in new_messages)
+
+
+def test_streaming_append_bumps_messages_revision() -> None:
+    """Streaming-token append must bump ``messages_revision``.
+
+    The view-autorun selector hashes only ``(messages_revision,
+    is_playing-tuple)`` instead of every message text — see
+    ``view_computation._chat_view_dependency``. Without the bump the view
+    never re-renders during LLM streaming.
+    """
+    message = _TYPES['ChatMessage'](
+        id='m1',
+        role=_TYPES['ChatRole'].ASSISTANT,
+        kind=_TYPES['ChatMessageKind'].TEXT,
+        text='Hel',
+    )
+    state = _TYPES['ChatState'](messages=(message,), messages_revision=5)
+    new_state = reducer(
+        state,
+        _TYPES['ChatAppendToMessageAction'](message_id='m1', chunk='lo'),
+    )
+    assert new_state.messages[0].text == 'Hello'
+    assert new_state.messages_revision == 6
+
+
 def _state_for_activity() -> Any:  # noqa: ANN401
     """Active session with a known stale ``last_activity_time``."""
     return _TYPES['ChatState'](
@@ -375,6 +427,7 @@ def test_pipecat_audio_sequence_flips_is_audio_playing() -> None:
             sample=sample,
             id='assistant:pipecat:turn-1',
             index=0,
+            source=_TYPES['AudioSequenceSource'].ASSISTANT_LIVE,
         ),
     )
     assert new_state.is_audio_playing is True
@@ -404,6 +457,7 @@ def test_subsequent_pipecat_chunks_keep_is_audio_playing(
             sample=sample,
             id='assistant:pipecat:turn-1',
             index=5,
+            source=_TYPES['AudioSequenceSource'].ASSISTANT_LIVE,
         ),
     )
     assert new_state.is_audio_playing is True
@@ -423,8 +477,11 @@ def test_non_pipecat_audio_sequence_does_not_set_is_audio_playing() -> None:
         state,
         _TYPES['AudioPlayAudioSequenceAction'](
             sample=sample,
-            id='assistant:assistant_request:foo',  # not pipecat
+            id='assistant:assistant_request:foo',
             index=0,
+            # OTHER is the default; explicit here for symmetry with the
+            # ASSISTANT_LIVE test above.
+            source=_TYPES['AudioSequenceSource'].OTHER,
         ),
     )
     assert new_state.is_audio_playing is False
@@ -446,7 +503,10 @@ def test_pipecat_audio_playback_done_clears_flag_and_bumps_activity() -> None:
     )
     new_state = reducer(
         state,
-        _TYPES['AudioPlaybackDoneAction'](id='assistant:pipecat:turn-1'),
+        _TYPES['AudioPlaybackDoneAction'](
+            id='assistant:pipecat:turn-1',
+            source=_TYPES['AudioSequenceSource'].ASSISTANT_LIVE,
+        ),
     )
     assert new_state.is_audio_playing is False
     assert new_state.last_activity_time is not None
@@ -463,7 +523,10 @@ def test_non_pipecat_audio_playback_done_is_noop() -> None:
     )
     new_state = reducer(
         state,
-        _TYPES['AudioPlaybackDoneAction'](id='chime:wifi-connected'),
+        _TYPES['AudioPlaybackDoneAction'](
+            id='chime:wifi-connected',
+            source=_TYPES['AudioSequenceSource'].OTHER,
+        ),
     )
     assert new_state.is_audio_playing is True
     assert new_state.last_activity_time == 0.0
@@ -474,7 +537,10 @@ def test_audio_actions_inactive_session_is_noop() -> None:
     state = _TYPES['ChatState'](session_id='s1', is_active=False)
     new_state = reducer(
         state,
-        _TYPES['AudioPlaybackDoneAction'](id='assistant:pipecat:turn-1'),
+        _TYPES['AudioPlaybackDoneAction'](
+            id='assistant:pipecat:turn-1',
+            source=_TYPES['AudioSequenceSource'].ASSISTANT_LIVE,
+        ),
     )
     assert new_state.is_audio_playing is False
     assert new_state.last_activity_time is None

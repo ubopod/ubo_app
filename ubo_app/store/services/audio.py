@@ -8,6 +8,7 @@ from enum import StrEnum
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
+from ubo_app.utils.clock import default_now
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 
@@ -16,6 +17,21 @@ class AudioDevice(StrEnum):
 
     INPUT = 'Input'
     OUTPUT = 'Output'
+
+
+class AudioSequenceSource(StrEnum):
+    """Origin of an :class:`AudioPlayAudioSequenceAction`.
+
+    Consumers that only care about a particular producer (currently: the chat
+    overlay, which needs to stay open while the live assistant pipeline is
+    playing TTS) match on this enum instead of parsing the free-form ``id``.
+    Defaults to :attr:`OTHER` so existing producers — chimes, file-system
+    playback, one-shot ``assistant_request`` synthesis — keep their current
+    "don't affect chat" semantics.
+    """
+
+    OTHER = 'other'
+    ASSISTANT_LIVE = 'assistant_live'
 
 
 class AudioAction(BaseAction):
@@ -71,6 +87,7 @@ class AudioPlayAudioSequenceAction(AudioAction):
     sample: AudioSample | None
     id: str
     index: int
+    source: AudioSequenceSource = AudioSequenceSource.OTHER
 
 
 class AudioSample(Immutable):
@@ -97,6 +114,11 @@ class AudioPlaybackDoneAction(AudioAction):
     """Playback done action."""
 
     id: str
+    source: AudioSequenceSource = AudioSequenceSource.OTHER
+    # Anchors the chat overlay's idle-dismiss countdown — sampled by the
+    # audio service's play loop when the buffer drains, not by the
+    # consumer reducer (keeps the reducer pure).
+    timestamp: float = field(default_factory=default_now)
 
 
 class AudioStartRecordingAction(AudioAction):
@@ -157,6 +179,7 @@ class AudioPlayAudioSequenceEvent(AudioEvent):
     sample: AudioSample | None
     id: str
     index: int
+    source: AudioSequenceSource = AudioSequenceSource.OTHER
 
 
 class AudioStopPlaybackEvent(AudioEvent):

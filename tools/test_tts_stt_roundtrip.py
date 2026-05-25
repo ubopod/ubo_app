@@ -37,6 +37,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 import wave
@@ -101,6 +102,10 @@ CHAIN_TIMEOUT = 90.0  # seconds to wait for a multi-stage chain (STT/LLM/TTS)
 
 APP_LOG_PATH = REPO_ROOT / 'ubo-app-roundtrip.log'
 TTS_WAV_PATH = Path('/tmp/ubo-roundtrip-tts.wav')  # noqa: S108
+# PIDs of processes this script launched. Persists across runs so a crashed
+# previous invocation can still be cleaned up surgically — replaces the old
+# ``pkill -9 -f <pattern>`` sweeps that could match unrelated dev processes.
+PID_FILE_PATH = Path(tempfile.gettempdir()) / 'ubo_tts_stt_roundtrip.pids'
 
 # Pass thresholds for STT — it is lossy, so lean on keyword coverage.
 MIN_SIMILARITY_RATIO = 0.6
@@ -162,7 +167,7 @@ def launch_app() -> subprocess.Popen:
         APP_LOG_PATH,
     )
     log_file = APP_LOG_PATH.open('wb')
-    return subprocess.Popen(  # noqa: S603
+    process = subprocess.Popen(  # noqa: S603
         LAUNCH_COMMAND,
         cwd=REPO_ROOT,
         env=env,
@@ -170,19 +175,66 @@ def launch_app() -> subprocess.Popen:
         stderr=subprocess.STDOUT,
         start_new_session=True,
     )
+    # Record the launched PID in a per-run pidfile so a crashed teardown
+    # can still be cleaned up surgically next run — no broad ``pkill -f``
+    # patterns that risk killing unrelated dev processes.
+    _append_pidfile(process.pid)
+    return process
+
+
+def _append_pidfile(pid: int) -> None:
+    """Append a launched-app PID to the pidfile (best-effort)."""
+    with contextlib.suppress(OSError), PID_FILE_PATH.open('a') as handle:
+        handle.write(f'{pid}\n')
+
+
+def _read_pidfile() -> list[int]:
+    """Return the PIDs recorded by a previous run, or []."""
+    if not PID_FILE_PATH.exists():
+        return []
+    pids: list[int] = []
+    with contextlib.suppress(OSError):
+        for line in PID_FILE_PATH.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.isdigit():
+                pids.append(int(stripped))
+    return pids
+
+
+def _clear_pidfile() -> None:
+    """Drop the pidfile after a clean teardown."""
+    with contextlib.suppress(OSError):
+        PID_FILE_PATH.unlink(missing_ok=True)
+
+
+def _kill_pgid(pid: int, sig: int) -> None:
+    """Send *sig* to the process group of *pid*, ignoring vanished processes."""
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(os.getpgid(pid), sig)
 
 
 def kill_stale_ubo_processes() -> None:
     """Best-effort: kill leftover ubo processes from a previous (crashed) run.
 
-    A run whose teardown did not complete (e.g. the script was killed) leaves a
-    core holding the gRPC port; the next run would then silently talk to that
-    zombie. This clears the slate.
+    A run whose teardown did not complete (e.g. the script was killed) leaves
+    a core holding the gRPC port; the next run would then silently talk to
+    that zombie. We rely on the pidfile from the previous launch (PIDs of
+    processes WE started, in their own POSIX session); the gRPC-port
+    ``lsof`` is the safety net for the rare case the pidfile was wiped.
     """
-    for pattern in ('ubo-assistant', 'ubo_app.main', 'uv run ubo', 'ubo_gui_client'):
-        with contextlib.suppress(Exception):
-            subprocess.run(['pkill', '-9', '-f', pattern], check=False)  # noqa: S603, S607
-    # Free the gRPC port if a zombie still holds it.
+    # First: the surgical path — kill exactly the PGIDs we previously
+    # launched (and only those).
+    for pid in _read_pidfile():
+        _kill_pgid(pid, signal.SIGTERM)
+    # Brief grace before escalating.
+    time.sleep(0.5)
+    for pid in _read_pidfile():
+        _kill_pgid(pid, signal.SIGKILL)
+    _clear_pidfile()
+
+    # Fallback: targeted only — kill whoever still holds the gRPC port.
+    # No ``pkill -f`` patterns; matching by command-line substring can take
+    # out unrelated dev processes on a workstation.
     with contextlib.suppress(Exception):
         result = subprocess.run(  # noqa: S603
             ['lsof', '-ti', f'tcp:{GRPC_PORT}'],  # noqa: S607
@@ -190,9 +242,9 @@ def kill_stale_ubo_processes() -> None:
             text=True,
             check=False,
         )
-        for pid in result.stdout.split():
+        for raw_pid in result.stdout.split():
             with contextlib.suppress(Exception):
-                os.kill(int(pid), signal.SIGKILL)
+                os.kill(int(raw_pid), signal.SIGKILL)
 
 
 def terminate_app(process: subprocess.Popen) -> None:
@@ -203,10 +255,11 @@ def terminate_app(process: subprocess.Popen) -> None:
     try:
         process.wait(timeout=15)
     except subprocess.TimeoutExpired:
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-    # The assistant/GUI subprocesses start their own sessions — sweep them too.
-    kill_stale_ubo_processes()
+        _kill_pgid(process.pid, signal.SIGKILL)
+    # The assistant/GUI subprocesses live in the same POSIX session
+    # (``start_new_session=True`` above), so this group-kill is enough —
+    # no broad ``pkill -f`` sweep needed.
+    _clear_pidfile()
 
 
 def wait_for_grpc(host: str, port: int, timeout: float) -> bool:

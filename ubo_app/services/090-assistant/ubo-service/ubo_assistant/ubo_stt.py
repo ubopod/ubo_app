@@ -25,6 +25,7 @@ from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
     AssistanceTextFrame,
+    AssistantPipelineStage,
 )
 
 from ubo_assistant.segmented_googlestt import SegmentedGoogleSTTService
@@ -409,7 +410,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                         timestamp=self.client.event_loop.time(),
                         id=self._assistance_id,
                         index=self._assistance_index,
-                        source='stt',
+                        source=AssistantPipelineStage.STT,
                     ),
                 ),
             )
@@ -424,7 +425,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
                         timestamp=self.client.event_loop.time(),
                         id=self._assistance_id,
                         index=self._assistance_index,
-                        source='stt',
+                        source=AssistantPipelineStage.STT,
                         is_last_frame=True,
                     ),
                 ),

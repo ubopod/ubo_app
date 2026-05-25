@@ -21,16 +21,23 @@ from ubo_bindings.ubo.v1 import (
     AssistanceAudioFrame,
     AssistanceErrorFrame,
     AssistanceTextFrame,
+    AssistantPipelineStage,
     AssistantReportAction,
+    AudioPlayAudioSequenceAction,
     AudioSample,
+    AudioSequenceSource,
 )
+
+from ubo_assistant.constants import REQUEST_PIPELINE_SOURCE_ID
 
 if TYPE_CHECKING:
     from ubo_bindings.client import UboRPCClient
 
-# `source_id` on report actions originating from a one-shot programmatic request,
-# distinct from the live pipeline's `pipecat` source.
-REQUEST_SOURCE_ID = 'assistant_request'
+# Re-exported under the historical name kept by external consumers (tests,
+# the request handler). The canonical definition lives in
+# ``ubo_assistant/constants.py`` and mirrors
+# ``ubo_app.store.services.assistant.REQUEST_PIPELINE_SOURCE_ID``.
+REQUEST_SOURCE_ID = REQUEST_PIPELINE_SOURCE_ID
 
 _PCM_SAMPLE_WIDTH = 2
 
@@ -48,7 +55,7 @@ class GRPCTerminalCollector(FrameProcessor):
         *,
         client: UboRPCClient,
         session_id: str,
-        terminal_stage: str,
+        terminal_stage: AssistantPipelineStage,
     ) -> None:
         """Initialize the collector for the given session and terminal stage."""
         super().__init__()
@@ -136,9 +143,36 @@ class GRPCTerminalCollector(FrameProcessor):
         self.first_output.set()
 
     def dispatch_last_frame(self) -> None:
-        """Dispatch a final end-of-stream marker frame exactly once."""
+        """Dispatch end-of-stream sentinel(s); idempotent.
+
+        For TTS terminals, *also* dispatches a sentinel
+        ``AudioPlayAudioSequenceAction(sample=None, ...)`` directly (not
+        wrapped in an ``AssistanceAudioFrame``). The audio manager breaks
+        out of its play loop on ``sample is None`` instead of waiting
+        for the 1 s empty-buffer fallback. Direct dispatch sidesteps the
+        wire-level oneof handling for ``AssistanceAudioFrame(audio=None)``
+        which can be dropped because the inner message has no
+        distinguishing non-default content.
+        """
         if self._sent_last_frame:
             return
+        if self._terminal_stage is AssistantPipelineStage.TTS:
+            # ``_index`` here equals the count of audio chunks already
+            # dispatched, so it lands at the next slot after the final
+            # audio frame — exactly where the audio service's play loop
+            # head sits. Direct dispatch (skipping the ``_report`` /
+            # ``AssistantReportAction`` wrapper) avoids the wire-level
+            # oneof handling for an empty inner ``AssistanceAudioFrame``.
+            self._client.dispatch(
+                action=Action(
+                    audio_play_audio_sequence_action=AudioPlayAudioSequenceAction(
+                        sample=None,
+                        id=f'assistant:{REQUEST_SOURCE_ID}:{self._assistance_id}',
+                        index=self._index,
+                        source=AudioSequenceSource.OTHER,
+                    ),
+                ),
+            )
         self._report(
             AcceptableAssistanceFrame(
                 assistance_text_frame=AssistanceTextFrame(
@@ -152,6 +186,7 @@ class GRPCTerminalCollector(FrameProcessor):
                 ),
             ),
         )
+        self._index += 1
         self._sent_last_frame = True
         self.first_output.set()
 
@@ -159,15 +194,15 @@ class GRPCTerminalCollector(FrameProcessor):
         """Tap the terminal stage's output frames and report them over gRPC."""
         await super().process_frame(frame, direction)
 
-        if self._terminal_stage == 'stt':
+        if self._terminal_stage is AssistantPipelineStage.STT:
             if isinstance(frame, TranscriptionFrame):
                 self._dispatch_text(frame.text)
-        elif self._terminal_stage == 'llm':
+        elif self._terminal_stage is AssistantPipelineStage.LLM:
             if isinstance(frame, LLMTextFrame):
                 self._dispatch_text(frame.text)
             elif isinstance(frame, LLMFullResponseEndFrame):
                 self.dispatch_last_frame()
-        elif self._terminal_stage == 'tts':
+        elif self._terminal_stage is AssistantPipelineStage.TTS:
             if isinstance(frame, TTSAudioRawFrame) and frame.audio:
                 self._dispatch_audio(frame)
             elif isinstance(frame, TTSStoppedFrame):

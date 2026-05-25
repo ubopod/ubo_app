@@ -31,7 +31,11 @@ from ubo_bindings.ubo.v1 import (
     AssistantReportAction,
 )
 
-from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
+from ubo_assistant.constants import (
+    DEFAULT_SYSTEM_MESSAGE,
+    DEFAULT_TOOLS_MESSAGE,
+    LIVE_PIPELINE_SOURCE_ID,
+)
 from ubo_assistant.tools import MCPServerMetadata
 
 if TYPE_CHECKING:
@@ -147,7 +151,7 @@ class UboSwitchMixin(Generic[T]):
         self.client.dispatch(
             action=Action(
                 assistant_report_action=AssistantReportAction(
-                    source_id='pipecat',
+                    source_id=LIVE_PIPELINE_SOURCE_ID,
                     data=frame_data,
                 ),
             ),

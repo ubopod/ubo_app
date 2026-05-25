@@ -40,6 +40,7 @@ from ubo_bindings.ubo.v1 import (
     AssistantLlmName,
     AssistantModelChangedEvent,
     AssistantOllamaThinkingChangedEvent,
+    AssistantPipelineStage,
     Event,
 )
 
@@ -868,7 +869,7 @@ class UboLLMService(UboLLMSwitchService):
                         timestamp=self.client.event_loop.time(),
                         id=self._assistance_id,
                         index=self._assistance_index,
-                        source='llm',
+                        source=AssistantPipelineStage.LLM,
                     ),
                 ),
             )
@@ -882,7 +883,7 @@ class UboLLMService(UboLLMSwitchService):
                         timestamp=self.client.event_loop.time(),
                         id=self._assistance_id,
                         index=self._assistance_index,
-                        source='llm',
+                        source=AssistantPipelineStage.LLM,
                         is_last_frame=True,
                     ),
                 ),

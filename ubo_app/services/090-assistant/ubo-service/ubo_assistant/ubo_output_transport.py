@@ -24,6 +24,8 @@ from ubo_bindings.ubo.v1 import (
     AudioSample,
 )
 
+from ubo_assistant.constants import LIVE_PIPELINE_SOURCE_ID
+
 
 class UboOutputTransport(BaseOutputTransport):
     """Output transport that writes audio samples to UBO RPC Client."""
@@ -60,6 +62,14 @@ class UboOutputTransport(BaseOutputTransport):
             self._assistance_id = uuid.uuid4().hex
             self._audio_assistance_index = 0
             self._video_assistance_index = 0
+        # NB: don't dispatch a ``sample=None`` sentinel on ``TTSStoppedFrame``
+        # here. In the live pipeline that frame fires after *each utterance*
+        # (per sentence), not at the end of the conversation turn — emitting
+        # a sentinel per utterance cuts subsequent utterances off mid-reply.
+        # The audio service's 1 s empty-buffer fallback is the correct
+        # mechanism here; for the request pipeline (one utterance per
+        # request) ``grpc_collector.dispatch_last_frame`` dispatches the
+        # sentinel directly.
         if isinstance(frame, OutputAudioRawFrame):
             # Handle audio frames directly to avoid resampler conflicts
             target_sample_rate = 48000  # UBO target sample rate
@@ -96,7 +106,7 @@ class UboOutputTransport(BaseOutputTransport):
         self.client.dispatch(
             action=Action(
                 assistant_report_action=AssistantReportAction(
-                    source_id='pipecat',
+                    source_id=LIVE_PIPELINE_SOURCE_ID,
                     data=frame_data,
                 ),
             ),

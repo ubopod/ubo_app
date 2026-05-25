@@ -134,6 +134,12 @@ def _make_run_pipeline_event(  # noqa: PLR0913
         else state.selected_models.get(resolved_llm, DEFAULT_MODELS[resolved_llm]),
         system_prompt=system_prompt,
         enable_tools=enable_tools,
+        # Resolve per-engine selections so the request handler doesn't fall
+        # back to hardcoded module defaults (live and one-shot pipelines must
+        # agree on the same Vosk model / Piper voice / Kokoro voice).
+        vosk_model_id=state.selected_vosk_model,
+        piper_voice_id=state.selected_piper_voice,
+        kokoro_voice_id=state.selected_kokoro_voice,
     )
 
 

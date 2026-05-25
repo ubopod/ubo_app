@@ -1,7 +1,6 @@
 # ruff: noqa: D100, D103
 from __future__ import annotations
 
-import datetime
 from dataclasses import replace
 
 from redux import (
@@ -31,6 +30,7 @@ from ubo_app.store.services.display import (
     DisplayUnblankEvent,
     DisplayUpdateActivityAction,
 )
+from ubo_app.utils.clock import default_now
 
 Action = (
     InitAction
@@ -91,18 +91,17 @@ def reducer(
                 state=replace(
                     state,
                     is_blanked=False,
-                    last_activity_time=datetime.datetime.now(tz=datetime.UTC).timestamp(),
+                    last_activity_time=action.timestamp,
                 ),
                 events=[DisplayUnblankEvent(), DisplayRedrawEvent()],
             )
 
         case DisplayUpdateActivityAction():
-            timestamp = datetime.datetime.now(tz=datetime.UTC).timestamp()
             logger.debug(
                 'DisplayUpdateActivityAction received',
-                extra={'timestamp': timestamp},
+                extra={'timestamp': action.timestamp},
             )
-            return replace(state, last_activity_time=timestamp)
+            return replace(state, last_activity_time=action.timestamp)
 
         case DisplaySetBlankTimeoutAction():
             logger.info(
@@ -116,7 +115,12 @@ def reducer(
             | AssistantStopListeningAction()
             | AssistantToggleListeningAction()
         ):
-            timestamp = datetime.datetime.now(tz=datetime.UTC).timestamp()
+            # Cross-service actions don't carry a ``timestamp`` field today;
+            # ``default_now`` is the centralized, monkey-patchable clock
+            # helper, so reading it here keeps behaviour deterministic
+            # under tests without rippling a field-add across the assistant
+            # action surface.
+            timestamp = default_now()
             logger.info(
                 'Assistant action - updating activity and waking screen if blanked',
                 extra={

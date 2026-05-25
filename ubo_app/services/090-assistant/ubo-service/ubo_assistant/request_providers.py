@@ -52,12 +52,20 @@ async def _secret(client: UboRPCClient, env_var: str) -> str | None:
 async def _build_stt(  # noqa: C901
     provider_id: str,
     client: UboRPCClient,
+    *,
+    vosk_model_id: str = '',
 ) -> STTService | None:
     if provider_id == 'vosk':
         from ubo_assistant.vosk import DEFAULT_VOSK_MODEL_ID, VoskSTTService
 
         # The Vosk model load is blocking — keep it off the event loop.
-        return await asyncio.to_thread(VoskSTTService, model_id=DEFAULT_VOSK_MODEL_ID)
+        # The reducer resolves the user's selection into ``vosk_model_id``;
+        # ``DEFAULT_VOSK_MODEL_ID`` is the fallback for legacy callers that
+        # didn't carry a selection on the event.
+        return await asyncio.to_thread(
+            VoskSTTService,
+            model_id=vosk_model_id or DEFAULT_VOSK_MODEL_ID,
+        )
 
     if provider_id in ('google', 'google_segmented'):
         credentials = await _secret(client, _GOOGLE_CREDENTIALS_ENV)
@@ -279,11 +287,16 @@ def _construct_cloud_llm(
 async def _build_tts(  # noqa: C901, PLR0912
     provider_id: str,
     client: UboRPCClient,
+    *,
+    piper_voice_id: str = '',
+    kokoro_voice_id: str = '',
 ) -> TTSService | None:
     if provider_id == 'piper':
         from ubo_assistant.piper import DEFAULT_PIPER_VOICE_ID, PiperTTSService
 
-        return PiperTTSService(voice_id=DEFAULT_PIPER_VOICE_ID)
+        return PiperTTSService(
+            voice_id=piper_voice_id or DEFAULT_PIPER_VOICE_ID,
+        )
 
     if provider_id == 'kokoro':
         from ubo_assistant.kokoro import (
@@ -295,7 +308,9 @@ async def _build_tts(  # noqa: C901, PLR0912
 
         if not (KOKORO_MODEL_PATH.exists() and KOKORO_VOICES_PATH.exists()):
             return None
-        return KokoroTTSService(voice_id=DEFAULT_KOKORO_VOICE_ID)
+        return KokoroTTSService(
+            voice_id=kokoro_voice_id or DEFAULT_KOKORO_VOICE_ID,
+        )
 
     if provider_id == 'google':
         credentials = await _secret(client, _GOOGLE_CREDENTIALS_ENV)
@@ -368,10 +383,11 @@ async def build_stt_service(
     provider_id: str,
     *,
     client: UboRPCClient,
+    vosk_model_id: str = '',
 ) -> STTService | None:
     """Construct the STT service for ``provider_id``, or ``None`` if unavailable."""
     try:
-        return await _build_stt(provider_id, client)
+        return await _build_stt(provider_id, client, vosk_model_id=vosk_model_id)
     except Exception:
         logger.exception('Failed to build STT service', extra={'provider': provider_id})
         return None
@@ -395,10 +411,17 @@ async def build_tts_service(
     provider_id: str,
     *,
     client: UboRPCClient,
+    piper_voice_id: str = '',
+    kokoro_voice_id: str = '',
 ) -> TTSService | None:
     """Construct the TTS service for ``provider_id``, or ``None`` if unavailable."""
     try:
-        return await _build_tts(provider_id, client)
+        return await _build_tts(
+            provider_id,
+            client,
+            piper_voice_id=piper_voice_id,
+            kokoro_voice_id=kokoro_voice_id,
+        )
     except Exception:
         logger.exception('Failed to build TTS service', extra={'provider': provider_id})
         return None
