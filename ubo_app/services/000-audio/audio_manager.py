@@ -31,6 +31,7 @@ from ubo_app.store.services.audio import (
     AudioPlaybackDoneAction,
     AudioReportSampleAction,
     AudioSample,
+    AudioSequenceSource,
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
@@ -278,12 +279,13 @@ class AudioManager:
             )
             return
 
-    async def play_sequence(  # noqa: C901, PLR0915
+    async def play_sequence(  # noqa: C901, PLR0912, PLR0915
         self,
         sample: AudioSample | None,
         *,
         id: str,
         index: int,
+        source: AudioSequenceSource = AudioSequenceSource.OTHER,
     ) -> None:
         """Play a sequence of audio samples.
 
@@ -298,6 +300,11 @@ class AudioManager:
 
         index: int
             Index of the sample in the sequence
+
+        source: AudioSequenceSource
+            Origin discriminator propagated to the matching
+            ``AudioPlaybackDoneAction`` so cross-service consumers (e.g. the
+            chat overlay) can match the same value they queued with.
 
         """
         logger.debug(
@@ -378,28 +385,34 @@ class AudioManager:
             async def play(sample: AudioSample) -> None:
                 stream.write(sample.data)
 
-        # Grace period between the last buffered chunk being played and
-        # declaring playback finished. Producers that explicitly mark
-        # end-of-stream (e.g. ``010-speech-synthesis`` enqueueing a
-        # ``sample=None`` action) short-circuit this via the ``None`` arm
-        # below; producers that don't (e.g. the pipecat assistant
-        # subprocess) rely on this timeout so ``AudioPlaybackDoneAction``
-        # still fires reliably once the speaker actually goes quiet. One
-        # second is well above pipecat's intra-utterance chunk gaps.
-        _empty_buffer_grace_seconds = 1.0
+        # Fallback grace period when a producer doesn't send the
+        # ``sample=None`` end-of-stream sentinel. Every well-behaved
+        # producer (``010-speech-synthesis``, the live pipecat pipeline
+        # via ``UboOutputTransport``, the request pipeline via
+        # ``GRPCTerminalCollector``) emits the sentinel and short-
+        # circuits via the ``None`` arm below; this timeout is the
+        # safety net for misbehaving producers. The warning logged when
+        # it fires tells us a sentinel is missing somewhere.
+        _empty_buffer_fallback_grace_seconds = 1.0
         _poll_interval_seconds = 0.05
-        _max_empty_polls = int(_empty_buffer_grace_seconds / _poll_interval_seconds)
+        _max_empty_polls = int(
+            _empty_buffer_fallback_grace_seconds / _poll_interval_seconds,
+        )
         empty_polls = 0
+        fallback_fired = False
         while id in self.audio_heads:
             head_sample = buffer.get(self.audio_heads.get(id, -1), not_provided)
             if head_sample is None:
-                # None signals end-of-stream
+                # None signals end-of-stream — the producer's sentinel.
                 break
             if isinstance(head_sample, NotProvided):
                 empty_polls += 1
                 if empty_polls >= _max_empty_polls:
-                    # Buffer empty past the grace window — assume the
-                    # producer has finished sending chunks.
+                    # Buffer empty past the fallback window — the producer
+                    # never sent its end-of-stream sentinel. Surface so
+                    # the missing sentinel can be tracked down; behaviour
+                    # is still correct (we break out as before).
+                    fallback_fired = True
                     break
                 await asyncio.sleep(_poll_interval_seconds)
                 continue
@@ -410,6 +423,14 @@ class AudioManager:
             if id in self.audio_heads:
                 self.audio_heads[id] += 1
 
+        if fallback_fired:
+            logger.warning(
+                'Audio - Sequence ended via empty-buffer fallback; '
+                'producer did not send an end-of-stream sentinel '
+                '(``sample=None`` action). This is correct but adds '
+                '~1 s of latency before the chat overlay can dismiss.',
+                extra={'sequence_id': id, 'source': source.value},
+            )
         logger.debug(
             'Audio - Sequence playback finished',
             extra={'sequence_id': id},
@@ -417,7 +438,10 @@ class AudioManager:
         with self.audio_buffers_lock:
             self.audio_buffers.pop(id, None)
             self.audio_heads.pop(id, None)
-            store.dispatch(AudioPlaybackDoneAction(id=id))
+            # Propagate the original sequence's ``source`` so consumers
+            # (e.g. the chat reducer's "TTS playback finished" branch)
+            # match the same discriminator they used for the queue action.
+            store.dispatch(AudioPlaybackDoneAction(id=id, source=source))
 
         if self.pa:
             import pyaudio

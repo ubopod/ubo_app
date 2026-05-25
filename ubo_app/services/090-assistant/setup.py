@@ -103,6 +103,7 @@ from ubo_app.store.input.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     DEFAULT_MODELS,
+    LIVE_PIPELINE_SOURCE_ID,
     AssistanceAudioFrame,
     AssistanceImageFrame,
     AssistantAddMcpServerEvent,
@@ -137,7 +138,10 @@ from ubo_app.store.services.assistant import (
     McpServerMetadata,
     McpServerType,
 )
-from ubo_app.store.services.audio import AudioPlayAudioSequenceAction
+from ubo_app.store.services.audio import (
+    AudioPlayAudioSequenceAction,
+    AudioSequenceSource,
+)
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationDisplayType,
@@ -322,11 +326,22 @@ def _communicate(event: AssistantHandleReportEvent) -> None:
     match event.data:
         case AssistanceAudioFrame(audio=sample, index=index, id=id):
             if sample:
+                # Only the live pipeline drives chat-overlay reconciliation;
+                # one-shot programmatic requests share the audio bus but
+                # the chat reducer must ignore them — tagging the sequence
+                # with an explicit ``source`` is the discriminator
+                # (preferred over parsing the free-form ``id``).
+                audio_source = (
+                    AudioSequenceSource.ASSISTANT_LIVE
+                    if event.source_id == LIVE_PIPELINE_SOURCE_ID
+                    else AudioSequenceSource.OTHER
+                )
                 store.dispatch(
                     AudioPlayAudioSequenceAction(
                         sample=sample,
                         id=f'assistant:{event.source_id}:{id}',
                         index=index,
+                        source=audio_source,
                     ),
                 )
 

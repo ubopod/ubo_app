@@ -169,11 +169,22 @@ class AssistantPipelineStage(StrEnum):
     """A stage in the assistant pipeline.
 
     A programmatic request runs a *contiguous* sub-chain of these, in this order.
+    Also doubles as the ``source`` discriminator on
+    :class:`AssistanceTextFrame` so consumers can route by enum identity instead
+    of string-matching.
     """
 
     STT = 'stt'
     LLM = 'llm'
     TTS = 'tts'
+
+
+# ``AssistantReportAction.source_id`` / ``AssistantHandleReportEvent.source_id``
+# identifies which *pipeline* produced a frame. Two well-known values exist;
+# everywhere they're used should import these constants instead of repeating
+# the literal — a typo in a comparison silently breaks chat routing.
+LIVE_PIPELINE_SOURCE_ID = 'pipecat'
+REQUEST_PIPELINE_SOURCE_ID = 'assistant_request'
 
 
 class McpServerType(StrEnum):
@@ -596,8 +607,12 @@ class AssistanceTextFrame(AssistanceFrame):
     """A text assistance frame."""
 
     text: str
-    # Originating pipeline stage for programmatic requests (stt/llm/tts).
-    source: str = ''
+    # Originating pipeline stage. Set by every producer (the live
+    # ``ubo_stt``/``ubo_llm`` pipelines and the request-pipeline
+    # ``GRPCTerminalCollector``). ``None`` only on the wire-default path —
+    # consumers should treat the value as the discriminator and never
+    # parse the raw string.
+    source: AssistantPipelineStage | None = None
 
 
 class AssistanceAudioFrame(AssistanceFrame):
@@ -897,6 +912,11 @@ class AssistantRunPipelineEvent(AssistantEvent):
     in by the reducer from the current ``AssistantState`` selections. The
     discrete shortcut actions and ``AssistantRunPipelineAction`` all funnel
     into this one canonical event.
+
+    Per-engine model/voice fields (``vosk_model_id``, ``piper_voice_id``,
+    ``kokoro_voice_id``) carry the user's current selection so the request
+    handler in the subprocess doesn't have to fall back to module-level
+    defaults — keeping live and one-shot pipelines on the same model.
     """
 
     session_id: str
@@ -911,6 +931,9 @@ class AssistantRunPipelineEvent(AssistantEvent):
     llm_model: str
     system_prompt: str | None
     enable_tools: bool
+    vosk_model_id: str = ''
+    piper_voice_id: str = ''
+    kokoro_voice_id: str = ''
 
 
 class AssistantState(Immutable):

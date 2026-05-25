@@ -194,6 +194,7 @@ def init_service() -> Subscriptions:
                 event.sample,
                 id=event.id,
                 index=event.index,
+                source=event.source,
             )
         else:
             to_thread(

@@ -70,9 +70,21 @@ class FakeStore:
         self,
         event_type: type,
         handler: Callable[[Any], None],
-    ) -> None:
-        """Register an event handler keyed on its type."""
+    ) -> Callable[[], None]:
+        """Register an event handler keyed on its type.
+
+        Returns an unsubscribe callable so the production code's cleanup
+        path (the ``Subscriptions`` list returned by ``_register_voice_handler``)
+        can detach the handler.
+        """
         self._event_handlers.setdefault(event_type, []).append(handler)
+
+        def _unsubscribe() -> None:
+            handlers = self._event_handlers.get(event_type, [])
+            if handler in handlers:
+                handlers.remove(handler)
+
+        return _unsubscribe
 
     def fire_event(self, event: Any) -> None:  # noqa: ANN401
         """Fan an event out to every subscriber synchronously."""
@@ -166,7 +178,9 @@ def voice_handler(
         module._voice_state.dismiss_handle = None  # noqa: SLF001
         module._voice_state.timer_initiated_dismiss = False  # noqa: SLF001
 
-        module._register_voice_handler()  # noqa: SLF001
+        voice_subscriptions = module._register_voice_handler()  # noqa: SLF001
+        # Stash the cleanup list on the module for tests that exercise teardown.
+        module._test_voice_subscriptions = voice_subscriptions  # type: ignore[attr-defined]  # noqa: SLF001
 
         # Capture the store classes the handler's lazy imports actually
         # used so tests' ``isinstance`` checks share class identity with
@@ -177,9 +191,12 @@ def voice_handler(
         from ubo_app.store.services import chat as _chat_mod
 
         captured_types = SimpleNamespace(
+            LIVE_PIPELINE_SOURCE_ID=_assistant_mod.LIVE_PIPELINE_SOURCE_ID,
+            REQUEST_PIPELINE_SOURCE_ID=_assistant_mod.REQUEST_PIPELINE_SOURCE_ID,
             AssistanceAudioFrame=_assistant_mod.AssistanceAudioFrame,
             AssistanceTextFrame=_assistant_mod.AssistanceTextFrame,
             AssistantHandleReportEvent=_assistant_mod.AssistantHandleReportEvent,
+            AssistantPipelineStage=_assistant_mod.AssistantPipelineStage,
             AssistantStopListeningAction=_assistant_mod.AssistantStopListeningAction,
             AssistantStopTalkingAction=_assistant_mod.AssistantStopTalkingAction,
             ChatAddMessageAction=_chat_mod.ChatAddMessageAction,
@@ -216,7 +233,7 @@ def _make_text_frame(
     types: SimpleNamespace,
     *,
     text: str,
-    source: str,
+    source: Any,  # noqa: ANN401  # AssistantPipelineStage member
     is_last_frame: bool = False,
 ) -> Any:  # noqa: ANN401
     return types.AssistanceTextFrame(
@@ -242,8 +259,10 @@ def _make_audio_frame(types: SimpleNamespace) -> Any:  # noqa: ANN401
 def _report(
     types: SimpleNamespace,
     frame: Any,  # noqa: ANN401
-    source_id: str = 'pipecat',
+    source_id: str | None = None,
 ) -> Any:  # noqa: ANN401
+    if source_id is None:
+        source_id = types.LIVE_PIPELINE_SOURCE_ID
     return types.AssistantHandleReportEvent(source_id=source_id, data=frame)
 
 
@@ -268,7 +287,14 @@ def test_stt_first_frame_creates_user_bubble(
     fake_store.dispatched.clear()
 
     fake_store.fire_event(
-        _report(types, _make_text_frame(types, text='hello', source='stt')),
+        _report(
+            types,
+            _make_text_frame(
+                types,
+                text='hello',
+                source=types.AssistantPipelineStage.STT,
+            ),
+        ),
     )
 
     add = next(
@@ -289,13 +315,27 @@ def test_stt_subsequent_frame_overwrites_text(
     fake_store.set_listening(value=True)
 
     fake_store.fire_event(
-        _report(types, _make_text_frame(types, text='hel', source='stt')),
+        _report(
+            types,
+            _make_text_frame(
+                types,
+                text='hel',
+                source=types.AssistantPipelineStage.STT,
+            ),
+        ),
     )
     msg_id = module._voice_state.user_message_id  # noqa: SLF001
     fake_store.dispatched.clear()
 
     fake_store.fire_event(
-        _report(types, _make_text_frame(types, text='hello world', source='stt')),
+        _report(
+            types,
+            _make_text_frame(
+                types,
+                text='hello world',
+                source=types.AssistantPipelineStage.STT,
+            ),
+        ),
     )
     set_action = next(
         a
@@ -311,7 +351,14 @@ def test_stt_final_frame_clears_user_id(voice_handler: _VoiceHandler) -> None:
     module, fake_store, _, types = voice_handler
     fake_store.set_listening(value=True)
     fake_store.fire_event(
-        _report(types, _make_text_frame(types, text='hi', source='stt')),
+        _report(
+            types,
+            _make_text_frame(
+                types,
+                text='hi',
+                source=types.AssistantPipelineStage.STT,
+            ),
+        ),
     )
     assert module._voice_state.user_message_id  # noqa: SLF001
 
@@ -321,7 +368,7 @@ def test_stt_final_frame_clears_user_id(voice_handler: _VoiceHandler) -> None:
             _make_text_frame(
                 types,
                 text='hi there',
-                source='stt',
+                source=types.AssistantPipelineStage.STT,
                 is_last_frame=True,
             ),
         ),
@@ -338,7 +385,14 @@ def test_llm_first_frame_creates_assistant_bubble(
     fake_store.dispatched.clear()
 
     fake_store.fire_event(
-        _report(types, _make_text_frame(types, text='Hi', source='llm')),
+        _report(
+            types,
+            _make_text_frame(
+                types,
+                text='Hi',
+                source=types.AssistantPipelineStage.LLM,
+            ),
+        ),
     )
 
     add = next(
@@ -359,13 +413,27 @@ def test_llm_subsequent_frame_appends_chunk(
     fake_store.set_listening(value=True)
 
     fake_store.fire_event(
-        _report(types, _make_text_frame(types, text='Hi', source='llm')),
+        _report(
+            types,
+            _make_text_frame(
+                types,
+                text='Hi',
+                source=types.AssistantPipelineStage.LLM,
+            ),
+        ),
     )
     msg_id = module._voice_state.assistant_message_id  # noqa: SLF001
     fake_store.dispatched.clear()
 
     fake_store.fire_event(
-        _report(types, _make_text_frame(types, text=' there', source='llm')),
+        _report(
+            types,
+            _make_text_frame(
+                types,
+                text=' there',
+                source=types.AssistantPipelineStage.LLM,
+            ),
+        ),
     )
     append = next(
         a
@@ -387,8 +455,12 @@ def test_non_pipecat_source_id_is_ignored(
     fake_store.fire_event(
         _report(
             types,
-            _make_text_frame(types, text='hello', source='stt'),
-            source_id='assistant_request',
+            _make_text_frame(
+                types,
+                text='hello',
+                source=types.AssistantPipelineStage.STT,
+            ),
+            source_id=types.REQUEST_PIPELINE_SOURCE_ID,
         ),
     )
     assert not any(
@@ -470,3 +542,40 @@ def test_dismiss_loop_started_on_register(
     module, _, create_task_mock, _ = voice_handler
     assert create_task_mock.call_count >= 1
     assert module._voice_state.dismiss_handle is not None  # noqa: SLF001
+
+
+def test_register_voice_handler_returns_cleanup_subscriptions(
+    voice_handler: _VoiceHandler,
+) -> None:
+    """``_register_voice_handler`` must hand back cleanup callables.
+
+    Without these the service can't be torn down (hot-reload / tests) and
+    subscriptions leak — duplicating handlers across reload generations.
+    """
+    module, fake_store, _, types = voice_handler
+    subscriptions = module._test_voice_subscriptions  # noqa: SLF001
+    # autorun unsub + 2 event-subscriber unsubs + dismiss-task cancel.
+    expected_subscription_count = 4
+    assert len(list(subscriptions)) == expected_subscription_count
+
+    # Running every cleanup must cancel the dismiss task and detach the
+    # report subscriber so post-cleanup events don't reach the handler.
+    for cleanup in subscriptions:
+        cleanup()
+    assert module._voice_state.dismiss_handle is None  # noqa: SLF001
+    fake_store.dispatched.clear()
+    fake_store.fire_event(
+        _report(
+            types,
+            _make_text_frame(
+                types,
+                text='post-teardown',
+                source=types.AssistantPipelineStage.STT,
+            ),
+        ),
+    )
+    # No subscriber should still be wired — no ChatAddMessageAction.
+    assert not any(
+        isinstance(a, types.ChatAddMessageAction)
+        for a in fake_store.dispatched
+    )

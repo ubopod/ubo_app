@@ -5,7 +5,8 @@ import enum
 import functools
 import importlib
 from datetime import UTC, datetime
-from typing import TypeAlias, TypeVar, Union, cast, get_args, get_origin
+from types import UnionType
+from typing import TypeAlias, TypeVar, Union, cast, get_args, get_origin, get_type_hints
 
 import betterproto
 from betterproto.casing import snake_case
@@ -192,14 +193,34 @@ def get_field_value(
     key: str,
 ) -> ReturnType | _MissingType:
     if getattr(message, key) is None:
-        # check if destination_class which is a dataclass has a default value for this
-        # field
-        field_type = destination_class.__dataclass_fields__.get(key)
+        # Decide whether ``None`` is a valid value for the destination
+        # field. ``__dataclass_fields__`` returns ``Field`` objects, which
+        # don't carry the resolved type annotation directly; under
+        # ``from __future__ import annotations`` (and Python 3.10+'s lazy
+        # evaluation) ``Field.type`` is a string. ``get_type_hints`` does
+        # the runtime resolution for us and works whether the annotation
+        # was a forward-ref string or a real type. Fall back to the raw
+        # ``Field.type`` string match so that any class that opts out of
+        # ``get_type_hints`` (e.g. due to a non-importable forward ref)
+        # still works as before.
+        try:
+            hints = get_type_hints(destination_class)
+        except Exception:  # noqa: BLE001
+            hints = {}
+        field_type = hints.get(key)
+        if field_type is None:
+            field = destination_class.__dataclass_fields__.get(key)
+            field_type = getattr(field, 'type', None)
         origin = get_origin(field_type)
+        # Catch both ``Union[X, None]`` and PEP 604 ``X | None`` (origin is
+        # ``types.UnionType``). Without ``UnionType`` here, dataclasses
+        # using the ``|`` syntax silently lose their nullable fields.
+        is_union_like = origin is Union or origin is UnionType
         is_none_accepted = (
             type(None) in get_args(field_type)
-            if origin is Union
+            if is_union_like
             else field_type is type(None)
+            or (isinstance(field_type, str) and 'None' in field_type)
         )
 
         if not is_none_accepted:

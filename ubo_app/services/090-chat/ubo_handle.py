@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
+import contextlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+from ubo_app.utils.clock import default_now
 
 if TYPE_CHECKING:
     from asyncio import Handle
@@ -16,6 +18,7 @@ if TYPE_CHECKING:
         ChatSessionEndedEvent,
         ChatUserMessageSentEvent,
     )
+    from ubo_app.utils.types import Subscriptions
 
 
 # How long after the last activity to close the chat overlay, provided
@@ -65,13 +68,13 @@ class _VoiceState:
 _voice_state = _VoiceState()
 
 
-def _register_chat_menu_item() -> None:
+def _register_chat_menu_item() -> Subscriptions:
     """Register a one-click "Chat" item under Settings → Assistant.
 
     Selecting it dispatches ``ChatStartSessionAction`` (via the action
     registry), which opens the chat overlay on every connected client.
     """
-    from ubo_app.store.core.action_registry import register_action
+    from ubo_app.store.core.action_registry import register_action, unregister_action
     from ubo_app.store.core.types import (
         RegisterSettingAppAction,
         SettingsCategory,
@@ -94,8 +97,13 @@ def _register_chat_menu_item() -> None:
         ),
     )
 
+    def _unregister_chat_action() -> None:
+        unregister_action('chat:open')
 
-def _register_echo_handler() -> None:
+    return [_unregister_chat_action]
+
+
+def _register_echo_handler() -> Subscriptions:
     """Echo every sent user message back as an assistant reply.
 
     Test-only scaffolding (gated behind ``IS_TEST_ENV`` in ``setup``): it
@@ -126,10 +134,10 @@ def _register_echo_handler() -> None:
             ),
         )
 
-    store.subscribe_event(ChatUserMessageSentEvent, on_user_message)
+    return [store.subscribe_event(ChatUserMessageSentEvent, on_user_message)]
 
 
-def _register_voice_handler() -> None:  # noqa: C901, PLR0915
+def _register_voice_handler() -> Subscriptions:  # noqa: C901, PLR0915
     """Wire the pipecat assistant into the chat widget.
 
     This is the real assistant↔chat bridge (the echo handler is test-only
@@ -150,8 +158,10 @@ def _register_voice_handler() -> None:  # noqa: C901, PLR0915
     """
     from ubo_app.store.main import store
     from ubo_app.store.services.assistant import (
+        LIVE_PIPELINE_SOURCE_ID,
         AssistanceTextFrame,
         AssistantHandleReportEvent,
+        AssistantPipelineStage,
         AssistantStopListeningAction,
         AssistantStopTalkingAction,
     )
@@ -167,13 +177,6 @@ def _register_voice_handler() -> None:  # noqa: C901, PLR0915
         ChatStartSessionAction,
     )
     from ubo_app.utils.async_ import create_task
-
-    # Live pipeline frames carry this ``source_id`` (see
-    # ``ubo_assistant/ubo_output_transport.py`` and
-    # ``ubo_assistant/switch.py``); one-shot programmatic requests use
-    # ``'assistant_request'`` instead, which we deliberately ignore so
-    # test/synthesis runs never hijack the chat overlay.
-    live_pipeline_source_id = 'pipecat'
 
     def _selected_is_listening(state: object) -> bool:
         """Read ``state.assistant.is_listening`` defensively.
@@ -243,7 +246,7 @@ def _register_voice_handler() -> None:  # noqa: C901, PLR0915
             _voice_state.assistant_message_id = ''
 
     def _on_report(event: AssistantHandleReportEvent) -> None:
-        if event.source_id != live_pipeline_source_id:
+        if event.source_id != LIVE_PIPELINE_SOURCE_ID:
             return
         frame = event.data
         # Audio frames keep the chat open via the reducer (which sees the
@@ -251,9 +254,9 @@ def _register_voice_handler() -> None:  # noqa: C901, PLR0915
         # the handler only routes text frames into chat bubbles.
         if not isinstance(frame, AssistanceTextFrame):
             return
-        if frame.source == 'stt':
+        if frame.source is AssistantPipelineStage.STT:
             _route_stt_frame(frame)
-        elif frame.source == 'llm':
+        elif frame.source is AssistantPipelineStage.LLM:
             _route_llm_frame(frame)
 
     def _on_session_ended(_event: ChatSessionEndedEvent) -> None:
@@ -298,7 +301,7 @@ def _register_voice_handler() -> None:  # noqa: C901, PLR0915
                 # service's play loop exited because the buffer drained).
                 if chat.is_audio_playing:
                     continue
-                now = datetime.datetime.now(tz=datetime.UTC).timestamp()
+                now = default_now()
                 if now - chat.last_activity_time < _DISMISS_DELAY_SECONDS:
                     continue
                 # Mark the dispatch as "from our timer" so the session-
@@ -312,29 +315,54 @@ def _register_voice_handler() -> None:  # noqa: C901, PLR0915
 
                 logger.exception('Chat dismiss loop iteration failed')
 
-    # Suppress the "function not used" warning — the autorun decorator holds
-    # the reference for us, but linters can't see that.
-    _ = _on_listening_change
+    report_unsub = store.subscribe_event(AssistantHandleReportEvent, _on_report)
+    session_ended_unsub = store.subscribe_event(
+        ChatSessionEndedEvent,
+        _on_session_ended,
+    )
+    dismiss_task = create_task(_dismiss_loop())
+    _voice_state.dismiss_handle = dismiss_task
 
-    store.subscribe_event(AssistantHandleReportEvent, _on_report)
-    store.subscribe_event(ChatSessionEndedEvent, _on_session_ended)
-    _voice_state.dismiss_handle = create_task(_dismiss_loop())
+    def _cancel_dismiss_loop() -> None:
+        # The dismiss loop catches CancelledError on its ``await
+        # asyncio.sleep`` and returns; suppress any race where the task
+        # already completed.
+        with contextlib.suppress(Exception):
+            dismiss_task.cancel()
+        _voice_state.dismiss_handle = None
+
+    def _unsubscribe_autorun() -> None:
+        # The real redux ``autorun`` decorates the function and attaches an
+        # ``.unsubscribe`` for teardown. Test fixtures may stub ``autorun``
+        # with a passthrough that lacks the attribute — be defensive.
+        unsubscribe = getattr(_on_listening_change, 'unsubscribe', None)
+        if unsubscribe is not None:
+            unsubscribe()
+
+    return [
+        _unsubscribe_autorun,
+        report_unsub,
+        session_ended_unsub,
+        _cancel_dismiss_loop,
+    ]
 
 
-def setup(register_reducer: ReducerRegistrar) -> None:
+def setup(register_reducer: ReducerRegistrar) -> Subscriptions:
     from reducer import reducer
 
     from ubo_app.utils import IS_TEST_ENV
 
     register_reducer(reducer)
-    _register_chat_menu_item()
-    _register_voice_handler()
+    subscriptions: list[object] = []
+    subscriptions.extend(_register_chat_menu_item())
+    subscriptions.extend(_register_voice_handler())
     # The echo responder is dev/test scaffolding — register it only under
     # the test harness so it never collides with the real assistant
     # responder (the voice handler covers the voice path; the echo handler
     # only services the typed-text seam, ``ChatUserMessageSentEvent``).
     if IS_TEST_ENV:
-        _register_echo_handler()
+        subscriptions.extend(_register_echo_handler())
+    return subscriptions  # type: ignore[return-value]
 
 
 register(

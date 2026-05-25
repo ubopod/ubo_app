@@ -35,7 +35,11 @@ from pipecat.processors.aggregators.llm_context import (
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
 )
-from ubo_bindings.ubo.v1 import AssistantRunPipelineEvent, Event
+from ubo_bindings.ubo.v1 import (
+    AssistantPipelineStage,
+    AssistantRunPipelineEvent,
+    Event,
+)
 
 from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE
 from ubo_assistant.grpc_collector import GRPCTerminalCollector
@@ -145,7 +149,11 @@ async def _resolve_stage_services(
         provider_id = _STT_PROVIDER_IDS.get(event.stt_provider.name or '')
         if provider_id is None:
             return services, f'Unknown STT provider: {event.stt_provider.name}'
-        service = await build_stt_service(provider_id, client=client)
+        service = await build_stt_service(
+            provider_id,
+            client=client,
+            vosk_model_id=event.vosk_model_id or '',
+        )
         if service is None:
             return services, f"STT provider '{provider_id}' is not available"
         services[STT] = service
@@ -167,7 +175,12 @@ async def _resolve_stage_services(
         provider_id = _TTS_PROVIDER_IDS.get(event.tts_provider.name or '')
         if provider_id is None:
             return services, f'Unknown TTS provider: {event.tts_provider.name}'
-        service = await build_tts_service(provider_id, client=client)
+        service = await build_tts_service(
+            provider_id,
+            client=client,
+            piper_voice_id=event.piper_voice_id or '',
+            kokoro_voice_id=event.kokoro_voice_id or '',
+        )
         if service is None:
             return services, f"TTS provider '{provider_id}' is not available"
         services[TTS] = service
@@ -235,7 +248,9 @@ async def _run_request(
     collector = GRPCTerminalCollector(
         client=client,
         session_id=session_id,
-        terminal_stage=terminal_stage,
+        # The collector routes by enum identity; convert from the internal
+        # string id (lowercased name) to the enum once, at the boundary.
+        terminal_stage=AssistantPipelineStage[terminal_stage.upper()],
     )
 
     try:

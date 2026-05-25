@@ -10,6 +10,8 @@ from uuid import uuid4
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
+from ubo_app.utils.clock import default_now
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -41,9 +43,16 @@ class ChatMessage(Immutable):
     id: str = field(default_factory=lambda: uuid4().hex)
     kind: ChatMessageKind = ChatMessageKind.TEXT
     text: str = ''
-    # ``audio_id`` references an audio clip; ``audio_data`` carries the raw
-    # bytes (populated in phase 2 when the assistant feeds real audio).
+    # ``audio_id`` references an audio clip by id; the actual bytes live
+    # in the audio service's per-id cache, NOT in Redux state.
     audio_id: str = ''
+    # TODO(phase-2): do NOT populate ``audio_data`` from any reducer or  # noqa: FIX002
+    # producer. Real audio bytes belong in an ``audio_id``→``bytes`` cache
+    # owned by ``ubo_app/services/000-audio/audio_manager.py`` (the
+    # renderer fetches lazily by ``audio_id``). Putting bytes here makes
+    # them part of every Redux snapshot and gRPC ``ChatState`` push —
+    # quickly bloats snapshots/network for any non-trivial audio. This
+    # field stays as a typed placeholder; a unit test enforces ``b''``.
     audio_data: bytes = b''
     # Normalized (0..1) bar heights for the waveform rendering. Deterministic
     # so window snapshots are stable.
@@ -75,6 +84,12 @@ class ChatState(Immutable):
     # audio service's play loop fires the matching done event once its
     # buffer fully drains.
     is_audio_playing: bool = False
+    # Monotonic counter bumped by every reducer case that mutates
+    # ``messages`` (add/append/set/clear). The view-autorun selector
+    # observes this single int instead of hashing every message field
+    # per token — drops per-token selector equality work from
+    # ``O(history)`` to ``O(1)``. Never compared across sessions.
+    messages_revision: int = 0
 
 
 class ChatAction(BaseAction): ...
@@ -84,6 +99,9 @@ class ChatStartSessionAction(ChatAction):
     """Start a fresh chat session and open the chat overlay."""
 
     session_id: str = field(default_factory=lambda: uuid4().hex)
+    # ``timestamp`` is sampled by the dispatcher (or defaulted to ``now``)
+    # so the reducer stays a pure function — see ``ubo_app/utils/clock.py``.
+    timestamp: float = field(default_factory=default_now)
 
 
 class ChatEndSessionAction(ChatAction):
@@ -94,6 +112,7 @@ class ChatAddMessageAction(ChatAction):
     """Append a message to the current chat session."""
 
     message: ChatMessage
+    timestamp: float = field(default_factory=default_now)
 
 
 class ChatAppendToMessageAction(ChatAction):
@@ -105,6 +124,7 @@ class ChatAppendToMessageAction(ChatAction):
 
     message_id: str
     chunk: str
+    timestamp: float = field(default_factory=default_now)
 
 
 class ChatSetMessageTextAction(ChatAction):
@@ -118,6 +138,7 @@ class ChatSetMessageTextAction(ChatAction):
 
     message_id: str
     text: str
+    timestamp: float = field(default_factory=default_now)
 
 
 class ChatSendUserMessageAction(ChatAction):
@@ -128,6 +149,7 @@ class ChatSendUserMessageAction(ChatAction):
     """
 
     text: str
+    timestamp: float = field(default_factory=default_now)
 
 
 class ChatToggleAudioPlaybackAction(ChatAction):

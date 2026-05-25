@@ -137,6 +137,7 @@ def reducer(
                         sample=action.sample,
                         id=action.id,
                         index=action.index,
+                        source=action.source,
                     ),
                 ],
             )

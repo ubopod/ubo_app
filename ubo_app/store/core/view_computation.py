@@ -440,22 +440,19 @@ def _chat_view_dependency(state: RootState) -> tuple[object, ...]:
 
     Added to the view autorun selector so adding a message (which changes
     ``state.chat`` but not ``state.main.stack``) still triggers a view
-    recomputation.
+    recomputation. Returns a single revision counter rather than hashing
+    every message field per LLM token — the reducer bumps the counter on
+    every mutation, so selector equality work stays ``O(1)`` regardless
+    of history length. ``is_playing`` flips outside the streaming hot
+    path but still needs to invalidate the view, so it's folded into the
+    dependency tuple alongside the revision.
     """
-    messages = (
-        state.chat.messages if hasattr(state, 'chat') else ()
-    )
-    return tuple(
-        (
-            message.id,
-            message.role,
-            message.kind,
-            message.text,
-            message.audio_id,
-            message.is_playing,
-            tuple(message.waveform),
-        )
-        for message in messages
+    chat = getattr(state, 'chat', None)
+    if chat is None:
+        return (0, ())
+    return (
+        chat.messages_revision,
+        tuple(message.is_playing for message in chat.messages),
     )
 
 

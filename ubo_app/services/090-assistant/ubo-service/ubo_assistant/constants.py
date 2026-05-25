@@ -5,6 +5,15 @@ from pathlib import Path
 
 import platformdirs
 
+# ``source_id`` on ``AssistantReportAction`` / ``AssistantHandleReportEvent``
+# identifying which pipeline produced a frame. Mirrors
+# ``ubo_app.store.services.assistant.LIVE_PIPELINE_SOURCE_ID`` /
+# ``REQUEST_PIPELINE_SOURCE_ID``; kept here as bare strings because the
+# subprocess can't import the core store package, but the two definitions
+# must stay in sync — a mismatch silently breaks chat routing.
+LIVE_PIPELINE_SOURCE_ID = 'pipecat'
+REQUEST_PIPELINE_SOURCE_ID = 'assistant_request'
+
 IS_RPI = Path('/etc/rpi-issue').exists()
 DATA_PATH = Path(
     os.environ.get(
