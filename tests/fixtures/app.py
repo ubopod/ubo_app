@@ -10,11 +10,21 @@ from typing import TYPE_CHECKING, Any, cast
 
 import dotenv
 import pytest
+import redux  # noqa: F401 -- load redux before the modules_snapshot below
 from pyfakefs.fake_filesystem_unittest import Patcher
 from str_to_bool import str_to_bool
 
 from ubo_app.logger import logger
 
+# Captured at import time. The cleanup at the end of `app_context` deletes
+# every module NOT in this set so each integration test starts from a clean
+# slate. The `import redux` above is load-bearing: without it redux's
+# submodules are not in sys.modules yet, get deleted on first cleanup, and
+# the next test sees a brand-new `redux.basic_types.FinishEvent` class while
+# the redux store still holds handlers registered against the OLD class. The
+# store then has TWO FinishEvent keys in `_event_handlers`, handlers don't
+# fire on dispatch, and downstream tests timeout waiting for service
+# lifecycle events that never propagate.
 modules_snapshot = set(sys.modules).union(
     {
         # This need to persist because sdbus interfaces can't be unloaded
@@ -165,7 +175,14 @@ class AppContext:
         store.dispatch(FinishAction())
         store.wait_for_event_handlers()
 
-        scheduler.join()
+        # Belt-and-braces: FinishAction is already wired to scheduler.stop via
+        # on_finish in ubo_app/store/main.py, but call it explicitly so a
+        # missed/lost FinishAction can't strand the scheduler thread and hang
+        # the entire pytest process during fixture teardown.
+        scheduler.stop()
+        scheduler.join(timeout=5)
+        if scheduler.is_alive():
+            logger.warning('scheduler did not join within 5s')
 
         # Clean up subscriptions
         for cleanup in self._subscriptions:
@@ -182,7 +199,8 @@ class AppContext:
                 self.gui_process.wait()
             self.gui_process = None
 
-        ubo_app.service.worker_thread.is_finished.wait()
+        if not ubo_app.service.worker_thread.is_finished.wait(timeout=5):
+            logger.warning('worker_thread did not finish within 5s')
 
         gc.collect()
 

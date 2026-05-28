@@ -84,8 +84,11 @@ async def test_subscribe_event_runs_handler_in_service_thread(
 
     unload_waiter = await load_services(service_ids=['test'], run_async=True)
 
-    store.dispatch(DummyAction())
+    try:
+        store.dispatch(DummyAction())
 
-    assert await result, 'handler for subscribe event did not run in service thread'
-
-    await unload_waiter()
+        assert await result, (
+            'handler for subscribe event did not run in service thread'
+        )
+    finally:
+        await unload_waiter()

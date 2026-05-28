@@ -294,6 +294,11 @@ def setup_loggers() -> Subscriptions:
         except ImportError:
             pass
 
+    # HTTP/2 codec libraries used by grpclib trace every header/frame at DEBUG,
+    # which drowns ubo logs whenever UBO_LOG_LEVEL=DEBUG. Silence them.
+    for noisy in ('hpack', 'hyperframe', 'grpclib', 'h2'):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
     return subscriptions
 
 

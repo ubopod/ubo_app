@@ -12,6 +12,7 @@
     "is_active": false,
     "is_listening": false,
     "is_microphone_mute": true,
+    "kokoro_is_downloaded": false,
     "last_stop_reason": null,
     "mcp_servers": {},
     "ollama_downloaded_models": [],
@@ -31,6 +32,7 @@
         "policy": {
           "_type": "AssistantTriggerPolicy",
           "end_of_turn_phrases": [
+            "i am done",
             "i'm done",
             "that's it",
             "that's all",
@@ -44,7 +46,7 @@
         "_type": "AssistantTriggerPolicyEntry",
         "matcher": {
           "_type": "WakePhraseMatcher",
-          "phrase": "can you help me"
+          "phrase": "hey quick question"
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
@@ -104,6 +106,7 @@
       "google": false,
       "google_cloud": false,
       "grok": false,
+      "kokoro": false,
       "mistral": false,
       "ollama": false,
       "ollama_onprem": false,
@@ -112,9 +115,11 @@
       "piper": false,
       "qwen": false,
       "rime": false,
+      "venice": false,
       "vosk": false
     },
     "selected_image_generator": "google",
+    "selected_kokoro_voice": "af_heart",
     "selected_llm": "ollama",
     "selected_models": {
       "anthropic": "claude-sonnet-4-5",
@@ -128,11 +133,14 @@
       "ollama_onprem": "granite3.3:8b",
       "openai": "gpt-4o",
       "openrouter": "openai/gpt-4o-mini",
-      "qwen": "qwen-plus"
+      "qwen": "qwen-plus",
+      "venice": "llama-3.3-70b"
     },
     "selected_piper_voice": "en/en_US/kristin/medium/en_US-kristin-medium",
     "selected_stt": "vosk",
-    "selected_tts": "piper"
+    "selected_tts": "piper",
+    "selected_vosk_model": "vosk-model-small-en-us-0.15",
+    "vosk_downloaded_models": []
   },
   "audio": {
     "_type": "AudioState",
@@ -146,11 +154,17 @@
   "camera": {
     "_type": "CameraState",
     "available_cameras": [
-      0
+      {
+        "_type": "CameraSource",
+        "id": "local:0",
+        "kind": "local",
+        "label": "Local Camera 0"
+      }
     ],
     "camera_type": "default",
+    "pending_remote_registrations": [],
     "queue": [],
-    "selected_camera_index": 0
+    "selected_source_id": "local:0"
   },
   "combine_reducers_id": "e3e70682c2094cac629f6fbed82c07cd",
   "display": {
@@ -487,7 +501,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Hardware",
-        "icon": "",
+        "icon": "",
         "key": "camera:",
         "label": "Camera",
         "priority": 1
