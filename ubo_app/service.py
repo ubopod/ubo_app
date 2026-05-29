@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import threading
 import traceback
 from typing import TYPE_CHECKING, TypeVarTuple
@@ -135,7 +136,9 @@ worker_thread = WorkerThread()
 def start_event_loop_thread(loop: asyncio.AbstractEventLoop) -> None:
     from ubo_app.utils.error_handlers import loop_exception_handler
 
-    loop.set_exception_handler(loop_exception_handler)
+    loop.set_exception_handler(
+        functools.partial(loop_exception_handler, owner=worker_thread),
+    )
 
     worker_thread.loop = loop
     worker_thread.start()

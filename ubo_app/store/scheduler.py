@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import threading
 from typing import TYPE_CHECKING
 
@@ -29,7 +30,9 @@ class Scheduler(threading.Thread):
         self.stopped = False
         self._callbacks: list[tuple[Callable[[], None], float]] = []
         self.loop = asyncio.new_event_loop()
-        self.loop.set_exception_handler(loop_exception_handler)
+        self.loop.set_exception_handler(
+            functools.partial(loop_exception_handler, owner=self),
+        )
         self.tasks: set[asyncio.Task] = set()
         # Freeze detection state (only used when DEBUG_SCHEDULER is enabled)
         if DEBUG_SCHEDULER:

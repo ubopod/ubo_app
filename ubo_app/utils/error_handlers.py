@@ -127,6 +127,8 @@ STACKS = weakref.WeakKeyDictionary(dict[asyncio.Task, str]())
 def loop_exception_handler(
     loop: asyncio.AbstractEventLoop,
     context: dict[str, object],
+    *,
+    owner: threading.Thread | None = None,
 ) -> None:
     from ubo_app.constants import DEBUG_TASKS
     from ubo_app.logger import logger
@@ -141,7 +143,17 @@ def loop_exception_handler(
     else:
         parent_stack = None
 
-    thread = threading.current_thread()
+    # Attribute the error to the thread that owns ``loop`` — bound at
+    # ``set_exception_handler`` time — rather than to ``threading.current_thread()``.
+    # asyncio calls this handler synchronously for in-loop errors (where the current
+    # thread *is* the owner) but also from ``Task.__del__``/``Future.__del__`` during
+    # garbage collection, which can run on any thread; using the current thread there
+    # charges the error to whichever service happened to trigger the GC. Loops with no
+    # owning service (the scheduler and worker loops) bind a thread that has no
+    # ``service_id``, so their diagnostics resolve to ``None`` — logged but never
+    # recorded as a service error. The ``current_thread()`` fallback preserves prior
+    # behaviour for any handler registered without an explicit owner.
+    thread = owner if owner is not None else threading.current_thread()
     label = getattr(thread, 'label', None)
     service_id = getattr(thread, 'service_id', None)
     service_path = getattr(thread, 'path', None)
@@ -203,7 +215,11 @@ def loop_exception_handler(
             },
         )
 
-    if service_id is not None:
+    # Only record a genuine error against a service. asyncio also invokes the loop
+    # exception handler for benign diagnostics that carry no exception object (e.g.
+    # "Task was destroyed but it is pending!"); these are logged above but are not
+    # service errors and must not pollute a service's (deterministic) state snapshot.
+    if service_id is not None and exception is not None:
         report_service_error(
             service_id=service_id,
             exception=exception,

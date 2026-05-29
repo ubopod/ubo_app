@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import math
+import threading
 import wave
 from pathlib import Path
 from typing import TYPE_CHECKING, ParamSpec
@@ -55,7 +57,9 @@ def _run_async_in_thread(
     **kwargs: Args.kwargs,
 ) -> None:
     loop = asyncio.new_event_loop()
-    loop.set_exception_handler(loop_exception_handler)
+    loop.set_exception_handler(
+        functools.partial(loop_exception_handler, owner=threading.current_thread()),
+    )
     result = loop.run_until_complete(async_func(*args, **kwargs))
     loop.close()
     return result

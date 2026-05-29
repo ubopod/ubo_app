@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import ctypes
+import functools
 import importlib
 import importlib.abc
 import importlib.util
@@ -318,7 +319,9 @@ class UboServiceThread(threading.Thread):
         from ubo_app.store.main import store
 
         self.loop = asyncio.new_event_loop()
-        self.loop.set_exception_handler(loop_exception_handler)
+        self.loop.set_exception_handler(
+            functools.partial(loop_exception_handler, owner=self),
+        )
 
         @store.autorun(
             lambda state: state.settings.services[self.service_id].log_level
