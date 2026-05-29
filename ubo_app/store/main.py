@@ -553,6 +553,14 @@ class _UboAutorun(
             self.handler_ref = weakref.ref(func)
 
         self.coroutine_runner = get_coroutine_runner()
+        # Reactions are dispatched to a thread pool (see ``call`` below), so without
+        # serialization the *same* autorun can run its reaction concurrently with
+        # itself. Several services rebuild menus from a reaction by unregistering then
+        # re-registering ids in the process-wide action registry (a check-then-act
+        # that is not atomic); concurrent reactions race and raise
+        # ``ValueError: ... already registered``. This lock serializes an autorun's
+        # own reactions while leaving distinct autoruns free to run in parallel.
+        self._reaction_lock = threading.Lock()
 
         super().__init__(
             store=store,
@@ -574,7 +582,8 @@ class _UboAutorun(
 
         def wrapper(super_: Autorun) -> None:
             try:
-                super_.call(*args, **kwargs)
+                with self._reaction_lock:
+                    super_.call(*args, **kwargs)
             except Exception:
                 logger.exception(
                     'Error in autorun call',
