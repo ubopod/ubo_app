@@ -187,7 +187,7 @@ async def test_move_copy_remove(  # noqa: C901
         ['notifications', 'file_system', 'keypad', 'display'],
         run_async=True,
     )
-    await stability(initial_wait=5, attempts=2, wait=2)
+    await stability(initial_wait=1)
     store_snapshot.take(selector=_snapshot_selector)
 
     # ── Phase 1: Navigate to file browser ────────────────────────────────

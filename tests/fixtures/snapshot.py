@@ -63,23 +63,36 @@ class WindowSnapshot:
     def _capture_screenshot(self: WindowSnapshot) -> None:
         """Dispatch TakeScreenshotAction and wait for ScreenshotDataEvent.
 
-        If no GUI client is running, the screenshot round-trip cannot complete.
-        In that case, we set a stable dummy hash so stability checks pass.
-        Uses a short timeout to avoid blocking when GUI is not available,
-        but does not permanently cache the result since the GUI may connect
-        after an initial delay (e.g., splash screen).
-
-        Retries with increasing timeouts on slow hardware (e.g., Pi 4) where
-        the GUI subprocess may take longer to become responsive via gRPC.
+        Re-dispatches on a fixed cadence until the GUI client answers (the
+        action is edge-triggered and lost if sent before the client has
+        subscribed). The first capture tolerates the one-time GUI cold-boot on
+        slow hardware (e.g. a Raspberry Pi 4 under full-suite load); subsequent
+        captures return as soon as the client renders. Raises ``TimeoutError``
+        only if the client never responds within the (generous) ceiling.
         """
         from ubo_app.store.core.types import ScreenshotDataEvent, TakeScreenshotAction
         from ubo_app.store.main import store
 
-        # Retry schedule: longer timeouts for initial captures on slow hardware
-        # (e.g., Pi 4 where gRPC round-trip can take 30+ seconds on first attempt).
-        # Subsequent captures also need generous timeouts since Pi 4 gRPC
-        # round-trips can exceed 3s under load.
-        timeouts = [10, 10] if self._latest_data is not None else [30, 30]
+        # Retry schedule = one ``TakeScreenshotAction`` dispatch per entry,
+        # each followed by a wait of that many seconds for the
+        # ``ScreenshotDataEvent``. ``TakeScreenshotAction`` is edge-triggered:
+        # a dispatch sent before the GUI client has subscribed over gRPC is
+        # simply missed — so we re-dispatch every 2s, catching the client the
+        # moment it becomes ready (a couple of sparse dispatches would miss the
+        # readiness window).
+        #
+        # The ceiling only bounds the *failure* path: on the happy path a
+        # capture returns as soon as the event arrives, so a generous ceiling
+        # costs nothing on success. It MUST be sized for the slowest hardware:
+        # the first ever capture (``_latest_data is None``) pays the one-time
+        # ``ubo-gui-client`` cold-boot (Kivy init + gRPC connect + first
+        # render), which on a Raspberry Pi 4 running the full suite under load
+        # can take well over a minute — hence ~120s cold. ``stability`` primes
+        # this first capture *before* starting its settle deadline so the
+        # cold-boot isn't charged against the settle budget. Once the client is
+        # warm every capture returns in well under a second; the warm ceiling
+        # (~30s) is just a safety net for momentary load spikes.
+        timeouts = [2] * 15 if self._latest_data is not None else [2] * 60
 
         for attempt, timeout in enumerate(timeouts):
             capture_event = threading.Event()

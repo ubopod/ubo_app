@@ -27,6 +27,23 @@ if TYPE_CHECKING:
 from tests.fixtures.dispatch import DIRECT, GRPC_KEYPAD, GRPC_MENU
 
 
+@pytest.fixture(autouse=True, scope='module')
+def _wifi_clean_slate() -> None:
+    """Reset NetworkManager Wi-Fi state once before the Wi-Fi test (RPi only).
+
+    Runs ``tests/flows/wifi_setup.sh`` a single time for this module instead of
+    the old ``tests/setup.sh`` that the autouse ``_setup_script`` walk executed
+    for *every* test in the suite. Off-device the script is a no-op.
+    """
+    import subprocess
+    from pathlib import Path
+
+    if not IS_RPI:
+        return
+    script = Path(__file__).parent / 'wifi_setup.sh'
+    subprocess.run(['/usr/bin/env', 'bash', str(script)], check=True)  # noqa: S603
+
+
 @pytest.mark.timeout(250)
 @pytest.mark.skipif(not IS_RPI, reason='Only runs on Raspberry Pi')
 async def test_setup_flow(
@@ -95,7 +112,7 @@ async def test_setup_flow(
 
     await check_icon('󰖪')
 
-    await stability(initial_wait=10, attempts=2, wait=2)
+    await stability(initial_wait=2, timeout=30)
 
     store_snapshot.take(selector=store_snapshot_selector)
 

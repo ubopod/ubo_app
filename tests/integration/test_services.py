@@ -36,7 +36,7 @@ async def test_all_services_register(
     app_context.set_app()
     unload_waiter = await load_services(CORE_SERVICE_IDS, timeout=90, run_async=True)
 
-    await stability(initial_wait=6, attempts=5, wait=2)
+    await stability(initial_wait=2, timeout=45)
 
     from tenacity import wait_fixed
 
@@ -54,7 +54,7 @@ async def test_all_services_register(
 
     await wait_for_docker_ready()
 
-    @wait_for(run_async=True, timeout=120, wait=wait_fixed(2))
+    @wait_for(run_async=True, timeout=30, wait=wait_fixed(2))
     def wait_for_docker_menu_items() -> None:
         state = store._state  # noqa: SLF001
         assert state is not None
@@ -66,7 +66,7 @@ async def test_all_services_register(
     assert len(store._listeners) < MAX_EXPECTED_LISTENERS  # noqa: SLF001
     assert len(store._event_handlers) < MAX_EXPECTED_EVENT_HANDLERS  # noqa: SLF001
 
-    await stability(initial_wait=10, attempts=5, wait=2)
+    await stability(initial_wait=2, timeout=45)
 
     from tests.conftest import exclude_dynamic_menus
 

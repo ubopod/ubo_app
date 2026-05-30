@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import TYPE_CHECKING, Protocol
 
 import pytest
-from tenacity import RetryError, stop_after_attempt, wait_fixed
 
 from tests.fixtures.snapshot import WindowSnapshot, write_png
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
-
     from redux_pytest.fixtures import StoreSnapshot
     from redux_pytest.fixtures.wait_for import AsyncWaiter, WaitFor
 
@@ -22,52 +20,40 @@ class Stability(Protocol):
 
     async def __call__(
         self: Stability,
-        initial_wait: float = 1,
-        attempts: int = 2,
-        wait: float = 2,
+        initial_wait: float = 0,
+        *,
+        settle_polls: int = 6,
+        poll_interval: float = 0.3,
+        timeout: float = 30.0,  # noqa: ASYNC109
     ) -> AsyncWaiter:
-        """Wait for the screen and store to stabilize."""
+        """Wait for the screen and store to stabilize.
+
+        Polls the window hash and the store snapshot and returns as soon as
+        the last ``settle_polls`` observations are identical (early exit).
+        Raises after ``timeout`` seconds if the screen/store never settles.
+        """
         ...
 
 
-async def _run(
+def _write_mismatch_diagnostics(
     *,
-    initial_wait: float,
-    attempts: int,
-    wait: float,
-    check: Callable[[], Coroutine],
     store_snapshot: StoreSnapshot,
     window_snapshot: WindowSnapshot,
     store_snapshots: list[str],
     window_snapshots: list[bytes],
 ) -> None:
-    await asyncio.sleep(initial_wait)
-    for _ in range(attempts):
-        try:
-            await check()
-            await asyncio.sleep(wait)
-        except RetryError as exception:
-            if isinstance(exception.last_attempt.exception(), AssertionError):
-                continue
-            raise
-        except AssertionError:
-            continue
-
-    try:
-        await check()
-    except RetryError:
-        for i, snapshot in enumerate(store_snapshots):
-            (
-                store_snapshot.results_dir
-                / f'store-unstability_snapshot_{i}.mismatch.jsonc'
-            ).write_text(snapshot)
-        for i, snapshot in enumerate(window_snapshots):
-            write_png(
-                window_snapshot.results_dir
-                / f'window-unstability_snapshot_{i}.mismatch.png',
-                snapshot,
-            )
-        raise
+    """Persist the captured transient frames for post-mortem debugging."""
+    for i, snapshot in enumerate(store_snapshots):
+        (
+            store_snapshot.results_dir
+            / f'store-unstability_snapshot_{i}.mismatch.jsonc'
+        ).write_text(snapshot)
+    for i, snapshot in enumerate(window_snapshots):
+        write_png(
+            window_snapshot.results_dir
+            / f'window-unstability_snapshot_{i}.mismatch.png',
+            snapshot,
+        )
 
 
 @pytest.fixture
@@ -77,56 +63,86 @@ async def stability(
     wait_for: WaitFor,
 ) -> AsyncWaiter:
     """Wait for the screen and store to stabilize."""
+    _ = wait_for
 
     async def wrapper(
-        initial_wait: float = 1,
-        attempts: int = 2,
-        wait: float = 1,
+        initial_wait: float = 0,
+        *,
+        settle_polls: int = 6,
+        poll_interval: float = 0.3,
+        timeout: float = 30.0,  # noqa: ASYNC109
     ) -> None:
-        latest_window_hash = None
-        latest_store_snapshot = None
+        # ``initial_wait`` gives a dispatched action time to start rendering so
+        # we don't sample a stale pre-render frame and mistake it for stable.
+        if initial_wait:
+            await asyncio.sleep(initial_wait)
 
+        # Every distinct frame/state seen while unstable, kept for diagnostics
+        # if we time out without settling.
         store_snapshots: list[str] = []
         window_snapshots: list[bytes] = []
 
-        @wait_for(
-            run_async=True,
-            wait=wait_fixed(wait),
-            stop=stop_after_attempt(attempts),
+        # Prime the first capture *before* starting the settle clock. The very
+        # first screenshot of a freshly-booted app pays a one-time GUI
+        # cold-boot latency (Kivy init + gRPC connect + first render) that is
+        # unrelated to whether the screen has settled; charging it against
+        # ``timeout`` would spuriously fail otherwise-fast tests on a cold GUI.
+        previous_window = window_snapshot.hash
+        assert previous_window, (
+            'Window snapshot returned an empty hash — GUI is not responding'
         )
-        def check() -> None:
-            nonlocal latest_window_hash, latest_store_snapshot
+        previous_store = store_snapshot.json_snapshot()
+        if window_snapshot._latest_data is not None:  # noqa: SLF001
+            window_snapshots.append(window_snapshot._latest_data)  # noqa: SLF001
+        store_snapshots.append(previous_store)
+
+        # Ring buffers of the most recent observations; stable once the last
+        # ``settle_polls`` window hashes and store snapshots are all identical.
+        recent_window: list[str] = [previous_window]
+        recent_store: list[str] = [previous_store]
+
+        deadline = time.monotonic() + timeout
+
+        while True:
+            await asyncio.sleep(poll_interval)
 
             new_hash = window_snapshot.hash
             assert new_hash, (
                 'Window snapshot returned an empty hash — GUI is not responding'
             )
-            new_snapshot = store_snapshot.json_snapshot()
+            new_store = store_snapshot.json_snapshot()
 
-            is_window_stable = latest_window_hash == new_hash
-            is_store_stable = latest_store_snapshot == new_snapshot
-
-            latest_window_hash = new_hash
-            latest_store_snapshot = new_snapshot
-
-            if not is_window_stable and window_snapshot._latest_data is not None:  # noqa: SLF001
+            if new_hash != previous_window and window_snapshot._latest_data is not None:  # noqa: SLF001
                 window_snapshots.append(window_snapshot._latest_data)  # noqa: SLF001
+            if new_store != previous_store:
+                store_snapshots.append(new_store)
 
-            if not is_store_stable:
-                store_snapshots.append(store_snapshot.json_snapshot())
+            previous_window = new_hash
+            previous_store = new_store
 
-            assert is_window_stable, 'The content of the screen is not stable yet'
-            assert is_store_stable, 'The content of the store is not stable yet'
+            recent_window.append(new_hash)
+            recent_store.append(new_store)
+            recent_window = recent_window[-settle_polls:]
+            recent_store = recent_store[-settle_polls:]
 
-        await _run(
-            initial_wait=initial_wait,
-            attempts=attempts,
-            wait=wait,
-            check=check,
-            store_snapshot=store_snapshot,
-            window_snapshot=window_snapshot,
-            store_snapshots=store_snapshots,
-            window_snapshots=window_snapshots,
-        )
+            if (
+                len(recent_window) >= settle_polls
+                and len(set(recent_window)) == 1
+                and len(set(recent_store)) == 1
+            ):
+                return
+
+            if time.monotonic() >= deadline:
+                _write_mismatch_diagnostics(
+                    store_snapshot=store_snapshot,
+                    window_snapshot=window_snapshot,
+                    store_snapshots=store_snapshots,
+                    window_snapshots=window_snapshots,
+                )
+                msg = (
+                    f'Screen/store did not stabilize within {timeout}s '
+                    f'(last {len(recent_window)} polls were not identical)'
+                )
+                raise AssertionError(msg)
 
     return wrapper
