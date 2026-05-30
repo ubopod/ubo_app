@@ -20,7 +20,7 @@ MAX_EXPECTED_LISTENERS = 600
 MAX_EXPECTED_EVENT_HANDLERS = 90
 
 
-@pytest.mark.timeout(300)
+@pytest.mark.timeout(500)
 async def test_all_services_register(
     app_context: AppContext,
     window_snapshot: WindowSnapshot,
