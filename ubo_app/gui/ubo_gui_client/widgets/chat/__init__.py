@@ -20,8 +20,8 @@ import math
 from typing import TYPE_CHECKING
 
 from kivy.clock import Clock
-from kivy.graphics import (
-    Color,
+from kivy.graphics.context_instructions import Color
+from kivy.graphics.vertex_instructions import (
     Ellipse,
     Line,
     Rectangle,
