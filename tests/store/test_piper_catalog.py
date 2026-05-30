@@ -8,7 +8,6 @@ from ubo_app.engines.piper_catalog import (
     all_voices,
     json_path_for,
     json_url_for,
-    language_by_code,
     language_for,
     model_path_for,
     model_url_for,
@@ -90,6 +89,12 @@ def test_visible_languages_english_only_when_system_is_english() -> None:
 
 def test_language_by_code_round_trip() -> None:
     """Every catalog language is reachable via ``language_by_code``."""
+    # Re-import inside the test: a sibling test may have ``importlib.reload``-ed
+    # ``piper_catalog`` (re-execing it in place), leaving the module-level names
+    # bound at collection time pointing at a stale object generation. The local
+    # import keeps both sides on the current generation so the round-trip holds.
+    from ubo_app.engines.piper_catalog import PIPER_LANGUAGES, language_by_code
+
     for language in PIPER_LANGUAGES:
         assert language_by_code(language.code) is language
 

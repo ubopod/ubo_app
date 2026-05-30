@@ -42,10 +42,16 @@ def _load_assistant(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.syspath_prepend(SERVICE_PATH.as_posix())
 
     from ubo_app.store.services import assistant as assistant_module
-    from ubo_app.store.services import keypad as keypad_module
 
     assistant_module = importlib.reload(assistant_module)
-    keypad_module = importlib.reload(keypad_module)
+    # Reload the *current* ``sys.modules`` entry rather than a reference bound
+    # earlier: an earlier test in the session can leave the ``keypad`` package
+    # attribute and its ``sys.modules`` entry pointing at different module
+    # objects, which makes ``importlib.reload`` of the stale reference raise
+    # ``ImportError: module ... not in sys.modules``.
+    keypad_module = importlib.reload(
+        importlib.import_module('ubo_app.store.services.keypad'),
+    )
 
     spec = importlib.util.spec_from_file_location(
         'assistant_service_reducer',
