@@ -47,13 +47,17 @@ def _load_speech_recognition(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace
     """Load the speech-recognition reducer + namespace of public classes."""
     monkeypatch.syspath_prepend(SERVICE_PATH.as_posix())
 
-    from ubo_app.store.services import assistant as assistant_module
-    from ubo_app.store.services import (
-        speech_recognition as speech_recognition_module,
+    # Reload the *current* ``sys.modules`` entries rather than references bound
+    # via ``from ... import``: an earlier integration test in the session can
+    # leave the package attribute and its ``sys.modules`` entry pointing at
+    # different module objects, which makes ``importlib.reload`` of the stale
+    # reference raise ``ImportError: module ... not in sys.modules``.
+    assistant_module = importlib.reload(
+        importlib.import_module('ubo_app.store.services.assistant'),
     )
-
-    assistant_module = importlib.reload(assistant_module)
-    speech_recognition_module = importlib.reload(speech_recognition_module)
+    speech_recognition_module = importlib.reload(
+        importlib.import_module('ubo_app.store.services.speech_recognition'),
+    )
 
     spec = importlib.util.spec_from_file_location(
         'speech_recognition_service_reducer',
