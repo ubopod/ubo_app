@@ -5,7 +5,7 @@
     "queue": [
       {
         "_type": "PathInputDescription",
-        "id": "1846d424c17c627923c6612f48268673",
+        "id": "file-system:select-destination",
         "input_method": "path_selector",
         "prompt": "Select the destination directory.\n[b]Source:[/b] /tmp/aaa_ubo_e2e_test/dir_a/test_file.txt",
         "selector_config": {

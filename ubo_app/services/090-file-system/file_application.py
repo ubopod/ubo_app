@@ -245,6 +245,7 @@ def _choose_destination_and_dispatch(
             f'[b]Source:[/b] {escape_markup(path.as_posix())}',
             descriptions=[
                 PathInputDescription(
+                    id='file-system:select-destination',
                     selector_config=PathSelectorConfig(
                         accepts_directories=True,
                         accepts_files=False,
