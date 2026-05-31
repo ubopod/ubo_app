@@ -145,6 +145,8 @@ def reducer(
                 kind=ChatMessageKind.TEXT,
                 text=action.text,
             )
+            if action.message_id:
+                message = replace(message, id=action.message_id)
             return CompleteReducerResult(
                 state=replace(
                     state,

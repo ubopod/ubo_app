@@ -127,6 +127,7 @@ def _register_echo_handler() -> Subscriptions:
         store.dispatch(
             ChatAddMessageAction(
                 message=ChatMessage(
+                    id=f'{event.message_id}-reply',
                     role=ChatRole.ASSISTANT,
                     kind=ChatMessageKind.TEXT,
                     text=f'echo=> {event.text}',
