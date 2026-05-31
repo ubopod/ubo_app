@@ -291,7 +291,9 @@ async def test_chat_widget_flows(
     await stability(initial_wait=2)
     snap('echo-01-opened')
 
-    store.dispatch(ChatSendUserMessageAction(text='hello there'))
+    store.dispatch(
+        ChatSendUserMessageAction(text='hello there', message_id='echo-user'),
+    )
     await stability(initial_wait=2)
     snap('echo-02-echoed')
 

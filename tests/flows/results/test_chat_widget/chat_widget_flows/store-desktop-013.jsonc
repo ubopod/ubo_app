@@ -21,7 +21,7 @@
   "messages": [
     {
       "audio_id": "",
-      "id": "02a6433767684213aa702e26a89cce5b",
+      "id": "echo-user",
       "is_playing": false,
       "kind": "text",
       "role": "user",
@@ -29,7 +29,7 @@
     },
     {
       "audio_id": "",
-      "id": "643f14fc2f8142d99aa4f8a428f9351d",
+      "id": "echo-user-reply",
       "is_playing": false,
       "kind": "text",
       "role": "assistant",

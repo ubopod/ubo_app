@@ -149,6 +149,7 @@ class ChatSendUserMessageAction(ChatAction):
     """
 
     text: str
+    message_id: str | None = None
     timestamp: float = field(default_factory=default_now)
 
 
