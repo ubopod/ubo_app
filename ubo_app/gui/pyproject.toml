@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["ubo", "gui", "kivy", "grpc"]
 dependencies = [
-    "headless-kivy>=0.12.4",
+    "headless-kivy>=0.13.0",
     "ubo-gui>=0.13.17",
     "grpclib>=0.4.7",
     "betterproto>=2.0.0b7",

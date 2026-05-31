@@ -1038,16 +1038,17 @@ wheels = [
 
 [[package]]
 name = "headless-kivy"
-version = "0.12.4"
+version = "0.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "kivy" },
     { name = "numpy" },
+    { name = "pyright" },
     { name = "python-strtobool" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/13/17/2f88b12f7a7fab855fdc8b628e064664c0b6f4514859894499a730ac54f5/headless_kivy-0.12.4.tar.gz", hash = "sha256:e1c7c91aab73d9959f53b69633a6825a7f06da607a43d6b1c6729cfd8ad42b94", size = 16540 }
+sdist = { url = "https://files.pythonhosted.org/packages/74/85/af9b4a3dd09f89ff30f30658c3c7efe88cfd778a11b2bc9c90a79708bdb3/headless_kivy-0.13.0.tar.gz", hash = "sha256:12b66c37f724aa130ee424d0169e549c8e896c0d80c803e35b1f164322888fd9", size = 17602 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/73/48/df34c9e981bdcef4b86a096c989a3ee2d507e73ecda6c24a751977d481b4/headless_kivy-0.12.4-py3-none-any.whl", hash = "sha256:330859da48e1bc42f792935be36295b1a4a53be8f207037e4d212e9b0c37bbe3", size = 20206 },
+    { url = "https://files.pythonhosted.org/packages/22/a6/b4a97524f1a86f525ef9d58213ea248067ee2b38cde0e0df1c803926f847/headless_kivy-0.13.0-py3-none-any.whl", hash = "sha256:972fd10e82930ddb7a30c5dcae66299630a6595eb7219d99595ba672eb623419", size = 21275 },
 ]
 
 [package.optional-dependencies]
@@ -2670,7 +2671,7 @@ requires-dist = [
     { name = "google-cloud-speech", specifier = "==2.32.0" },
     { name = "gpiozero", marker = "platform_machine != 'aarch64'", specifier = "==2.0.1" },
     { name = "graphviz", marker = "extra == 'test-investigation'", specifier = ">=0.20.3" },
-    { name = "headless-kivy", specifier = "==0.12.4" },
+    { name = "headless-kivy", specifier = "==0.13.0" },
     { name = "netifaces", specifier = "==0.11.0" },
     { name = "objgraph", marker = "extra == 'test-investigation'", specifier = ">=3.6.2" },
     { name = "ollama", specifier = "==0.5.1" },
@@ -2708,7 +2709,7 @@ requires-dist = [
 dev = [
     { name = "grpcio-tools", specifier = ">=1.66.1" },
     { name = "hatch-vcs", specifier = ">=0.5.0" },
-    { name = "headless-kivy", extras = ["test"], specifier = ">=0.12.4" },
+    { name = "headless-kivy", extras = ["test"], specifier = ">=0.13.0" },
     { name = "ipdb", specifier = ">=0.13.13" },
     { name = "ipython", specifier = ">=8.23.0" },
     { name = "pdbpp", specifier = ">=0.10.3" },
@@ -2729,6 +2730,7 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
+version = "1.7.1.dev260415103101521015"
 source = { editable = "ubo_app/rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },
