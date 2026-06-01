@@ -1,0 +1,209 @@
+/**
+ * @file ubo_lvgl.h
+ *
+ * Public C API for the Ubo LVGL GUI renderer (libubo_lvgl).
+ *
+ * This header is the STABLE SEAM between the data source and the renderer.
+ *
+ *   Phase 1: a Python bridge decodes gRPC `ViewData`/`StatusBarData` and calls
+ *            these functions via CFFI.
+ *   Phase 2: a C gRPC/proto decoder on a microcontroller calls the SAME
+ *            functions. All rendering code below this seam is reused verbatim.
+ *
+ * The view-model structs mirror the core's `ViewData` / `StatusBarData` proto
+ * messages field-for-field so the phase-2 decoder maps onto them directly.
+ *
+ * Threading: the renderer runs LVGL on its own loop (see ubo_lvgl_run). All
+ * `ubo_lvgl_*` entry points are safe to call from another thread; they take an
+ * internal lock and build the LVGL widget tree synchronously. Strings passed in
+ * are only read during the call (LVGL copies what it needs), so the caller may
+ * free/reuse them after the call returns.
+ */
+
+#ifndef UBO_LVGL_H
+#define UBO_LVGL_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ------------------------------------------------------------------------- */
+/* Configuration                                                             */
+/* ------------------------------------------------------------------------- */
+
+typedef enum {
+    UBO_BACKEND_SDL = 0,    /* desktop dev window (macOS/Linux)            */
+    UBO_BACKEND_ST7789 = 1, /* Raspberry Pi ST7789 SPI panel              */
+    UBO_BACKEND_BUFFER = 2, /* offscreen RGB565 framebuffer (headless,     */
+                            /* for snapshot tests). See ubo_lvgl_snapshot. */
+} ubo_backend_t;
+
+typedef struct {
+    ubo_backend_t backend;
+    int32_t width;  /* panel width  in px (default 240) */
+    int32_t height; /* panel height in px (default 240) */
+} ubo_lvgl_config;
+
+/* ------------------------------------------------------------------------- */
+/* View model (mirrors gRPC ViewData / StatusBarData)                        */
+/* ------------------------------------------------------------------------- */
+
+/* A single selectable menu/action item. Colors are "#RRGGBB" strings (or NULL
+ * to use the theme default), matching what the core emits. `icon` is a unicode
+ * glyph string (Material Design Icons / Nerd Font), or NULL. */
+typedef struct {
+    const char *key;
+    const char *label;
+    const char *icon;
+    const char *color;            /* foreground, "#RRGGBB" or NULL */
+    const char *background_color; /* "#RRGGBB" or NULL             */
+    bool is_short;
+    bool is_selected;
+} ubo_menu_item;
+
+typedef struct {
+    bool show_status_bar;
+    const ubo_menu_item *items;
+    int item_count;
+    double cpu_percent; /* 0..100 */
+    double ram_percent; /* 0..100 */
+    double volume_level; /* 0..1  */
+} ubo_home_view;
+
+typedef struct {
+    bool show_status_bar;
+    const char *title;
+    const char *heading;
+    const char *sub_heading;
+    const ubo_menu_item *items;
+    int item_count;
+    int page_index; /* 0-based            */
+    int total_pages;
+    int stack_depth;
+} ubo_menu_view;
+
+typedef struct {
+    bool show_status_bar;
+    const char *notification_id;
+    const char *title;
+    const char *content;
+    const char *icon;
+    const char *color;
+    const ubo_menu_item *items; /* action items */
+    int item_count;
+    int page_index;
+    int total_pages;
+} ubo_notification_view;
+
+typedef struct {
+    bool show_status_bar;
+    const char *title;
+    const char *instruction;
+    const char *icon;
+    bool spinner;
+    const char *progress_text;
+    const char *footer_text;
+} ubo_instruction_view;
+
+typedef struct {
+    bool show_status_bar;
+    const char *title;
+    const char *prompt;
+    const char *icon;
+    const ubo_menu_item *items; /* options, typically 2 */
+    int item_count;
+} ubo_prompt_view;
+
+typedef struct {
+    bool show_status_bar;
+    const char *application_id;
+} ubo_application_view;
+
+/* ------------------------------------------------------------------------- */
+/* Status bar                                                                */
+/* ------------------------------------------------------------------------- */
+
+typedef struct {
+    const char *symbol; /* unicode glyph */
+    const char *color;  /* "#RRGGBB" or NULL */
+} ubo_status_icon;
+
+typedef struct {
+    const char *id;
+    bool has_progress;  /* false => indeterminate spinner */
+    double progress;    /* 0..1 when has_progress         */
+    const char *color;  /* "#RRGGBB" or NULL              */
+} ubo_progress_notification;
+
+typedef struct {
+    const char *title;
+    bool is_recording;
+    bool is_replaying;
+    bool is_recording_audio;
+    const ubo_progress_notification *progress_notifications;
+    int progress_count;
+    const char *clock; /* "HH:MM" */
+    bool has_temperature;
+    double temperature; /* celsius */
+    bool has_light;
+    double light_level; /* 0..1 */
+    const ubo_status_icon *icons;
+    int icon_count;
+} ubo_status_bar;
+
+/* ------------------------------------------------------------------------- */
+/* Input                                                                     */
+/* ------------------------------------------------------------------------- */
+
+/* Called when a key is pressed/released. `key` is one of:
+ * "UP", "DOWN", "BACK", "HOME", "L1", "L2", "L3". The bridge maps these to the
+ * core's KeypadKey* actions over gRPC. */
+typedef void (*ubo_input_cb)(const char *key, bool pressed, void *user);
+
+/* ------------------------------------------------------------------------- */
+/* Lifecycle & rendering                                                     */
+/* ------------------------------------------------------------------------- */
+
+/* Initialize LVGL and the display backend. Returns 0 on success. */
+int ubo_lvgl_init(const ubo_lvgl_config *cfg);
+
+void ubo_lvgl_set_input_cb(ubo_input_cb cb, void *user);
+
+void ubo_lvgl_render_home(const ubo_home_view *v);
+void ubo_lvgl_render_menu(const ubo_menu_view *v);
+void ubo_lvgl_render_notification(const ubo_notification_view *v);
+void ubo_lvgl_render_instruction(const ubo_instruction_view *v);
+void ubo_lvgl_render_prompt(const ubo_prompt_view *v);
+void ubo_lvgl_render_application(const ubo_application_view *v);
+
+void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
+void ubo_lvgl_set_blanked(bool blanked);    /* backlight off + black overlay */
+void ubo_lvgl_set_connected(bool connected); /* show/hide disconnect overlay  */
+
+/* Run the LVGL loop.
+ *   threaded=false: block on the calling thread until quit (sim / tests).
+ *   threaded=true : spawn an internal loop thread and return immediately.
+ * Returns 0 on success. */
+int ubo_lvgl_run(bool threaded);
+
+void ubo_lvgl_shutdown(void);
+
+/* Headless snapshot: flush the current screen and write the offscreen
+ * framebuffer to a 24-bit BMP at `path`. Only valid with UBO_BACKEND_BUFFER.
+ * Returns 0 on success. Used for snapshot verification/tests on machines with
+ * no display (this agent, CI). */
+int ubo_lvgl_snapshot(const char *path);
+
+/* Flush the current screen and expose the offscreen RGB565 (little-endian)
+ * framebuffer. Only valid with UBO_BACKEND_BUFFER. Returns 0 on success. Backs
+ * the gRPC screenshot facility (the Python side encodes PNG + hash). */
+int ubo_lvgl_get_framebuffer(const uint8_t **data, int32_t *width,
+                             int32_t *height);
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* UBO_LVGL_H */

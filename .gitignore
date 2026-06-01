@@ -118,3 +118,5 @@ whisker.bin
 .memsearch/
 .graphify/
 graphify-out/
+# LVGL C build output
+ubo_lvgl/build/

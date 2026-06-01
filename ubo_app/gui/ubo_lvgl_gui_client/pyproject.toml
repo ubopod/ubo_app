@@ -1,0 +1,59 @@
+[project]
+name = "ubo-lvgl-gui-client"
+dynamic = ["version"]
+description = "LVGL (C) GUI client for Ubo App - communicates via gRPC, renders via libubo_lvgl"
+license = "Apache-2.0"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["ubo", "gui", "lvgl", "grpc"]
+dependencies = [
+    "cffi>=1.16.0",
+    "grpclib>=0.4.7",
+    "betterproto>=2.0.0b7",
+    "ubo-app-raw-bindings",
+    "platformdirs",
+    "python-strtobool>=1.0.3",
+]
+
+[project.scripts]
+ubo-lvgl-gui-client = "ubo_lvgl_gui_client.__main__:main"
+
+[tool.uv]
+dev-dependencies = [
+    "poethepoet>=0.36.0",
+    "pyright>=1.1.408",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.12.10",
+]
+
+[tool.uv.sources]
+ubo-app-raw-bindings = { path = "../rpc", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "code"
+path = "../parent_version.py"
+expression = "get_version()"
+
+[tool.hatch.build]
+packages = ["ubo_lvgl_gui_client"]
+
+[tool.poe.tasks]
+lint = "ruff check ."
+"lint:fix" = "ruff check . --fix --unsafe-fixes"
+typecheck = "pyright -p pyproject.toml ."
+sanity = ["typecheck", "lint"]
+demo = "python -m ubo_lvgl_gui_client.demo"
+
+[tool.pyright]
+exclude = ["**/.venv", "dist/"]
+# ".." resolves the `ubo_lvgl_gui_client` package; "../../rpc" resolves the
+# `ubo_bindings` editable dependency.
+extraPaths = ["..", "../../rpc"]
+venvPath = "."
+venv = ".venv"
+reportMissingModuleSource = false

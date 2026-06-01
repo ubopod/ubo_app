@@ -1,0 +1,4 @@
+[submodule "ubo_lvgl/lvgl"]
+	path = ubo_lvgl/lvgl
+	url = https://github.com/lvgl/lvgl.git
+	branch = release/v9.3
