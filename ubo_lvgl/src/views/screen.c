@@ -11,20 +11,32 @@
 
 static lv_obj_t *s_header;
 static lv_obj_t *s_title_lbl;
+static lv_obj_t *s_header_progress; /* left: progress-notification ring/spinner strip */
+static lv_obj_t *s_header_signs;    /* right: recording/replaying signs (flex row) */
+static lv_obj_t *s_record_sign;     /* recording / audio-recording indicator (blinks) */
+static lv_obj_t *s_replay_sign;     /* replaying indicator (blinks) */
 static lv_obj_t *s_content; /* fixed middle area */
 static lv_obj_t *s_page;    /* current page (built into by views) */
 static lv_obj_t *s_prev;    /* outgoing page during a transition */
 static lv_obj_t *s_footer;
 static lv_obj_t *s_clock_lbl;
 static lv_obj_t *s_temp_lbl;
+static lv_obj_t *s_light_lbl;    /* ambient light glyph (opacity tracks level) */
 static lv_obj_t *s_footer_icons; /* right-aligned status icon strip */
 static lv_obj_t *s_slider_track;  /* persistent page-position slider (stays put) */
 static lv_obj_t *s_slider_marker;
+
+/* Nerd-Font glyphs (same codepoints ubo_gui menu_header/footer use). */
+#define GLYPH_RECORD "\xF3\xB0\x91\x8A" /* U+F044A record */
+#define GLYPH_REPLAY "\xF3\xB0\x91\x99" /* U+F0459 play   */
+#define GLYPH_LIGHT  "\xF3\xB1\xA9\x8E" /* U+F1A4E brightness */
 
 /* Cached status bar so a content rebuild can re-apply it. */
 static char s_clock[16];
 static bool s_has_temp;
 static double s_temp;
+static bool s_has_light;
+static double s_light;
 static char s_title_cache[80];
 
 lv_color_t ubo_parse_color(const char *hex, lv_color_t fallback)
@@ -37,6 +49,45 @@ lv_color_t ubo_parse_color(const char *hex, lv_color_t fallback)
         return fallback;
     }
     return lv_color_make((uint8_t)r, (uint8_t)g, (uint8_t)b);
+}
+
+/* Blink a sign label like ubo_gui's sign_animation: hold visible ~1s, fade out,
+ * hold hidden ~0.5s, fade back in, repeat. */
+static void blink_opa_cb(void *obj, int32_t v)
+{
+    lv_obj_set_style_opa((lv_obj_t *)obj, (lv_opa_t)v, 0);
+}
+
+static void start_blink(lv_obj_t *o)
+{
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, o);
+    lv_anim_set_exec_cb(&a, blink_opa_cb);
+    lv_anim_set_values(&a, LV_OPA_COVER, LV_OPA_TRANSP);
+    lv_anim_set_time(&a, 100);          /* fade out */
+    lv_anim_set_playback_time(&a, 100); /* fade back in */
+    lv_anim_set_repeat_delay(&a, 1000); /* hold visible before fading out */
+    lv_anim_set_playback_delay(&a, 500); /* hold hidden before fading in  */
+    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_start(&a);
+}
+
+/* Show/hide a blinking sign (matches ubo_gui _update_sign_widget). */
+static void update_sign(lv_obj_t *sign, bool show, lv_color_t color)
+{
+    if (show) {
+        lv_obj_set_style_text_color(sign, color, 0);
+        if (lv_obj_has_flag(sign, LV_OBJ_FLAG_HIDDEN)) {
+            lv_obj_clear_flag(sign, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_opa(sign, LV_OPA_COVER, 0);
+            start_blink(sign);
+        }
+    } else if (!lv_obj_has_flag(sign, LV_OBJ_FLAG_HIDDEN)) {
+        lv_anim_del(sign, blink_opa_cb);
+        lv_obj_set_style_opa(sign, LV_OPA_COVER, 0);
+        lv_obj_add_flag(sign, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 static void style_bar(lv_obj_t *o)
@@ -98,6 +149,40 @@ void ubo_screen_ensure(void)
     lv_obj_center(s_title_lbl);
     lv_label_set_text(s_title_lbl, "");
 
+    /* Header left: progress-notification indicators (ring / spinner), overlaid
+     * on the title's left edge (matches ubo_gui menu_header progress_layout). */
+    s_header_progress = lv_obj_create(s_header);
+    lv_obj_remove_style_all(s_header_progress);
+    lv_obj_clear_flag(s_header_progress, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_size(s_header_progress, LV_SIZE_CONTENT, lv_pct(100));
+    lv_obj_align(s_header_progress, LV_ALIGN_LEFT_MID, 4, 0);
+    lv_obj_set_flex_flow(s_header_progress, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(s_header_progress, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(s_header_progress, 3, 0);
+
+    /* Header right: recording / replaying signs (blink while active). Hidden
+     * children are ignored by the flex layout, so they stack cleanly. */
+    s_header_signs = lv_obj_create(s_header);
+    lv_obj_remove_style_all(s_header_signs);
+    lv_obj_clear_flag(s_header_signs, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_size(s_header_signs, LV_SIZE_CONTENT, lv_pct(100));
+    lv_obj_align(s_header_signs, LV_ALIGN_RIGHT_MID, -4, 0);
+    lv_obj_set_flex_flow(s_header_signs, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(s_header_signs, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(s_header_signs, 2, 0);
+
+    s_record_sign = lv_label_create(s_header_signs);
+    lv_obj_set_style_text_font(s_record_sign, ubo_font_icon_18(), 0);
+    lv_label_set_text(s_record_sign, GLYPH_RECORD);
+    lv_obj_add_flag(s_record_sign, LV_OBJ_FLAG_HIDDEN);
+
+    s_replay_sign = lv_label_create(s_header_signs);
+    lv_obj_set_style_text_font(s_replay_sign, ubo_font_icon_18(), 0);
+    lv_label_set_text(s_replay_sign, GLYPH_REPLAY);
+    lv_obj_add_flag(s_replay_sign, LV_OBJ_FLAG_HIDDEN);
+
     /* Footer (overlays the content). Left group: clock + temperature.
      * Right group: status icons (globe, mic, wifi/ethernet, ...). */
     s_footer = lv_obj_create(scr);
@@ -124,6 +209,14 @@ void ubo_screen_ensure(void)
     lv_obj_set_style_text_color(s_temp_lbl, UBO_COL_MUTED, 0);
     lv_obj_set_style_text_font(s_temp_lbl, &lv_font_montserrat_14, 0);
     lv_label_set_text(s_temp_lbl, "");
+
+    /* Ambient light glyph: opacity tracks the reading (bright env => brighter),
+     * hidden when the device reports no light sensor (matches ubo_gui). */
+    s_light_lbl = lv_label_create(left);
+    lv_obj_set_style_text_font(s_light_lbl, ubo_font_icon_18(), 0);
+    lv_obj_set_style_text_color(s_light_lbl, UBO_COL_FG, 0);
+    lv_label_set_text(s_light_lbl, GLYPH_LIGHT);
+    lv_obj_add_flag(s_light_lbl, LV_OBJ_FLAG_HIDDEN);
 
     s_footer_icons = lv_obj_create(s_footer);
     lv_obj_remove_style_all(s_footer_icons);
@@ -320,6 +413,25 @@ void ubo_screen_set_title(const char *title)
     lv_label_set_text(s_title_lbl, title ? title : "");
 }
 
+/* Update the ambient-light glyph from the cached reading: hidden when there is
+ * no sensor, else opacity scales with the level (matches ubo_gui's /140 map). */
+static void apply_light(void)
+{
+    if (!s_has_light) {
+        lv_obj_add_flag(s_light_lbl, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+    double v = s_light;
+    if (v < 0) {
+        v = 0;
+    }
+    if (v > 140) {
+        v = 140;
+    }
+    lv_obj_clear_flag(s_light_lbl, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_opa(s_light_lbl, (lv_opa_t)(v / 140.0 * 255.0), 0);
+}
+
 void ubo_status_bar_reapply(void)
 {
     ubo_screen_ensure();
@@ -331,6 +443,7 @@ void ubo_status_bar_reapply(void)
     } else {
         lv_label_set_text(s_temp_lbl, "");
     }
+    apply_light();
 }
 
 void ubo_status_bar_apply(const ubo_status_bar *s)
@@ -343,6 +456,8 @@ void ubo_status_bar_apply(const ubo_status_bar *s)
     snprintf(s_title_cache, sizeof(s_title_cache), "%s", s->title ? s->title : "");
     s_has_temp = s->has_temperature;
     s_temp = s->temperature;
+    s_has_light = s->has_light;
+    s_light = s->light_level;
 
     /* Rebuild the footer status-icon strip. Match ubo_gui: reversed order,
      * at most 4 icons (the right-most strip). */
@@ -358,6 +473,42 @@ void ubo_status_bar_apply(const ubo_status_bar *s)
         lv_obj_set_style_text_color(l, ubo_parse_color(ic->color, UBO_COL_FG), 0);
         lv_label_set_text(l, ic->symbol);
         rendered++;
+    }
+
+    /* Recording / replaying indicators (header right). Match ubo_gui: the record
+     * sign shows for is_recording OR is_recording_audio (blue when recording,
+     * else green); the replay sign shows for is_replaying (green). */
+    update_sign(s_record_sign, s->is_recording || s->is_recording_audio,
+                s->is_recording ? lv_color_hex(0x0000FF) : lv_color_hex(0x00FF00));
+    update_sign(s_replay_sign, s->is_replaying, lv_color_hex(0x00FF00));
+
+    /* Progress notifications (header left): determinate => ring, else spinner. */
+    lv_obj_clean(s_header_progress);
+    for (int i = 0; i < s->progress_count; i++) {
+        const ubo_progress_notification *pn = &s->progress_notifications[i];
+        const lv_color_t col = ubo_parse_color(pn->color, UBO_COL_INFO);
+        if (pn->has_progress) {
+            lv_obj_t *arc = lv_arc_create(s_header_progress);
+            lv_obj_set_size(arc, 22, 22);
+            lv_obj_remove_style(arc, NULL, LV_PART_KNOB);
+            lv_obj_clear_flag(arc, LV_OBJ_FLAG_CLICKABLE);
+            lv_arc_set_rotation(arc, 270);
+            lv_arc_set_bg_angles(arc, 0, 360);
+            lv_arc_set_range(arc, 0, 100);
+            lv_arc_set_value(arc, (int32_t)(pn->progress * 100.0 + 0.5));
+            lv_obj_set_style_arc_width(arc, 3, LV_PART_MAIN);
+            lv_obj_set_style_arc_width(arc, 3, LV_PART_INDICATOR);
+            lv_obj_set_style_arc_color(arc, UBO_COL_MUTED, LV_PART_MAIN);
+            lv_obj_set_style_arc_color(arc, col, LV_PART_INDICATOR);
+        } else {
+            lv_obj_t *sp = lv_spinner_create(s_header_progress);
+            lv_obj_set_size(sp, 22, 22);
+            lv_spinner_set_anim_params(sp, 1000, 270);
+            lv_obj_set_style_arc_width(sp, 3, LV_PART_MAIN);
+            lv_obj_set_style_arc_width(sp, 3, LV_PART_INDICATOR);
+            lv_obj_set_style_arc_color(sp, UBO_COL_MUTED, LV_PART_MAIN);
+            lv_obj_set_style_arc_color(sp, col, LV_PART_INDICATOR);
+        }
     }
 
     ubo_status_bar_reapply();
