@@ -106,6 +106,21 @@ CMake options: `-DUBO_WITH_SDL=ON|OFF` (default ON), `-DUBO_WITH_ST7789=ON|OFF`
 The bridge auto-locates `libubo_lvgl` under `ubo_lvgl/build/` and the icon fonts
 under `ubo_lvgl/assets/` (override with `UBO_LVGL_LIB` / `UBO_LVGL_ASSETS_DIR`).
 
+### Selecting the backend via the supervisor
+
+The normal `ubo` command (the supervisor in `ubo_app/main.py`) picks the GUI
+client from an env var, so the same command / service drives either renderer:
+
+```sh
+UBO_GUI_BACKEND=lvgl  UBO_LVGL_BACKEND=st7789  ubo   # LVGL on the ST7789 panel
+UBO_GUI_BACKEND=kivy  ubo                            # Kivy (default)
+```
+
+`UBO_GUI_BACKEND` is `kivy` by default; set it to `lvgl` to spawn
+`ubo-lvgl-gui-client` with `--backend $UBO_LVGL_BACKEND` (`st7789` on a device,
+`sdl` on desktop). In a systemd unit, set `Environment=UBO_GUI_BACKEND=lvgl`.
+(The Kivy client uses lgpio, which needs a writable working directory.)
+
 ### Headless snapshots (no display)
 
 The C library can render to an offscreen RGB565 framebuffer, used for CI snapshot
