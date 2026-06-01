@@ -1,0 +1,184 @@
+# Ubo LVGL GUI client
+
+An [LVGL](https://lvgl.io) (C) reimplementation of the Ubo GUI's rendering
+layer. It draws the Ubo UI on the 240×240 **ST7789** SPI panel (and on a desktop
+**SDL** window for development), replacing the heavier Kivy + headless-kivy
+stack. The renderer is a *dumb* client: it subscribes to the core's `ViewData` /
+`StatusBarData` over gRPC and draws them — all navigation/menu logic lives in the
+core.
+
+It comes in two pieces:
+
+| Piece | Path | Language |
+|-------|------|----------|
+| Renderer library (`libubo_lvgl`) | `ubo_lvgl/` | C |
+| gRPC bridge / launcher | `ubo_app/gui/ubo_lvgl_gui_client/` | Python |
+
+## Why two pieces (phases)
+
+The C library is the durable artifact. Its public API (`include/ubo_lvgl.h`) is a
+*view model* that mirrors the core's `ViewData`/`StatusBarData` field-for-field.
+
+```
+            PHASE 1 (now)                          PHASE 2 (future, MCU)
+ ┌──────────────────────────────┐         ┌──────────────────────────────┐
+ │ Python: ubo_lvgl_gui_client  │         │ C on a microcontroller       │
+ │  gRPC client + reconnect     │         │  C gRPC / nanopb decode      │
+ │  ViewData ── translate ──┐   │         │      │ (same C API)          │
+ └──────────────────────────┼───┘         └──────┼───────────────────────┘
+                            │ CFFI typed API       │
+                  ┌─────────▼──────────────────────▼────────┐
+                  │ libubo_lvgl (this directory)             │
+                  │  view-model API → LVGL widget tree       │
+                  │  backend: SDL | buffer | ST7789 SPI      │
+                  └──────────────────────────────────────────┘
+```
+
+In **phase 1** a Python process owns gRPC and calls the C API over CFFI. In
+**phase 2** a C gRPC/proto decoder calls the *same* C API — every line below the
+seam is reused.
+
+## Directory layout
+
+```
+ubo_lvgl/
+  CMakeLists.txt
+  lv_conf.h                 # LVGL configuration (RGB565, SDL, fonts, FS driver)
+  lvgl/                     # LVGL v9.3 (git submodule)
+  include/ubo_lvgl.h        # PUBLIC C API — the stable seam
+  assets/
+    fonts/ArimoNerdFont-Regular.ttf   # source for the icon font
+    ubo_icons_{18,14}.bin             # runtime icon fonts (full Nerd-Font range)
+  src/
+    ubo_lvgl.c              # init, LVGL loop, lock, render entry points, snapshot
+    sim_main.c              # ubo_lvgl_sim   — desktop SDL window
+    snapshot_main.c         # ubo_lvgl_snapshot — headless BMP of a sample view
+    display/                # backend_sdl.c | backend_buffer.c | backend_st7789.c
+    fonts/                  # generated LVGL fonts + runtime loader (fonts/README.md)
+    views/                  # screen chrome, item bar, page slider, per-view builders
+```
+
+## Prerequisites
+
+- A C toolchain + CMake ≥ 3.15
+- **SDL2** (desktop backend): `brew install sdl2` (macOS) / `apt install libsdl2-dev`
+- The LVGL submodule:
+  ```sh
+  git submodule update --init ubo_lvgl/lvgl
+  ```
+
+## Build (C library + tools)
+
+```sh
+cmake -S ubo_lvgl -B ubo_lvgl/build -DCMAKE_PREFIX_PATH=/opt/homebrew   # macOS/brew
+cmake --build ubo_lvgl/build -j8
+```
+
+Targets produced in `ubo_lvgl/build/`:
+
+| Target | What it is |
+|--------|------------|
+| `libubo_lvgl.{dylib,so}` | the renderer library (loaded by the Python bridge) |
+| `ubo_lvgl_sim` | standalone SDL window showing the current screen |
+| `ubo_lvgl_snapshot` | renders a sample view to a BMP with no display (CI) |
+
+CMake options: `-DUBO_WITH_SDL=ON|OFF` (default ON), `-DUBO_WITH_ST7789=ON|OFF`
+(default OFF; Raspberry Pi). The offscreen buffer backend is always built.
+
+## Run (desktop, against a live core)
+
+1. Start the core's gRPC server (no GUI of its own):
+   ```sh
+   uv run ubo-core            # serves 127.0.0.1:50051
+   ```
+2. Set up the Python bridge venv (once) and run the client:
+   ```sh
+   cd ubo_app/gui/ubo_lvgl_gui_client
+   uv venv && uv pip install cffi betterproto grpclib pypng python-strtobool platformdirs
+   cd -
+   PYTHONPATH=ubo_app/gui:ubo_app/rpc \
+     ubo_app/gui/ubo_lvgl_gui_client/.venv/bin/python \
+     -m ubo_lvgl_gui_client --backend sdl
+   ```
+   An SDL window opens and mirrors what the core renders. Keys (desktop):
+   `↑/k` up, `↓/j` down, `1/2/3` → L1/L2/L3, `←/esc/h` back, `backspace` home.
+
+The bridge auto-locates `libubo_lvgl` under `ubo_lvgl/build/` and the icon fonts
+under `ubo_lvgl/assets/` (override with `UBO_LVGL_LIB` / `UBO_LVGL_ASSETS_DIR`).
+
+### Headless snapshots (no display)
+
+The C library can render to an offscreen RGB565 framebuffer, used for CI snapshot
+tests and screenshots when there is no window:
+
+```sh
+ubo_lvgl/build/ubo_lvgl_snapshot out.bmp menu      # or: home
+```
+
+From Python (drives the real render path via the bridge):
+
+```python
+from ubo_lvgl_gui_client.bridge import Renderer, BACKEND_BUFFER, MenuView, MenuItem
+r = Renderer(); r.init(BACKEND_BUFFER, 240, 240)
+r.render_menu(MenuView(title='Main', items=[MenuItem(label='WiFi')]))
+r.snapshot('/tmp/out.bmp')
+```
+
+### gRPC screenshot facility
+
+When connected to a core, the client answers the core's `ScreenshotEvent`
+(e.g. the `HOME`+`L1` keypad shortcut, or a dispatched `TakeScreenshotAction`) by
+encoding its framebuffer to PNG and returning a `ScreenshotDataAction`. The core
+saves it under `screenshots/ubo-screenshot-NNN.png` — the same mechanism the Kivy
+client uses, enabling apple-to-apple comparison and CI window-snapshot tests.
+
+## How it works
+
+**View model.** `include/ubo_lvgl.h` declares one struct per view
+(`ubo_home_view`, `ubo_menu_view`, …) mirroring the core's `ViewData`, plus
+`ubo_status_bar`. The render entry points (`ubo_lvgl_render_menu(...)`, …) rebuild
+the LVGL widget tree for that view.
+
+**Threading.** LVGL runs its own loop (`ubo_lvgl_run`). A single mutex
+(`ubo_lock`/`ubo_unlock`) serializes all LVGL access, so the render functions can
+be called from another thread (the Python gRPC loop in phase 1). Strings passed
+in are only read during the call. On macOS the SDL window must be driven from the
+main thread, so the launcher runs the LVGL loop on the main thread and gRPC on a
+worker.
+
+**Layout (matches ubo_gui).** The content area is full-screen with the
+header/footer drawn as overlays on top. Views lay out in the middle **band**
+(between a 34 px header and a 36 px footer) so the centre item is always
+screen-centred. Menu items are right-rounded "D" bars (52 px tall, 7 px gap).
+Paginated menus show the **header only on the first page** and the **footer only
+on the last page**; middle pages reveal the previous/next items peeking into the
+header/footer space (ubo_gui's `render_surroundings`). A thin page-position
+slider tracks the current page, and view changes animate with a directional
+slide.
+
+**Fonts.** Text uses built-in Montserrat. Icons use a Nerd Font (the same
+`ArimoNerdFont` ubo_gui registers) generated to `assets/ubo_icons_*.bin` and
+loaded at runtime via LVGL's filesystem driver; a small compiled subset is the
+fallback. See `src/fonts/README.md` to regenerate / add glyphs.
+
+**Backends.** `display/backend_sdl.c` (desktop window + key events),
+`display/backend_buffer.c` (offscreen RGB565 for snapshots),
+`display/backend_st7789.c` (Raspberry Pi SPI panel — Step 6, WIP).
+
+## Verifying changes
+
+- C: build with `-Wall -Wextra` (clean), then snapshot a view and eyeball it.
+- Python: `cd ubo_app/gui/ubo_lvgl_gui_client && .venv/bin/pyright && .venv/bin/ruff check .`
+- End-to-end: run a core + the SDL client and compare to the Kivy client.
+
+## Status / roadmap
+
+Phase 1 is complete and verified on desktop against a live core (all core
+navigation views, keypad input, transitions, icons, status bar, snapshot
+facility). Remaining:
+
+- **ST7789 bring-up** (`backend_st7789.c`: spidev + libgpiod, `y_offset=80`,
+  backlight on GPIO26) and on-device verification.
+- Generic `RenderViewData` widgets (qr/text/image/video) — phase 1.6.
+- **Phase 2**: move the whole client (incl. gRPC) to C on a microcontroller,
+  reusing this library.
