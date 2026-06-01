@@ -33,11 +33,8 @@
         "policy": {
           "_type": "AssistantTriggerPolicy",
           "end_of_turn_phrases": [
-            "i am done",
-            "i'm done",
-            "that's it",
-            "that's all",
-            "thanks bye"
+            "i am done talking",
+            "i'm done talking"
           ],
           "requires_phrase_for_stop": true,
           "silence_timeout_seconds": null
@@ -357,6 +354,7 @@
     "depth": 1,
     "is_consumed": false,
     "is_display_blanked": false,
+    "is_on_chat": false,
     "is_on_notification": false
   },
   "lightdm": {

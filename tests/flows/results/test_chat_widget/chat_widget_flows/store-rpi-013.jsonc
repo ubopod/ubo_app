@@ -1,0 +1,45 @@
+// store-rpi-013
+{
+  "bubbles": [
+    {
+      "alignment": "right",
+      "is_playing": false,
+      "kind": "text",
+      "pointer_key": "",
+      "role": "user"
+    },
+    {
+      "alignment": "left",
+      "is_playing": false,
+      "kind": "text",
+      "pointer_key": "",
+      "role": "assistant"
+    }
+  ],
+  "current_view_type": "ChatViewData",
+  "is_active": true,
+  "messages": [
+    {
+      "audio_id": "",
+      "id": "echo-user",
+      "is_playing": false,
+      "kind": "text",
+      "role": "user",
+      "text": "hello there"
+    },
+    {
+      "audio_id": "",
+      "id": "echo-user-reply",
+      "is_playing": false,
+      "kind": "text",
+      "role": "assistant",
+      "text": "echo=> hello there"
+    }
+  ],
+  "scroll_offset": 0,
+  "session_id": "chat-echo",
+  "stack": [
+    "MenuStackItem",
+    "ChatStackItem"
+  ]
+}
