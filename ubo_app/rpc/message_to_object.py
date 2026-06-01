@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import TypeAlias, TypeVar, Union, cast, get_args, get_origin
 
 import betterproto
-import betterproto.casing
+from betterproto.casing import snake_case
 from betterproto.lib.std.google import protobuf as betterproto_protobuf
 from immutable import Immutable
 
@@ -37,7 +37,7 @@ META_FIELD_PREFIX_PACKAGE_NAME_INDEX = 1000
 
 # --- Caching for hot-path operations ---
 _class_cache: dict[type, type | None] = {}
-_snake_case = functools.lru_cache(maxsize=512)(betterproto.casing.snake_case)
+_snake_case = functools.lru_cache(maxsize=512)(snake_case)
 
 
 def get_class(message: betterproto.Message | betterproto.Enum) -> type | None:

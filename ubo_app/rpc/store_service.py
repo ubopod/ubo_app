@@ -10,6 +10,7 @@ from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 import betterproto
+from betterproto.casing import snake_case
 from betterproto.lib.std.google import protobuf as betterproto_protobuf
 from ubo_app.logger import logger
 from ubo_app.rpc.message_to_object import get_class, rebuild_object, reduce_group
@@ -245,7 +246,7 @@ def _setup_event_subscriptions(
     for event_proto in event_protos:
         event_class = get_class(reduce_group(event_proto))
         if event_class:
-            event_field_names[event_class] = betterproto.casing.snake_case(
+            event_field_names[event_class] = snake_case(
                 event_class.__name__,
             )
             unsubscribes.append(

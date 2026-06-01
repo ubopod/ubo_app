@@ -6,7 +6,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Protocol, TypeAlias, TypeVar, cast, overload
 
 import betterproto
-import betterproto.casing
+from betterproto.casing import pascal_case, snake_case
 
 import ubo_bindings.ubo.v1
 
@@ -28,8 +28,8 @@ ReturnType: TypeAlias = (
 # --- Caching for hot-path operations ---
 _msg_class_cache: dict[type, type[betterproto.Message]] = {}
 _enum_class_cache: dict[type, type[betterproto.Enum]] = {}
-_pascal_case = functools.lru_cache(maxsize=512)(betterproto.casing.pascal_case)
-_snake_case = functools.lru_cache(maxsize=512)(betterproto.casing.snake_case)
+_pascal_case = functools.lru_cache(maxsize=512)(pascal_case)
+_snake_case = functools.lru_cache(maxsize=512)(snake_case)
 
 
 def get_class(object_: Immutable) -> type[betterproto.Message]:
