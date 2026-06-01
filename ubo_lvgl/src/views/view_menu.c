@@ -21,6 +21,23 @@ void ubo_build_menu(const ubo_menu_view *v)
     ubo_screen_set_title(title);
 
     const int count = v->item_count;
+
+    /* Empty menu: show the placeholder centred in the band (ubo_gui HeadedMenu). */
+    if (count == 0) {
+        const char *ph = (v->placeholder && v->placeholder[0]) ? v->placeholder
+                                                               : "";
+        lv_obj_t *lbl = lv_label_create(page);
+        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_color(lbl, UBO_COL_MUTED, 0);
+        lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_width(lbl, UBO_W - 24);
+        lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
+        lv_label_set_text(lbl, ph);
+        lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
+        ubo_screen_set_page_slider(v->page_index, v->total_pages);
+        ubo_status_bar_reapply();
+        return;
+    }
     int start = 0;
     if (count > UBO_PAGE_SIZE && v->page_index > 0) {
         start = v->page_index * UBO_PAGE_SIZE;

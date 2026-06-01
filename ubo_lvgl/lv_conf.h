@@ -68,4 +68,7 @@
 #define LV_USE_IMAGE    1
 #define LV_USE_ANIMIMG  1
 
+/* QR codes for the generic RenderViewData 'qr_code'/'qr_code_carousel' kinds. */
+#define LV_USE_QRCODE   1
+
 #endif /* LV_CONF_H */

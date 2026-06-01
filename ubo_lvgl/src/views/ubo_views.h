@@ -69,11 +69,17 @@ void ubo_build_notification(const ubo_notification_view *v);
 void ubo_build_instruction(const ubo_instruction_view *v);
 void ubo_build_prompt(const ubo_prompt_view *v);
 void ubo_build_application(const ubo_application_view *v);
+void ubo_build_render(const ubo_render_view *v);
+
+/* Look up a generic render-view prop by key; returns NULL when absent. */
+const char *ubo_render_prop_get(const ubo_render_view *v, const char *key);
 
 /* ---- Top-layer overlays ---- */
 void ubo_overlay_splash_show(void);
 void ubo_overlay_splash_hide(void);
 void ubo_overlay_blank(bool on);          /* full black cover */
 void ubo_overlay_disconnected(bool shown); /* red "Disconnected" cover */
+/* Show the disconnect cover with a reconnect countdown subtitle. */
+void ubo_overlay_disconnected_status(int attempt, int max_attempts, int seconds);
 
 #endif /* UBO_VIEWS_H */

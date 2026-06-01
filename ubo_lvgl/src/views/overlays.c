@@ -10,6 +10,7 @@
 static lv_obj_t *s_splash;
 static lv_obj_t *s_blank;
 static lv_obj_t *s_disc;
+static lv_obj_t *s_disc_sub; /* "Reconnecting in Ns (attempt A/M)" subtitle */
 
 static lv_obj_t *full_cover(lv_color_t bg)
 {
@@ -68,24 +69,52 @@ void ubo_overlay_blank(bool on)
     }
 }
 
+static void ensure_disc(void)
+{
+    if (s_disc) {
+        return;
+    }
+    s_disc = full_cover(lv_color_hex(0x000000));
+    lv_obj_t *icon = lv_label_create(s_disc);
+    lv_obj_set_style_text_font(icon, ubo_font_icon_18(), 0);
+    lv_obj_set_style_text_color(icon, lv_color_hex(0xE53935), 0);
+    lv_label_set_text(icon, "\U000F02FC"); /* information/alert glyph */
+
+    lv_obj_t *lbl = lv_label_create(s_disc);
+    lv_obj_set_style_text_color(lbl, lv_color_hex(0xE53935), 0);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
+    lv_label_set_text(lbl, "Disconnected");
+
+    s_disc_sub = lv_label_create(s_disc);
+    lv_label_set_long_mode(s_disc_sub, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(s_disc_sub, UBO_W - 20);
+    lv_obj_set_style_text_align(s_disc_sub, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(s_disc_sub, UBO_COL_MUTED, 0);
+    lv_obj_set_style_text_font(s_disc_sub, &lv_font_montserrat_14, 0);
+    lv_label_set_text(s_disc_sub, "");
+}
+
 void ubo_overlay_disconnected(bool shown)
 {
     if (shown) {
-        if (!s_disc) {
-            s_disc = full_cover(lv_color_hex(0x000000));
-            lv_obj_t *icon = lv_label_create(s_disc);
-            lv_obj_set_style_text_font(icon, ubo_font_icon_18(), 0);
-            lv_obj_set_style_text_color(icon, lv_color_hex(0xE53935), 0);
-            lv_label_set_text(icon, "\U000F02FC"); /* information/alert glyph */
-
-            lv_obj_t *lbl = lv_label_create(s_disc);
-            lv_obj_set_style_text_color(lbl, lv_color_hex(0xE53935), 0);
-            lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
-            lv_label_set_text(lbl, "Disconnected");
-        }
+        ensure_disc();
         lv_obj_move_foreground(s_disc);
         lv_obj_clear_flag(s_disc, LV_OBJ_FLAG_HIDDEN);
     } else if (s_disc) {
         lv_obj_add_flag(s_disc, LV_OBJ_FLAG_HIDDEN);
     }
+}
+
+void ubo_overlay_disconnected_status(int attempt, int max_attempts, int seconds)
+{
+    ensure_disc();
+    if (seconds > 0) {
+        lv_label_set_text_fmt(s_disc_sub, "Reconnecting in %ds (attempt %d/%d)",
+                              seconds, attempt, max_attempts);
+    } else {
+        lv_label_set_text_fmt(s_disc_sub, "Reconnecting... (attempt %d/%d)",
+                              attempt, max_attempts);
+    }
+    lv_obj_move_foreground(s_disc);
+    lv_obj_clear_flag(s_disc, LV_OBJ_FLAG_HIDDEN);
 }

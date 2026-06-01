@@ -55,6 +55,7 @@ set(UBO_SOURCES
     src/views/view_instruction.c
     src/views/view_prompt.c
     src/views/view_application.c
+    src/views/view_render.c
     src/views/overlays.c
     src/fonts/ubo_icon_18.c
     src/fonts/ubo_icon_14.c

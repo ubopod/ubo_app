@@ -41,7 +41,8 @@ typedef struct {
 
 typedef struct {
     bool show_status_bar; const char *title; const char *heading;
-    const char *sub_heading; const ubo_menu_item *items; int item_count;
+    const char *sub_heading; const char *placeholder;
+    const ubo_menu_item *items; int item_count;
     int page_index; int total_pages; int stack_depth;
 } ubo_menu_view;
 
@@ -66,6 +67,14 @@ typedef struct {
     bool show_status_bar; const char *application_id;
 } ubo_application_view;
 
+typedef struct { const char *key; const char *value; } ubo_render_prop;
+
+typedef struct {
+    bool show_status_bar; const char *kind; const char *title;
+    const ubo_render_prop *props; int prop_count;
+    const ubo_menu_item *items; int item_count; const char *stream_id;
+} ubo_render_view;
+
 typedef struct { const char *symbol; const char *color; } ubo_status_icon;
 
 typedef struct {
@@ -89,9 +98,11 @@ void ubo_lvgl_render_notification(const ubo_notification_view *v);
 void ubo_lvgl_render_instruction(const ubo_instruction_view *v);
 void ubo_lvgl_render_prompt(const ubo_prompt_view *v);
 void ubo_lvgl_render_application(const ubo_application_view *v);
+void ubo_lvgl_render_render(const ubo_render_view *v);
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
 void ubo_lvgl_set_blanked(bool blanked);
 void ubo_lvgl_set_connected(bool connected);
+void ubo_lvgl_set_disconnect_status(int attempt, int max_attempts, int seconds);
 int  ubo_lvgl_run(bool threaded);
 void ubo_lvgl_shutdown(void);
 int  ubo_lvgl_snapshot(const char *path);
@@ -139,6 +150,7 @@ class MenuView:
     title: str = ''
     heading: str | None = None
     sub_heading: str | None = None
+    placeholder: str | None = None
     items: list[MenuItem] = field(default_factory=list)
     page_index: int = 0
     total_pages: int = 1
@@ -190,6 +202,26 @@ class ApplicationView:
 
     show_status_bar: bool = True
     application_id: str = ''
+
+
+@dataclass
+class RenderProp:
+    """A generic render-widget property (mirrors ubo_render_prop)."""
+
+    key: str = ''
+    value: str = ''
+
+
+@dataclass
+class RenderView:
+    """Generic render view (mirrors ubo_render_view)."""
+
+    show_status_bar: bool = False
+    kind: str = ''
+    title: str = ''
+    props: list[RenderProp] = field(default_factory=list)
+    items: list[MenuItem] = field(default_factory=list)
+    stream_id: str | None = None
 
 
 @dataclass
@@ -345,6 +377,7 @@ class Renderer:
         c.title = self._s(v.title, keep)
         c.heading = self._s(v.heading, keep)
         c.sub_heading = self._s(v.sub_heading, keep)
+        c.placeholder = self._s(v.placeholder, keep)
         c.items = self._items(v.items, keep)
         c.item_count = len(v.items)
         c.page_index = v.page_index
@@ -401,6 +434,25 @@ class Renderer:
         c.application_id = self._s(v.application_id, keep)
         self.lib.ubo_lvgl_render_application(c)
 
+    def render_render(self, v: RenderView) -> None:
+        """Render a generic RenderViewData widget (text/qr/status/...)."""
+        keep: list = []
+        props = self.ffi.new('ubo_render_prop[]', max(len(v.props), 1))
+        keep.append(props)
+        for i, p in enumerate(v.props):
+            props[i].key = self._s(p.key, keep)
+            props[i].value = self._s(p.value, keep)
+        c = self.ffi.new('ubo_render_view*')
+        c.show_status_bar = v.show_status_bar
+        c.kind = self._s(v.kind, keep)
+        c.title = self._s(v.title, keep)
+        c.props = props
+        c.prop_count = len(v.props)
+        c.items = self._items(v.items, keep)
+        c.item_count = len(v.items)
+        c.stream_id = self._s(v.stream_id, keep)
+        self.lib.ubo_lvgl_render_render(c)
+
     def set_status_bar(self, s: StatusBar) -> None:
         """Update the header/footer status bar."""
         keep: list = []
@@ -443,3 +495,12 @@ class Renderer:
     def set_connected(self, connected: bool) -> None:  # noqa: FBT001
         """Show/hide the disconnect overlay."""
         self.lib.ubo_lvgl_set_connected(connected)
+
+    def set_disconnect_status(
+        self,
+        attempt: int,
+        max_attempts: int,
+        seconds: int,
+    ) -> None:
+        """Show the disconnect overlay with a reconnect countdown subtitle."""
+        self.lib.ubo_lvgl_set_disconnect_status(attempt, max_attempts, seconds)

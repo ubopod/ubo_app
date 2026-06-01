@@ -78,6 +78,7 @@ typedef struct {
     const char *title;
     const char *heading;
     const char *sub_heading;
+    const char *placeholder; /* shown centred when the menu is empty, or NULL */
     const ubo_menu_item *items;
     int item_count;
     int page_index; /* 0-based            */
@@ -121,6 +122,27 @@ typedef struct {
     bool show_status_bar;
     const char *application_id;
 } ubo_application_view;
+
+/* One generic render-widget property. Values are stringified ("42", "true");
+ * list-valued props are newline-joined. Binary props (image bytes) are not
+ * carried here — image/frame data uses dedicated paths. */
+typedef struct {
+    const char *key;
+    const char *value;
+} ubo_render_prop;
+
+/* A generic render view (RenderViewData): the core dispatches on `kind`
+ * (e.g. "text_viewer", "status", "qr_code", "qr_code_carousel"). */
+typedef struct {
+    bool show_status_bar;
+    const char *kind;
+    const char *title;
+    const ubo_render_prop *props;
+    int prop_count;
+    const ubo_menu_item *items;
+    int item_count;
+    const char *stream_id;
+} ubo_render_view;
 
 /* ------------------------------------------------------------------------- */
 /* Status bar                                                                */
@@ -178,10 +200,13 @@ void ubo_lvgl_render_notification(const ubo_notification_view *v);
 void ubo_lvgl_render_instruction(const ubo_instruction_view *v);
 void ubo_lvgl_render_prompt(const ubo_prompt_view *v);
 void ubo_lvgl_render_application(const ubo_application_view *v);
+void ubo_lvgl_render_render(const ubo_render_view *v);
 
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
 void ubo_lvgl_set_blanked(bool blanked);    /* backlight off + black overlay */
 void ubo_lvgl_set_connected(bool connected); /* show/hide disconnect overlay  */
+/* Show the disconnect overlay with a reconnect countdown subtitle. */
+void ubo_lvgl_set_disconnect_status(int attempt, int max_attempts, int seconds);
 
 /* Run the LVGL loop.
  *   threaded=false: block on the calling thread until quit (sim / tests).

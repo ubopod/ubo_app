@@ -87,7 +87,9 @@ def main() -> None:  # noqa: C901, PLR0915
         client.subscribe_view_changes(
             on_view,
             on_connected=lambda: renderer.set_connected(True),
-            on_disconnect=lambda *_: renderer.set_connected(False),
+            on_disconnect=lambda delay, attempt, max_attempts: (
+                renderer.set_disconnect_status(attempt, max_attempts, int(delay))
+            ),
         )
 
         def on_screenshot() -> None:

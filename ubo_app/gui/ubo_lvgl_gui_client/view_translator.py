@@ -8,8 +8,9 @@ rewritten in C against the decoded proto. The C renderer ignores ``action_id``
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
+import betterproto
 from ubo_bindings.ubo.v1 import (
     ApplicationViewData,
     HomeViewData,
@@ -70,6 +71,43 @@ def _strip_markup(value: str | None) -> str | None:
 
 # Icons are single glyphs but may also be wrapped in markup.
 _icon = _strip_markup
+
+
+def _basic_to_str(b: betterproto.Message) -> str | None:
+    """Stringify a betterproto BasicType oneof (bytes are not carried)."""
+    name, val = betterproto.which_one_of(b, 'basic_type')
+    if name == 'bytes' or val is None:
+        return None
+    if name == 'bool':
+        return 'true' if val else 'false'
+    return str(val)
+
+
+def _prop_value_to_str(pv: betterproto.Message) -> str | None:
+    """Stringify a RenderViewData PropsValue (scalar, or newline-joined list)."""
+    name, val = betterproto.which_one_of(pv, 'props_value')
+    if name == 'basic_type':
+        return _basic_to_str(val) if val is not None else None
+    if name == 'list':
+        items = cast('list[Any]', getattr(val, 'items', None) or [])
+        parts: list[str] = []
+        for x in items:
+            s = _basic_to_str(x)
+            if s is not None:
+                parts.append(s)
+        return '\n'.join(parts)
+    return None
+
+
+def _props(props: object) -> list[bridge.RenderProp]:
+    """Flatten a RenderViewData props map into stringified key/value pairs."""
+    mapping = getattr(props, 'items', None) or {}
+    out = []
+    for key, pv in mapping.items():
+        value = _prop_value_to_str(pv)
+        if value is not None:
+            out.append(bridge.RenderProp(key=key, value=value))
+    return out
 
 
 def _items(wrapper: object) -> list:
@@ -154,6 +192,7 @@ def render_view(renderer: Renderer, view: object) -> None:
                 title=_strip_markup(view.title) or '',
                 heading=_strip_markup(view.heading),
                 sub_heading=_strip_markup(view.sub_heading),
+                placeholder=_strip_markup(view.placeholder),
                 items=[_menu_item(it) for it in _items(view.items)],
                 page_index=view.page_index or 0,
                 total_pages=view.total_pages or 1,
@@ -204,11 +243,13 @@ def render_view(renderer: Renderer, view: object) -> None:
             ),
         )
     elif isinstance(view, RenderViewData):
-        # Generic render widgets (qr/text/image/...) are phase 1.5; show a
-        # placeholder for now.
-        renderer.render_application(
-            bridge.ApplicationView(
+        renderer.render_render(
+            bridge.RenderView(
                 show_status_bar=bool(view.show_status_bar),
-                application_id=view.kind or 'render',
+                kind=view.kind or '',
+                title=_strip_markup(view.title) or '',
+                props=_props(view.props),
+                items=[_menu_item(it) for it in _items(view.items)],
+                stream_id=view.stream_id or None,
             ),
         )
