@@ -17,6 +17,19 @@ logging.basicConfig(level=logging.INFO)
 _GRPC_HOST = os.environ.get('UBO_GRPC_LISTEN_ADDRESS', '127.0.0.1')
 _GRPC_PORT = int(os.environ.get('UBO_GRPC_LISTEN_PORT', '50051'))
 
+# GUI backend: 'kivy' (default) spawns ubo-gui-client; 'lvgl' spawns the LVGL
+# client (ubo-lvgl-gui-client) with the display backend from UBO_LVGL_BACKEND
+# ('st7789' on the device, 'sdl' on desktop).
+_GUI_BACKEND = os.environ.get('UBO_GUI_BACKEND', 'kivy').lower()
+_LVGL_DISPLAY = os.environ.get('UBO_LVGL_BACKEND', 'st7789')
+
+
+def _gui_spec() -> tuple[str, tuple[str, ...]]:
+    """Return (executable name, extra args) for the selected GUI backend."""
+    if _GUI_BACKEND == 'lvgl':
+        return 'ubo-lvgl-gui-client', ('--backend', _LVGL_DISPLAY)
+    return 'ubo-gui-client', ()
+
 _CORE_SHUTDOWN_TIMEOUT = 30.0  # max seconds to wait for core graceful shutdown
 
 
@@ -66,10 +79,11 @@ def _spawn_gui(
     gui_exe: Path,
     host: str,
     port: int,
+    extra_args: tuple[str, ...] = (),
 ) -> subprocess.Popen[bytes]:
-    """Spawn the ubo-gui-client process in its own session."""
+    """Spawn the GUI client process in its own session."""
     return subprocess.Popen(  # noqa: S603
-        [str(gui_exe), '--host', host, '--port', str(port)],
+        [str(gui_exe), *extra_args, '--host', host, '--port', str(port)],
         start_new_session=True,
     )
 
@@ -88,7 +102,7 @@ def _monitor_children(
     while core_proc.poll() is None:
         if gui_proc.poll() is not None and not shutting_down[0]:
             logger.info(
-                'ubo-gui-client exited unexpectedly with code %d',
+                'GUI client exited unexpectedly with code %d',
                 gui_proc.returncode,
             )
             return
@@ -168,10 +182,12 @@ def main() -> None:
         )
         sys.exit(1)
 
-    gui_exe = _find_executable('ubo-gui-client')
+    gui_name, gui_extra_args = _gui_spec()
+    logger.info('GUI backend: %s (%s)', _GUI_BACKEND, gui_name)
+    gui_exe = _find_executable(gui_name)
     headless_only = gui_exe is None
     if headless_only:
-        logger.warning('ubo-gui-client not found, running headless only')
+        logger.warning('%s not found, running headless only', gui_name)
 
     shutting_down: list[bool] = [False]
     gui_proc_holder: list[subprocess.Popen[bytes] | None] = [None]
@@ -179,7 +195,9 @@ def main() -> None:
     # Spawn GUI first so its window starts initializing (showing splash)
     # while core boots up
     if not headless_only:
-        gui_proc_holder[0] = _spawn_gui(gui_exe, _GRPC_HOST, _GRPC_PORT)
+        gui_proc_holder[0] = _spawn_gui(
+            gui_exe, _GRPC_HOST, _GRPC_PORT, gui_extra_args,
+        )
 
     core_proc = _spawn_core(core_exe)
 
