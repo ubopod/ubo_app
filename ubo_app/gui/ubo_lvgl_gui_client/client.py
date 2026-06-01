@@ -77,6 +77,28 @@ class GUIClient:
             callback=lambda _event: callback(),
         )
 
+    def subscribe_frame_stream(
+        self,
+        stream_id: str,
+        callback: Callable[[bytes, int, int], None],
+    ) -> Callable[[], None]:
+        """Subscribe to a generic frame stream; returns an unsubscribe fn."""
+        if not self._client:
+            msg = 'Client not connected'
+            raise RuntimeError(msg)
+        from ubo_bindings.ubo.v1 import Event, FrameStreamDataEvent
+
+        def _callback(event: Event) -> None:
+            stream_event = event.frame_stream_data_event
+            if stream_event.stream_id != stream_id:
+                return
+            callback(stream_event.data, stream_event.width, stream_event.height)
+
+        return self._client.subscribe_event(
+            event_type=Event(frame_stream_data_event=FrameStreamDataEvent()),
+            callback=_callback,
+        )
+
     def subscribe_view_changes(  # noqa: C901
         self,
         callback: Callable[[ViewData, StatusBarData | None, bool | None], None],

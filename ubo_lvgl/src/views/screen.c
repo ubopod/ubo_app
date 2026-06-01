@@ -25,6 +25,7 @@ static lv_obj_t *s_light_lbl;    /* ambient light glyph (opacity tracks level) *
 static lv_obj_t *s_footer_icons; /* right-aligned status icon strip */
 static lv_obj_t *s_slider_track;  /* persistent page-position slider (stays put) */
 static lv_obj_t *s_slider_marker;
+static lv_obj_t *s_frame_img;     /* current image_viewer/frame_stream target */
 
 /* Nerd-Font glyphs (same codepoints ubo_gui menu_header/footer use). */
 #define GLYPH_RECORD "\xF3\xB0\x91\x8A" /* U+F044A record */
@@ -248,9 +249,21 @@ lv_obj_t *ubo_screen_band_box(void)
     return box;
 }
 
+void ubo_screen_set_frame_target(lv_obj_t *img)
+{
+    s_frame_img = img;
+}
+
+lv_obj_t *ubo_screen_frame_target(void)
+{
+    return s_frame_img;
+}
+
 void ubo_screen_clear_content(void)
 {
     ubo_screen_ensure();
+    /* The outgoing page (and any frame image on it) is about to be replaced. */
+    s_frame_img = NULL;
     /* Hide the page slider by default; paginated views re-show it. */
     if (s_slider_track) {
         lv_obj_add_flag(s_slider_track, LV_OBJ_FLAG_HIDDEN);

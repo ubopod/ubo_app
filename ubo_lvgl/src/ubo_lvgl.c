@@ -261,6 +261,13 @@ void ubo_lvgl_render_render(const ubo_render_view *v)
     ubo_unlock();
 }
 
+void ubo_lvgl_update_frame(const uint8_t *rgb, int32_t width, int32_t height)
+{
+    ubo_lock();
+    ubo_render_update_frame(rgb, width, height);
+    ubo_unlock();
+}
+
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s)
 {
     if (!s) {

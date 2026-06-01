@@ -202,6 +202,11 @@ void ubo_lvgl_render_prompt(const ubo_prompt_view *v);
 void ubo_lvgl_render_application(const ubo_application_view *v);
 void ubo_lvgl_render_render(const ubo_render_view *v);
 
+/* Push a raw RGB888 (3 bytes/px, top-to-bottom) frame into the current
+ * image_viewer/frame_stream view. One-shot for an image, repeated for a live
+ * stream. No-op unless such a view is being shown. */
+void ubo_lvgl_update_frame(const uint8_t *rgb, int32_t width, int32_t height);
+
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
 void ubo_lvgl_set_blanked(bool blanked);    /* backlight off + black overlay */
 void ubo_lvgl_set_connected(bool connected); /* show/hide disconnect overlay  */

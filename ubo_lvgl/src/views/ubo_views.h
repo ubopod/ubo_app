@@ -74,6 +74,15 @@ void ubo_build_render(const ubo_render_view *v);
 /* Look up a generic render-view prop by key; returns NULL when absent. */
 const char *ubo_render_prop_get(const ubo_render_view *v, const char *key);
 
+/* The image_viewer/frame_stream lv_image that frame updates write to (or NULL).
+ * Set by the render builder; cleared on every content rebuild. */
+void ubo_screen_set_frame_target(lv_obj_t *img);
+lv_obj_t *ubo_screen_frame_target(void);
+
+/* Convert a raw RGB888 (3 bytes/px) frame to the panel format and blit it into
+ * the current frame target. No-op when there is no frame target. */
+void ubo_render_update_frame(const uint8_t *rgb, int32_t w, int32_t h);
+
 /* ---- Top-layer overlays ---- */
 void ubo_overlay_splash_show(void);
 void ubo_overlay_splash_hide(void);

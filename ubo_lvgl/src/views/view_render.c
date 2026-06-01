@@ -170,6 +170,73 @@ static void build_qr_carousel(const ubo_render_view *v)
     }
 }
 
+/* image_viewer / frame_stream: a centred lv_image fed by ubo_render_update_frame
+ * (one-shot for image_viewer, repeatedly for frame_stream). */
+static lv_image_dsc_t s_frame_dsc;
+static uint16_t *s_frame_buf;
+static lv_obj_t *s_frame_hint;
+
+static void build_frame_view(bool stream)
+{
+    lv_obj_t *c = ubo_screen_content();
+    lv_obj_set_flex_flow(c, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(c, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
+
+    lv_obj_t *img = lv_image_create(c);
+    lv_obj_center(img);
+    ubo_screen_set_frame_target(img);
+
+    /* Hint shown until the first frame lands (mainly for the live stream). */
+    s_frame_hint = lv_label_create(c);
+    lv_obj_set_style_text_color(s_frame_hint, UBO_COL_MUTED, 0);
+    lv_obj_set_style_text_font(s_frame_hint, &lv_font_montserrat_14, 0);
+    lv_label_set_text(s_frame_hint, stream ? "Waiting for video..." : "");
+}
+
+void ubo_render_update_frame(const uint8_t *rgb, int32_t w, int32_t h)
+{
+    lv_obj_t *img = ubo_screen_frame_target();
+    if (!img || !rgb || w <= 0 || h <= 0) {
+        return;
+    }
+    const size_t n = (size_t)w * (size_t)h;
+    uint16_t *buf = realloc(s_frame_buf, n * 2);
+    if (!buf) {
+        return;
+    }
+    s_frame_buf = buf;
+    for (size_t i = 0; i < n; i++) {
+        const uint8_t r = rgb[i * 3];
+        const uint8_t g = rgb[i * 3 + 1];
+        const uint8_t b = rgb[i * 3 + 2];
+        s_frame_buf[i] =
+            (uint16_t)(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
+    }
+    memset(&s_frame_dsc, 0, sizeof(s_frame_dsc));
+    s_frame_dsc.header.cf = LV_COLOR_FORMAT_RGB565;
+    s_frame_dsc.header.w = (uint32_t)w;
+    s_frame_dsc.header.h = (uint32_t)h;
+    s_frame_dsc.header.stride = (uint32_t)w * 2;
+    s_frame_dsc.data = (const uint8_t *)s_frame_buf;
+    s_frame_dsc.data_size = (uint32_t)(n * 2);
+    lv_image_set_src(img, &s_frame_dsc);
+
+    /* Scale to fit the panel while keeping aspect ratio. */
+    int32_t sx = (int32_t)((long)UBO_W * 256 / w);
+    int32_t sy = (int32_t)((long)UBO_H * 256 / h);
+    int32_t scale = sx < sy ? sx : sy;
+    if (scale > 256) {
+        scale = 256; /* don't upscale past 1:1 */
+    }
+    lv_image_set_scale(img, (uint16_t)scale);
+    lv_obj_center(img);
+
+    if (s_frame_hint) {
+        lv_obj_add_flag(s_frame_hint, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 static void build_placeholder(const char *kind)
 {
     lv_obj_t *c = column(ubo_screen_content());
@@ -196,8 +263,11 @@ void ubo_build_render(const ubo_render_view *v)
                  ubo_render_prop_get(v, "label"));
     } else if (strcmp(kind, "qr_code_carousel") == 0) {
         build_qr_carousel(v);
+    } else if (strcmp(kind, "image_viewer") == 0) {
+        build_frame_view(false);
+    } else if (strcmp(kind, "frame_stream") == 0) {
+        build_frame_view(true);
     } else {
-        /* image_viewer / frame_stream / unknown: placeholder for now. */
         build_placeholder(kind);
     }
 

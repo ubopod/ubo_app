@@ -52,11 +52,40 @@ def main() -> None:  # noqa: C901, PLR0915
     # Shared handles, populated by the gRPC thread.
     state: dict[str, Any] = {}
 
+    def _update_frame_stream(view: object) -> None:
+        """(Un)subscribe to a frame_stream view's live frames on view changes."""
+        client = state.get('client')
+        if client is None:
+            return
+        stream_id = view_translator.frame_stream_id(view)
+        if stream_id == state.get('stream_id'):
+            return
+        unsubscribe = state.get('stream_unsub')
+        if unsubscribe is not None:
+            try:
+                unsubscribe()
+            except Exception:  # noqa: BLE001
+                logger.debug('frame-stream unsubscribe failed', exc_info=True)
+        state['stream_unsub'] = None
+        state['stream_id'] = None
+        if stream_id:
+            def on_frame(data: bytes, width: int, height: int) -> None:
+                try:
+                    renderer.update_frame(data, width, height)
+                except Exception:
+                    logger.exception('frame update failed')
+
+            state['stream_unsub'] = client.subscribe_frame_stream(
+                stream_id, on_frame,
+            )
+            state['stream_id'] = stream_id
+
     def on_view(view: object, status_bar: object, is_blanked: object) -> None:
         try:
             if status_bar is not None:
                 renderer.set_status_bar(view_translator.translate_status_bar(status_bar))
             view_translator.render_view(renderer, view)
+            _update_frame_stream(view)
             if is_blanked is not None:
                 renderer.set_blanked(bool(is_blanked))
         except Exception:

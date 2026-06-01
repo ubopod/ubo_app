@@ -99,6 +99,7 @@ void ubo_lvgl_render_instruction(const ubo_instruction_view *v);
 void ubo_lvgl_render_prompt(const ubo_prompt_view *v);
 void ubo_lvgl_render_application(const ubo_application_view *v);
 void ubo_lvgl_render_render(const ubo_render_view *v);
+void ubo_lvgl_update_frame(const uint8_t *rgb, int32_t width, int32_t height);
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
 void ubo_lvgl_set_blanked(bool blanked);
 void ubo_lvgl_set_connected(bool connected);
@@ -452,6 +453,11 @@ class Renderer:
         c.item_count = len(v.items)
         c.stream_id = self._s(v.stream_id, keep)
         self.lib.ubo_lvgl_render_render(c)
+
+    def update_frame(self, rgb: bytes, width: int, height: int) -> None:
+        """Push a raw RGB888 frame into the current image/frame_stream view."""
+        buf = self.ffi.new('uint8_t[]', rgb)
+        self.lib.ubo_lvgl_update_frame(buf, width, height)
 
     def set_status_bar(self, s: StatusBar) -> None:
         """Update the header/footer status bar."""
