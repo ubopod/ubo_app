@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from apps import IMAGES
 from redux import (
     BaseAction,
     BaseEvent,
@@ -166,8 +167,6 @@ def image_reducer(
             )
 
         case DockerImageFetchAction():
-            from apps import IMAGES
-
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(
                     state=replace(state, status=DockerItemStatus.FETCHING),
@@ -179,8 +178,6 @@ def image_reducer(
             )
 
         case DockerImageRemoveAction():
-            from apps import IMAGES
-
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(
                     state=state,
@@ -192,8 +189,6 @@ def image_reducer(
             )
 
         case DockerImageRunAction():
-            from apps import IMAGES
-
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(
                     state=state,
@@ -205,8 +200,6 @@ def image_reducer(
             )
 
         case DockerImageStopAction():
-            from apps import IMAGES
-
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(
                     state=state,

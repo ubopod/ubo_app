@@ -35,6 +35,7 @@ from ubo_app.store.services.assistant import (
     AssistantReportAction,
     AssistantSetIsActiveAction,
     AssistantSetKokoroDownloadedAction,
+    AssistantSetMcpServersAction,
     AssistantSetOllamaDownloadedModelsAction,
     AssistantSetOllamaModelCapabilitiesAction,
     AssistantSetOllamaThinkingAction,
@@ -54,9 +55,12 @@ from ubo_app.store.services.assistant import (
     AssistantStopTalkingAction,
     AssistantStopTalkingEvent,
     AssistantSyncMcpServersAction,
+    AssistantSyncMcpServersEvent,
     AssistantToggleListeningAction,
     AssistantToggleMcpServerAction,
+    AssistantToggleMcpServerEvent,
     AssistantUpdateProvidersAction,
+    EnabledMcpServersWithMetadata,
     StopTalkingPhraseStopReason,
     UserStopReason,
     resolve_policy,
@@ -85,9 +89,6 @@ if TYPE_CHECKING:
 
     from ubo_app.store.services.notifications import NotificationsAction
     from ubo_app.store.services.rgb_ring import RgbRingAction
-
-# MCP server_id format: name_uuid (2 parts when split by last underscore)
-_MCP_SERVER_ID_PARTS = 2
 
 
 def reducer(
@@ -401,25 +402,13 @@ def reducer(
             )
 
         case AssistantToggleMcpServerAction():
-            from mcp_servers import toggle_mcp_server
-
-            # Toggle in filesystem
-            new_state = toggle_mcp_server(action.server_id)
-            logger.info(
-                'AssistantToggleMCPServerAction processed',
-                extra={'server_id': action.server_id, 'enabled': new_state},
-            )
-
-            # Update in-memory state
+            # Flip the in-memory enabled state purely; the on-disk write is
+            # performed by the AssistantToggleMcpServerEvent handler in setup.py.
             enabled_servers = list(state.enabled_mcp_servers)
-            if new_state:
-                if action.server_id not in enabled_servers:
-                    enabled_servers.append(action.server_id)
-            elif action.server_id in enabled_servers:
-                    enabled_servers.remove(action.server_id)
-
-            # Build enabled servers with metadata for gRPC autorun
-            from ubo_app.store.services.assistant import EnabledMcpServersWithMetadata
+            if action.server_id in enabled_servers:
+                enabled_servers.remove(action.server_id)
+            else:
+                enabled_servers.append(action.server_id)
 
             enabled_with_metadata = EnabledMcpServersWithMetadata(
                 items=[
@@ -429,10 +418,13 @@ def reducer(
                 ],
             )
 
-            return replace(
-                state,
-                enabled_mcp_servers=enabled_servers,
-                enabled_mcp_servers_with_metadata=enabled_with_metadata,
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    enabled_mcp_servers=enabled_servers,
+                    enabled_mcp_servers_with_metadata=enabled_with_metadata,
+                ),
+                events=[AssistantToggleMcpServerEvent(server_id=action.server_id)],
             )
 
         case AssistantDeleteMcpServerAction():
@@ -445,8 +437,6 @@ def reducer(
                 k: v for k, v in state.mcp_servers.items() if k != action.server_id
             }
             # Build enabled servers with metadata for gRPC autorun
-            from ubo_app.store.services.assistant import EnabledMcpServersWithMetadata
-
             enabled_with_metadata = EnabledMcpServersWithMetadata(
                 items=[
                     mcp_servers[sid]
@@ -474,129 +464,27 @@ def reducer(
             )
 
         case AssistantSyncMcpServersAction():
-            # Load servers from filesystem and update state
-            import json
-
-            from ubo_app.constants.assistant import ASSISTANT_MCP_SERVERS_PATH
-            from ubo_app.store.services.assistant import (
-                EnabledMcpServersWithMetadata,
-                McpServerMetadata,
-                McpServerType,
-                SseMcpConfig,
-                StdioMcpConfig,
+            # The filesystem read is done by the AssistantSyncMcpServersEvent
+            # handler in setup.py, which dispatches AssistantSetMcpServersAction
+            # with the result — keeping this reducer pure.
+            return CompleteReducerResult(
+                state=state,
+                events=[AssistantSyncMcpServersEvent()],
             )
 
-            loaded_servers: dict[str, McpServerMetadata] = {}
-            enabled_servers: list[str] = []
-
-            logger.debug(
-                'Syncing MCP servers from filesystem',
-                extra={'path': str(ASSISTANT_MCP_SERVERS_PATH),
-                        'exists': ASSISTANT_MCP_SERVERS_PATH.exists(),
-                    },
-            )
-
-            if ASSISTANT_MCP_SERVERS_PATH.exists():
-                # Iterate through server directories
-                for server_dir in ASSISTANT_MCP_SERVERS_PATH.iterdir():
-                    if not server_dir.is_dir():
-                        continue
-
-                    config_file = server_dir / 'config.json'
-                    if not config_file.exists():
-                        continue
-
-                    try:
-                        with config_file.open() as f:
-                            data = json.load(f)
-
-                        server_id = server_dir.name
-                        # Extract name from server_id (format: name_uuid)
-                        name_parts = server_id.rsplit('_', 1)
-                        name = (
-                            name_parts[0]
-                            if len(name_parts) == _MCP_SERVER_ID_PARTS
-                            else server_id
-                        )
-
-                        server_type = McpServerType(data['type'])
-                        raw_config = data['config']
-
-                        # Parse config into typed object
-                        if server_type == McpServerType.STDIO:
-                            # Parse STDIO config from JSON dict or string
-                            if isinstance(raw_config, str):
-                                config_dict = json.loads(raw_config)
-                            else:
-                                config_dict = raw_config
-                            # Extract first server from mcpServers
-                            mcp_servers_dict = config_dict.get('mcpServers', {})
-                            if mcp_servers_dict:
-                                server_config = next(iter(mcp_servers_dict.values()))
-                                typed_config: StdioMcpConfig | SseMcpConfig = (
-                                    StdioMcpConfig(
-                                        command=server_config['command'],
-                                        args=server_config.get('args', []),
-                                        env=server_config.get('env', {}),
-                                    )
-                                )
-                            else:
-                                # Legacy format: config is the server config directly
-                                typed_config = StdioMcpConfig(
-                                    command=config_dict['command'],
-                                    args=config_dict.get('args', []),
-                                    env=config_dict.get('env', {}),
-                                )
-                        else:
-                            # SSE config - URL string
-                            typed_config = SseMcpConfig(url=raw_config)
-
-                        loaded_servers[server_id] = McpServerMetadata(
-                            server_id=server_id,
-                            name=name,
-                            type=server_type,
-                            config=typed_config,
-                        )
-
-                        # Track enabled state from config file
-                        if data.get('enabled', False):
-                            enabled_servers.append(server_id)
-
-                        logger.debug(
-                            'Loaded MCP server',
-                            extra={
-                                'server_id': server_id,
-                                'server_name': name,
-                                'enabled': data.get('enabled', False),
-                            },
-                        )
-                    except Exception:
-                        logger.exception(
-                            'Failed to load MCP server',
-                            extra={'config_file': str(config_file)},
-                        )
-                        continue
-
-            # Build enabled servers with metadata for gRPC autorun
+        case AssistantSetMcpServersAction():
+            mcp_servers = {server.server_id: server for server in action.servers}
+            enabled_servers = [
+                server_id
+                for server_id in action.enabled_servers
+                if server_id in mcp_servers
+            ]
             enabled_with_metadata = EnabledMcpServersWithMetadata(
-                items=[
-                    loaded_servers[sid]
-                    for sid in enabled_servers
-                    if sid in loaded_servers
-                ],
+                items=[mcp_servers[sid] for sid in enabled_servers],
             )
-
-            logger.debug(
-                'Finished syncing MCP servers',
-                extra={'server_count': len(loaded_servers),
-                    'server_ids': list(loaded_servers.keys()),
-                    'enabled_count': len(enabled_servers),
-                    },
-            )
-
             return replace(
                 state,
-                mcp_servers=loaded_servers,
+                mcp_servers=mcp_servers,
                 enabled_mcp_servers=enabled_servers,
                 enabled_mcp_servers_with_metadata=enabled_with_metadata,
             )

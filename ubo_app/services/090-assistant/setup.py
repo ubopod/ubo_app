@@ -118,6 +118,7 @@ from ubo_app.store.services.assistant import (
     AssistantHandleReportEvent,
     AssistantImageGeneratorName,
     AssistantLLMName,
+    AssistantSetMcpServersAction,
     AssistantSetOllamaThinkingAction,
     AssistantSetSelectedImageGeneratorAction,
     AssistantSetSelectedKokoroVoiceAction,
@@ -129,6 +130,8 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedVoskModelAction,
     AssistantSTTName,
     AssistantSyncMcpServersAction,
+    AssistantSyncMcpServersEvent,
+    AssistantToggleMcpServerEvent,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
     McpServerMetadata,
@@ -2007,6 +2010,33 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         logger.info('Dispatching AssistantSyncMcpServersAction after delete')
         store.dispatch(AssistantSyncMcpServersAction())
 
+    def handle_toggle_mcp_server(event: AssistantToggleMcpServerEvent) -> None:
+        """Persist the toggled MCP server enabled state to the filesystem."""
+        from mcp_servers import toggle_mcp_server
+
+        logger.info(
+            'handle_toggle_mcp_server invoked',
+            extra={'server_id': event.server_id},
+        )
+        toggle_mcp_server(event.server_id)
+
+    def handle_sync_mcp_servers(_event: AssistantSyncMcpServersEvent) -> None:
+        """Load MCP servers from the filesystem and push them into the store."""
+        from mcp_servers import load_enabled_mcp_server_ids, load_mcp_servers
+
+        servers = load_mcp_servers()
+        enabled = load_enabled_mcp_server_ids()
+        logger.info(
+            'handle_sync_mcp_servers loaded servers',
+            extra={'count': len(servers), 'enabled': len(enabled)},
+        )
+        store.dispatch(
+            AssistantSetMcpServersAction(
+                servers=list(servers.values()),
+                enabled_servers=enabled,
+            ),
+        )
+
     return (
         secrets_monitor,
         providers,
@@ -2027,6 +2057,8 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         mcp_servers_menu,
         handle_add_mcp_server,
         handle_delete_mcp_server,
+        handle_toggle_mcp_server,
+        handle_sync_mcp_servers,
         _handle_ollama_download,
         _handle_piper_download,
         _handle_kokoro_download,
@@ -2252,6 +2284,8 @@ async def init_service() -> None:
         _mcp_servers_menu,
         handle_add_mcp_server,
         handle_delete_mcp_server,
+        handle_toggle_mcp_server,
+        handle_sync_mcp_servers,
         handle_ollama_download,
         handle_piper_download,
         handle_kokoro_download,
@@ -2309,6 +2343,8 @@ async def init_service() -> None:
     store.subscribe_event(AssistantHandleReportEvent, _communicate)
     store.subscribe_event(AssistantAddMcpServerEvent, handle_add_mcp_server)
     store.subscribe_event(AssistantDeleteMcpServerEvent, handle_delete_mcp_server)
+    store.subscribe_event(AssistantToggleMcpServerEvent, handle_toggle_mcp_server)
+    store.subscribe_event(AssistantSyncMcpServersEvent, handle_sync_mcp_servers)
     store.subscribe_event(
         AssistantDownloadOllamaModelEvent,
         handle_ollama_download,

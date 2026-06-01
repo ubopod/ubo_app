@@ -89,16 +89,31 @@ def _import_reducer() -> Callable:
 
     from ubo_app.store.core.reducer import reducer as _reducer
 
-    # Clean up: remove ALL modules loaded during this import so they
-    # don't interfere with integration tests that need real modules
+    # Clean up: remove modules loaded during this import so they don't
+    # interfere with integration tests that need real modules. Preserve the
+    # pure ``ubo_app.store.services.*`` type modules though: the retained
+    # reducer holds class references from them (e.g. ``KeypadAction`` for the
+    # recording isinstance check), and tests import the same classes — wiping
+    # them would split the module generation and break isinstance.
     if not already_loaded:
         for mod in set(sys.modules) - modules_before:
+            if mod.startswith('ubo_app.store.services.'):
+                continue
             del sys.modules[mod]
 
     return _reducer
 
 
 reducer = _import_reducer()
+
+# Bind the keypad classes right after the reducer import so both reference the
+# same module generation that ``_import_reducer`` left in ``sys.modules`` — the
+# recording test relies on ``isinstance(action, KeypadAction)`` inside the
+# reducer, which breaks if a later (re)import yields a fresh class object.
+from ubo_app.store.services.keypad import (  # noqa: E402
+    Key,
+    KeypadKeyPressAction,
+)
 
 
 def _init_state() -> MainState:
@@ -675,8 +690,6 @@ class TestToggleRecording:
 
     def test_recording_captures_actions(self) -> None:
         """Verify KeypadAction dispatched during recording are captured."""
-        from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
-
         state = _init_state()
         state = _get_state(reducer(state, ToggleRecordingAction()))
         # Dispatch keypad actions while recording (only KeypadAction captured)

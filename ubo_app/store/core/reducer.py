@@ -100,6 +100,7 @@ from ubo_app.store.core.types import (
     UpdateRenderPropsAction,
     ViewChangedEvent,
 )
+from ubo_app.store.services.keypad import KeypadAction
 from ubo_app.store.services.notifications import NotificationsClearByIdAction
 from ubo_app.store.settings.types import SettingsServiceSetStatusAction
 
@@ -119,17 +120,14 @@ def reducer(
             )
         raise InitializationActionError(action)
 
-    if state.is_recording:
-        from ubo_app.store.services.keypad import KeypadAction
-
-        if isinstance(action, KeypadAction):
-            state = replace(
-                state,
-                recorded_sequence=(
-                    *state.recorded_sequence,
-                    action,
-                ),
-            )
+    if state.is_recording and isinstance(action, KeypadAction):
+        state = replace(
+            state,
+            recorded_sequence=(
+                *state.recorded_sequence,
+                action,
+            ),
+        )
 
     match action:
         case MenuGoBackAction():

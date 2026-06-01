@@ -103,6 +103,28 @@ def load_mcp_servers() -> dict[str, McpServerMetadata]:
     return servers
 
 
+def load_enabled_mcp_server_ids() -> list[str]:
+    """Return the ids of MCP servers whose on-disk config marks them enabled."""
+    enabled: list[str] = []
+
+    if not ASSISTANT_MCP_SERVERS_PATH.exists():
+        return enabled
+
+    for server_dir in ASSISTANT_MCP_SERVERS_PATH.iterdir():
+        config_file = server_dir / 'config.json'
+        if not (server_dir.is_dir() and config_file.exists()):
+            continue
+        try:
+            with config_file.open() as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            continue
+        if data.get('enabled', False):
+            enabled.append(server_dir.name)
+
+    return enabled
+
+
 def save_mcp_server(
     name: str,
     server_type: McpServerType,

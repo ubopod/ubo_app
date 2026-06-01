@@ -6,6 +6,8 @@ from enum import StrEnum
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
+from ubo_app.utils.persistent_store import read_from_persistent_store
+
 
 class DisplayBlankTimeout(StrEnum):
     """Available display blank timeout options."""
@@ -97,4 +99,8 @@ class DisplayState(Immutable):
     is_paused: bool = False
     is_blanked: bool = False
     last_activity_time: float | None = None
-    selected_blank_timeout: DisplayBlankTimeout = DisplayBlankTimeout.TEN_MINUTES
+    selected_blank_timeout: DisplayBlankTimeout = read_from_persistent_store(
+        'display:selected_blank_timeout',
+        mapper=lambda value: DisplayBlankTimeout(value),
+        default=DisplayBlankTimeout.TEN_MINUTES,
+    )

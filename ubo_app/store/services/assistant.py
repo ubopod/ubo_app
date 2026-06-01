@@ -672,6 +672,18 @@ class AssistantSyncMcpServersAction(AssistantAction):
     """Action to sync MCP servers from filesystem."""
 
 
+class AssistantSetMcpServersAction(AssistantAction):
+    """Action carrying MCP servers loaded from the filesystem.
+
+    Dispatched by the assistant service's ``AssistantSyncMcpServersEvent``
+    handler after it has read the on-disk configs, so the reducer can update
+    the slice purely (no filesystem access inside the reduce cycle).
+    """
+
+    servers: list[McpServerMetadata]
+    enabled_servers: list[str]
+
+
 class AssistantStopTalkingAction(AssistantAction):
     """Action to silence the assistant immediately.
 
@@ -775,6 +787,26 @@ class AssistantDeleteMcpServerEvent(AssistantEvent):
     """Event to delete an MCP server."""
 
     server_id: str
+
+
+class AssistantToggleMcpServerEvent(AssistantEvent):
+    """Event fired when an MCP server's enabled state is toggled.
+
+    The reducer flips the in-memory ``enabled_mcp_servers`` purely; this event
+    lets the assistant service persist the new state to the filesystem outside
+    the reduce cycle.
+    """
+
+    server_id: str
+
+
+class AssistantSyncMcpServersEvent(AssistantEvent):
+    """Event requesting a reload of MCP servers from the filesystem.
+
+    Emitted by the reducer in response to ``AssistantSyncMcpServersAction``;
+    the assistant service reads the on-disk configs and dispatches
+    ``AssistantSetMcpServersAction`` with the result.
+    """
 
 
 class AssistantState(Immutable):
