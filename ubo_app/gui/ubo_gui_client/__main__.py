@@ -125,6 +125,10 @@ def main() -> None:
             flip_vertical=True,
             width=WIDTH,
             height=HEIGHT,
+            # On the Pi the SPI panel (driven via ``callback``) is the real display, so
+            # keep Kivy off-screen ('hidden'). On desktop/macOS use 'auto' so SDL opens
+            # a visible window — headless-kivy 0.13's new default 'hidden' left none.
+            window_mode='hidden' if IS_RPI else 'auto',
         ),
     )
 
