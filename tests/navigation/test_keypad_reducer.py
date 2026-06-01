@@ -103,8 +103,8 @@ class TestScreenWake:
         """When blanked, a press emits DisplayUnblankAction and is consumed."""
         result = reducer(KeypadState(is_display_blanked=True), _press(Key.L1))
         assert isinstance(result, CompleteReducerResult)
-        # ``DisplayUnblankAction`` carries a non-deterministic ``timestamp`` field, so
-        # assert on the action type rather than equality with a freshly-stamped instance.
+        # ``DisplayUnblankAction`` carries a non-deterministic ``timestamp`` field,
+        # so assert on the action type rather than equality with a fresh instance.
         assert result.actions is not None
         assert len(result.actions) == 1
         assert isinstance(result.actions[0], DisplayUnblankAction)
