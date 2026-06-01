@@ -11,8 +11,8 @@ from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import Frame
 from pipecat.pipeline.parallel_pipeline import ParallelPipeline
 from pipecat.pipeline.pipeline import Pipeline
-from pipecat.pipeline.runner import PipelineRunner
-from pipecat.pipeline.task import PipelineParams, PipelineTask
+from pipecat.pipeline.runner import WorkerRunner
+from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.aggregators.llm_context import (
     LLMContext,
     LLMContextMessage,
@@ -304,15 +304,15 @@ class Assistant:
             ],
         )
 
-        task = PipelineTask(
+        worker = PipelineWorker(
             pipeline,
             params=PipelineParams(audio_in_sample_rate=16000),
             cancel_on_idle_timeout=False,
         )
-        attach_whisker_observer(task)
-        runner = PipelineRunner(handle_sigint=True)
+        attach_whisker_observer(worker)
+        runner = WorkerRunner(handle_sigint=True)
 
-        await runner.run(task)
+        await runner.run(worker)
 
 
 def main() -> None:

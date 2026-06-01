@@ -3,7 +3,7 @@
 import json
 import os
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 from pipecat.frames.frames import (
@@ -143,7 +143,7 @@ class GenericLLMProxy(LLMService):
     def __init__(self) -> None:
         """Initialize the proxy."""
         super().__init__(settings=make_empty_llm_settings())
-        self._service: LLMService | None = None
+        self._service: LLMService[Any] | None = None
         self._processor_setup: FrameProcessorSetup | None = None
         self._start_frame: StartFrame | None = None
         self._registered_functions: list[
@@ -151,7 +151,7 @@ class GenericLLMProxy(LLMService):
         ] = []
 
     @property
-    def service(self) -> LLMService | None:
+    def service(self) -> LLMService[Any] | None:
         """Current underlying LLM service."""
         return self._service
 
@@ -194,7 +194,7 @@ class GenericLLMProxy(LLMService):
                 timeout_secs=timeout_secs,
             )
 
-    async def set_service(self, service: LLMService | None) -> None:
+    async def set_service(self, service: LLMService[Any] | None) -> None:
         """Replace the underlying generic LLM implementation."""
         if self._service is not None:
             await self._service.cleanup()
@@ -469,7 +469,7 @@ class UboLLMService(UboLLMSwitchService):
         setattr(self._config, config_attr, api_key)
 
         factory = getattr(self, factory_name)
-        real_service: LLMService | None = factory()
+        real_service: LLMService[Any] | None = factory()
 
         proxy: GenericLLMProxy = getattr(self, proxy_attr)
         if proxy.service is real_service:

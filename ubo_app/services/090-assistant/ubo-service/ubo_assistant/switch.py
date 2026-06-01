@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import TYPE_CHECKING, Generic, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
 from loguru import logger
 from pipecat.frames.frames import (
@@ -347,7 +347,7 @@ class UboSwitchMixin(Generic[T]):
 
     async def _get_combined_tools(
         self,
-        llm_service: LLMService,
+        llm_service: LLMService[Any],
         *,
         mcp_enabled: bool = True,
     ) -> CombinedTools:
@@ -389,7 +389,7 @@ class UboSwitchMixin(Generic[T]):
         self,
         *,
         service_id: str,
-        llm_service: LLMService,
+        llm_service: LLMService[Any],
     ) -> None:
         """Update LLM tools and optionally messages."""
         async with self._mcp_tools_update_lock:
@@ -484,7 +484,7 @@ class UboSwitchService(UboSwitchMixin[T], ServiceSwitcher):
         self._initialize_ubo_switch(client=client, selector=selector)
 
 
-class UboLLMSwitchService(UboSwitchMixin[LLMService], LLMSwitcher):
+class UboLLMSwitchService(UboSwitchMixin[LLMService[Any]], LLMSwitcher):
     """Native LLMSwitcher with Ubo store integration."""
 
     def __init__(

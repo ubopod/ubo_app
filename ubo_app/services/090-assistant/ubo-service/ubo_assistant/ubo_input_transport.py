@@ -62,8 +62,6 @@ class UboInputTransport(BaseInputTransport):
     ) -> None:
         """Initialize the UboInputTransport with the given parameters and client."""
         self.client = client
-        self._is_listening = False
-        self._zero_frame_task: asyncio.Task[None] | None = None
         self._audio_subscription: Callable[[], None] | None = None
 
         self._image_set_events: dict[VideoSource, asyncio.Event] = {
@@ -193,34 +191,14 @@ class UboInputTransport(BaseInputTransport):
             )
             self._image_set_events[VideoSource.CAMERA].set()
 
-    async def _send_zero_frames(self) -> None:
-        """Send zero audio frames.
-
-        This is used to keep streaming STT services alive when not listening.
-        """
-        try:
-            # Send zero frames at 50ms intervals (16kHz * 0.05s = 800 samples)
-            frame_duration = 0.05  # 50ms
-            samples_per_frame = int(16000 * frame_duration)
-            zero_audio = b'\x00' * (samples_per_frame * 2)  # 2 bytes per sample (int16)
-
-            while not self._is_listening:
-                await self.push_audio_frame(
-                    InputAudioRawFrame(
-                        audio=zero_audio,
-                        sample_rate=16000,
-                        num_channels=1,
-                    ),
-                )
-                await asyncio.sleep(frame_duration)
-        except asyncio.CancelledError:
-            # Task was cancelled when switching to listening mode
-            pass
-
     def _on_listening_state_changed(self, *, is_listening: bool) -> None:
-        """Handle changes to the listening state."""
-        self._is_listening = is_listening
+        """Subscribe to mic audio only while listening.
 
+        At rest the pipeline is fed nothing; streaming STT services reconnect on
+        the next user turn (Pipecat >=1.1 buffers and replays during reconnect).
+        Previously a 20fps zero-frame keepalive was broadcast to every switcher
+        branch here, which pinned a full CPU core at idle for no functional gain.
+        """
         if is_listening:
             logger.info('UboInputTransport is now listening for audio samples.')
             # Subscribe to audio events when listening
@@ -229,22 +207,12 @@ class UboInputTransport(BaseInputTransport):
                     event_type=Event(audio_report_sample_event=AudioReportSampleEvent()),
                     callback=self._queue_audio_sample,
                 )
-            # Stop sending zero frames when actively listening
-            if self._zero_frame_task and not self._zero_frame_task.done():
-                self._zero_frame_task.cancel()
-                self._zero_frame_task = None
         else:
             logger.info('UboInputTransport is no longer listening for audio samples.')
             # Unsubscribe from audio events when not listening
             if self._audio_subscription is not None:
                 self._audio_subscription()
                 self._audio_subscription = None
-            # Start sending zero frames when not listening
-            if not self._zero_frame_task or self._zero_frame_task.done():
-                self._zero_frame_task = self.task_manager.create_task(
-                    self._send_zero_frames(),
-                    name='ubo_zero_frame_sender',
-                )
 
     async def start(self, frame: StartFrame) -> None:
         """Start the transport and subscribe to audio sample events."""

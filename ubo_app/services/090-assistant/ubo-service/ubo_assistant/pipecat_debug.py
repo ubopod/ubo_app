@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 
 from loguru import logger
 
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
     from pipecat.observers.base_observer import BaseObserver
     from pipecat.pipeline.base_pipeline import BasePipeline
+    from pipecat.pipeline.worker import PipelineWorker
 
 TRUTHY_VALUES = frozenset({'1', 'true', 'yes', 'on'})
 WHISKER_ENABLED_ENV = 'UBO_ASSISTANT_WHISKER_ENABLED'
@@ -43,14 +44,14 @@ def attach_whisker_observer(task: SupportsWhiskerObserver) -> bool:
         return False
 
     try:
-        from pipecat_whisker import WhiskerObserver
+        from pipecat_whisker import WhiskerObserver, WhiskerServer
 
-        file_name = os.environ.get(WHISKER_FILE_ENV)
-        observer = (
-            WhiskerObserver(task.pipeline, file_name=file_name)
-            if file_name
-            else WhiskerObserver(task.pipeline)
-        )
+        # Whisker 2.0 takes the worker plus an explicit sink; WhiskerServer
+        # doubles as a file sink when ``file_name`` is set, matching the old
+        # file-or-live behavior.
+        file_name = os.environ.get(WHISKER_FILE_ENV) or None
+        sink = WhiskerServer(file_name=file_name)
+        observer = WhiskerObserver(cast('PipelineWorker', task), sink)
         task.add_observer(observer)
     except Exception as exception:  # noqa: BLE001
         logger.warning(
