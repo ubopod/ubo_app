@@ -1,0 +1,30 @@
+// store-rpi-001
+{
+  "bubbles": [
+    {
+      "alignment": "left",
+      "is_playing": false,
+      "kind": "text",
+      "pointer_key": "",
+      "role": "assistant"
+    }
+  ],
+  "current_view_type": "ChatViewData",
+  "is_active": true,
+  "messages": [
+    {
+      "audio_id": "",
+      "id": "msg-1",
+      "is_playing": false,
+      "kind": "text",
+      "role": "assistant",
+      "text": "dolore magna aliqua. ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+    }
+  ],
+  "scroll_offset": 0,
+  "session_id": "chat-conversation",
+  "stack": [
+    "MenuStackItem",
+    "ChatStackItem"
+  ]
+}

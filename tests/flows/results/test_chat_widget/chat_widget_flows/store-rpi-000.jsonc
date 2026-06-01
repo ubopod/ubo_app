@@ -1,0 +1,13 @@
+// store-rpi-000
+{
+  "bubbles": [],
+  "current_view_type": "ChatViewData",
+  "is_active": true,
+  "messages": [],
+  "scroll_offset": 0,
+  "session_id": "chat-conversation",
+  "stack": [
+    "MenuStackItem",
+    "ChatStackItem"
+  ]
+}
