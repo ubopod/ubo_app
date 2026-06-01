@@ -277,6 +277,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'KeypadKeyReleaseAction': 'ubo_app.store.services.keypad',
     'KeypadKeyUnholdAction': 'ubo_app.store.services.keypad',
     'KeypadMatcher': 'ubo_app.store.services.assistant',
+    'KeypadReportContextAction': 'ubo_app.store.services.keypad',
     'KeypadState': 'ubo_app.store.services.keypad',
     'KeypadTriggerSource': 'ubo_app.store.services.assistant',
     'LanguageCode': 'ubo_app.store.services.localization',

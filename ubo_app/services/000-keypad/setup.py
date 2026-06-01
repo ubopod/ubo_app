@@ -11,6 +11,8 @@ import board
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 
 from ubo_app.logger import logger
+from ubo_app.store.core.types import MenuStackItem, NotificationStackItem
+from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioDevice, AudioSetMuteStatusAction
 from ubo_app.store.services.keypad import (
     Key,
@@ -18,6 +20,7 @@ from ubo_app.store.services.keypad import (
     KeypadKeyPressAction,
     KeypadKeyReleaseAction,
     KeypadKeyUnholdAction,
+    KeypadReportContextAction,
 )
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.eeprom import get_eeprom_data
@@ -28,6 +31,7 @@ if TYPE_CHECKING:
     from adafruit_bus_device import i2c_device
     from adafruit_register.i2c_struct import UnaryStruct
 
+    from ubo_app.store.core.types import StackItemType
     from ubo_app.utils.types import Subscriptions
 
 INT_EXPANDER = 5  # GPIO PIN index that receives interrupt from AW9523
@@ -49,6 +53,42 @@ KEY_INDEX = {
 }
 MIC_INDEX = 7
 BUS_ADDRESS = 0x58
+
+
+def _compute_depth_from_stack(stack: tuple[StackItemType, ...]) -> int:
+    """Count of menu items in the navigation stack."""
+    return len([item for item in stack if isinstance(item, MenuStackItem)])
+
+
+def _is_on_notification(stack: tuple[StackItemType, ...]) -> bool:
+    """Whether the top of the stack is a notification view."""
+    return bool(stack) and isinstance(stack[-1], NotificationStackItem)
+
+
+@store.autorun(
+    lambda state: (
+        _compute_depth_from_stack(state.main.stack),
+        _is_on_notification(state.main.stack),
+        state.display.is_blanked if hasattr(state, 'display') else False,
+    ),
+)
+def _sync_keypad_context(context: tuple[int, bool, bool]) -> None:
+    """Mirror navigation/display context into the keypad slice.
+
+    The selector is deliberately cheap (stack + display flag only) so it can run on
+    every store change without flooding. It runs outside the reduce cycle whenever the
+    derived context changes, so the keypad reducer can stay pure and read only its own
+    slice instead of reaching into the live store mid-reduce. Active regardless of
+    `IS_RPI`, since key events also arrive from the GUI client, the web UI and infrared.
+    """
+    depth, is_on_notification, is_display_blanked = context
+    store.dispatch(
+        KeypadReportContextAction(
+            depth=depth,
+            is_on_notification=is_on_notification,
+            is_display_blanked=is_display_blanked,
+        ),
+    )
 
 
 class Keypad:

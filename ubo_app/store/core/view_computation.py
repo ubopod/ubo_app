@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from ubo_app.store.core.types import StackItemType, ViewData
-    from ubo_app.store.main import RootState
+    from ubo_app.store.main import RootState, UboStore
 
 
 def _is_background_notification(state: RootState, item: StackItemType) -> bool:
@@ -67,9 +67,7 @@ def _is_background_notification(state: RootState, item: StackItemType) -> bool:
     if not isinstance(item, NotificationStackItem):
         return False
     notifications = (
-        state.notifications.notifications
-        if hasattr(state, 'notifications')
-        else ()
+        state.notifications.notifications if hasattr(state, 'notifications') else ()
     )
     notification = next(
         (n for n in notifications if n.id == item.notification_id),
@@ -79,6 +77,7 @@ def _is_background_notification(state: RootState, item: StackItemType) -> bool:
         notification is None
         or notification.display_type is NotificationDisplayType.BACKGROUND
     )
+
 
 # Cache hostname at module load — it doesn't change at runtime
 _HOSTNAME_TITLE = f'󰋜{socket.gethostname()}.local'
@@ -250,9 +249,7 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
             ProgressNotificationData(
                 id=notification.id,
                 progress=(
-                    None
-                    if math.isnan(notification.progress)
-                    else notification.progress
+                    None if math.isnan(notification.progress) else notification.progress
                 ),
                 color=notification.color,
             )
@@ -277,10 +274,14 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
     light_level: float | None = None
     if hasattr(state, 'sensors'):
         temperature = getattr(
-            getattr(state.sensors, 'temperature', None), 'value', None,
+            getattr(state.sensors, 'temperature', None),
+            'value',
+            None,
         )
         light_level = getattr(
-            getattr(state.sensors, 'light', None), 'value', None,
+            getattr(state.sensors, 'light', None),
+            'value',
+            None,
         )
 
     # Get system metrics (clock)
@@ -291,7 +292,9 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
     is_recording = getattr(main, 'is_recording', False)
     is_replaying = getattr(main, 'is_replaying', False)
     is_recording_audio = getattr(
-        getattr(state, 'audio', None), 'is_recording', False,
+        getattr(state, 'audio', None),
+        'is_recording',
+        False,
     )
 
     return StatusBarData(
@@ -368,9 +371,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901, P
     # STICKY → BACKGROUND → FLASH lifecycle work without popping and
     # re-pushing the notification (which raced the view autorun).
     stack = tuple(
-        item
-        for item in stack
-        if not _is_background_notification(state, item)
+        item for item in stack if not _is_background_notification(state, item)
     )
 
     if not stack:
@@ -448,9 +449,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901, P
         home_items: tuple[MenuItemData, ...] = ()
         home_menu = dynamic_menus_state.menus.get(HOME_MENU_ID)
         if home_menu is not None:
-            home_items = tuple(
-                item for item in home_menu.items if item is not None
-            )
+            home_items = tuple(item for item in home_menu.items if item is not None)
 
         return HomeViewData(
             show_status_bar=True,
@@ -509,8 +508,14 @@ def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901, P
     )
 
 
-def _dispatch_view_update(state: RootState) -> None:
-    """Compute view and status bar, then dispatch if changed."""
+def _dispatch_view_update(state: RootState, store: UboStore) -> None:
+    """Compute view and status bar, then dispatch if changed.
+
+    ``store`` is threaded in by the caller (see ``setup_dynamic_view_autorun``) rather
+    than imported here: this runs on the scheduler thread, and a deferred
+    ``from ubo_app.store.main import store`` can be re-isolated by the service-thread
+    import machinery into a fresh module load that trips the store's main-thread guard.
+    """
     if not hasattr(state, 'main'):
         return
     from ubo_app.store.core.types import (
@@ -521,7 +526,6 @@ def _dispatch_view_update(state: RootState) -> None:
         StackSetPageIndexAction,
         UpdateCurrentViewAction,
     )
-    from ubo_app.store.main import store
 
     computed_view = compute_view_from_root_state(state)
     computed_status_bar = compute_status_bar_data(state)
@@ -557,7 +561,7 @@ def _dispatch_view_update(state: RootState) -> None:
         )
 
 
-def _dispatch_status_bar_update(state: RootState) -> None:
+def _dispatch_status_bar_update(state: RootState, store: UboStore) -> None:
     """Compute status bar and view freshly, dispatch if either changed.
 
     The view is recomputed from scratch via ``compute_view_from_root_state``
@@ -574,7 +578,6 @@ def _dispatch_status_bar_update(state: RootState) -> None:
     if not hasattr(state, 'main'):
         return
     from ubo_app.store.core.types import UpdateCurrentViewAction
-    from ubo_app.store.main import store
 
     computed_status_bar = compute_status_bar_data(state)
     computed_view = compute_view_from_root_state(state)
@@ -616,11 +619,11 @@ def setup_dynamic_view_autorun() -> None:
 
     @store.with_state(lambda state: state)
     def _view_dispatch(state: RootState) -> None:
-        _dispatch_view_update(state)
+        _dispatch_view_update(state, store)
 
     @store.with_state(lambda state: state)
     def _status_bar_dispatch(state: RootState) -> None:
-        _dispatch_status_bar_update(state)
+        _dispatch_status_bar_update(state, store)
 
     # Store references so release_view_autorun() can trigger deferred computations
     _dispatch_fn[0] = _view_dispatch  # type: ignore[assignment]
@@ -672,7 +675,9 @@ def setup_dynamic_view_autorun() -> None:
 
     # Keep strong references so the autoruns (and their wrapped functions)
     # survive after this function returns.
-    _autoruns.extend([
-        _update_view_on_navigation_change,
-        _update_status_bar_on_metrics_change,
-    ])
+    _autoruns.extend(
+        [
+            _update_view_on_navigation_change,
+            _update_status_bar_on_metrics_change,
+        ],
+    )

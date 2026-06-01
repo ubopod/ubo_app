@@ -101,7 +101,11 @@ if TYPE_CHECKING:
         InfraredState,
     )
     from ubo_app.store.services.ip import IpAction, IpEvent, IpState
-    from ubo_app.store.services.keypad import KeypadAction, KeypadState
+    from ubo_app.store.services.keypad import (
+        KeypadAction,
+        KeypadReportContextAction,
+        KeypadState,
+    )
     from ubo_app.store.services.lightdm import LightDMAction, LightDMState
     from ubo_app.store.services.localization import (
         LocalizationAction,
@@ -158,6 +162,7 @@ UboAction: TypeAlias = Union[
     'InfraredAction',
     'IpAction',
     'KeypadAction',
+    'KeypadReportContextAction',
     'LightDMAction',
     'LocalizationAction',
     'NotificationsAction',

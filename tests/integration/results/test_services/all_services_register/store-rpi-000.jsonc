@@ -353,7 +353,10 @@
   },
   "keypad": {
     "_type": "KeypadState",
-    "is_consumed": false
+    "depth": 1,
+    "is_consumed": false,
+    "is_display_blanked": false,
+    "is_on_notification": false
   },
   "lightdm": {
     "_type": "LightDMState",
