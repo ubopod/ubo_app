@@ -263,6 +263,11 @@ void ubo_lvgl_set_blanked(bool blanked)
 {
     ubo_lock();
     ubo_overlay_blank(blanked);
+#ifdef UBO_WITH_ST7789
+    /* On the real panel, blanking turns the backlight off (as in ubo_gui),
+     * not just paints a black overlay. */
+    ubo_backend_st7789_set_backlight(!blanked);
+#endif
     ubo_unlock();
 }
 

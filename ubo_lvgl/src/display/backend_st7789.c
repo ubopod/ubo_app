@@ -158,6 +158,13 @@ static int open_hw(void)
     return 0;
 }
 
+void ubo_backend_st7789_set_backlight(bool on)
+{
+    if (s_gpio >= 0) {
+        gpio_set(2, on ? 1 : 0); /* BL = GPIO26 */
+    }
+}
+
 static void panel_init(void)
 {
     write_cmd(0x01); /* SWRESET */

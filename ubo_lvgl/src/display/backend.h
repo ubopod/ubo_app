@@ -13,6 +13,7 @@ lv_display_t *ubo_backend_sdl_create(int32_t width, int32_t height);
 
 #ifdef UBO_WITH_ST7789
 lv_display_t *ubo_backend_st7789_create(int32_t width, int32_t height);
+void ubo_backend_st7789_set_backlight(bool on); /* GPIO26 */
 #endif
 
 /* Offscreen RGB565 framebuffer backend. Always available; used for headless
