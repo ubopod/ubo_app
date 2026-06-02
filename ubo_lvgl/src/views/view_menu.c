@@ -30,6 +30,8 @@ static void add_text_slot(lv_obj_t *list, const char *text, const lv_font_t *fon
     lv_obj_t *s = slot_box(list);
     lv_obj_t *l = lv_label_create(s);
     lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
+    /* The core embeds colored icon glyphs as recolor spans (#RRGGBB text#). */
+    lv_label_set_recolor(l, true);
     lv_obj_set_width(l, lv_pct(100));
     lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(l, font, 0);
@@ -46,7 +48,9 @@ static void add_slot(lv_obj_t *list, const ubo_menu_view *v, int g, int header_s
     if (header_slots > 0 && g == 0) {
         add_text_slot(list, v->heading, &lv_font_montserrat_20, UBO_COL_FG);
     } else if (header_slots > 0 && g == 1) {
-        add_text_slot(list, v->sub_heading, &lv_font_montserrat_14, UBO_COL_MUTED);
+        /* The sub_heading can carry icon glyphs (e.g. offline/online dots), so
+         * use the Nerd-Font face that has both icons and Latin. */
+        add_text_slot(list, v->sub_heading, ubo_font_icon_14(), UBO_COL_MUTED);
     } else {
         const int idx = g - header_slots;
         if (idx >= 0 && idx < v->item_count) {

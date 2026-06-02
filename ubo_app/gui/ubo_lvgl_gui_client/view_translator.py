@@ -8,6 +8,7 @@ rewritten in C against the decoded proto. The C renderer ignores ``action_id``
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any, cast
 
 import betterproto
@@ -71,6 +72,24 @@ def _strip_markup(value: str | None) -> str | None:
 
 # Icons are single glyphs but may also be wrapped in markup.
 _icon = _strip_markup
+
+_COLOR_OPEN = re.compile(r'\[color=#?([0-9a-fA-F]{6})[0-9a-fA-F]*\]')
+_ANY_TAG = re.compile(r'\[/?[^\]]*\]')
+
+
+def _recolor(value: str | None) -> str | None:
+    """Convert Kivy color markup to LVGL recolor syntax (`#RRGGBB text#`).
+
+    Headings/sub-headings embed colored icon glyphs (e.g. the blue/amber dots
+    before "Offline models"/"Online models"); plain stripping drops the colors.
+    Other markup tags (e.g. ``[size=..]``) are removed.
+    """
+    if not value:
+        return None
+    out = _COLOR_OPEN.sub(lambda m: f'#{m.group(1)} ', value)
+    out = out.replace('[/color]', '#')
+    out = _ANY_TAG.sub('', out)
+    return out or None
 
 
 def _basic_to_str(b: betterproto.Message) -> str | None:
@@ -246,8 +265,8 @@ def render_view(renderer: Renderer, view: object) -> None:
             bridge.MenuView(
                 show_status_bar=bool(view.show_status_bar),
                 title=_strip_markup(view.title) or '',
-                heading=_strip_markup(view.heading),
-                sub_heading=_strip_markup(view.sub_heading),
+                heading=_recolor(view.heading),
+                sub_heading=_recolor(view.sub_heading),
                 placeholder=_strip_markup(view.placeholder),
                 items=[_menu_item(it) for it in _items(view.items)],
                 page_index=view.page_index or 0,
