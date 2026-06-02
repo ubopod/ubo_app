@@ -34,6 +34,13 @@ from ubo_bindings.ubo.v1 import (
     QrCodeInputDescription,
 )
 
+_SILENCE_FRAME_INTERVAL_SECONDS = 0.05
+"""Cadence of the trailing-silence flush (50ms, ~20fps)."""
+_SILENCE_FLUSH_SECONDS = 2.0
+"""How long to feed silence after listening ends so streaming STT finalizes."""
+_SILENCE_FRAME_BYTES = b'\x00' * (int(16000 * _SILENCE_FRAME_INTERVAL_SECONDS) * 2)
+"""One 50ms frame of int16 mono silence at 16kHz."""
+
 
 class VideoSource(StrEnum):
     """Enum for video sources."""
@@ -63,6 +70,7 @@ class UboInputTransport(BaseInputTransport):
         """Initialize the UboInputTransport with the given parameters and client."""
         self.client = client
         self._audio_subscription: Callable[[], None] | None = None
+        self._silence_task: asyncio.Task[None] | None = None
 
         self._image_set_events: dict[VideoSource, asyncio.Event] = {
             key: asyncio.Event() for key in VideoSource
@@ -194,13 +202,16 @@ class UboInputTransport(BaseInputTransport):
     def _on_listening_state_changed(self, *, is_listening: bool) -> None:
         """Subscribe to mic audio only while listening.
 
-        At rest the pipeline is fed nothing; streaming STT services reconnect on
-        the next user turn (Pipecat >=1.1 buffers and replays during reconnect).
-        Previously a 20fps zero-frame keepalive was broadcast to every switcher
-        branch here, which pinned a full CPU core at idle for no functional gain.
+        At rest the pipeline is fed nothing (no idle CPU cost). When listening
+        ends, the device stops reporting mic samples instantly, but streaming
+        STT providers (e.g. Google) only emit a final transcript once they
+        observe trailing silence — otherwise the stream times out without ever
+        finalizing and the user's turn never reaches the LLM. So on the way out
+        we feed a bounded tail of silence to let the STT detect end-of-speech.
         """
         if is_listening:
             logger.info('UboInputTransport is now listening for audio samples.')
+            self._cancel_silence_flush()
             # Subscribe to audio events when listening
             if self._audio_subscription is None:
                 self._audio_subscription = self.client.subscribe_event(
@@ -213,6 +224,41 @@ class UboInputTransport(BaseInputTransport):
             if self._audio_subscription is not None:
                 self._audio_subscription()
                 self._audio_subscription = None
+            # Feed trailing silence so the streaming STT can finalize the turn.
+            self._start_silence_flush()
+
+    def _cancel_silence_flush(self) -> None:
+        """Stop any in-progress trailing-silence flush."""
+        if self._silence_task is not None and not self._silence_task.done():
+            self._silence_task.cancel()
+        self._silence_task = None
+
+    def _start_silence_flush(self) -> None:
+        """Begin feeding a bounded tail of silence frames into the pipeline."""
+        self._cancel_silence_flush()
+        self._silence_task = self.task_manager.create_task(
+            self._flush_trailing_silence(),
+            name='ubo_trailing_silence',
+        )
+
+    async def _flush_trailing_silence(self) -> None:
+        """Push ~``_SILENCE_FLUSH_SECONDS`` of silence so streaming STT finalizes.
+
+        Cancelled early when listening resumes (the user presses to talk again).
+        """
+        frame_count = int(_SILENCE_FLUSH_SECONDS / _SILENCE_FRAME_INTERVAL_SECONDS)
+        try:
+            for _ in range(frame_count):
+                await self.push_audio_frame(
+                    InputAudioRawFrame(
+                        audio=_SILENCE_FRAME_BYTES,
+                        sample_rate=16000,
+                        num_channels=1,
+                    ),
+                )
+                await asyncio.sleep(_SILENCE_FRAME_INTERVAL_SECONDS)
+        except asyncio.CancelledError:
+            pass
 
     async def start(self, frame: StartFrame) -> None:
         """Start the transport and subscribe to audio sample events."""
