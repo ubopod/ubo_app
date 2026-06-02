@@ -100,6 +100,8 @@ void ubo_lvgl_render_prompt(const ubo_prompt_view *v);
 void ubo_lvgl_render_application(const ubo_application_view *v);
 void ubo_lvgl_render_render(const ubo_render_view *v);
 void ubo_lvgl_update_frame(const uint8_t *rgb, int32_t width, int32_t height);
+void ubo_lvgl_render_scroll(const char *direction);
+void ubo_lvgl_render_choose(int index);
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
 void ubo_lvgl_set_blanked(bool blanked);
 void ubo_lvgl_set_connected(bool connected);
@@ -458,6 +460,14 @@ class Renderer:
         """Push a raw RGB888 frame into the current image/frame_stream view."""
         buf = self.ffi.new('uint8_t[]', rgb)
         self.lib.ubo_lvgl_update_frame(buf, width, height)
+
+    def render_scroll(self, direction: str) -> None:
+        """Scroll/cycle/zoom the current render widget ('up' or 'down')."""
+        self.lib.ubo_lvgl_render_scroll(direction.encode())
+
+    def render_choose(self, index: int) -> None:
+        """Apply an L1/L2/L3 (0/1/2) choice to the current render widget."""
+        self.lib.ubo_lvgl_render_choose(index)
 
     def set_status_bar(self, s: StatusBar) -> None:
         """Update the header/footer status bar."""

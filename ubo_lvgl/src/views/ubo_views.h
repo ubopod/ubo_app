@@ -83,6 +83,12 @@ lv_obj_t *ubo_screen_frame_target(void);
  * the current frame target. No-op when there is no frame target. */
 void ubo_render_update_frame(const uint8_t *rgb, int32_t w, int32_t h);
 
+/* Forget the active render widget's interaction state (called on every content
+ * rebuild). Scroll/choose route to the current render widget only. */
+void ubo_render_reset(void);
+void ubo_render_scroll(const char *direction); /* "up"/"down" on current widget */
+void ubo_render_choose(int index);             /* L1/L2/L3 on current widget    */
+
 /* ---- Top-layer overlays ---- */
 void ubo_overlay_splash_show(void);
 void ubo_overlay_splash_hide(void);

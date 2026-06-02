@@ -73,14 +73,47 @@ static lv_obj_t *column(lv_obj_t *parent)
     return parent;
 }
 
+/* ---- Local interaction state (driven by ApplicationScroll/ChooseByIndex) ----
+ * Only the active render widget reacts to UP/DOWN (scroll/cycle/zoom) and to
+ * L1/L2/L3 (image-viewer mode switch). Reset on every content rebuild. */
+enum { RW_NONE, RW_TEXT, RW_CAROUSEL, RW_IMAGE };
+static int s_rw_kind;
+static lv_obj_t *s_text_scroll;
+static lv_obj_t *s_car_col;   /* carousel container to rebuild on cycle */
+static char *s_car_values;    /* strdup'd newline-joined value/label lists */
+static char *s_car_labels;
+static int s_car_index;
+static int s_car_total;
+static lv_obj_t *s_img_obj;
+static int s_img_mode;        /* 0=vertical pan, 1=horizontal pan, 2=zoom */
+static int32_t s_img_scale;   /* current scale, 256 = 1:1 */
+static int32_t s_img_fit;     /* fit-to-screen scale (zoom-out floor) */
+static lv_obj_t *s_frame_hint; /* "waiting" hint, hidden once a frame lands */
+
+void ubo_render_reset(void)
+{
+    s_rw_kind = RW_NONE;
+    s_text_scroll = NULL;
+    s_car_col = NULL;
+    free(s_car_values);
+    s_car_values = NULL;
+    free(s_car_labels);
+    s_car_labels = NULL;
+    s_car_index = 0;
+    s_car_total = 0;
+    s_img_obj = NULL;
+    s_img_mode = 0;
+    s_frame_hint = NULL;
+}
+
 static void build_text_viewer(const ubo_render_view *v)
 {
     const char *text = ubo_render_prop_get(v, "text");
     lv_obj_t *c = ubo_screen_content();
     lv_obj_set_style_pad_all(c, 6, 0);
 
-    /* A vertically scrollable container with a wrapped label. (Local UP/DOWN
-     * scrolling is wired with the application-scroll events; see roadmap.) */
+    /* A vertically scrollable container with a wrapped label; UP/DOWN scroll it
+     * via the application-scroll events (see ubo_render_scroll). */
     lv_obj_t *scroll = lv_obj_create(c);
     lv_obj_remove_style_all(scroll);
     lv_obj_set_size(scroll, lv_pct(100), lv_pct(100));
@@ -92,6 +125,9 @@ static void build_text_viewer(const ubo_render_view *v)
     lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
     lv_obj_set_style_text_color(lbl, UBO_COL_FG, 0);
     lv_label_set_text(lbl, text ? text : "");
+
+    s_rw_kind = RW_TEXT;
+    s_text_scroll = scroll;
 }
 
 static void build_status(const ubo_render_view *v)
@@ -144,37 +180,48 @@ static void build_qr(lv_obj_t *parent, const char *value, const char *label)
     }
 }
 
+/* (Re)build the carousel QR for the current index into the stored container. */
+static void carousel_render(void)
+{
+    if (!s_car_col) {
+        return;
+    }
+    lv_obj_clean(s_car_col);
+    char val[1024];
+    char lab[256];
+    nth_line(s_car_values, s_car_index, val, sizeof(val));
+    nth_line(s_car_labels, s_car_index, lab, sizeof(lab));
+    build_qr(s_car_col, val, lab[0] ? lab : NULL);
+    if (s_car_total > 1) {
+        lv_obj_t *pos = lv_label_create(s_car_col);
+        lv_obj_set_style_text_font(pos, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_color(pos, UBO_COL_MUTED, 0);
+        lv_label_set_text_fmt(pos, "%d / %d", s_car_index + 1, s_car_total);
+    }
+}
+
 static void build_qr_carousel(const ubo_render_view *v)
 {
     const char *values = ubo_render_prop_get(v, "values");
     const char *labels = ubo_render_prop_get(v, "labels");
     const char *idx_s = ubo_render_prop_get(v, "index");
-    const int total = count_lines(values);
+    s_car_total = count_lines(values);
     int idx = idx_s ? atoi(idx_s) : 0;
-    if (total > 0) {
-        idx = ((idx % total) + total) % total;
+    if (s_car_total > 0) {
+        idx = ((idx % s_car_total) + s_car_total) % s_car_total;
     }
-
-    char val[1024];
-    char lab[256];
-    nth_line(values, idx, val, sizeof(val));
-    nth_line(labels, idx, lab, sizeof(lab));
-
-    lv_obj_t *c = column(ubo_screen_content());
-    build_qr(c, val, lab[0] ? lab : NULL);
-    if (total > 1) {
-        lv_obj_t *pos = lv_label_create(c);
-        lv_obj_set_style_text_font(pos, &lv_font_montserrat_12, 0);
-        lv_obj_set_style_text_color(pos, UBO_COL_MUTED, 0);
-        lv_label_set_text_fmt(pos, "%d / %d", idx + 1, total);
-    }
+    s_car_index = idx;
+    s_car_values = values ? strdup(values) : NULL;
+    s_car_labels = labels ? strdup(labels) : NULL;
+    s_car_col = column(ubo_screen_content());
+    s_rw_kind = RW_CAROUSEL;
+    carousel_render();
 }
 
 /* image_viewer / frame_stream: a centred lv_image fed by ubo_render_update_frame
  * (one-shot for image_viewer, repeatedly for frame_stream). */
 static lv_image_dsc_t s_frame_dsc;
 static uint16_t *s_frame_buf;
-static lv_obj_t *s_frame_hint;
 
 static void build_frame_view(bool stream)
 {
@@ -192,6 +239,13 @@ static void build_frame_view(bool stream)
     lv_obj_set_style_text_color(s_frame_hint, UBO_COL_MUTED, 0);
     lv_obj_set_style_text_font(s_frame_hint, &lv_font_montserrat_14, 0);
     lv_label_set_text(s_frame_hint, stream ? "Waiting for video..." : "");
+
+    /* A still image is pan/zoomable (UP/DOWN + L1/L2/L3); a live stream is not. */
+    if (!stream) {
+        s_rw_kind = RW_IMAGE;
+        s_img_obj = img;
+        s_img_mode = 0;
+    }
 }
 
 void ubo_render_update_frame(const uint8_t *rgb, int32_t w, int32_t h)
@@ -231,6 +285,8 @@ void ubo_render_update_frame(const uint8_t *rgb, int32_t w, int32_t h)
     }
     lv_image_set_scale(img, (uint16_t)scale);
     lv_obj_center(img);
+    s_img_fit = scale;   /* zoom-out floor for the still-image viewer */
+    s_img_scale = scale;
 
     if (s_frame_hint) {
         lv_obj_add_flag(s_frame_hint, LV_OBJ_FLAG_HIDDEN);
@@ -272,4 +328,65 @@ void ubo_build_render(const ubo_render_view *v)
     }
 
     ubo_status_bar_reapply();
+}
+
+static void image_scroll(bool up)
+{
+    if (!s_img_obj) {
+        return;
+    }
+    if (s_img_mode == 2) { /* zoom */
+        int32_t s = s_img_scale + (up ? 26 : -26); /* ~10% per step */
+        if (s < s_img_fit) {
+            s = s_img_fit;
+        }
+        if (s > 1024) {
+            s = 1024; /* cap at 4x */
+        }
+        s_img_scale = s;
+        lv_image_set_scale(s_img_obj, (uint16_t)s);
+        lv_obj_center(s_img_obj);
+    } else { /* pan vertically (mode 0) or horizontally (mode 1) */
+        const int step = up ? 24 : -24;
+        if (s_img_mode == 0) {
+            lv_obj_set_y(s_img_obj, lv_obj_get_y(s_img_obj) + step);
+        } else {
+            lv_obj_set_x(s_img_obj, lv_obj_get_x(s_img_obj) + step);
+        }
+    }
+}
+
+void ubo_render_scroll(const char *direction)
+{
+    if (!direction) {
+        return;
+    }
+    const bool up = strcmp(direction, "up") == 0;
+    switch (s_rw_kind) {
+        case RW_TEXT:
+            if (s_text_scroll) {
+                lv_obj_scroll_by(s_text_scroll, 0, up ? 100 : -100, LV_ANIM_ON);
+            }
+            break;
+        case RW_CAROUSEL:
+            if (s_car_total > 1) {
+                s_car_index =
+                    (s_car_index + (up ? -1 : 1) + s_car_total) % s_car_total;
+                carousel_render();
+            }
+            break;
+        case RW_IMAGE:
+            image_scroll(up);
+            break;
+        default:
+            break;
+    }
+}
+
+void ubo_render_choose(int index)
+{
+    /* Image viewer: L1/L2/L3 switch pan-vertical / pan-horizontal / zoom mode. */
+    if (s_rw_kind == RW_IMAGE && index >= 0 && index <= 2) {
+        s_img_mode = index;
+    }
 }

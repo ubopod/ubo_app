@@ -268,6 +268,20 @@ void ubo_lvgl_update_frame(const uint8_t *rgb, int32_t width, int32_t height)
     ubo_unlock();
 }
 
+void ubo_lvgl_render_scroll(const char *direction)
+{
+    ubo_lock();
+    ubo_render_scroll(direction);
+    ubo_unlock();
+}
+
+void ubo_lvgl_render_choose(int index)
+{
+    ubo_lock();
+    ubo_render_choose(index);
+    ubo_unlock();
+}
+
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s)
 {
     if (!s) {

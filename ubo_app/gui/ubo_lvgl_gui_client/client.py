@@ -99,6 +99,36 @@ class GUIClient:
             callback=_callback,
         )
 
+    def subscribe_menu_choose_by_index(
+        self,
+        callback: Callable[[int], None],
+    ) -> Callable[[], None]:
+        """Subscribe to L1/L2/L3 choose-by-index events; returns unsubscribe."""
+        if not self._client:
+            msg = 'Client not connected'
+            raise RuntimeError(msg)
+        from ubo_bindings.ubo.v1 import Event, MenuChooseByIndexEvent
+
+        return self._client.subscribe_event(
+            event_type=Event(menu_choose_by_index_event=MenuChooseByIndexEvent()),
+            callback=lambda event: callback(event.menu_choose_by_index_event.index),
+        )
+
+    def subscribe_application_scroll(
+        self,
+        callback: Callable[[str], None],
+    ) -> Callable[[], None]:
+        """Subscribe to application scroll events ('up'/'down'); returns unsub."""
+        if not self._client:
+            msg = 'Client not connected'
+            raise RuntimeError(msg)
+        from ubo_bindings.ubo.v1 import ApplicationScrollEvent, Event
+
+        return self._client.subscribe_event(
+            event_type=Event(application_scroll_event=ApplicationScrollEvent()),
+            callback=lambda event: callback(event.application_scroll_event.direction),
+        )
+
     def subscribe_view_changes(  # noqa: C901
         self,
         callback: Callable[[ViewData, StatusBarData | None, bool | None], None],

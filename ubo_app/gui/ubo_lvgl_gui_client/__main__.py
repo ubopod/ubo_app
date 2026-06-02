@@ -139,6 +139,10 @@ def main() -> None:  # noqa: C901, PLR0915
                 logger.exception('screenshot capture failed')
 
         client.subscribe_screenshot_events(on_screenshot)
+        # Local interaction on generic render widgets: UP/DOWN scroll/cycle/zoom,
+        # L1/L2/L3 switch the image-viewer mode (the core emits these on app views).
+        client.subscribe_application_scroll(renderer.render_scroll)
+        client.subscribe_menu_choose_by_index(renderer.render_choose)
         logger.info('gRPC client connected to %s:%d', args.host, args.port)
         loop.run_forever()
 

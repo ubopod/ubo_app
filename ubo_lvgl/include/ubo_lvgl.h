@@ -207,6 +207,13 @@ void ubo_lvgl_render_render(const ubo_render_view *v);
  * stream. No-op unless such a view is being shown. */
 void ubo_lvgl_update_frame(const uint8_t *rgb, int32_t width, int32_t height);
 
+/* Local interaction on the current generic render widget (from the core's
+ * ApplicationScroll / MenuChooseByIndex events): scroll/cycle/zoom on
+ * "up"/"down", and L1/L2/L3 (index 0/1/2) for the image viewer's mode. No-op
+ * unless a render widget is showing. */
+void ubo_lvgl_render_scroll(const char *direction);
+void ubo_lvgl_render_choose(int index);
+
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
 void ubo_lvgl_set_blanked(bool blanked);    /* backlight off + black overlay */
 void ubo_lvgl_set_connected(bool connected); /* show/hide disconnect overlay  */
