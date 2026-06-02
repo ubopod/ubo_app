@@ -162,6 +162,27 @@ def _items(wrapper: object) -> list:
     return out
 
 
+def _slot_items(wrapper: object) -> list:
+    """Like ``_items`` but keep empty (None) slots as blank items.
+
+    Notification action items occupy fixed L1/L2/L3 slots: the core pads the
+    column with empty slots (e.g. ``[None, info, camera]`` to bottom-align two
+    actions). Dropping the None entries would misalign the items, so represent
+    each empty slot with a blank ``MenuItem`` to preserve positions.
+    """
+    if wrapper is None:
+        return []
+    out = []
+    for elem in getattr(wrapper, 'items', None) or []:
+        leaf = (
+            getattr(elem, 'items', None)
+            if type(elem).__name__.endswith('ItemsItem')
+            else elem
+        )
+        out.append(_menu_item(leaf) if leaf is not None else bridge.MenuItem())
+    return out
+
+
 def _menu_item(it: object) -> bridge.MenuItem:
     return bridge.MenuItem(
         key=getattr(it, 'key', '') or '',
@@ -243,7 +264,7 @@ def render_view(renderer: Renderer, view: object) -> None:
                 content=_strip_markup(view.content) or '',
                 icon=_icon(view.icon),
                 color=_color(view.color),
-                items=[_menu_item(it) for it in _items(view.items)],
+                items=_slot_items(view.items),
                 page_index=view.page_index or 0,
                 total_pages=view.total_pages or 1,
             ),

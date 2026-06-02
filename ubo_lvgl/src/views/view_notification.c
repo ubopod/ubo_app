@@ -21,6 +21,16 @@ void ubo_build_notification(const ubo_notification_view *v)
     const int n = v->item_count < 3 ? v->item_count : 3;
     const bool scrollable = v->total_pages > 1;
 
+    /* Map the n action items onto the 3 fixed L1/L2/L3 slots. ubo_gui
+     * bottom-aligns a single page (pad empty slots at the top) and top-aligns a
+     * paginated one, so e.g. two actions land on L2+L3 with L1 empty -> the L2
+     * item sits at the exact vertical centre of the screen. */
+    const ubo_menu_item *slot[3] = {NULL, NULL, NULL};
+    const int pad = scrollable ? 0 : 3 - n;
+    for (int i = 0; i < n; i++) {
+        slot[pad + i] = &v->items[i];
+    }
+
     /* Full-screen horizontal row: [items] [icon/title/content] [slider gap]. */
     lv_obj_t *row = lv_obj_create(page);
     lv_obj_remove_style_all(row);
@@ -42,8 +52,20 @@ void ubo_build_notification(const ubo_notification_view *v)
         lv_obj_set_flex_align(left, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                               LV_FLEX_ALIGN_CENTER);
         lv_obj_set_style_pad_row(left, UBO_ITEM_GAP, 0);
-        for (int i = 0; i < n; i++) {
-            ubo_item_bar(left, &v->items[i], true);
+        for (int s = 0; s < 3; s++) {
+            const ubo_menu_item *it = slot[s];
+            const bool empty = !it || ((!it->label || !it->label[0]) &&
+                                       (!it->icon || !it->icon[0]) &&
+                                       (!it->key || !it->key[0]));
+            if (empty) {
+                /* Reserve the slot height so filled slots line up with their
+                 * L1/L2/L3 buttons. */
+                lv_obj_t *sp = lv_obj_create(left);
+                lv_obj_remove_style_all(sp);
+                lv_obj_set_size(sp, UBO_SHORT_W, UBO_ITEM_H);
+            } else {
+                ubo_item_bar(left, it, true);
+            }
         }
     }
 
