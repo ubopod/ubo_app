@@ -48,6 +48,9 @@ static int sdl_key_watch(void *user, SDL_Event *ev)
         case SDLK_BACKSPACE:
             key = "HOME";
             break;
+        case SDLK_m:
+            key = "M"; /* toggle microphone mute (mirrors the Kivy client) */
+            break;
         default:
             break;
     }

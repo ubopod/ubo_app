@@ -17,10 +17,20 @@ def build_action(key: str) -> Action | None:
     """Return the gRPC Action for a key-down of `key`, or None."""
     from ubo_bindings.ubo.v1 import (
         Action,
+        AudioDevice,
+        AudioToggleMuteStatusAction,
         Key,
         KeypadKeyPressAction,
         KeypadKeyReleaseAction,
     )
+
+    if key == 'M':
+        # Toggle microphone (input) mute, mirroring the Kivy client's M key.
+        return Action(
+            audio_toggle_mute_status_action=AudioToggleMuteStatusAction(
+                device=AudioDevice.INPUT,
+            ),
+        )
 
     press = {
         'UP': Key.UP,
