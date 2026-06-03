@@ -61,6 +61,16 @@ DISPATCH_ACTION_PATH = '/store.v1.StoreService/DispatchAction'
 SUBSCRIBE_EVENT_PATH = '/store.v1.StoreService/SubscribeEvent'
 SUBSCRIBE_STORE_PATH = '/store.v1.StoreService/SubscribeStore'
 
+# Reconnect policy for long-lived event subscriptions. Envoy resets idle
+# server-streams after its `stream_idle_timeout` (5 min by default), so these
+# streams must be re-established transparently rather than dying.
+RECONNECT_INITIAL_DELAY = 0.2
+RECONNECT_MAX_DELAY = 30.0
+# A stream that stayed up at least this long before dropping is considered
+# healthy (e.g. an idle-timeout reset), so its backoff is reset; only rapid
+# repeated failures (server unreachable) keep backing off.
+HEALTHY_STREAM_SECONDS = 5.0
+
 
 class GrpcWebError(RuntimeError):
     """A gRPC-Web call returned a non-zero ``grpc-status`` trailer."""
@@ -171,18 +181,39 @@ class WebUboRPCClient:
         event_type: Event,
         callback: Callable[[Event], None],
     ) -> Callable[[], None]:
-        """Subscribe to the remote store's events; returns an unsubscribe fn."""
+        """Subscribe to the remote store's events; returns an unsubscribe fn.
+
+        The stream is re-established with exponential backoff if it drops, so a
+        normal Envoy idle-timeout reset is handled transparently instead of
+        killing the subscription.
+        """
 
         async def iterator() -> None:
-            async for response in self._stream(
-                SUBSCRIBE_EVENT_PATH,
-                SubscribeEventRequest(events=[event_type]),
-                SubscribeEventResponse,
-            ):
+            delay = RECONNECT_INITIAL_DELAY
+            while True:
+                started = self.event_loop.time()
                 try:
-                    callback(response.event)
-                except Exception:
-                    logger.exception('Error in event subscription callback')
+                    async for response in self._stream(
+                        SUBSCRIBE_EVENT_PATH,
+                        SubscribeEventRequest(events=[event_type]),
+                        SubscribeEventResponse,
+                    ):
+                        try:
+                            callback(response.event)
+                        except Exception:
+                            logger.exception('Error in event subscription callback')
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug(
+                        'event subscription dropped (%s); reconnecting in %.1fs',
+                        exc,
+                        delay,
+                    )
+                if self.event_loop.time() - started >= HEALTHY_STREAM_SECONDS:
+                    delay = RECONNECT_INITIAL_DELAY
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, RECONNECT_MAX_DELAY)
 
         task = self.event_loop.create_task(iterator())
 
