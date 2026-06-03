@@ -80,6 +80,9 @@ ignore = ["INP001", "PLR0911", "D203", "D213", "PLC0415", "TD003"]
 fixable = ["ALL"]
 unfixable = []
 
+[tool.ruff.lint.per-file-ignores]
+"test_*.py" = ["S101", "PLR0913", "PLR0915", "PLR2004", "D103"]
+
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["id"]
 

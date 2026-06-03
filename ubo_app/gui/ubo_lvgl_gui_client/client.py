@@ -23,24 +23,52 @@ BASE_DELAY = 1.0
 MAX_DELAY = 30.0
 MAX_RETRIES = 50
 
+TRANSPORT_GRPC = 'grpc'
+TRANSPORT_WEB_GRPC = 'web-grpc'
+
 
 class GUIClient:
-    """Communicate with the ubo_app core over gRPC."""
+    """Communicate with the ubo_app core over gRPC or gRPC-Web.
 
-    def __init__(self, host: str = 'localhost', port: int = 50051) -> None:
-        """Store the gRPC server host/port (no connection yet)."""
+    Two transports are supported and selected at construction time:
+
+    * ``grpc`` — native gRPC over HTTP/2 (``UboRPCClient``), the default.
+    * ``web-grpc`` — gRPC-Web over HTTP/1.1 through an Envoy proxy
+      (``WebUboRPCClient``), for resource-constrained targets.
+
+    Both back-ends expose the same duck-typed surface, so the rest of this class
+    is transport-agnostic.
+    """
+
+    def __init__(
+        self,
+        host: str = 'localhost',
+        port: int = 50051,
+        *,
+        transport: str = TRANSPORT_GRPC,
+        web_grpc_url: str | None = None,
+    ) -> None:
+        """Store connection parameters (no connection yet)."""
         self.host = host
         self.port = port
+        self.transport = transport
+        self.web_grpc_url = web_grpc_url
         self._client = None
         self._subscription_task: asyncio.Task | None = None
         self._is_disconnecting = False
         self._has_ever_connected = False
 
     def connect(self) -> None:
-        """Open the gRPC channel."""
-        from ubo_bindings.client import UboRPCClient
+        """Open the transport channel for the configured back-end."""
+        if self.transport == TRANSPORT_WEB_GRPC:
+            from ubo_lvgl_gui_client.web_client import WebUboRPCClient
 
-        self._client = UboRPCClient(self.host, self.port)
+            url = self.web_grpc_url or f'http://{self.host}:50052/grpc'
+            self._client = WebUboRPCClient(url)
+        else:
+            from ubo_bindings.client import UboRPCClient
+
+            self._client = UboRPCClient(self.host, self.port)
 
     def reconnect(self) -> None:
         """Close and re-open the gRPC channel."""

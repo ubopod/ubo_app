@@ -94,7 +94,7 @@ CMake options: `-DUBO_WITH_SDL=ON|OFF` (default ON), `-DUBO_WITH_ST7789=ON|OFF`
 2. Set up the Python bridge venv (once) and run the client:
    ```sh
    cd ubo_app/gui/ubo_lvgl_gui_client
-   uv venv && uv pip install cffi betterproto grpclib pypng python-strtobool platformdirs
+   uv venv && uv pip install cffi betterproto grpclib httpx pypng python-strtobool platformdirs
    cd -
    PYTHONPATH=ubo_app/gui:ubo_app/rpc \
      ubo_app/gui/ubo_lvgl_gui_client/.venv/bin/python \
@@ -105,6 +105,47 @@ CMake options: `-DUBO_WITH_SDL=ON|OFF` (default ON), `-DUBO_WITH_ST7789=ON|OFF`
 
 The bridge auto-locates `libubo_lvgl` under `ubo_lvgl/build/` and the icon fonts
 under `ubo_lvgl/assets/` (override with `UBO_LVGL_LIB` / `UBO_LVGL_ASSETS_DIR`).
+
+### Transports (native gRPC vs gRPC-Web)
+
+The client can reach the core over two wire transports. Both carry the identical
+protobuf messages — only the framing/HTTP layer differs — so behaviour is the
+same either way:
+
+| Transport | Protocol | Talks to | Default endpoint |
+| --------- | -------- | -------- | ---------------- |
+| `grpc` (default) | native gRPC over HTTP/2 | the core's gRPC port directly | `--host`:`--port` (`localhost:50051`) |
+| `web-grpc` | gRPC-Web over HTTP/1.1 | an **Envoy** proxy's `/grpc` endpoint (same one the web-UI uses) | `http://<host>:50052/grpc` |
+
+`web-grpc` exists for resource-constrained targets (eventually an ESP32 in C)
+where a full HTTP/2 gRPC stack is impractical but an HTTP client is trivial.
+
+Select it with a CLI flag or an environment variable (the flag wins; the env var
+is the fallback / default):
+
+```sh
+# Native gRPC (default — nothing extra needed)
+python -m ubo_lvgl_gui_client --backend sdl --host localhost --port 50051
+
+# gRPC-Web via Envoy, CLI flags
+python -m ubo_lvgl_gui_client --backend sdl \
+  --transport web-grpc --web-grpc-url http://localhost:50052/grpc
+
+# gRPC-Web via Envoy, environment variables
+UBO_LVGL_GUI_TRANSPORT=web-grpc \
+UBO_LVGL_GUI_WEB_GRPC_URL=http://localhost:50052/grpc \
+  python -m ubo_lvgl_gui_client --backend sdl
+```
+
+| Setting | CLI flag | Env var | Default |
+| ------- | -------- | ------- | ------- |
+| Transport | `--transport {grpc,web-grpc}` | `UBO_LVGL_GUI_TRANSPORT` | `grpc` |
+| Envoy URL (web-grpc only) | `--web-grpc-url URL` | `UBO_LVGL_GUI_WEB_GRPC_URL` | `http://<host>:50052/grpc` |
+
+For `web-grpc`, an Envoy proxy exposing `/grpc` must be reachable — on an Ubo
+device this is the same Envoy the web-UI service brings up (listening on
+`50052` by default). The `--host`/`--port` flags still apply to the `grpc`
+transport.
 
 ### Selecting the backend via the supervisor
 

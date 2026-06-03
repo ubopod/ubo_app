@@ -10,6 +10,7 @@ dependencies = [
     "cffi>=1.16.0",
     "grpclib>=0.4.7",
     "betterproto>=2.0.0b7",
+    "httpx>=0.27.0",
     "ubo-app-raw-bindings",
     "platformdirs",
     "python-strtobool>=1.0.3",

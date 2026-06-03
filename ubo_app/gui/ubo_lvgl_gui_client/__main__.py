@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import sys
 import threading
 from typing import Any
@@ -35,6 +36,18 @@ def main() -> None:  # noqa: C901, PLR0915
     parser.add_argument('--host', default='localhost')
     parser.add_argument('--port', type=int, default=50051)
     parser.add_argument('--backend', choices=['sdl', 'st7789'], default='sdl')
+    parser.add_argument(
+        '--transport',
+        choices=['grpc', 'web-grpc'],
+        default=os.environ.get('UBO_LVGL_GUI_TRANSPORT', 'grpc'),
+        help='Wire transport: native gRPC (HTTP/2) or gRPC-Web (HTTP/1.1 via Envoy)',
+    )
+    parser.add_argument(
+        '--web-grpc-url',
+        default=os.environ.get('UBO_LVGL_GUI_WEB_GRPC_URL'),
+        help="Envoy '/grpc' base URL for the web-grpc transport "
+        '(default: http://<host>:50052/grpc)',
+    )
     parser.add_argument('-v', '--verbose', action='store_true', default=False)
     args = parser.parse_args()
 
@@ -109,7 +122,12 @@ def main() -> None:  # noqa: C901, PLR0915
         asyncio.set_event_loop(loop)
         loop.set_exception_handler(_on_loop_exception)
         state['loop'] = loop
-        client = GUIClient(args.host, args.port)
+        client = GUIClient(
+            args.host,
+            args.port,
+            transport=args.transport,
+            web_grpc_url=args.web_grpc_url,
+        )
         client.connect()
         state['client'] = client
         renderer.set_connected(True)
@@ -143,7 +161,13 @@ def main() -> None:  # noqa: C901, PLR0915
         # L1/L2/L3 switch the image-viewer mode (the core emits these on app views).
         client.subscribe_application_scroll(renderer.render_scroll)
         client.subscribe_menu_choose_by_index(renderer.render_choose)
-        logger.info('gRPC client connected to %s:%d', args.host, args.port)
+        if args.transport == 'web-grpc':
+            logger.info(
+                'gRPC-Web client connected to %s',
+                args.web_grpc_url or f'http://{args.host}:50052/grpc',
+            )
+        else:
+            logger.info('gRPC client connected to %s:%d', args.host, args.port)
         loop.run_forever()
 
     threading.Thread(target=grpc_thread, daemon=True).start()
