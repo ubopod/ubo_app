@@ -6,7 +6,8 @@
  * Matches ubo_gui's pagination (compute_total_pages / HEADED_MENU_HEADER_SLOTS):
  *   - A HEADED menu (heading set) reserves the first two slots for the heading
  *     and sub_heading, so item 0 lands on L3 of page 0 and the items continue on
- *     the following pages.
+ *     the following pages. The heading + sub_heading are laid out together in
+ *     that two-slot band so a multi-line sub_heading wraps without overlapping.
  *   - A HEADLESS menu has no header slots, so its items fill from L1.
  *   - A scrollable menu reveals the previous/next slot peeking into the
  *     header/footer space.
@@ -24,11 +25,13 @@ static lv_obj_t *slot_box(lv_obj_t *list)
     return s;
 }
 
-static void add_text_slot(lv_obj_t *list, const char *text, const lv_font_t *font,
-                          lv_color_t color)
+static void header_label(lv_obj_t *box, const char *text, const lv_font_t *font,
+                         lv_color_t color)
 {
-    lv_obj_t *s = slot_box(list);
-    lv_obj_t *l = lv_label_create(s);
+    if (!text || !text[0]) {
+        return;
+    }
+    lv_obj_t *l = lv_label_create(box);
     lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
     /* The core embeds colored icon glyphs as recolor spans (#RRGGBB text#). */
     lv_label_set_recolor(l, true);
@@ -36,28 +39,35 @@ static void add_text_slot(lv_obj_t *list, const char *text, const lv_font_t *fon
     lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(l, font, 0);
     lv_obj_set_style_text_color(l, color, 0);
-    lv_label_set_text(l, text ? text : "");
-    lv_obj_center(l);
+    lv_label_set_text(l, text);
 }
 
-/* Render the content of global slot `g`: heading (slot 0), sub_heading (slot 1)
- * for a headed menu, otherwise the item at `g - header_slots` (or a blank slot
- * to keep the L1/L2/L3 positions fixed). */
+/* The heading + sub_heading laid out together across the two header slots, so a
+ * multi-line sub_heading wraps in the shared space instead of spilling out of a
+ * single 52px slot. The sub_heading uses the Nerd-Font face (icons + Latin) so
+ * its colored offline/online dots render. */
+static void add_header_box(lv_obj_t *list, const ubo_menu_view *v)
+{
+    lv_obj_t *box = lv_obj_create(list);
+    lv_obj_remove_style_all(box);
+    lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_size(box, lv_pct(100), UBO_HEADER_SLOTS * UBO_ITEM_H + UBO_ITEM_GAP);
+    lv_obj_set_flex_flow(box, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(box, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(box, 4, 0);
+    header_label(box, v->heading, &lv_font_montserrat_20, UBO_COL_FG);
+    header_label(box, v->sub_heading, ubo_font_icon_14(), UBO_COL_MUTED);
+}
+
+/* The item at global slot `g` (or a blank slot to keep L1/L2/L3 fixed). */
 static void add_slot(lv_obj_t *list, const ubo_menu_view *v, int g, int header_slots)
 {
-    if (header_slots > 0 && g == 0) {
-        add_text_slot(list, v->heading, &lv_font_montserrat_20, UBO_COL_FG);
-    } else if (header_slots > 0 && g == 1) {
-        /* The sub_heading can carry icon glyphs (e.g. offline/online dots), so
-         * use the Nerd-Font face that has both icons and Latin. */
-        add_text_slot(list, v->sub_heading, ubo_font_icon_14(), UBO_COL_MUTED);
+    const int idx = g - header_slots;
+    if (idx >= 0 && idx < v->item_count) {
+        ubo_item_bar(list, &v->items[idx], false);
     } else {
-        const int idx = g - header_slots;
-        if (idx >= 0 && idx < v->item_count) {
-            ubo_item_bar(list, &v->items[idx], false);
-        } else {
-            slot_box(list);
-        }
+        slot_box(list);
     }
 }
 
@@ -97,6 +107,8 @@ void ubo_build_menu(const ubo_menu_view *v)
     const int below_g = UBO_PAGE_SIZE * p + UBO_PAGE_SIZE;
     const bool peek_below =
         scrollable && (below_g - hs) >= 0 && (below_g - hs) < count;
+    /* Page 0 of a headed menu carries the heading band (the first two slots). */
+    const bool header_page = headed && p == 0;
 
     /* The list holds the three slots for this page (plus the peeking neighbours),
      * positioned so the main slots land on L1/L2/L3. */
@@ -113,8 +125,14 @@ void ubo_build_menu(const ubo_menu_view *v)
     if (peek_above) {
         ubo_item_bar(list, &v->items[(UBO_PAGE_SIZE * p - 1) - hs], false);
     }
-    for (int k = 0; k < UBO_PAGE_SIZE; k++) {
-        add_slot(list, v, UBO_PAGE_SIZE * p + k, hs);
+    if (header_page) {
+        /* Header band (slots 0+1) then the remaining slot 2 -> item 0. */
+        add_header_box(list, v);
+        add_slot(list, v, UBO_HEADER_SLOTS, hs);
+    } else {
+        for (int k = 0; k < UBO_PAGE_SIZE; k++) {
+            add_slot(list, v, UBO_PAGE_SIZE * p + k, hs);
+        }
     }
     if (peek_below) {
         ubo_item_bar(list, &v->items[below_g - hs], false);
