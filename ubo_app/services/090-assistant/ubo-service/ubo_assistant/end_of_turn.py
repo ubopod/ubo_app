@@ -11,7 +11,7 @@ TTS) is unaffected.
 
 from __future__ import annotations
 
-import string
+import re
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -33,27 +33,55 @@ if TYPE_CHECKING:
     )
 
 
-_PUNCTUATION_TRANSLATION = str.maketrans('', '', string.punctuation)
+_APOSTROPHES = ("'", chr(0x2019))  # straight and typographic apostrophe
+_WORD_RE = re.compile(r'\w+')
+_MAX_TRAILING_WORDS = 2
+"""How many words may follow an end phrase and still count as end-of-utterance.
+
+Lets verbose completions ("i'm done talking", "i'm done talking now") trigger a
+stop while longer continuations ("i'm done thinking, what next") do not.
+"""
 
 
-def _normalise(text: str) -> str:
-    return text.translate(_PUNCTUATION_TRANSLATION).strip().casefold()
+def _words(text: str) -> list[str]:
+    """Split *text* into lowercase word tokens.
+
+    Apostrophes are removed so contractions collapse (``that's`` → ``thats``);
+    every other punctuation char acts as a word boundary, so a period inserted
+    mid-phrase by the STT (``done. talking``, ``done.talking``, ``done .
+    talking``) tokenises identically to the configured phrase.
+    """
+    lowered = text.casefold()
+    for apostrophe in _APOSTROPHES:
+        lowered = lowered.replace(apostrophe, '')
+    return _WORD_RE.findall(lowered)
 
 
 def match_end_of_turn_phrase(
     text: str,
     phrases: tuple[str, ...],
 ) -> str | None:
-    """Return the matching phrase if *text* ends with any of *phrases*."""
+    """Return the matching phrase if *text* ends with any of *phrases*.
+
+    Matching is on word tokens, so punctuation and whitespace the STT inserts
+    between words never blocks a match. Up to ``_MAX_TRAILING_WORDS`` words may
+    follow the phrase, so spoken completions ("i'm done talking") still count as
+    end-of-utterance.
+    """
     if not text or not phrases:
         return None
-    normalised = _normalise(text)
+    text_words = _words(text)
+    total = len(text_words)
     for phrase in phrases:
-        normalised_phrase = _normalise(phrase)
-        if not normalised_phrase:
+        phrase_words = _words(phrase)
+        count = len(phrase_words)
+        if not count or count > total:
             continue
-        if normalised.endswith(normalised_phrase):
-            return phrase
+        latest_start = total - count
+        earliest_start = max(0, latest_start - _MAX_TRAILING_WORDS)
+        for start in range(latest_start, earliest_start - 1, -1):
+            if text_words[start : start + count] == phrase_words:
+                return phrase
     return None
 
 
@@ -92,7 +120,8 @@ class EndOfTurnPhraseDetector(FrameProcessor):
             )
             if phrase is not None:
                 logger.info(
-                    'End-of-turn phrase matched',
+                    'End-of-turn phrase matched; ending turn and dropping the '
+                    'phrase transcript so it is not sent to the LLM',
                     extra={'phrase': phrase, 'text': frame.text},
                 )
                 await self._user_turn_stop_strategy.trigger_phrase_end_of_turn()
@@ -110,5 +139,9 @@ class EndOfTurnPhraseDetector(FrameProcessor):
                         ),
                     ),
                 )
+                # Swallow the end-phrase transcript: it is a control command,
+                # not content. Forwarding it would add it to the user aggregator
+                # and prompt the LLM to reply to "i'm done".
+                return
 
         await self.push_frame(frame, direction)

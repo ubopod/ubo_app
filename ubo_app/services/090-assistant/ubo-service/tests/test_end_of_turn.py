@@ -61,8 +61,70 @@ class MatchEndOfTurnPhraseTests(unittest.TestCase):
         )
         self.assertEqual(match, "that's all")  # noqa: PT009
 
+    def test_mid_phrase_period_with_space_matches(self) -> None:
+        """A period inserted mid-phrase (after a pause) still matches."""
+        match = match_end_of_turn_phrase(
+            'i am done. talking',
+            ('i am done talking',),
+        )
+        self.assertEqual(match, 'i am done talking')  # noqa: PT009
+
+    def test_mid_phrase_period_without_space_matches(self) -> None:
+        """A period with no surrounding space does not merge the words."""
+        match = match_end_of_turn_phrase(
+            'i am done.talking',
+            ('i am done talking',),
+        )
+        self.assertEqual(match, 'i am done talking')  # noqa: PT009
+
+    def test_mid_phrase_spaced_period_matches(self) -> None:
+        """A space-period-space sequence does not leave a double space."""
+        match = match_end_of_turn_phrase(
+            'i am done . talking',
+            ('i am done talking',),
+        )
+        self.assertEqual(match, 'i am done talking')  # noqa: PT009
+
+    def test_contraction_phrase_matches_mid_period(self) -> None:
+        """A contracted phrase still matches across an inserted period."""
+        match = match_end_of_turn_phrase(
+            "i'm done. talking",
+            ("i'm done talking",),
+        )
+        self.assertEqual(match, "i'm done talking")  # noqa: PT009
+
+    def test_trailing_word_after_phrase_matches(self) -> None:
+        """A short completion after the phrase still ends the turn."""
+        self.assertEqual(  # noqa: PT009
+            match_end_of_turn_phrase("i'm done talking", ("i'm done",)),
+            "i'm done",
+        )
+
+    def test_two_trailing_words_after_phrase_match(self) -> None:
+        """Up to two trailing words still count as end-of-utterance."""
+        self.assertEqual(  # noqa: PT009
+            match_end_of_turn_phrase("i'm done talking now", ("i'm done",)),
+            "i'm done",
+        )
+
+    def test_trailing_words_with_mid_period_match(self) -> None:
+        """The 'i am done talking' case from the field reports matches."""
+        self.assertEqual(  # noqa: PT009
+            match_end_of_turn_phrase('i am done. talking', ('i am done',)),
+            'i am done',
+        )
+
+    def test_many_trailing_words_do_not_match(self) -> None:
+        """More than two trailing words is a continuation, not an end."""
+        self.assertIsNone(  # noqa: PT009
+            match_end_of_turn_phrase(
+                "i'm done thinking what next please",
+                ("i'm done",),
+            ),
+        )
+
     def test_phrase_in_middle_of_text_does_not_match(self) -> None:
-        """Only end-of-utterance triggers a stop."""
+        """A phrase trailed by a full continuation does not trigger a stop."""
         self.assertIsNone(  # noqa: PT009
             match_end_of_turn_phrase(
                 "i'm done thinking, what next",
@@ -166,6 +228,65 @@ class EndOfTurnPhraseDetectorTests(unittest.IsolatedAsyncioTestCase):
 
         strategy.trigger_phrase_end_of_turn.assert_not_awaited()
         self.assertEqual(client.dispatch.call_count, 0)  # noqa: PT009
+
+    async def test_matched_phrase_is_not_forwarded(self) -> None:
+        """A matched end-phrase transcript is swallowed, not sent downstream."""
+        strategy = MagicMock()
+        strategy.trigger_phrase_end_of_turn = AsyncMock()
+        detector, _ = _make_detector(
+            end_of_turn_phrases=("i'm done",),
+            strategy=strategy,
+        )
+
+        frame = TranscriptionFrame(
+            user_id='u',
+            timestamp='2025-01-01T00:00:00Z',
+            text="i'm done talking",
+        )
+
+        push_frame = AsyncMock()
+        with patch.object(
+            FrameProcessor,
+            'process_frame',
+            new=AsyncMock(),
+        ), patch.object(
+            EndOfTurnPhraseDetector,
+            'push_frame',
+            new=push_frame,
+        ):
+            await detector.process_frame(frame, FrameDirection.DOWNSTREAM)
+
+        strategy.trigger_phrase_end_of_turn.assert_awaited_once()
+        push_frame.assert_not_awaited()
+
+    async def test_unmatched_frame_is_forwarded(self) -> None:
+        """A non-matching transcript is forwarded downstream unchanged."""
+        strategy = MagicMock()
+        strategy.trigger_phrase_end_of_turn = AsyncMock()
+        detector, _ = _make_detector(
+            end_of_turn_phrases=("i'm done",),
+            strategy=strategy,
+        )
+
+        frame = TranscriptionFrame(
+            user_id='u',
+            timestamp='2025-01-01T00:00:00Z',
+            text='what is the weather',
+        )
+
+        push_frame = AsyncMock()
+        with patch.object(
+            FrameProcessor,
+            'process_frame',
+            new=AsyncMock(),
+        ), patch.object(
+            EndOfTurnPhraseDetector,
+            'push_frame',
+            new=push_frame,
+        ):
+            await detector.process_frame(frame, FrameDirection.DOWNSTREAM)
+
+        push_frame.assert_awaited_once()
 
     async def test_empty_phrases_keeps_detector_inert(self) -> None:
         """Policy with no end phrases never triggers strategy or dispatch."""
