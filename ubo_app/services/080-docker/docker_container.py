@@ -64,6 +64,16 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
 
+def _image_ref_matches(ref: str | None, image_path: str) -> bool:
+    """Return True if a docker image reference matches an app's registry-stripped path.
+
+    Docker drops the default ``docker.io/`` registry prefix from local
+    references, so we match on the registry-stripped path with an optional
+    registry prefix (e.g. ``docker.io/path`` or ``ghcr.io/path``).
+    """
+    return bool(ref) and (ref == image_path or ref.endswith(f'/{image_path}'))
+
+
 def find_container(client: docker.DockerClient, *, image_path: str) -> Container | None:
     """Find a container by image path (without registry).
 
@@ -82,7 +92,7 @@ def find_container(client: docker.DockerClient, *, image_path: str) -> Container
                 # Check if any tag matches exactly or ends with the image path
                 # (to handle registry prefixes like docker.io/path or ghcr.io/path)
                 for tag in container_image.tags:
-                    if tag == image_path or tag.endswith(f'/{image_path}'):
+                    if _image_ref_matches(tag, image_path):
                         return container
 
     return None
@@ -373,7 +383,7 @@ def _monitor_events(  # noqa: C901, PLR0912, PLR0915
                 )
                 continue
 
-            if event_image != path:
+            if not _image_ref_matches(event_image, IMAGES[image_id].path):
                 continue
 
             # Healthcheck/exec events fire on every HEALTHCHECK interval and
