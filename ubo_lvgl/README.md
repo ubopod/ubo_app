@@ -39,9 +39,10 @@ In **phase 1** a Python process owns the transport and calls the C API over CFFI
 In **phase 2** the C client (`client/`) owns the transport itself — it speaks
 **gRPC-Web over HTTP/1.1** (web-grpc only, via Envoy), decodes protobuf with
 **nanopb**, and calls the *same* C API. It runs on macOS today (SDL backend) and
-is structured to port to an **ESP32-C6** under ESP-IDF (swap libcurl→
-`esp_http_client`, pthreads→FreeRTOS tasks; the framing codec and nanopb are
-already MCU-ready). The Python bridge stays for the native gRPC/HTTP-2 path.
+on the **ESP32-C6-Touch-AMOLED-1.8** under ESP-IDF (libcurl→`esp_http_client`,
+pthreads→FreeRTOS tasks, SH8601 368×448 QSPI AMOLED backend, FT3168 touch) — see
+[`esp32/README.md`](esp32/README.md). The framing codec and nanopb are MCU-ready
+and reused verbatim. The Python bridge stays for the native gRPC/HTTP-2 path.
 
 ## Directory layout
 
@@ -273,12 +274,20 @@ icons, status bar, generic `RenderViewData` widgets, snapshot facility).
 
 **Phase 2** (native C client, `client/`) runs on macOS against a live core +
 Envoy: web-grpc transport, nanopb decode, full view translation, input dispatch,
-and stream reconnect are verified. Remaining:
+and stream reconnect are verified.
 
-- **ESP-IDF port** to the ESP32-C6 (swap libcurl→`esp_http_client`, pthreads→
-  FreeRTOS tasks; AMOLED/QSPI display backend). The framing codec and nanopb
-  schema are already MCU-ready.
+**ESP32-C6 port** (`esp32/`) runs the same renderer + client on the Waveshare
+ESP32-C6-Touch-AMOLED-1.8 (SH8601 368×448 QSPI AMOLED, FT3168 touch, WiFi 6):
+responsive layout, `esp_http_client` web-grpc transport, live store/event
+streams, touch navigation + interactive volume, and reconnect/backoff with a
+disconnect overlay — all verified on-device. See [`esp32/README.md`](esp32/README.md).
+The camera viewfinder is deferred on-device (512KB SRAM, no PSRAM).
+
+Remaining:
+
 - **gRPC screenshot round-trip** in C (PNG + sha256) — deferred; rendering is
   verified via the BUFFER backend + `ubo_lvgl_snapshot()` instead.
 - **frame_stream** is currently always-subscribed + filtered by active stream id;
   a dynamic (un)subscribe (bandwidth) is a follow-up for the MCU.
+- **camera viewfinder on-device** — needs a downscaling/streaming-decode strategy
+  to fit under 512KB SRAM.

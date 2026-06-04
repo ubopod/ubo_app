@@ -36,12 +36,17 @@ store-stream thread (owns the disconnect overlay + reconnect), an event-stream
 thread (`app_scroll` + `menu_choose` + `frame_stream`), and a dispatch worker
 that drains the key queue so input never blocks on the network.
 
-## ESP-IDF port (next)
+## ESP-IDF port
 
-The seams designed for it: implement `http_transport.h` over `esp_http_client`;
-map the three worker threads to FreeRTOS tasks; add an AMOLED/QSPI display
-backend under `../src/display/`. `grpc_web_frame.*` and the nanopb schema compile
-as-is; nanopb has an official ESP-IDF component.
+Done and running on the ESP32-C6 (`../esp32/`): `http_transport_esp.c` implements
+`http_transport.h` over `esp_http_client`, the three workers map to FreeRTOS tasks
+(`esp32/main/client_app.c`), and an SH8601 AMOLED/QSPI backend lives under
+`../src/display/`. `grpc_web_frame.*`, `view_translate.*`, `keymap.*` and the
+nanopb schema compile and are reused as-is.
+
+> The Action/Event oneof **field numbers** in `proto/ubo_client.proto` must match
+> the *running* core's `ubo_bindings` — they drift between checkouts. After editing
+> the proto, run `proto/regen.sh`.
 
 ## Tests
 
