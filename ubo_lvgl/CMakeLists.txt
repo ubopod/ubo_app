@@ -7,6 +7,9 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(UBO_WITH_SDL "Build the SDL desktop backend" ON)
 option(UBO_WITH_ST7789 "Build the ST7789 SPI backend (Raspberry Pi)" OFF)
+option(UBO_WITH_CLIENT "Build the native C web-grpc client (libcurl + nanopb)" ON)
+
+enable_testing()
 
 # Point LVGL at our lv_conf.h and trim its demo/example builds.
 set(LV_BUILD_CONF_PATH "${CMAKE_CURRENT_SOURCE_DIR}/lv_conf.h" CACHE PATH "" FORCE)
@@ -87,3 +90,8 @@ target_link_libraries(ubo_lvgl_sim PRIVATE ubo_lvgl)
 # Headless snapshot tool (renders to BMP; no display needed).
 add_executable(ubo_lvgl_snapshot src/snapshot_main.c)
 target_link_libraries(ubo_lvgl_snapshot PRIVATE ubo_lvgl)
+
+# Native C web-grpc client (libcurl + nanopb).
+if(UBO_WITH_CLIENT)
+    add_subdirectory(client)
+endif()

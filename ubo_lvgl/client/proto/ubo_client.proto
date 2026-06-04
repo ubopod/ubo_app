@@ -1,0 +1,293 @@
+// Curated, wire-compatible subset of the ubo-core proto surface the LVGL C
+// client actually uses (web-grpc transport only).
+//
+// Field NUMBERS match ubo_app/rpc/proto/{store,ubo}/v1/*.proto exactly, so this
+// is wire-compatible with the full server messages; nanopb skips unknown fields
+// on decode, and omitting fields we never set is harmless on encode. Field
+// NAMES may differ (e.g. BasicType.bool -> bool_value) to avoid C keyword
+// clashes — names do not affect the wire format.
+//
+// Keeping this curated keeps the nanopb output tiny: the real Action (~253
+// members) and Event (~133 members) oneofs would otherwise bloat the MCU image.
+//
+// Regenerate: see ubo_lvgl/client/proto/README or the CMake `ubo_client_pb`
+// target (runs nanopb_generator.py).
+
+syntax = "proto3";
+
+package ubo_client;
+
+// ── google well-known types (minimal, wire-compatible) ──────────────────────
+// SubscribeStoreResponse.results carries google.protobuf.Any; is_blanked is a
+// google.protobuf.BoolValue, and None is encoded as google.protobuf.Empty. We
+// decode Any.value positionally (selectors are fixed order) and only read
+// Any.type_url as a string to detect the Empty (None) case.
+message Any {
+  string type_url = 1;
+  bytes value = 2;
+}
+
+message BoolValue {
+  bool value = 1;
+}
+
+// ── store.v1.StoreService request/response messages ─────────────────────────
+message DispatchActionRequest {
+  Action action = 1;
+}
+
+message DispatchActionResponse {}
+
+message SubscribeEventRequest {
+  repeated Event events = 2;
+}
+
+message SubscribeEventResponse {
+  Event event = 1;
+}
+
+message SubscribeStoreRequest {
+  repeated string selectors = 1;
+}
+
+message SubscribeStoreResponse {
+  repeated Any results = 1;
+}
+
+// ── Enums the client encodes ────────────────────────────────────────────────
+enum Key {
+  KEY_UNSPECIFIED = 0;
+  KEY_BACK = 1;
+  KEY_HOME = 2;
+  KEY_UP = 3;
+  KEY_DOWN = 4;
+  KEY_L1 = 5;
+  KEY_L2 = 6;
+  KEY_L3 = 7;
+}
+
+enum AudioDevice {
+  AUDIO_DEVICE_UNSPECIFIED = 0;
+  AUDIO_DEVICE_INPUT = 1;
+  AUDIO_DEVICE_OUTPUT = 2;
+}
+
+// ── Actions the client encodes (trimmed Action oneof) ───────────────────────
+message KeypadKeyPressAction {
+  Key key = 2;
+  repeated Key pressed_keys = 3;
+}
+
+message KeypadKeyReleaseAction {
+  Key key = 2;
+  repeated Key pressed_keys = 3;
+}
+
+message AudioToggleMuteStatusAction {
+  AudioDevice device = 2;
+}
+
+message Action {
+  oneof action {
+    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 46;
+    KeypadKeyPressAction keypad_key_press_action = 122;
+    KeypadKeyReleaseAction keypad_key_release_action = 123;
+  }
+}
+
+// ── Events the client decodes (trimmed Event oneof) ─────────────────────────
+message ApplicationScrollEvent {
+  string direction = 2;
+}
+
+message MenuChooseByIndexEvent {
+  int64 index = 2;
+}
+
+message FrameStreamDataEvent {
+  string stream_id = 2;
+  bytes data = 3;
+  int64 width = 4;
+  int64 height = 5;
+}
+
+message Event {
+  oneof event {
+    ApplicationScrollEvent application_scroll_event = 1;
+    FrameStreamDataEvent frame_stream_data_event = 74;
+    MenuChooseByIndexEvent menu_choose_by_index_event = 88;
+  }
+}
+
+// ── Dynamic value type (used by RenderViewData props) ───────────────────────
+// Field NUMBERS match the server's BasicType; names suffixed to dodge C
+// keywords (bool/float).
+message BasicType {
+  oneof basic_type {
+    bool bool_value = 1;
+    bytes bytes_value = 2;
+    float float_value = 3;
+    int64 int64_value = 4;
+    string string_value = 5;
+  }
+}
+
+// ── Shared view types ───────────────────────────────────────────────────────
+message MenuItemData {
+  string key = 2;
+  string label = 3;
+  string icon = 4;
+  optional string color = 5;
+  optional bool is_short = 6;
+  optional string action_id = 7;
+  optional string background_color = 8;
+}
+
+message StatusIconData {
+  string symbol = 2;
+  string color = 3;
+}
+
+message ProgressNotificationData {
+  string id = 2;
+  optional float progress = 3;
+  string color = 4;
+}
+
+message StatusBarData {
+  message ProgressNotifications {
+    repeated ProgressNotificationData items = 1;
+  }
+  message Icons {
+    repeated StatusIconData items = 1;
+  }
+  optional string title = 2;
+  optional bool is_recording = 3;
+  optional bool is_replaying = 4;
+  optional bool is_recording_audio = 5;
+  optional ProgressNotifications progress_notifications = 6;
+  optional string clock = 7;
+  optional float temperature = 8;
+  optional float light_level = 9;
+  optional Icons icons = 10;
+}
+
+// ── ViewData variants ───────────────────────────────────────────────────────
+message HomeViewData {
+  message MenuItems {
+    repeated MenuItemData items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional MenuItems menu_items = 4;
+  optional float cpu_percent = 5;
+  optional float ram_percent = 6;
+  optional float volume_level = 7;
+}
+
+message MenuViewData {
+  message ItemsItem {
+    optional MenuItemData items = 1;
+  }
+  message Items {
+    repeated ItemsItem items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string title = 4;
+  optional string heading = 5;
+  optional string sub_heading = 6;
+  optional Items items = 7;
+  optional string placeholder = 8;
+  optional int64 page_index = 9;
+  optional int64 total_pages = 10;
+  optional int64 stack_depth = 11;
+}
+
+message ApplicationViewData {
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string application_id = 4;
+  // field 5 (extra_data map) intentionally omitted — unused by the client.
+  optional int64 stack_depth = 6;
+}
+
+message RenderViewData {
+  message PropsValue2 {
+    repeated BasicType items = 1;
+  }
+  message PropsValue {
+    oneof props_value {
+      BasicType basic_type = 1;
+      PropsValue2 list = 2;
+    }
+  }
+  message PropsDict {
+    map<string, PropsValue> items = 1;
+  }
+  message Items {
+    repeated MenuItemData items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string kind = 4;
+  optional string title = 5;
+  optional PropsDict props = 6;
+  optional Items items = 7;
+  optional string stream_id = 8;
+  optional int64 stack_depth = 9;
+}
+
+message NotificationViewData {
+  message ItemsItem {
+    optional MenuItemData items = 1;
+  }
+  message Items {
+    repeated ItemsItem items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string notification_id = 4;
+  optional string title = 5;
+  optional string content = 6;
+  optional string icon = 7;
+  optional string color = 8;
+  optional Items items = 9;
+  optional string extra_information = 10;
+  optional int64 page_index = 11;
+  optional int64 total_pages = 12;
+  optional int64 stack_depth = 13;
+}
+
+message InstructionViewData {
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string title = 4;
+  optional string instruction = 5;
+  optional string icon = 6;
+  optional bool spinner = 7;
+  optional int64 timeout_seconds = 8;
+  optional string progress_text = 9;
+  optional string footer_text = 10;
+  optional int64 stack_depth = 11;
+}
+
+message PromptViewData {
+  message Items {
+    repeated MenuItemData items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string title = 4;
+  optional string prompt = 5;
+  optional string icon = 6;
+  optional Items items = 7;
+  optional int64 stack_depth = 8;
+}
+
+// NB: there is intentionally no `ViewData` oneof here. On the wire,
+// `state.main.current_view` arrives as a google.protobuf.Any whose `value` is
+// the CONCRETE view message (HomeViewData / MenuViewData / ...), identified by
+// `Any.type_url` (e.g. ".../HomeViewData"). The client dispatches on the
+// type_url suffix and decodes the matching message above — it never decodes a
+// ViewData wrapper.

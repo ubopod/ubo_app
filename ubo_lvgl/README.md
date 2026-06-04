@@ -7,26 +7,27 @@ stack. The renderer is a *dumb* client: it subscribes to the core's `ViewData` /
 `StatusBarData` over gRPC and draws them — all navigation/menu logic lives in the
 core.
 
-It comes in two pieces:
+It comes in three pieces:
 
 | Piece | Path | Language |
 |-------|------|----------|
 | Renderer library (`libubo_lvgl`) | `ubo_lvgl/` | C |
-| gRPC bridge / launcher | `ubo_app/gui/ubo_lvgl_gui_client/` | Python |
+| Python gRPC bridge / launcher | `ubo_app/gui/ubo_lvgl_gui_client/` | Python |
+| Native C web-grpc client (`ubo_lvgl_client`) | `ubo_lvgl/client/` | C |
 
-## Why two pieces (phases)
+## Why three pieces (phases)
 
 The C library is the durable artifact. Its public API (`include/ubo_lvgl.h`) is a
 *view model* that mirrors the core's `ViewData`/`StatusBarData` field-for-field.
 
 ```
-            PHASE 1 (now)                          PHASE 2 (future, MCU)
+        PHASE 1 (Python bridge)              PHASE 2 (native C, this client/)
  ┌──────────────────────────────┐         ┌──────────────────────────────┐
- │ Python: ubo_lvgl_gui_client  │         │ C on a microcontroller       │
- │  gRPC client + reconnect     │         │  C gRPC / nanopb decode      │
- │  ViewData ── translate ──┐   │         │      │ (same C API)          │
- └──────────────────────────┼───┘         └──────┼───────────────────────┘
-                            │ CFFI typed API       │
+ │ Python: ubo_lvgl_gui_client  │         │ C: ubo_lvgl_client           │
+ │  gRPC or web-grpc + reconnect│         │  web-grpc + nanopb decode    │
+ │  ViewData ── translate ──┐   │         │  ViewData ── translate ──┐   │
+ └──────────────────────────┼───┘         └──────────────────────────┼───┘
+                            │ CFFI typed API     same C API           │
                   ┌─────────▼──────────────────────▼────────┐
                   │ libubo_lvgl (this directory)             │
                   │  view-model API → LVGL widget tree       │
@@ -34,9 +35,13 @@ The C library is the durable artifact. Its public API (`include/ubo_lvgl.h`) is 
                   └──────────────────────────────────────────┘
 ```
 
-In **phase 1** a Python process owns gRPC and calls the C API over CFFI. In
-**phase 2** a C gRPC/proto decoder calls the *same* C API — every line below the
-seam is reused.
+In **phase 1** a Python process owns the transport and calls the C API over CFFI.
+In **phase 2** the C client (`client/`) owns the transport itself — it speaks
+**gRPC-Web over HTTP/1.1** (web-grpc only, via Envoy), decodes protobuf with
+**nanopb**, and calls the *same* C API. It runs on macOS today (SDL backend) and
+is structured to port to an **ESP32-C6** under ESP-IDF (swap libcurl→
+`esp_http_client`, pthreads→FreeRTOS tasks; the framing codec and nanopb are
+already MCU-ready). The Python bridge stays for the native gRPC/HTTP-2 path.
 
 ## Directory layout
 
@@ -56,15 +61,26 @@ ubo_lvgl/
     display/                # backend_sdl.c | backend_buffer.c | backend_st7789.c
     fonts/                  # generated LVGL fonts + runtime loader (fonts/README.md)
     views/                  # screen chrome, item bar, page slider, per-view builders
+  client/                   # native C web-grpc client (ubo_lvgl_client)
+    proto/ubo_client.proto  # curated, wire-compatible subset of the core proto
+    proto/ubo_client.pb.*   # committed nanopb output (regen with proto/regen.sh)
+    grpc_web_frame.{c,h}    # gRPC-Web framing codec (MCU-portable, unit-tested)
+    http_transport.{c,h}    # HTTP/1.1 transport (libcurl; esp_http_client later)
+    ubo_rpc.{c,h}           # dispatch + subscribe_store/_event over frame+nanopb
+    view_translate.{c,h}    # decoded ViewData → ubo_lvgl_render_* (markup/colors)
+    keymap.{c,h}            # key name → KeypadKey*/AudioToggle action
+    client_main.c           # threads, reconnect, input queue, arg/env parsing
+  third_party/nanopb/       # nanopb runtime + generator (git submodule)
 ```
 
 ## Prerequisites
 
 - A C toolchain + CMake ≥ 3.15
 - **SDL2** (desktop backend): `brew install sdl2` (macOS) / `apt install libsdl2-dev`
-- The LVGL submodule:
+- **libcurl** (native C client): ships with macOS / `apt install libcurl4-openssl-dev`
+- The submodules (LVGL renderer + nanopb for the C client):
   ```sh
-  git submodule update --init ubo_lvgl/lvgl
+  git submodule update --init ubo_lvgl/lvgl ubo_lvgl/third_party/nanopb
   ```
 
 ## Build (C library + tools)
@@ -81,9 +97,13 @@ Targets produced in `ubo_lvgl/build/`:
 | `libubo_lvgl.{dylib,so}` | the renderer library (loaded by the Python bridge) |
 | `ubo_lvgl_sim` | standalone SDL window showing the current screen |
 | `ubo_lvgl_snapshot` | renders a sample view to a BMP with no display (CI) |
+| `client/ubo_lvgl_client` | native C web-grpc client (transport + render) |
+| `client/ubo_client_test_{frame,decode}` | unit tests (run via `ctest`) |
 
 CMake options: `-DUBO_WITH_SDL=ON|OFF` (default ON), `-DUBO_WITH_ST7789=ON|OFF`
-(default OFF; Raspberry Pi). The offscreen buffer backend is always built.
+(default OFF; Raspberry Pi), `-DUBO_WITH_CLIENT=ON|OFF` (default ON; the native C
+client). The offscreen buffer backend is always built. Run the C unit tests with
+`ctest --test-dir ubo_lvgl/build`.
 
 ## Run (desktop, against a live core)
 
@@ -105,6 +125,24 @@ CMake options: `-DUBO_WITH_SDL=ON|OFF` (default ON), `-DUBO_WITH_ST7789=ON|OFF`
 
 The bridge auto-locates `libubo_lvgl` under `ubo_lvgl/build/` and the icon fonts
 under `ubo_lvgl/assets/` (override with `UBO_LVGL_LIB` / `UBO_LVGL_ASSETS_DIR`).
+
+### Run the native C client (no Python)
+
+The C client needs the core reachable through an **Envoy** proxy that exposes the
+`/grpc` web-grpc endpoint (the same one the web-UI uses; default port `50052`).
+With core + Envoy running:
+
+```sh
+UBO_LVGL_ASSETS_DIR=ubo_lvgl/assets \
+  ubo_lvgl/build/client/ubo_lvgl_client --backend sdl \
+  --web-grpc-url http://localhost:50052/grpc
+```
+
+Config (flags or env): `--backend {sdl,st7789,buffer}`, `--host HOST`,
+`--web-grpc-url URL` / `UBO_LVGL_GUI_WEB_GRPC_URL` (defaults to
+`http://<host>:50052/grpc`). Same desktop keys as the Python client. The protobuf
+bindings are committed; regenerate after changing `client/proto/ubo_client.proto`
+with `client/proto/regen.sh` (needs `uv` + python `protobuf`).
 
 ### Transports (native gRPC vs gRPC-Web)
 
@@ -229,12 +267,18 @@ fallback. See `src/fonts/README.md` to regenerate / add glyphs.
 
 ## Status / roadmap
 
-Phase 1 is complete and verified on desktop against a live core (all core
-navigation views, keypad input, transitions, icons, status bar, snapshot
-facility). Remaining:
+**Phase 1** (Python bridge) is complete and verified on desktop and on the
+physical ST7789 panel (all core navigation views, keypad input, transitions,
+icons, status bar, generic `RenderViewData` widgets, snapshot facility).
 
-- **ST7789 bring-up** (`backend_st7789.c`: spidev + libgpiod, `y_offset=80`,
-  backlight on GPIO26) and on-device verification.
-- Generic `RenderViewData` widgets (qr/text/image/video) — phase 1.6.
-- **Phase 2**: move the whole client (incl. gRPC) to C on a microcontroller,
-  reusing this library.
+**Phase 2** (native C client, `client/`) runs on macOS against a live core +
+Envoy: web-grpc transport, nanopb decode, full view translation, input dispatch,
+and stream reconnect are verified. Remaining:
+
+- **ESP-IDF port** to the ESP32-C6 (swap libcurl→`esp_http_client`, pthreads→
+  FreeRTOS tasks; AMOLED/QSPI display backend). The framing codec and nanopb
+  schema are already MCU-ready.
+- **gRPC screenshot round-trip** in C (PNG + sha256) — deferred; rendering is
+  verified via the BUFFER backend + `ubo_lvgl_snapshot()` instead.
+- **frame_stream** is currently always-subscribed + filtered by active stream id;
+  a dynamic (un)subscribe (bandwidth) is a follow-up for the MCU.

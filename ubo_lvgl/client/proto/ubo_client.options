@@ -1,0 +1,8 @@
+# nanopb field options for ubo_client.proto.
+#
+# Global pointer/malloc mode: every string, bytes, repeated, submessage and
+# optional scalar becomes a heap pointer. This keeps RAM proportional to the
+# data actually present (view messages are small and transient) and avoids
+# fixed max-size truncation of long text (notification content, text_viewer).
+# Requires PB_ENABLE_MALLOC; pb_release() frees a decoded message.
+* type:FT_POINTER
