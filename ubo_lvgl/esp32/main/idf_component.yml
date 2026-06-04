@@ -1,0 +1,10 @@
+## Managed components for the ESP32-C6-Touch-AMOLED-1.8 board.
+## Driver versions are pinned loosely; `idf.py reconfigure` resolves & locks them.
+dependencies:
+  idf: ">=5.5"
+  # SH8601 AMOLED QSPI panel driver (Waveshare).
+  waveshare/esp_lcd_sh8601: "^1.0.2"
+  # FT3168 capacitive touch (FT5x06-compatible driver).
+  espressif/esp_lcd_touch_ft5x06: "*"
+  # TCA9554 I2C IO-expander: drives the panel reset lines on this board.
+  espressif/esp_io_expander_tca9554: "*"

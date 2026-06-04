@@ -122,7 +122,7 @@ static void build_text_viewer(const ubo_render_view *v)
     lv_obj_t *lbl = lv_label_create(scroll);
     lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(lbl, lv_pct(100));
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(lbl, UBO_FONT_SM, 0);
     lv_obj_set_style_text_color(lbl, UBO_COL_FG, 0);
     lv_label_set_text(lbl, text ? text : "");
 
@@ -141,7 +141,7 @@ static void build_status(const ubo_render_view *v)
         lv_obj_t *ic = lv_label_create(c);
         /* Largest icon font we ship is 18px; a dedicated large icon font is a
          * follow-up for full parity with ubo_gui's 56px status icon. */
-        lv_obj_set_style_text_font(ic, ubo_font_icon_18(), 0);
+        lv_obj_set_style_text_font(ic, UBO_FONT_ICON, 0);
         lv_obj_set_style_text_color(ic, UBO_COL_FG, 0);
         lv_label_set_text(ic, icon);
     }
@@ -150,7 +150,7 @@ static void build_status(const ubo_render_view *v)
         lv_label_set_long_mode(t, LV_LABEL_LONG_WRAP);
         lv_obj_set_width(t, lv_pct(90));
         lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_style_text_font(t, &lv_font_montserrat_20, 0);
+        lv_obj_set_style_text_font(t, UBO_FONT_XL, 0);
         lv_obj_set_style_text_color(t, UBO_COL_FG, 0);
         lv_label_set_text(t, text);
     }
@@ -174,7 +174,7 @@ static void build_qr(lv_obj_t *parent, const char *value, const char *label)
         lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
         lv_obj_set_width(l, lv_pct(90));
         lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_style_text_font(l, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(l, UBO_FONT_SM, 0);
         lv_obj_set_style_text_color(l, UBO_COL_FG, 0);
         lv_label_set_text(l, label);
     }
@@ -194,7 +194,7 @@ static void carousel_render(void)
     build_qr(s_car_col, val, lab[0] ? lab : NULL);
     if (s_car_total > 1) {
         lv_obj_t *pos = lv_label_create(s_car_col);
-        lv_obj_set_style_text_font(pos, &lv_font_montserrat_12, 0);
+        lv_obj_set_style_text_font(pos, UBO_FONT_XS, 0);
         lv_obj_set_style_text_color(pos, UBO_COL_MUTED, 0);
         lv_label_set_text_fmt(pos, "%d / %d", s_car_index + 1, s_car_total);
     }
@@ -237,7 +237,7 @@ static void build_frame_view(bool stream)
     /* Hint shown until the first frame lands (mainly for the live stream). */
     s_frame_hint = lv_label_create(c);
     lv_obj_set_style_text_color(s_frame_hint, UBO_COL_MUTED, 0);
-    lv_obj_set_style_text_font(s_frame_hint, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(s_frame_hint, UBO_FONT_SM, 0);
     lv_label_set_text(s_frame_hint, stream ? "Waiting for video..." : "");
 
     /* A still image is pan/zoomable (UP/DOWN + L1/L2/L3); a live stream is not. */
@@ -299,7 +299,7 @@ static void build_placeholder(const char *kind)
     lv_obj_t *l = lv_label_create(c);
     lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(l, UBO_COL_MUTED, 0);
-    lv_obj_set_style_text_font(l, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(l, UBO_FONT_MD, 0);
     lv_label_set_text(l, (kind && kind[0]) ? kind : "render");
 }
 

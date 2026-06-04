@@ -22,7 +22,7 @@ void ubo_build_application(const ubo_application_view *v)
     lv_obj_t *lbl = lv_label_create(c);
     lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(lbl, UBO_COL_MUTED, 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(lbl, UBO_FONT_MD, 0);
     lv_label_set_text_fmt(lbl, "Application\n%s", id);
 
     ubo_status_bar_reapply();

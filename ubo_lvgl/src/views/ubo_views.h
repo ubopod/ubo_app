@@ -12,17 +12,69 @@
 #include "fonts/ubo_fonts.h"
 #include "ubo_lvgl.h"
 
-/* ---- Layout constants (240x240 panel; values mirror ubo_gui) ---- */
-#define UBO_W 240
-#define UBO_H 240
-#define UBO_HEADER_H 34 /* ubo_gui app.kv header */
-#define UBO_FOOTER_H 36 /* ubo_gui app.kv footer */
-#define UBO_CONTENT_H (UBO_H - UBO_HEADER_H - UBO_FOOTER_H) /* 170 */
-#define UBO_PAGE_SIZE 3
-#define UBO_ITEM_H 52    /* ubo_gui MENU_ITEM_HEIGHT */
-#define UBO_ITEM_GAP 7   /* ubo_gui MENU_ITEM_GAP     */
-#define UBO_SHORT_W 46   /* ubo_gui SHORT_WIDTH       */
-#define UBO_ITEM_RADIUS 26 /* ubo_gui: right corners rounded, left squared */
+/* ---- Responsive layout ----
+ * All geometry + font sizes derive from the panel size by a single uniform
+ * scale relative to the 240x240 reference design (scale = height / 240). The
+ * reference values mirror ubo_gui; at 240x240 scale==1 reproduces them exactly
+ * (desktop/Pi unchanged), and a larger panel scales everything together so the
+ * header/footer/menu band and the fonts/icons stay in proportion.
+ *
+ * Computed once in ubo_layout_init(w,h) (ubo_lvgl.c) and read via ubo_layout().
+ * The constant names below are kept as accessor macros so the view code is
+ * unchanged. */
+#define UBO_REF_DIM      240 /* reference panel (square) */
+#define UBO_REF_HEADER   34  /* ubo_gui app.kv header */
+#define UBO_REF_FOOTER   36  /* ubo_gui app.kv footer */
+#define UBO_REF_ITEM_H   52  /* ubo_gui MENU_ITEM_HEIGHT */
+#define UBO_REF_ITEM_GAP 7   /* ubo_gui MENU_ITEM_GAP */
+#define UBO_REF_SHORT_W  46  /* ubo_gui SHORT_WIDTH */
+
+typedef struct {
+    int w, h;
+    int header_h, footer_h, content_h;
+    int item_h, item_gap, item_radius, short_w;
+    /* Fonts chosen by nearest available size to (reference * scale). */
+    const lv_font_t *f_xs;     /* ref montserrat 12 */
+    const lv_font_t *f_sm;     /* ref montserrat 14 */
+    const lv_font_t *f_md;     /* ref montserrat 16 */
+    const lv_font_t *f_lg;     /* ref montserrat 18 (menu item label) */
+    const lv_font_t *f_xl;     /* ref montserrat 20 (heading) */
+    const lv_font_t *f_xxl;    /* ref montserrat 28 (overlay) */
+    const lv_font_t *f_icon;   /* ref icon 18 */
+    const lv_font_t *f_icon_sm; /* ref icon 14 */
+} ubo_layout_t;
+
+/* Compute the layout for a panel size; call once at init before any render. */
+void ubo_layout_init(int w, int h);
+/* The current layout (valid after ubo_layout_init). */
+const ubo_layout_t *ubo_layout(void);
+
+/* Scale a reference (240-panel) pixel value to the current panel. Lets per-view
+ * dimensions (gauges, bars) stay responsive without bespoke layout fields. */
+#define UBO_SCALE(ref) (((ref) * ubo_layout()->h + 120) / 240)
+
+/* Geometry accessor macros (unchanged names; now responsive). */
+#define UBO_W           (ubo_layout()->w)
+#define UBO_H           (ubo_layout()->h)
+#define UBO_HEADER_H    (ubo_layout()->header_h)
+#define UBO_FOOTER_H    (ubo_layout()->footer_h)
+#define UBO_CONTENT_H   (ubo_layout()->content_h)
+#define UBO_ITEM_H      (ubo_layout()->item_h)
+#define UBO_ITEM_GAP    (ubo_layout()->item_gap)
+#define UBO_SHORT_W     (ubo_layout()->short_w)
+#define UBO_ITEM_RADIUS (ubo_layout()->item_radius)
+#define UBO_PAGE_SIZE   3 /* fixed: L1/L2/L3 */
+
+/* Font accessor macros (responsive; were hard-coded lv_font_montserrat_* /
+ * ubo_font_icon_*). */
+#define UBO_FONT_XS     (ubo_layout()->f_xs)
+#define UBO_FONT_SM     (ubo_layout()->f_sm)
+#define UBO_FONT_MD     (ubo_layout()->f_md)
+#define UBO_FONT_LG     (ubo_layout()->f_lg)
+#define UBO_FONT_XL     (ubo_layout()->f_xl)
+#define UBO_FONT_XXL    (ubo_layout()->f_xxl)
+#define UBO_FONT_ICON   (ubo_layout()->f_icon)
+#define UBO_FONT_ICON_SM (ubo_layout()->f_icon_sm)
 
 /* ---- Palette (see ubo_gui constants) ---- */
 #define UBO_COL_BG      lv_color_hex(0x000000)

@@ -143,7 +143,7 @@ void ubo_screen_ensure(void)
     lv_obj_set_style_text_color(s_title_lbl, UBO_COL_FG, 0);
     /* Titles carry a leading Nerd-Font icon glyph (e.g. U+F035C) followed by
      * text, so use the icon font (ArimoNerd has both icons and Latin). */
-    lv_obj_set_style_text_font(s_title_lbl, ubo_font_icon_18(), 0);
+    lv_obj_set_style_text_font(s_title_lbl, UBO_FONT_ICON, 0);
     lv_label_set_long_mode(s_title_lbl, LV_LABEL_LONG_DOT);
     lv_obj_set_width(s_title_lbl, UBO_W - 16);
     lv_obj_set_style_text_align(s_title_lbl, LV_TEXT_ALIGN_CENTER, 0);
@@ -175,12 +175,12 @@ void ubo_screen_ensure(void)
     lv_obj_set_style_pad_column(s_header_signs, 2, 0);
 
     s_record_sign = lv_label_create(s_header_signs);
-    lv_obj_set_style_text_font(s_record_sign, ubo_font_icon_18(), 0);
+    lv_obj_set_style_text_font(s_record_sign, UBO_FONT_ICON, 0);
     lv_label_set_text(s_record_sign, GLYPH_RECORD);
     lv_obj_add_flag(s_record_sign, LV_OBJ_FLAG_HIDDEN);
 
     s_replay_sign = lv_label_create(s_header_signs);
-    lv_obj_set_style_text_font(s_replay_sign, ubo_font_icon_18(), 0);
+    lv_obj_set_style_text_font(s_replay_sign, UBO_FONT_ICON, 0);
     lv_label_set_text(s_replay_sign, GLYPH_REPLAY);
     lv_obj_add_flag(s_replay_sign, LV_OBJ_FLAG_HIDDEN);
 
@@ -203,18 +203,18 @@ void ubo_screen_ensure(void)
 
     s_clock_lbl = lv_label_create(left);
     lv_obj_set_style_text_color(s_clock_lbl, UBO_COL_FG, 0);
-    lv_obj_set_style_text_font(s_clock_lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(s_clock_lbl, UBO_FONT_SM, 0);
     lv_label_set_text(s_clock_lbl, "");
 
     s_temp_lbl = lv_label_create(left);
     lv_obj_set_style_text_color(s_temp_lbl, UBO_COL_MUTED, 0);
-    lv_obj_set_style_text_font(s_temp_lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(s_temp_lbl, UBO_FONT_SM, 0);
     lv_label_set_text(s_temp_lbl, "");
 
     /* Ambient light glyph: opacity tracks the reading (bright env => brighter),
      * hidden when the device reports no light sensor (matches ubo_gui). */
     s_light_lbl = lv_label_create(left);
-    lv_obj_set_style_text_font(s_light_lbl, ubo_font_icon_18(), 0);
+    lv_obj_set_style_text_font(s_light_lbl, UBO_FONT_ICON, 0);
     lv_obj_set_style_text_color(s_light_lbl, UBO_COL_FG, 0);
     lv_label_set_text(s_light_lbl, GLYPH_LIGHT);
     lv_obj_add_flag(s_light_lbl, LV_OBJ_FLAG_HIDDEN);
@@ -483,7 +483,7 @@ void ubo_status_bar_apply(const ubo_status_bar *s)
             continue;
         }
         lv_obj_t *l = lv_label_create(s_footer_icons);
-        lv_obj_set_style_text_font(l, ubo_font_icon_18(), 0);
+        lv_obj_set_style_text_font(l, UBO_FONT_ICON, 0);
         lv_obj_set_style_text_color(l, ubo_parse_color(ic->color, UBO_COL_FG), 0);
         lv_label_set_text(l, ic->symbol);
         rendered++;

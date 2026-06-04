@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h> /* usleep (ESP-IDF loop sleep) */
 
 #include "lvgl.h"
 
@@ -80,6 +81,74 @@ void ubo_emit_input(const char *key, bool pressed)
 }
 
 /* ------------------------------------------------------------------------- */
+/* Responsive layout (scale = panel height / 240 reference)                  */
+/* ------------------------------------------------------------------------- */
+
+static ubo_layout_t g_layout;
+
+const ubo_layout_t *ubo_layout(void) { return &g_layout; }
+
+static const lv_font_t *nearest_mont(int px)
+{
+    static const struct { int sz; const lv_font_t *f; } t[] = {
+        {12, &lv_font_montserrat_12}, {14, &lv_font_montserrat_14},
+        {16, &lv_font_montserrat_16}, {18, &lv_font_montserrat_18},
+        {20, &lv_font_montserrat_20}, {24, &lv_font_montserrat_24},
+        {28, &lv_font_montserrat_28}, {32, &lv_font_montserrat_32},
+        {40, &lv_font_montserrat_40}, {48, &lv_font_montserrat_48},
+    };
+    const lv_font_t *best = t[0].f;
+    int bd = 1 << 30;
+    for (size_t i = 0; i < sizeof(t) / sizeof(t[0]); i++) {
+        int d = px > t[i].sz ? px - t[i].sz : t[i].sz - px;
+        if (d < bd) { bd = d; best = t[i].f; }
+    }
+    return best;
+}
+
+/* Icons: at the reference sizes (14/18) prefer the runtime-loaded full font
+ * (better coverage on desktop); larger panels use the compiled bigger subsets. */
+static const lv_font_t *nearest_icon(int px)
+{
+    const struct { int sz; const lv_font_t *f; } t[] = {
+        {14, ubo_font_icon_14()}, {18, ubo_font_icon_18()},
+        {24, &ubo_icon_24},       {32, &ubo_icon_32},
+    };
+    const lv_font_t *best = t[0].f;
+    int bd = 1 << 30;
+    for (size_t i = 0; i < sizeof(t) / sizeof(t[0]); i++) {
+        int d = px > t[i].sz ? px - t[i].sz : t[i].sz - px;
+        if (d < bd) { bd = d; best = t[i].f; }
+    }
+    return best;
+}
+
+void ubo_layout_init(int w, int h)
+{
+    const double s = (double)h / UBO_REF_DIM;
+#define SCALE(v) ((int)((v) * s + 0.5))
+    g_layout.w = w;
+    g_layout.h = h;
+    g_layout.header_h = SCALE(UBO_REF_HEADER);
+    g_layout.footer_h = SCALE(UBO_REF_FOOTER);
+    g_layout.content_h = h - g_layout.header_h - g_layout.footer_h;
+    g_layout.item_gap = SCALE(UBO_REF_ITEM_GAP);
+    /* Items fill the content band exactly (3 slots), as on the 240 reference. */
+    g_layout.item_h = (g_layout.content_h - 2 * g_layout.item_gap) / 3;
+    g_layout.item_radius = g_layout.item_h / 2;
+    g_layout.short_w = SCALE(UBO_REF_SHORT_W);
+    g_layout.f_xs = nearest_mont(SCALE(12));
+    g_layout.f_sm = nearest_mont(SCALE(14));
+    g_layout.f_md = nearest_mont(SCALE(16));
+    g_layout.f_lg = nearest_mont(SCALE(18));
+    g_layout.f_xl = nearest_mont(SCALE(20));
+    g_layout.f_xxl = nearest_mont(SCALE(28));
+    g_layout.f_icon = nearest_icon(SCALE(18));
+    g_layout.f_icon_sm = nearest_icon(SCALE(14));
+#undef SCALE
+}
+
+/* ------------------------------------------------------------------------- */
 /* Init                                                                      */
 /* ------------------------------------------------------------------------- */
 
@@ -117,6 +186,13 @@ int ubo_lvgl_init(const ubo_lvgl_config *cfg)
         case UBO_BACKEND_BUFFER:
             disp = ubo_backend_buffer_create(w, h);
             break;
+        case UBO_BACKEND_SH8601:
+#ifdef UBO_WITH_SH8601
+            disp = ubo_backend_sh8601_create(w, h);
+#else
+            LV_LOG_ERROR("SH8601 backend not compiled in");
+#endif
+            break;
     }
 
     if (!disp) {
@@ -127,6 +203,9 @@ int ubo_lvgl_init(const ubo_lvgl_config *cfg)
 
     /* Load full-coverage icon fonts (falls back to the compiled subset). */
     ubo_fonts_load(getenv("UBO_LVGL_ASSETS_DIR"));
+
+    /* Compute the responsive layout (geometry + fonts) for this panel size. */
+    ubo_layout_init((int)w, (int)h);
 
     /* Build the persistent header/content/footer chrome, then show the splash
      * until the first view arrives. */
@@ -333,8 +412,13 @@ static void *ubo_loop(void *arg)
         if (next_ms == LV_NO_TIMER_READY || next_ms > 16) {
             next_ms = 16; /* keep animations/SDL responsive */
         }
+#ifdef ESP_PLATFORM
+        /* ESP-IDF newlib has no nanosleep; usleep maps onto vTaskDelay. */
+        usleep((useconds_t)next_ms * 1000U);
+#else
         struct timespec ts = {.tv_sec = 0, .tv_nsec = (long)next_ms * 1000000L};
         nanosleep(&ts, NULL);
+#endif
     }
     return NULL;
 }

@@ -56,8 +56,8 @@ static void add_header_box(lv_obj_t *list, const ubo_menu_view *v)
     lv_obj_set_flex_align(box, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(box, 4, 0);
-    header_label(box, v->heading, &lv_font_montserrat_20, UBO_COL_FG);
-    header_label(box, v->sub_heading, ubo_font_icon_14(), UBO_COL_MUTED);
+    header_label(box, v->heading, UBO_FONT_XL, UBO_COL_FG);
+    header_label(box, v->sub_heading, UBO_FONT_ICON_SM, UBO_COL_MUTED);
 }
 
 /* The item at global slot `g` (or a blank slot to keep L1/L2/L3 fixed). */
@@ -89,7 +89,7 @@ void ubo_build_menu(const ubo_menu_view *v)
         const char *ph = (v->placeholder && v->placeholder[0]) ? v->placeholder
                                                                : "";
         lv_obj_t *lbl = lv_label_create(page);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_font(lbl, UBO_FONT_MD, 0);
         lv_obj_set_style_text_color(lbl, UBO_COL_MUTED, 0);
         lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_width(lbl, UBO_W - 24);

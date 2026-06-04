@@ -1,5 +1,6 @@
 #include "ubo_rpc.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -83,9 +84,21 @@ int ubo_rpc_dispatch(ubo_rpc *r, const ubo_client_Action *action) {
         return -1;
     }
     long status = 0;
-    int rc = ubo_http_post_unary(r->http, PATH_DISPATCH, frame, frame_len, NULL,
-                                 NULL, &status);
+    uint8_t *resp = NULL;
+    size_t resp_len = 0;
+    int rc = ubo_http_post_unary(r->http, PATH_DISPATCH, frame, frame_len, &resp,
+                                 &resp_len, &status);
     free(frame);
+    if (getenv("UBO_RPC_DEBUG") && resp) {
+        fprintf(stderr, "[dispatch] http=%ld resp_len=%zu trailer=\"", status,
+                resp_len);
+        for (size_t i = 0; i < resp_len; i++) {
+            unsigned char c = resp[i];
+            fputc((c >= 32 && c < 127) ? c : '.', stderr);
+        }
+        fprintf(stderr, "\"\n");
+    }
+    free(resp);
     return (rc == 0 && status == 200) ? 0 : -1;
 }
 

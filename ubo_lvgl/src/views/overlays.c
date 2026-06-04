@@ -38,7 +38,7 @@ void ubo_overlay_splash_show(void)
 
     lv_obj_t *name = lv_label_create(s_splash);
     lv_obj_set_style_text_color(name, UBO_COL_FG, 0);
-    lv_obj_set_style_text_font(name, &lv_font_montserrat_28, 0);
+    lv_obj_set_style_text_font(name, UBO_FONT_XXL, 0);
     lv_label_set_text(name, "ubo");
 
     lv_obj_t *sp = lv_spinner_create(s_splash);
@@ -76,13 +76,13 @@ static void ensure_disc(void)
     }
     s_disc = full_cover(lv_color_hex(0x000000));
     lv_obj_t *icon = lv_label_create(s_disc);
-    lv_obj_set_style_text_font(icon, ubo_font_icon_18(), 0);
+    lv_obj_set_style_text_font(icon, UBO_FONT_ICON, 0);
     lv_obj_set_style_text_color(icon, lv_color_hex(0xE53935), 0);
     lv_label_set_text(icon, "\U000F02FC"); /* information/alert glyph */
 
     lv_obj_t *lbl = lv_label_create(s_disc);
     lv_obj_set_style_text_color(lbl, lv_color_hex(0xE53935), 0);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(lbl, UBO_FONT_LG, 0);
     lv_label_set_text(lbl, "Disconnected");
 
     s_disc_sub = lv_label_create(s_disc);
@@ -90,7 +90,7 @@ static void ensure_disc(void)
     lv_obj_set_width(s_disc_sub, UBO_W - 20);
     lv_obj_set_style_text_align(s_disc_sub, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(s_disc_sub, UBO_COL_MUTED, 0);
-    lv_obj_set_style_text_font(s_disc_sub, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(s_disc_sub, UBO_FONT_SM, 0);
     lv_label_set_text(s_disc_sub, "");
 }
 

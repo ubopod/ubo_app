@@ -9,9 +9,11 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+#include "keymap.h"
 #include "ubo_lvgl.h"
 #include "ubo_rpc.h"
 #include "view_translate.h"
@@ -23,6 +25,8 @@ static const char *type_suffix(const char *type_url) {
     const char *dot = type_url ? strrchr(type_url, '.') : NULL;
     return dot ? dot + 1 : (type_url ? type_url : "");
 }
+
+static int g_seq = 0;
 
 static void on_results(void *user, const ubo_client_Any *results, size_t count) {
     (void)user;
@@ -39,8 +43,13 @@ static void on_results(void *user, const ubo_client_Any *results, size_t count) 
     ubo_view_render(results[0].type_url, results[0].value->bytes,
                     results[0].value->size, NULL);
 
+    /* Let the slide-in transition settle (the loop thread advances it) before
+     * snapshotting, so we capture the final view, not a mid-animation frame. */
+    usleep(500000);
+
+    /* Sequence-numbered so every transition is captured (not just per-type). */
     char path[256];
-    snprintf(path, sizeof(path), "%s/cview_%s.bmp", g_out_dir, name);
+    snprintf(path, sizeof(path), "%s/cview_%02d_%s.bmp", g_out_dir, g_seq++, name);
     if (ubo_lvgl_snapshot(path) == 0) {
         printf("snapshot %s\n", path);
         fflush(stdout);
@@ -87,7 +96,14 @@ int main(int argc, char **argv) {
         g_out_dir = argv[2];
     }
 
-    ubo_lvgl_config cfg = {.backend = UBO_BACKEND_BUFFER, .width = 240, .height = 240};
+    /* Panel size is configurable so the same harness can preview the ESP32-C6
+     * 368x448 layout (UBO_SIM_W/H); defaults to the 240x240 Pi panel. NB: to
+     * match the device the renderer must also be COMPILED with the matching
+     * UBO_W/UBO_H geometry (-DUBO_W=368 ...). */
+    const char *sw = getenv("UBO_SIM_W"), *sh = getenv("UBO_SIM_H");
+    ubo_lvgl_config cfg = {.backend = UBO_BACKEND_BUFFER,
+                           .width = sw ? atoi(sw) : 240,
+                           .height = sh ? atoi(sh) : 240};
     if (ubo_lvgl_init(&cfg) != 0) {
         fprintf(stderr, "lvgl init failed\n");
         return 2;
@@ -99,22 +115,41 @@ int main(int argc, char **argv) {
         return 2;
     }
 
+    /* Run the LVGL loop on its own thread so slide transitions actually advance
+     * (the snapshot then captures the settled view). */
+    ubo_lvgl_run(true);
+
     struct sub_args a = {rpc};
     pthread_t t;
     pthread_create(&t, NULL, sub_thread, &a);
 
-    /* Navigate a small tour so several view types get snapshotted. */
+    /* Navigation: a comma-separated key sequence in UBO_SIM_KEYS drives the core
+     * so any screen can be captured (e.g. "HOME,L1,DOWN,L2"). UP/DOWN/L1/L2/L3
+     * are presses; BACK/HOME are releases. Defaults to a small tour. */
+    const char *keys = getenv("UBO_SIM_KEYS");
+    char buf[256];
+    snprintf(buf, sizeof(buf), "%s", keys && keys[0] ? keys : "HOME,L1,DOWN,L2,HOME");
     sleep(2);
-    key_release(rpc, ubo_client_Key_KEY_HOME); /* Home */
-    sleep(2);
-    key_press(rpc, ubo_client_Key_KEY_L1); /* open main menu */
-    sleep(2);
-    key_press(rpc, ubo_client_Key_KEY_DOWN); /* move selection */
-    sleep(1);
-    key_press(rpc, ubo_client_Key_KEY_L2); /* open a submenu */
-    sleep(2);
-    key_release(rpc, ubo_client_Key_KEY_HOME); /* back home */
-    sleep(2);
+    for (char *tok = strtok(buf, ","); tok; tok = strtok(NULL, ",")) {
+        ubo_client_Key k;
+        bool press = true, ok = true;
+        if (!strcmp(tok, "UP")) k = ubo_client_Key_KEY_UP;
+        else if (!strcmp(tok, "DOWN")) k = ubo_client_Key_KEY_DOWN;
+        else if (!strcmp(tok, "L1")) k = ubo_client_Key_KEY_L1;
+        else if (!strcmp(tok, "L2")) k = ubo_client_Key_KEY_L2;
+        else if (!strcmp(tok, "L3")) k = ubo_client_Key_KEY_L3;
+        else if (!strcmp(tok, "BACK")) { k = ubo_client_Key_KEY_BACK; press = false; }
+        else if (!strcmp(tok, "HOME")) { k = ubo_client_Key_KEY_HOME; press = false; }
+        else if (!strcmp(tok, "M")) { ubo_keymap_dispatch(rpc, "M"); sleep(2); continue; }
+        else ok = false;
+        if (ok) {
+            /* Matches the reference client: UP/DOWN/L1/L2/L3 are press-only;
+             * BACK/HOME are release. */
+            if (press) key_press(rpc, k);
+            else key_release(rpc, k);
+        }
+        sleep(2);
+    }
 
     g_stop = true;
     pthread_join(t, NULL);

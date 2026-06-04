@@ -1,0 +1,22 @@
+menu "Ubo LVGL Client"
+
+config UBO_WIFI_SSID
+    string "WiFi SSID"
+    default "changeme"
+    help
+        SSID of the 2.4GHz WiFi network to join (the ESP32-C6 radio is 2.4GHz).
+
+config UBO_WIFI_PASSWORD
+    string "WiFi password"
+    default "changeme"
+    help
+        WPA2 password for the WiFi network.
+
+config UBO_CORE_GRPC_WEB_URL
+    string "Core gRPC-Web base URL"
+    default "http://192.168.1.100:50052/grpc"
+    help
+        Base URL of ubo-core's Envoy gRPC-Web endpoint, e.g.
+        http://<host-lan-ip>:50052/grpc. Plain HTTP (no TLS).
+
+endmenu

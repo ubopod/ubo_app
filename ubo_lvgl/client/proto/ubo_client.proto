@@ -89,9 +89,9 @@ message AudioToggleMuteStatusAction {
 
 message Action {
   oneof action {
-    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 46;
-    KeypadKeyPressAction keypad_key_press_action = 122;
-    KeypadKeyReleaseAction keypad_key_release_action = 123;
+    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 35;
+    KeypadKeyPressAction keypad_key_press_action = 115;
+    KeypadKeyReleaseAction keypad_key_release_action = 116;
   }
 }
 
@@ -114,8 +114,8 @@ message FrameStreamDataEvent {
 message Event {
   oneof event {
     ApplicationScrollEvent application_scroll_event = 1;
-    FrameStreamDataEvent frame_stream_data_event = 74;
-    MenuChooseByIndexEvent menu_choose_by_index_event = 88;
+    FrameStreamDataEvent frame_stream_data_event = 72;
+    MenuChooseByIndexEvent menu_choose_by_index_event = 91;
   }
 }
 

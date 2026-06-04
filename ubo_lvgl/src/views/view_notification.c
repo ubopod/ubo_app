@@ -83,7 +83,7 @@ void ubo_build_notification(const ubo_notification_view *v)
 
     if (v->icon && v->icon[0]) {
         lv_obj_t *ic = lv_label_create(center);
-        lv_obj_set_style_text_font(ic, ubo_font_icon_18(), 0);
+        lv_obj_set_style_text_font(ic, UBO_FONT_ICON, 0);
         lv_obj_set_style_text_color(ic, accent, 0);
         lv_label_set_text(ic, v->icon);
     }
@@ -93,7 +93,7 @@ void ubo_build_notification(const ubo_notification_view *v)
         lv_obj_set_width(t, lv_pct(100));
         lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_text_color(t, UBO_COL_FG, 0);
-        lv_obj_set_style_text_font(t, &lv_font_montserrat_18, 0);
+        lv_obj_set_style_text_font(t, UBO_FONT_LG, 0);
         lv_label_set_text(t, v->title);
     }
     if (v->content && v->content[0]) {
@@ -102,7 +102,7 @@ void ubo_build_notification(const ubo_notification_view *v)
         lv_obj_set_width(txt, lv_pct(100));
         lv_obj_set_style_text_align(txt, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_text_color(txt, UBO_COL_FG, 0);
-        lv_obj_set_style_text_font(txt, &lv_font_montserrat_16, 0);
+        lv_obj_set_style_text_font(txt, UBO_FONT_MD, 0);
         lv_label_set_text(txt, v->content);
     }
 

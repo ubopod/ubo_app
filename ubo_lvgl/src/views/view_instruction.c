@@ -41,14 +41,14 @@ void ubo_build_instruction(const ubo_instruction_view *v)
     }
 
     if (v->instruction && v->instruction[0]) {
-        centered_label(c, v->instruction, &lv_font_montserrat_16, UBO_COL_FG);
+        centered_label(c, v->instruction, UBO_FONT_MD, UBO_COL_FG);
     }
     if (v->progress_text && v->progress_text[0]) {
-        centered_label(c, v->progress_text, &lv_font_montserrat_14,
+        centered_label(c, v->progress_text, UBO_FONT_SM,
                        UBO_COL_INFO);
     }
     if (v->footer_text && v->footer_text[0]) {
-        centered_label(c, v->footer_text, &lv_font_montserrat_12, UBO_COL_MUTED);
+        centered_label(c, v->footer_text, UBO_FONT_XS, UBO_COL_MUTED);
     }
 
     ubo_status_bar_reapply();

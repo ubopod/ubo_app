@@ -62,6 +62,8 @@ set(UBO_SOURCES
     src/views/overlays.c
     src/fonts/ubo_icon_18.c
     src/fonts/ubo_icon_14.c
+    src/fonts/ubo_icon_24.c
+    src/fonts/ubo_icon_32.c
     src/fonts/fonts_runtime.c
 )
 

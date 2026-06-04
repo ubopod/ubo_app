@@ -55,7 +55,7 @@ lv_obj_t *ubo_item_bar(lv_obj_t *parent, const ubo_menu_item *it, bool short_mod
 
     if (it->icon && it->icon[0]) {
         lv_obj_t *ic = lv_label_create(row);
-        lv_obj_set_style_text_font(ic, ubo_font_icon_18(), 0);
+        lv_obj_set_style_text_font(ic, UBO_FONT_ICON, 0);
         lv_obj_set_style_text_color(ic, fg, 0);
         lv_label_set_text(ic, it->icon);
     }
@@ -63,7 +63,7 @@ lv_obj_t *ubo_item_bar(lv_obj_t *parent, const ubo_menu_item *it, bool short_mod
     if (!short_mode) {
         lv_obj_t *lbl = lv_label_create(row);
         lv_obj_set_style_text_color(lbl, fg, 0);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18, 0);
+        lv_obj_set_style_text_font(lbl, UBO_FONT_LG, 0);
         lv_label_set_long_mode(lbl, LV_LABEL_LONG_DOT);
         lv_obj_set_flex_grow(lbl, 1);
         lv_label_set_text(lbl, it->label ? it->label : "");

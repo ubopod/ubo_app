@@ -475,9 +475,9 @@ extern "C" {
 #define ubo_client_KeypadKeyReleaseAction_key_tag 2
 #define ubo_client_KeypadKeyReleaseAction_pressed_keys_tag 3
 #define ubo_client_AudioToggleMuteStatusAction_device_tag 2
-#define ubo_client_Action_audio_toggle_mute_status_action_tag 46
-#define ubo_client_Action_keypad_key_press_action_tag 122
-#define ubo_client_Action_keypad_key_release_action_tag 123
+#define ubo_client_Action_audio_toggle_mute_status_action_tag 35
+#define ubo_client_Action_keypad_key_press_action_tag 115
+#define ubo_client_Action_keypad_key_release_action_tag 116
 #define ubo_client_ApplicationScrollEvent_direction_tag 2
 #define ubo_client_MenuChooseByIndexEvent_index_tag 2
 #define ubo_client_FrameStreamDataEvent_stream_id_tag 2
@@ -485,8 +485,8 @@ extern "C" {
 #define ubo_client_FrameStreamDataEvent_width_tag 4
 #define ubo_client_FrameStreamDataEvent_height_tag 5
 #define ubo_client_Event_application_scroll_event_tag 1
-#define ubo_client_Event_frame_stream_data_event_tag 74
-#define ubo_client_Event_menu_choose_by_index_event_tag 88
+#define ubo_client_Event_frame_stream_data_event_tag 72
+#define ubo_client_Event_menu_choose_by_index_event_tag 91
 #define ubo_client_BasicType_bool_value_tag      1
 #define ubo_client_BasicType_bytes_value_tag     2
 #define ubo_client_BasicType_float_value_tag     3
@@ -650,9 +650,9 @@ X(a, POINTER,  SINGULAR, UENUM,    device,            2)
 #define ubo_client_AudioToggleMuteStatusAction_DEFAULT NULL
 
 #define ubo_client_Action_FIELDLIST(X, a) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (action,audio_toggle_mute_status_action,action.audio_toggle_mute_status_action),  46) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (action,keypad_key_press_action,action.keypad_key_press_action), 122) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (action,keypad_key_release_action,action.keypad_key_release_action), 123)
+X(a, POINTER,  ONEOF,    MESSAGE,  (action,audio_toggle_mute_status_action,action.audio_toggle_mute_status_action),  35) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (action,keypad_key_press_action,action.keypad_key_press_action), 115) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (action,keypad_key_release_action,action.keypad_key_release_action), 116)
 #define ubo_client_Action_CALLBACK NULL
 #define ubo_client_Action_DEFAULT NULL
 #define ubo_client_Action_action_audio_toggle_mute_status_action_MSGTYPE ubo_client_AudioToggleMuteStatusAction
@@ -679,8 +679,8 @@ X(a, POINTER,  SINGULAR, INT64,    height,            5)
 
 #define ubo_client_Event_FIELDLIST(X, a) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,application_scroll_event,event.application_scroll_event),   1) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_data_event,event.frame_stream_data_event),  74) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,menu_choose_by_index_event,event.menu_choose_by_index_event),  88)
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_data_event,event.frame_stream_data_event),  72) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,menu_choose_by_index_event,event.menu_choose_by_index_event),  91)
 #define ubo_client_Event_CALLBACK NULL
 #define ubo_client_Event_DEFAULT NULL
 #define ubo_client_Event_event_application_scroll_event_MSGTYPE ubo_client_ApplicationScrollEvent

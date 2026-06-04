@@ -12,6 +12,9 @@
 
 extern const lv_font_t ubo_icon_18;
 extern const lv_font_t ubo_icon_14;
+/* Larger sizes for high-res panels (the responsive layout nearest-picks). */
+extern const lv_font_t ubo_icon_24;
+extern const lv_font_t ubo_icon_32;
 
 /* Load the full-coverage icon fonts from `assets_dir` (may be NULL/empty to use
  * the compiled subset). Accessors return the loaded font or the fallback. */

@@ -65,6 +65,12 @@ add_executable(ubo_client_render_snapshot tests/render_snapshot.c)
 target_link_libraries(ubo_client_render_snapshot PRIVATE ubo_client_core ubo_lvgl)
 target_compile_options(ubo_client_render_snapshot PRIVATE -Wall -Wextra)
 
+# Offline layout preview: renders synthetic representative views to BMP (no core)
+# for iterating on geometry/fonts at a given panel size.
+add_executable(ubo_client_layout_preview tests/layout_preview.c)
+target_link_libraries(ubo_client_layout_preview PRIVATE ubo_lvgl)
+target_compile_options(ubo_client_layout_preview PRIVATE -Wall -Wextra)
+
 # ── Tests ──
 # Phase-0 decode smoke test (proves the curated schema matches server bytes).
 add_executable(ubo_client_test_decode tests/test_decode.c)

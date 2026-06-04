@@ -43,7 +43,7 @@ void ubo_build_prompt(const ubo_prompt_view *v)
                           LV_FLEX_ALIGN_CENTER);
     if (v->icon && v->icon[0]) {
         lv_obj_t *ic = lv_label_create(head);
-        lv_obj_set_style_text_font(ic, ubo_font_icon_18(), 0);
+        lv_obj_set_style_text_font(ic, UBO_FONT_ICON, 0);
         lv_obj_set_style_text_color(ic, UBO_COL_FG, 0);
         lv_label_set_text(ic, v->icon);
     }
@@ -53,7 +53,7 @@ void ubo_build_prompt(const ubo_prompt_view *v)
         lv_obj_set_width(msg, lv_pct(100));
         lv_obj_set_style_text_align(msg, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_text_color(msg, UBO_COL_FG, 0);
-        lv_obj_set_style_text_font(msg, &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_font(msg, UBO_FONT_SM, 0);
         lv_label_set_text(msg, v->prompt);
     }
 
