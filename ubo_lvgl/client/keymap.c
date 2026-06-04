@@ -66,3 +66,16 @@ int ubo_keymap_dispatch(ubo_rpc *rpc, const char *key) {
     act.action.keypad_key_release_action = &kr;
     return ubo_rpc_dispatch(rpc, &act);
 }
+
+int ubo_keymap_set_volume(ubo_rpc *rpc, float volume) {
+    float v = volume;
+    ubo_client_AudioDevice dev = ubo_client_AudioDevice_AUDIO_DEVICE_OUTPUT;
+    ubo_client_AudioSetVolumeAction sv =
+        ubo_client_AudioSetVolumeAction_init_zero;
+    sv.volume = &v;
+    sv.device = &dev;
+    ubo_client_Action act = ubo_client_Action_init_zero;
+    act.which_action = ubo_client_Action_audio_set_volume_action_tag;
+    act.action.audio_set_volume_action = &sv;
+    return ubo_rpc_dispatch(rpc, &act);
+}

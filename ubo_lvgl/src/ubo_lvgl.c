@@ -149,6 +149,70 @@ void ubo_layout_init(int w, int h)
 }
 
 /* ------------------------------------------------------------------------- */
+/* Touch hit-test registry (which item bar, if any, is under a touch point)   */
+/* ------------------------------------------------------------------------- */
+
+#define UBO_HIT_MAX 8
+static lv_obj_t *s_hits[UBO_HIT_MAX];
+static int s_hit_count;
+static lv_obj_t *s_volume_bar; /* home-screen vertical volume bar, if shown */
+
+void ubo_hit_clear(void)
+{
+    s_hit_count = 0;
+    s_volume_bar = NULL;
+}
+
+void ubo_hit_register(lv_obj_t *item)
+{
+    if (item && s_hit_count < UBO_HIT_MAX) {
+        s_hits[s_hit_count++] = item;
+    }
+}
+
+void ubo_hit_set_volume(lv_obj_t *bar) { s_volume_bar = bar; }
+
+int ubo_lvgl_hit_volume(int x, int y)
+{
+    int level = -1;
+    ubo_lock();
+    if (s_volume_bar) {
+        lv_area_t a;
+        lv_obj_get_coords(s_volume_bar, &a);
+        const int mx = UBO_SCALE(30); /* horizontal grab margin (slide drift) */
+        if (x >= a.x1 - mx && x <= a.x2 + mx && y >= a.y1 && y <= a.y2) {
+            const int h = a.y2 - a.y1;
+            if (h > 0) {
+                int l = (int)((a.y2 - y) * 100 / h); /* top=100%, bottom=0% */
+                level = l < 0 ? 0 : (l > 100 ? 100 : l);
+            }
+        }
+    }
+    ubo_unlock();
+    return level;
+}
+
+int ubo_lvgl_hit_test(int x, int y)
+{
+    int slot = -1;
+    ubo_lock();
+    for (int i = 0; i < s_hit_count; i++) {
+        lv_area_t a;
+        lv_obj_get_coords(s_hits[i], &a);
+        if (x >= a.x1 && x <= a.x2 && y >= a.y1 && y <= a.y2) {
+            /* Map the item's vertical centre to the L1/L2/L3 slot. */
+            const int cy = (a.y1 + a.y2) / 2;
+            const int ch = UBO_CONTENT_H > 0 ? UBO_CONTENT_H : 1;
+            int s = (cy - UBO_HEADER_H) * 3 / ch;
+            slot = s < 0 ? 0 : (s > 2 ? 2 : s);
+            break;
+        }
+    }
+    ubo_unlock();
+    return slot;
+}
+
+/* ------------------------------------------------------------------------- */
 /* Init                                                                      */
 /* ------------------------------------------------------------------------- */
 

@@ -7,6 +7,7 @@
 #include "board.h"
 #include "client_app.h"
 #include "display/backend_sh8601.h"
+#include "input.h"
 #include "net.h"
 #include "ubo_lvgl.h"
 
@@ -26,10 +27,11 @@ static void lvgl_task(void *arg) {
 }
 
 void app_main(void) {
-    /* 1. Hardware: I2C bus + SH8601 QSPI panel (returns the panel-IO too). */
+    /* 1. Hardware: I2C bus + SH8601 QSPI panel (returns the panel-IO too) + touch. */
     i2c_master_bus_handle_t i2c = board_i2c_init();
     esp_lcd_panel_io_handle_t io = NULL;
     esp_lcd_panel_handle_t panel = board_display_init(i2c, &io);
+    esp_lcd_touch_handle_t touch = board_touch_init(i2c);
 
     /* 2. Renderer: hand the panel to the SH8601 backend, then init LVGL. The
      * renderer shows its splash until the first view arrives from the store. */
@@ -49,9 +51,10 @@ void app_main(void) {
     ESP_LOGI(TAG, "renderer up; free heap: %lu bytes",
              (unsigned long)esp_get_free_heap_size());
 
-    /* 4. Join WiFi, then start the live web-grpc client. */
+    /* 4. Join WiFi, then start the live web-grpc client + touch/BOOT input. */
     if (ubo_net_connect(CONFIG_UBO_WIFI_SSID, CONFIG_UBO_WIFI_PASSWORD)) {
         ubo_client_start(CONFIG_UBO_CORE_GRPC_WEB_URL);
+        ubo_input_start(touch);
     } else {
         ESP_LOGE(TAG, "wifi connect failed");
     }

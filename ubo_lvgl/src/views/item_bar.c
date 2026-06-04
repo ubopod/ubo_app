@@ -69,5 +69,7 @@ lv_obj_t *ubo_item_bar(lv_obj_t *parent, const ubo_menu_item *it, bool short_mod
         lv_label_set_text(lbl, it->label ? it->label : "");
     }
 
+    /* Register for touch hit-testing so taps only select where items are drawn. */
+    ubo_hit_register(row);
     return row;
 }

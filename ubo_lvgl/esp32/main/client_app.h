@@ -21,6 +21,10 @@ void ubo_client_start(const char *web_grpc_url);
  * input callback. */
 void ubo_client_enqueue_key(const char *key);
 
+/* Set the OUTPUT volume to `level` (0..100). Coalesced: only the latest value is
+ * sent, so a touch-slide doesn't flood the network. */
+void ubo_client_set_volume(int level);
+
 #ifdef __cplusplus
 }
 #endif

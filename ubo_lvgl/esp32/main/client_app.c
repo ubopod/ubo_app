@@ -147,11 +147,24 @@ static void event_task(void *arg) {
 }
 
 /* ── dispatch worker ── */
+static volatile int s_pending_vol = -1; /* 0..100, -1 = none */
+
+void ubo_client_set_volume(int level) {
+    s_pending_vol = level < 0 ? 0 : (level > 100 ? 100 : level);
+}
+
 static void dispatch_task(void *arg) {
     (void)arg;
     char key[KEY_MAX];
     while (!st.stop) {
-        if (xQueueReceive(st.keyq, key, portMAX_DELAY) == pdTRUE) {
+        /* Send the latest pending volume (coalesced), then drain a key with a
+         * short timeout so volume slides stay responsive. */
+        const int v = s_pending_vol;
+        if (v >= 0) {
+            s_pending_vol = -1;
+            ubo_keymap_set_volume(st.rpc, (float)v / 100.0f);
+        }
+        if (xQueueReceive(st.keyq, key, pdMS_TO_TICKS(40)) == pdTRUE) {
             ubo_keymap_dispatch(st.rpc, key);
         }
     }

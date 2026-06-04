@@ -90,6 +90,13 @@ const ubo_layout_t *ubo_layout(void);
 /* Parse "#RRGGBB" (or NULL) into an lv_color_t, returning `fallback` if unset. */
 lv_color_t ubo_parse_color(const char *hex, lv_color_t fallback);
 
+/* Touch hit-test registry: view builders register each selectable item bar so a
+ * touch client can map taps to the right slot only where items are drawn.
+ * Cleared whenever the content area is rebuilt. */
+void ubo_hit_clear(void);
+void ubo_hit_register(lv_obj_t *item);
+void ubo_hit_set_volume(lv_obj_t *bar);
+
 /* ---- Persistent chrome ---- */
 void ubo_screen_ensure(void);              /* build header/content/footer once   */
 lv_obj_t *ubo_screen_content(void);        /* full-screen page built into by views */

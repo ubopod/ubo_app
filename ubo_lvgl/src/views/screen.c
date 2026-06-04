@@ -264,6 +264,7 @@ void ubo_screen_clear_content(void)
     ubo_screen_ensure();
     /* The outgoing page (and any frame image on it) is about to be replaced. */
     s_frame_img = NULL;
+    ubo_hit_clear(); /* drop touch hit-targets from the previous view */
     ubo_render_reset(); /* drop the previous render widget's interaction state */
     /* Hide the page slider by default; paginated views re-show it. */
     if (s_slider_track) {

@@ -11,6 +11,7 @@
 #define UBO_BOARD_H
 
 #include "driver/i2c_master.h"
+#include "esp_lcd_touch.h"
 #include "esp_lcd_types.h"
 
 #ifdef __cplusplus
@@ -28,6 +29,10 @@ i2c_master_bus_handle_t board_i2c_init(void);
  * the panel-IO handle so the LVGL backend can register its DMA-done callback. */
 esp_lcd_panel_handle_t board_display_init(i2c_master_bus_handle_t i2c,
                                           esp_lcd_panel_io_handle_t *out_io);
+
+/* Initialize the FT3168 capacitive touch controller on the shared I2C bus.
+ * Returns the touch handle (poll with esp_lcd_touch_read_data / _get_coordinates). */
+esp_lcd_touch_handle_t board_touch_init(i2c_master_bus_handle_t i2c);
 
 #ifdef __cplusplus
 }

@@ -24,6 +24,10 @@ static const char *TAG = "ubo_http";
  * -ESP_ERR_HTTP_EAGAIN and is treated as "still connected, keep waiting" — NOT
  * a disconnect. Kept short so the loop re-checks *stop responsively. */
 #define HTTP_TIMEOUT_MS 5000
+/* Once a stream is connected, drop the per-read timeout low: esp_http_client_read
+ * holds buffered data until its buffer fills OR this timeout expires, so this is
+ * effectively the view-update latency (a fast poll over the pushed stream). */
+#define HTTP_STREAM_READ_TIMEOUT_MS 100
 #define HTTP_READ_CHUNK 1024
 
 struct ubo_http {
@@ -175,6 +179,10 @@ int ubo_http_post_stream(ubo_http *h, const char *path, const uint8_t *body,
         return -1;
     }
     const long status = esp_http_client_get_status_code(c);
+
+    /* Connected: shorten the read timeout so pushed view updates flush promptly
+     * instead of being held until the (long) connect timeout. */
+    esp_http_client_set_timeout_ms(c, HTTP_STREAM_READ_TIMEOUT_MS);
 
     int rc = 0;
     uint8_t chunk[HTTP_READ_CHUNK];

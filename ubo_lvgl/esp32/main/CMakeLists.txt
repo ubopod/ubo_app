@@ -4,11 +4,15 @@ idf_component_register(
         "board.c"
         "net.c"
         "client_app.c"
+        "input.c"
     INCLUDE_DIRS "."
     REQUIRES
         ubo_lvgl_renderer
         ubo_client_core
         esp_lcd
+        esp_lcd_touch
+        esp_lcd_touch_ft5x06
+        esp_driver_gpio
         esp_wifi
         esp_event
         nvs_flash

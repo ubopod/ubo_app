@@ -110,6 +110,7 @@ void ubo_build_home(const ubo_home_view *v)
     lv_obj_set_style_bg_color(vol, lv_color_hex(0x363F4B), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(vol, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_bg_color(vol, lv_color_hex(0x68B7FF), LV_PART_INDICATOR);
+    ubo_hit_set_volume(vol); /* enable touch slide/tap volume control */
 
     lv_obj_t *v_top = lv_label_create(right);
     lv_obj_set_style_text_font(v_top, UBO_FONT_ICON, 0);

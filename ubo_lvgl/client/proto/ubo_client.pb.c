@@ -39,6 +39,9 @@ PB_BIND(ubo_client_KeypadKeyReleaseAction, ubo_client_KeypadKeyReleaseAction, AU
 PB_BIND(ubo_client_AudioToggleMuteStatusAction, ubo_client_AudioToggleMuteStatusAction, AUTO)
 
 
+PB_BIND(ubo_client_AudioSetVolumeAction, ubo_client_AudioSetVolumeAction, AUTO)
+
+
 PB_BIND(ubo_client_Action, ubo_client_Action, 2)
 
 

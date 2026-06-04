@@ -217,6 +217,19 @@ void ubo_lvgl_update_frame(const uint8_t *rgb, int32_t width, int32_t height);
 void ubo_lvgl_render_scroll(const char *direction);
 void ubo_lvgl_render_choose(int index);
 
+/* Hit-test a touch point against the currently-drawn selectable item bars.
+ * Returns the slot index 0/1/2 (→ L1/L2/L3) of the item under (x,y), or -1 if
+ * the point is not on any item (e.g. the empty centre of the home screen). Lets
+ * a touch client map taps to keypad selects only where items are actually
+ * rendered. Thread-safe. */
+int ubo_lvgl_hit_test(int x, int y);
+
+/* Hit-test a touch point against the home-screen volume bar. Returns the volume
+ * level 0..100 the point corresponds to (top=100%, bottom=0%), or -1 if the
+ * point is not on/near the bar (or no bar is shown). Lets a touch client
+ * set the volume by tapping/sliding the bar. Thread-safe. */
+int ubo_lvgl_hit_volume(int x, int y);
+
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
 void ubo_lvgl_set_blanked(bool blanked);    /* backlight off + black overlay */
 void ubo_lvgl_set_connected(bool connected); /* show/hide disconnect overlay  */

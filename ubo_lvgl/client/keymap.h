@@ -12,4 +12,8 @@
  * Returns 0 if dispatched, -1 if the key has no mapping. */
 int ubo_keymap_dispatch(ubo_rpc *rpc, const char *key);
 
+/* Dispatch AudioSetVolumeAction for the OUTPUT device. `volume` is 0..1.
+ * Returns 0 on success. */
+int ubo_keymap_set_volume(ubo_rpc *rpc, float volume);
+
 #endif /* UBO_KEYMAP_H */
