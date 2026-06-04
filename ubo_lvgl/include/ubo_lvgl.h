@@ -235,6 +235,9 @@ void ubo_lvgl_set_blanked(bool blanked);    /* backlight off + black overlay */
 void ubo_lvgl_set_connected(bool connected); /* show/hide disconnect overlay  */
 /* Show the disconnect overlay with a reconnect countdown subtitle. */
 void ubo_lvgl_set_disconnect_status(int attempt, int max_attempts, int seconds);
+/* Show the WiFi-setup cover: "Join '<ap_ssid>' then open http://<ip>". Used by
+ * the ESP32 firmware while the captive portal is up. */
+void ubo_lvgl_set_provisioning_status(const char *ap_ssid, const char *ip);
 
 /* Run the LVGL loop.
  *   threaded=false: block on the calling thread until quit (sim / tests).

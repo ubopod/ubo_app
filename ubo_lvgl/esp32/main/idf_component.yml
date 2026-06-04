@@ -8,3 +8,5 @@ dependencies:
   espressif/esp_lcd_touch_ft5x06: "*"
   # TCA9554 I2C IO-expander: drives the panel reset lines on this board.
   espressif/esp_io_expander_tca9554: "*"
+  # (dns_server for the captive portal is vendored in-tree under
+  #  esp32/components/dns_server/ — it is not a registry component.)

@@ -3,12 +3,16 @@
  * Bring up the board (I2C + SH8601 QSPI panel), initialize the shared C renderer
  * on the SH8601 backend, run the LVGL loop on a dedicated task, join WiFi, then
  * start the web-grpc client so live views from ubo-core render on the panel.
+ * If WiFi can't be joined, fall back to the captive-portal provisioning flow.
  */
+#include <string.h>
+
 #include "board.h"
 #include "client_app.h"
 #include "display/backend_sh8601.h"
 #include "input.h"
 #include "net.h"
+#include "provisioning.h"
 #include "ubo_lvgl.h"
 
 #include "esp_log.h"
@@ -24,6 +28,22 @@ static void lvgl_task(void *arg) {
     (void)arg;
     ubo_lvgl_run(false); /* blocks: drives lv_timer_handler + flushes */
     vTaskDelete(NULL);
+}
+
+/* Resolve credentials: NVS first, else the build-time Kconfig seed (unless it's
+ * still the "changeme" default). Returns true if we have something to try. */
+static bool resolve_creds(char *ssid, char *pass) {
+    if (ubo_net_creds_load(ssid, pass)) {
+        ESP_LOGI(TAG, "using stored WiFi creds (SSID '%s')", ssid);
+        return true;
+    }
+    if (strcmp(CONFIG_UBO_WIFI_SSID, "changeme") != 0) {
+        strncpy(ssid, CONFIG_UBO_WIFI_SSID, UBO_SSID_MAXLEN - 1);
+        strncpy(pass, CONFIG_UBO_WIFI_PASSWORD, UBO_PASS_MAXLEN - 1);
+        ESP_LOGI(TAG, "using Kconfig seed creds (SSID '%s')", ssid);
+        return true;
+    }
+    return false;
 }
 
 void app_main(void) {
@@ -51,11 +71,27 @@ void app_main(void) {
     ESP_LOGI(TAG, "renderer up; free heap: %lu bytes",
              (unsigned long)esp_get_free_heap_size());
 
-    /* 4. Join WiFi, then start the live web-grpc client + touch/BOOT input. */
-    if (ubo_net_connect(CONFIG_UBO_WIFI_SSID, CONFIG_UBO_WIFI_PASSWORD)) {
-        ubo_client_start(CONFIG_UBO_CORE_GRPC_WEB_URL);
+    /* 4. WiFi: init the stack, then try to join (NVS creds, else Kconfig seed).
+     * On success start the live client + input (the input task also handles the
+     * BOOT long-press WiFi reset); otherwise bring up the captive portal. */
+    ubo_net_init();
+
+    char ssid[UBO_SSID_MAXLEN] = {0}, pass[UBO_PASS_MAXLEN] = {0};
+    const uint32_t timeout_ms = CONFIG_UBO_WIFI_CONNECT_TIMEOUT_S * 1000;
+    if (resolve_creds(ssid, pass) && ubo_net_connect(ssid, pass, timeout_ms)) {
+        ubo_net_creds_save(ssid, pass); /* persist a working seed/retry */
+        /* Core endpoint: provisioned host/port (NVS) wins over the Kconfig URL. */
+        char url[128];
+        const char *core_url = ubo_net_core_url(url, sizeof(url))
+                                   ? url
+                                   : CONFIG_UBO_CORE_GRPC_WEB_URL;
+        ESP_LOGI(TAG, "core endpoint: %s", core_url);
+        ubo_client_start(core_url);
         ubo_input_start(touch);
     } else {
-        ESP_LOGE(TAG, "wifi connect failed");
+        ESP_LOGW(TAG, "no WiFi: starting captive portal '%s'",
+                 CONFIG_UBO_PROV_AP_SSID);
+        ubo_lvgl_set_provisioning_status(CONFIG_UBO_PROV_AP_SSID, "192.168.4.1");
+        ubo_provisioning_run(); /* blocks; reboots on successful provision */
     }
 }

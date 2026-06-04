@@ -11,6 +11,7 @@ static lv_obj_t *s_splash;
 static lv_obj_t *s_blank;
 static lv_obj_t *s_disc;
 static lv_obj_t *s_disc_sub; /* "Reconnecting in Ns (attempt A/M)" subtitle */
+static lv_obj_t *s_prov;     /* WiFi setup / captive-portal instructions cover */
 
 static lv_obj_t *full_cover(lv_color_t bg)
 {
@@ -117,4 +118,32 @@ void ubo_overlay_disconnected_status(int attempt, int max_attempts, int seconds)
     }
     lv_obj_move_foreground(s_disc);
     lv_obj_clear_flag(s_disc, LV_OBJ_FLAG_HIDDEN);
+}
+
+void ubo_overlay_provisioning(const char *ap_ssid, const char *ip)
+{
+    if (!s_prov) {
+        s_prov = full_cover(UBO_COL_BG);
+
+        lv_obj_t *icon = lv_label_create(s_prov);
+        lv_obj_set_style_text_font(icon, UBO_FONT_ICON, 0);
+        lv_obj_set_style_text_color(icon, UBO_COL_INFO, 0);
+        lv_label_set_text(icon, "\U000F0928"); /* wifi glyph */
+
+        lv_obj_t *title = lv_label_create(s_prov);
+        lv_obj_set_style_text_color(title, UBO_COL_FG, 0);
+        lv_obj_set_style_text_font(title, UBO_FONT_LG, 0);
+        lv_label_set_text(title, "WiFi setup");
+
+        lv_obj_t *sub = lv_label_create(s_prov);
+        lv_label_set_long_mode(sub, LV_LABEL_LONG_WRAP);
+        lv_obj_set_width(sub, UBO_W - 20);
+        lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_text_color(sub, UBO_COL_MUTED, 0);
+        lv_obj_set_style_text_font(sub, UBO_FONT_SM, 0);
+        lv_label_set_text_fmt(sub, "Join WiFi '%s'\nthen open http://%s", ap_ssid,
+                              ip);
+    }
+    lv_obj_move_foreground(s_prov);
+    lv_obj_clear_flag(s_prov, LV_OBJ_FLAG_HIDDEN);
 }

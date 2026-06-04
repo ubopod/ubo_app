@@ -5,6 +5,7 @@ idf_component_register(
         "net.c"
         "client_app.c"
         "input.c"
+        "provisioning.c"
     INCLUDE_DIRS "."
     REQUIRES
         ubo_lvgl_renderer
@@ -15,5 +16,8 @@ idf_component_register(
         esp_driver_gpio
         esp_wifi
         esp_event
+        esp_netif
+        esp_http_server
+        dns_server
         nvs_flash
 )

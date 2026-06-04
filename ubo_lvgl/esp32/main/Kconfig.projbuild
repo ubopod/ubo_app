@@ -12,6 +12,21 @@ config UBO_WIFI_PASSWORD
     help
         WPA2 password for the WiFi network.
 
+config UBO_WIFI_CONNECT_TIMEOUT_S
+    int "WiFi connect timeout (seconds)"
+    default 5
+    range 3 30
+    help
+        How long to wait for a station connection before giving up and bringing
+        up the captive-portal provisioning AP.
+
+config UBO_PROV_AP_SSID
+    string "Provisioning AP SSID"
+    default "ubo-setup"
+    help
+        SSID of the open SoftAP exposed for captive-portal WiFi provisioning
+        when the device cannot join a configured network.
+
 config UBO_CORE_GRPC_WEB_URL
     string "Core gRPC-Web base URL"
     default "http://192.168.1.100:50052/grpc"

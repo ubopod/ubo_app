@@ -4,6 +4,8 @@
 #include "client_app.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "esp_system.h"
+#include "net.h"
 #include "ubo_lvgl.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -15,12 +17,13 @@ static const char *TAG = "ubo_input";
 #define POLL_MS 20        /* ~50 Hz */
 #define TAP_MAX_MOVE 25 /* px: below this a press/release is a tap */
 #define SWIPE_MIN 50    /* px: minimum travel for a swipe */
+#define BOOT_RESET_MS 3000 /* hold BOOT this long -> clear WiFi creds + reboot */
 
 /* Gestures -> Ubo keys:
  *   tap        -> L1/L2/L3 by which vertical third was tapped (the slot)
  *   swipe up   -> UP        swipe down -> DOWN
  *   swipe horiz-> BACK
- *   BOOT press -> HOME
+ *   BOOT tap   -> HOME       BOOT hold (>=3s) -> clear WiFi creds + reboot to setup
  */
 static void input_task(void *arg) {
     esp_lcd_touch_handle_t tp = (esp_lcd_touch_handle_t)arg;
@@ -35,7 +38,9 @@ static void input_task(void *arg) {
     bool down = false;
     bool vol_mode = false; /* this touch started on the volume bar */
     int sx = 0, sy = 0, cx = 0, cy = 0;
-    bool boot_prev = true; /* released (pull-up high) */
+    bool boot_pressed_prev = false;
+    int boot_held_ms = 0;
+    bool boot_reset_fired = false;
 
     while (1) {
         uint16_t tx[1], ty[1];
@@ -91,11 +96,25 @@ static void input_task(void *arg) {
             }
         }
 
-        const bool boot_now = gpio_get_level(BOOT_GPIO); /* 1=up, 0=pressed */
-        if (!boot_now && boot_prev) {
-            ubo_client_enqueue_key("HOME");
+        /* BOOT: short tap -> HOME (on release); hold >=3s -> clear WiFi creds
+         * and reboot so the device comes back up in the setup portal. */
+        const bool boot_pressed = gpio_get_level(BOOT_GPIO) == 0;
+        if (boot_pressed) {
+            boot_held_ms += POLL_MS;
+            if (!boot_reset_fired && boot_held_ms >= BOOT_RESET_MS) {
+                boot_reset_fired = true;
+                ESP_LOGW(TAG, "BOOT held: clearing WiFi creds, rebooting to setup");
+                ubo_net_creds_clear();
+                esp_restart();
+            }
+        } else {
+            if (boot_pressed_prev && !boot_reset_fired) {
+                ubo_client_enqueue_key("HOME");
+            }
+            boot_held_ms = 0;
+            boot_reset_fired = false;
         }
-        boot_prev = boot_now;
+        boot_pressed_prev = boot_pressed;
 
         vTaskDelay(pdMS_TO_TICKS(POLL_MS));
     }

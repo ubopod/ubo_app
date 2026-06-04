@@ -461,6 +461,13 @@ void ubo_lvgl_set_disconnect_status(int attempt, int max_attempts, int seconds)
     ubo_unlock();
 }
 
+void ubo_lvgl_set_provisioning_status(const char *ap_ssid, const char *ip)
+{
+    ubo_lock();
+    ubo_overlay_provisioning(ap_ssid, ip);
+    ubo_unlock();
+}
+
 /* ------------------------------------------------------------------------- */
 /* Loop                                                                      */
 /* ------------------------------------------------------------------------- */

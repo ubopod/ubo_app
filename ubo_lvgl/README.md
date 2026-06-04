@@ -279,9 +279,12 @@ and stream reconnect are verified.
 **ESP32-C6 port** (`esp32/`) runs the same renderer + client on the Waveshare
 ESP32-C6-Touch-AMOLED-1.8 (SH8601 368×448 QSPI AMOLED, FT3168 touch, WiFi 6):
 responsive layout, `esp_http_client` web-grpc transport, live store/event
-streams, touch navigation + interactive volume, and reconnect/backoff with a
-disconnect overlay — all verified on-device. See [`esp32/README.md`](esp32/README.md).
-The camera viewfinder is deferred on-device (512KB SRAM, no PSRAM).
+streams, touch navigation + interactive volume, reconnect/backoff with a
+disconnect overlay, and **on-device WiFi setup** via a captive portal (join the
+`ubo-setup` AP from a phone, pick your network + optional ubo-core host/port; hold
+BOOT ~3s to re-provision) — all verified on-device. See the WiFi setup journey and
+build steps in [`esp32/README.md`](esp32/README.md). The camera viewfinder is
+deferred on-device (512KB SRAM, no PSRAM).
 
 Remaining:
 

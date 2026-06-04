@@ -155,5 +155,7 @@ void ubo_overlay_blank(bool on);          /* full black cover */
 void ubo_overlay_disconnected(bool shown); /* red "Disconnected" cover */
 /* Show the disconnect cover with a reconnect countdown subtitle. */
 void ubo_overlay_disconnected_status(int attempt, int max_attempts, int seconds);
+/* WiFi-setup cover: "Join '<ap_ssid>' then open http://<ip>" (captive portal). */
+void ubo_overlay_provisioning(const char *ap_ssid, const char *ip);
 
 #endif /* UBO_VIEWS_H */
