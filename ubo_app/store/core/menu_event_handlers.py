@@ -141,10 +141,15 @@ def _handle_notification_choose_by_index(
     if state is None:
         return False
 
-    from ubo_app.store.core.view_computation import get_notification_view_data
+    from ubo_app.store.core.view_computation import (
+        get_notification_view_data,
+        visible_stack,
+    )
 
-    # Get page_index from the notification stack item
-    top = state.main.stack[-1] if state.main.stack else None
+    # Get page_index from the *visible* top notification (BACKGROUND overlays
+    # are filtered out, matching the view computation).
+    stack = visible_stack(state)
+    top = stack[-1] if stack else None
     notif_page_index = (
         top.page_index
         if isinstance(top, NotificationStackItem)
@@ -396,12 +401,18 @@ def _handle_choose_by_index(event: MenuChooseByIndexEvent) -> None:
         logger.warning('[MenuHandler] choose_by_index: state is None')
         return
 
-    top = state.main.stack[-1] if state.main.stack else None
+    # Resolve the *visible* top — BACKGROUND/mid-dismissal notification
+    # overlays sit on the raw stack top but are filtered out of the view, so a
+    # button press must act on what the user actually sees underneath them.
+    from ubo_app.store.core.view_computation import visible_stack
+
+    stack = visible_stack(state)
+    top = stack[-1] if stack else None
     logger.debug(
         '[MenuHandler] choose_by_index: index=%d, top=%s, stack_depth=%d',
         event.index,
         type(top).__name__ if top else 'None',
-        len(state.main.stack),
+        len(stack),
     )
 
     # Handle notification items

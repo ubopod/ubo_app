@@ -79,6 +79,24 @@ def _is_background_notification(state: RootState, item: StackItemType) -> bool:
     )
 
 
+def visible_stack(state: RootState) -> tuple[StackItemType, ...]:
+    """Return the navigation stack as the on-screen view sees it.
+
+    BACKGROUND (and mid-dismissal) notification overlays are dropped: they
+    live only in the status-bar progress wheel, not on screen, even while
+    their ``NotificationStackItem`` stays on the stack. Both the view
+    computation and the keypad ``choose_by_index`` handler must resolve the
+    "top" item through this filter, otherwise a hidden BACKGROUND overlay
+    sitting on the raw stack top would steal button presses meant for the
+    visible notification underneath it.
+    """
+    return tuple(
+        item
+        for item in state.main.stack
+        if not _is_background_notification(state, item)
+    )
+
+
 # Cache hostname at module load — it doesn't change at runtime
 _HOSTNAME_TITLE = f'󰋜{socket.gethostname()}.local'
 
@@ -370,9 +388,7 @@ def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901, P
     # item stays put; this filter is what makes the
     # STICKY → BACKGROUND → FLASH lifecycle work without popping and
     # re-pushing the notification (which raced the view autorun).
-    stack = tuple(
-        item for item in stack if not _is_background_notification(state, item)
-    )
+    stack = visible_stack(state)
 
     if not stack:
         return HomeViewData()

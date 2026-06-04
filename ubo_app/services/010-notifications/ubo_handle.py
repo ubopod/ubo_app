@@ -50,7 +50,6 @@ def _create_dismiss_handler(notification: Notification) -> None:
     from ubo_app.logger import logger
     from ubo_app.store.core.action_registry import register_action
     from ubo_app.store.core.constants import NOTIFICATION_DISMISS_PREFIX
-    from ubo_app.store.core.types import StackPopAction
     from ubo_app.store.main import store
     from ubo_app.store.services.notifications import NotificationsClearAction
 
@@ -58,8 +57,10 @@ def _create_dismiss_handler(notification: Notification) -> None:
     action_id = f'{NOTIFICATION_DISMISS_PREFIX}{notification_id}'
 
     def dismiss() -> None:
-        store.dispatch(StackPopAction())
-
+        # NotificationsClearAction already pops this notification's overlay by
+        # id (its reducer returns StackPopNotificationAction). A blind
+        # StackPopAction() here would pop whatever is on *top* of the stack,
+        # dismissing a second notification when this one isn't the top.
         @store.with_state(lambda state: state.notifications.notifications)
         def clear_notification(
             notifications: Sequence[Notification],
@@ -112,12 +113,15 @@ def _handle_close_dismiss(
     notification_id: str,
 ) -> None:
     """Handle close/dismiss behavior after action execution."""
-    from ubo_app.store.core.types import StackPopAction
+    from ubo_app.store.core.types import StackPopNotificationAction
     from ubo_app.store.main import store
     from ubo_app.store.services.notifications import NotificationsClearAction
 
-    if action.close_notification or action.dismiss_notification:
-        store.dispatch(StackPopAction())
+    # Close-only: pop *this* notification's overlay by id (not the stack top).
+    # Dismiss: NotificationsClearAction below already pops it by id, so no
+    # explicit pop is needed (and a blind pop would drop a second one).
+    if action.close_notification and not action.dismiss_notification:
+        store.dispatch(StackPopNotificationAction(notification_id=notification_id))
 
     if action.dismiss_notification:
 

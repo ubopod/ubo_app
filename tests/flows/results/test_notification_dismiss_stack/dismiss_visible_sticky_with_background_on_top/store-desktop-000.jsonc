@@ -1,0 +1,60 @@
+// store-desktop-000
+{
+  "current_view_type": "NotificationViewData",
+  "notification_ids_on_stack": [
+    "dismiss-bg:sticky",
+    "dismiss-bg:background"
+  ],
+  "notifications": [
+    {
+      "_type": "Notification",
+      "actions": [],
+      "blink": false,
+      "chime": null,
+      "color": "#2196F3",
+      "content": "Model download in progress.",
+      "dismiss_on_close": false,
+      "display_type": "background",
+      "expiration_timestamp": null,
+      "extra_information": null,
+      "flash_time": 1000,
+      "icon": "󰌶",
+      "id": "dismiss-bg:background",
+      "importance": "low",
+      "is_read": false,
+      "on_close_id": null,
+      "progress": 0.5,
+      "progress_weight": 1,
+      "sender": null,
+      "show_dismiss_action": true,
+      "timestamp": 0,
+      "title": "Downloading"
+    },
+    {
+      "_type": "Notification",
+      "actions": [],
+      "blink": false,
+      "chime": null,
+      "color": "#2196F3",
+      "content": "Set up WiFi.",
+      "dismiss_on_close": false,
+      "display_type": "sticky",
+      "expiration_timestamp": null,
+      "extra_information": null,
+      "flash_time": 1000,
+      "icon": "󰌶",
+      "id": "dismiss-bg:sticky",
+      "importance": "low",
+      "is_read": false,
+      "on_close_id": null,
+      "progress": null,
+      "progress_weight": 1,
+      "sender": null,
+      "show_dismiss_action": true,
+      "timestamp": 0,
+      "title": "WiFi"
+    }
+  ],
+  "progress": 0.5,
+  "unread_count": 2
+}
