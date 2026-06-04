@@ -175,6 +175,8 @@ def voice_handler(
         module._voice_state.is_listening = False  # noqa: SLF001
         module._voice_state.user_message_id = ''  # noqa: SLF001
         module._voice_state.assistant_message_id = ''  # noqa: SLF001
+        module._voice_state.awaiting_response = False  # noqa: SLF001
+        module._voice_state.turn_ended_at = 0.0  # noqa: SLF001
         module._voice_state.dismiss_handle = None  # noqa: SLF001
         module._voice_state.timer_initiated_dismiss = False  # noqa: SLF001
 
@@ -276,6 +278,166 @@ def test_listening_rising_edge_starts_chat_session(
         isinstance(a, types.ChatStartSessionAction)
         for a in fake_store.dispatched
     )
+
+
+def test_listening_falling_edge_arms_processing_hold(
+    voice_handler: _VoiceHandler,
+) -> None:
+    """True→False on ``is_listening`` arms the post-turn processing hold.
+
+    Non-streaming STT writes nothing during the turn, so the chat must be
+    held open between the user releasing the key and the first response
+    frame — ``_should_dismiss`` gates on this flag.
+    """
+    module, fake_store, _, _ = voice_handler
+    fake_store.set_listening(value=True)
+    assert module._voice_state.awaiting_response is False  # noqa: SLF001
+
+    fake_store.set_listening(value=False)
+
+    assert module._voice_state.awaiting_response is True  # noqa: SLF001
+    assert module._voice_state.turn_ended_at > 0  # noqa: SLF001
+
+
+def test_report_frame_does_not_eagerly_clear_hold(
+    voice_handler: _VoiceHandler,
+) -> None:
+    """The report handler must NOT eagerly clear the processing hold.
+
+    Regression guard: ``store.dispatch`` only queues the ``last_activity_time``
+    bump (applied later on the scheduler thread). If the handler cleared the
+    hold flag here, the dismiss loop (a different thread) could observe the
+    cleared flag together with the still-stale session-start
+    ``last_activity_time`` and race a spurious dismiss. The hold is released
+    instead by ``_should_dismiss`` observing the timestamp advance.
+    """
+    module, fake_store, _, types = voice_handler
+    fake_store.set_listening(value=True)
+    fake_store.set_listening(value=False)
+    assert module._voice_state.awaiting_response is True  # noqa: SLF001
+
+    fake_store.fire_event(
+        _report(
+            types,
+            _make_text_frame(
+                types,
+                text='hello',
+                source=types.AssistantPipelineStage.STT,
+            ),
+        ),
+    )
+
+    assert module._voice_state.awaiting_response is True  # noqa: SLF001
+
+
+def test_rising_edge_clears_stale_processing_hold(
+    voice_handler: _VoiceHandler,
+) -> None:
+    """Starting a new turn clears any leftover processing hold."""
+    module, fake_store, _, _ = voice_handler
+    fake_store.set_listening(value=True)
+    fake_store.set_listening(value=False)
+    assert module._voice_state.awaiting_response is True  # noqa: SLF001
+
+    fake_store.set_listening(value=True)
+
+    assert module._voice_state.awaiting_response is False  # noqa: SLF001
+
+
+def _fake_chat(
+    *,
+    last_activity_time: float | None,
+    is_active: bool = True,
+    is_audio_playing: bool = False,
+) -> SimpleNamespace:
+    """Minimal stand-in for ``ChatState`` for ``_should_dismiss`` tests."""
+    return SimpleNamespace(
+        is_active=is_active,
+        last_activity_time=last_activity_time,
+        is_audio_playing=is_audio_playing,
+    )
+
+
+def test_should_dismiss_holds_while_post_turn_write_pending(
+    voice_handler: _VoiceHandler,
+) -> None:
+    """The core race fix: a stale ``last_activity_time`` must NOT dismiss.
+
+    After a long non-streaming turn ``last_activity_time`` is still the
+    session-start value (far older than the idle delay), and the queued
+    post-turn bubble bump hasn't landed yet (``last_activity_time <=
+    turn_ended_at``). ``_should_dismiss`` must hold the chat open rather
+    than racing the bump.
+    """
+    module, _, _, _ = voice_handler
+    now = module.default_now()
+    module._voice_state.awaiting_response = True  # noqa: SLF001
+    module._voice_state.turn_ended_at = now  # noqa: SLF001
+    # Session started 10 s ago; nothing written since — far past the 4 s
+    # idle delay, yet <= turn_ended_at, so the hold must win.
+    chat = _fake_chat(last_activity_time=now - 10)
+
+    assert module._should_dismiss(chat) is False  # noqa: SLF001
+
+
+def test_should_dismiss_releases_once_activity_advances(
+    voice_handler: _VoiceHandler,
+) -> None:
+    """Once the post-turn write lands the hold releases to normal idle.
+
+    A fresh ``last_activity_time`` (> ``turn_ended_at``) means the bump has
+    been applied; within the idle delay the chat stays open under the
+    normal rule, not the hold.
+    """
+    module, _, _, _ = voice_handler
+    now = module.default_now()
+    module._voice_state.awaiting_response = True  # noqa: SLF001
+    module._voice_state.turn_ended_at = now - 10  # noqa: SLF001
+    # STT bump landed 1 s ago — fresh (> turn_ended_at), within the 4 s
+    # idle delay, so the chat stays open under the normal idle rule.
+    chat = _fake_chat(last_activity_time=now - 1)
+
+    assert module._should_dismiss(chat) is False  # noqa: SLF001
+
+    # ...and once that (post-turn) activity itself goes idle, it dismisses.
+    stale = _fake_chat(last_activity_time=now - 5)
+    assert module._should_dismiss(stale) is True  # noqa: SLF001
+
+
+def test_should_dismiss_hold_times_out_on_silent_turn(
+    voice_handler: _VoiceHandler,
+) -> None:
+    """A turn that yields no output can't wedge the chat open forever."""
+    module, _, _, _ = voice_handler
+    now = module.default_now()
+    timeout = module._AWAITING_RESPONSE_TIMEOUT_SECONDS  # noqa: SLF001
+    module._voice_state.awaiting_response = True  # noqa: SLF001
+    module._voice_state.turn_ended_at = now - (timeout + 1)  # noqa: SLF001
+    # No post-turn write ever landed (still <= turn_ended_at) and the grace
+    # window has elapsed — fall through to idle dismissal.
+    chat = _fake_chat(last_activity_time=now - (timeout + 5))
+
+    assert module._should_dismiss(chat) is True  # noqa: SLF001
+
+
+def test_should_dismiss_respects_listening_and_audio_gates(
+    voice_handler: _VoiceHandler,
+) -> None:
+    """Listening / active TTS playback keep the chat open regardless of idle."""
+    module, _, _, _ = voice_handler
+    now = module.default_now()
+    stale = _fake_chat(last_activity_time=now - 10)
+
+    module._voice_state.awaiting_response = False  # noqa: SLF001
+    module._voice_state.is_listening = True  # noqa: SLF001
+    assert module._should_dismiss(stale) is False  # noqa: SLF001
+
+    module._voice_state.is_listening = False  # noqa: SLF001
+    playing = _fake_chat(last_activity_time=now - 10, is_audio_playing=True)
+    assert module._should_dismiss(playing) is False  # noqa: SLF001
+
+    # Plain idle, no gates → dismiss.
+    assert module._should_dismiss(stale) is True  # noqa: SLF001
 
 
 def test_stt_first_frame_creates_user_bubble(
