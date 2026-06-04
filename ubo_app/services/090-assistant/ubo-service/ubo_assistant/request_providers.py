@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -146,7 +146,7 @@ async def _build_llm(
     provider_id: str,
     model: str,
     client: UboRPCClient,
-) -> LLMService | None:
+) -> LLMService[Any] | None:
     if provider_id == 'ollama':
         from pipecat.services.ollama.llm import OLLamaLLMService
 
@@ -212,7 +212,7 @@ def _construct_cloud_llm(
     provider_id: str,
     model: str,
     api_key: str,
-) -> LLMService | None:
+) -> LLMService[Any] | None:
     if provider_id == 'openai':
         from pipecat.services.openai.llm import OpenAILLMService
 
@@ -398,7 +398,7 @@ async def build_llm_service(
     *,
     model: str,
     client: UboRPCClient,
-) -> LLMService | None:
+) -> LLMService[Any] | None:
     """Construct the LLM service for ``provider_id``, or ``None`` if unavailable."""
     try:
         return await _build_llm(provider_id, model, client)
