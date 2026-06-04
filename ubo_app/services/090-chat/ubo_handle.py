@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from ubo_app.store.services.assistant import AssistantHandleReportEvent
     from ubo_app.store.services.chat import (
         ChatSessionEndedEvent,
+        ChatState,
         ChatUserMessageSentEvent,
     )
     from ubo_app.utils.types import Subscriptions
@@ -32,6 +33,17 @@ _DISMISS_DELAY_SECONDS = 4.0
 # delay between "should close" and "actually closes" is negligible, large
 # enough not to spam state reads.
 _DISMISS_POLL_SECONDS = 0.5
+# Grace window after the user's turn ends during which the chat refuses to
+# dismiss while waiting for the assistant's first response frame. Non-
+# streaming STT (e.g. OpenAI) writes nothing during the turn, so at key-
+# release ``last_activity_time`` is already stale and the normal idle
+# countdown would close the chat before the transcription returns from the
+# network. This bounded hold covers the processing gap; it's a safety net,
+# not the steady-state timeout — the first STT/LLM frame (or TTS audio)
+# clears it and hands back to ``last_activity_time`` / ``is_audio_playing``.
+# Generous enough for an STT round-trip plus first LLM token, but bounded so
+# an empty transcription (no frames, no audio) can't wedge the chat open.
+_AWAITING_RESPONSE_TIMEOUT_SECONDS = 15.0
 
 
 @dataclass
@@ -56,16 +68,77 @@ class _VoiceState:
       dispatching it would broadcast an ``InterruptionFrame`` that cuts
       in-flight TTS. On the Back-button path this flag stays False and
       the handler stops the assistant cleanly.
+    - ``awaiting_response`` / ``turn_ended_at``: set when the user's turn
+      ends (listening falling edge). The dismiss loop holds the chat open
+      while ``awaiting_response`` is set, no post-turn write has landed yet
+      (``last_activity_time <= turn_ended_at``), and we're within
+      ``_AWAITING_RESPONSE_TIMEOUT_SECONDS`` of ``turn_ended_at``. This is
+      the keep-alive for the processing gap that non-streaming STT leaves
+      uncovered, mirroring the ``is_listening`` / ``is_audio_playing``
+      gates. The release is keyed off ``last_activity_time`` advancing —
+      not an eager flag clear — so it can't race the queued bump (see
+      ``_should_dismiss``). ``awaiting_response`` is reset on the next
+      rising edge / session end purely for hygiene.
     """
 
     is_listening: bool = False
     user_message_id: str = ''
     assistant_message_id: str = ''
+    awaiting_response: bool = False
+    turn_ended_at: float = 0.0
     dismiss_handle: Handle | None = None
     timer_initiated_dismiss: bool = False
 
 
 _voice_state = _VoiceState()
+
+
+def _should_dismiss(chat: ChatState | None) -> bool:
+    """Decide whether the idle chat overlay should be auto-dismissed.
+
+    Returns True only when the chat is active, not being kept alive by
+    listening / TTS playback / the post-turn processing hold, and the idle
+    gap has elapsed. Reads the module-level ``_voice_state`` for the
+    listening / processing-hold gates; pure aside from ``default_now()`` so
+    the decision is unit-testable in isolation.
+    """
+    if chat is None or not chat.is_active:
+        return False
+    if chat.last_activity_time is None:
+        return False
+    if _voice_state.is_listening:
+        return False
+    # Never dismiss while pipecat TTS audio is actually being played out —
+    # the reducer holds this flag True between the first
+    # ``AudioPlayAudioSequenceAction`` (chunk queued) and the matching
+    # ``AudioPlaybackDoneAction`` (audio service's play loop exited because
+    # the buffer drained).
+    if chat.is_audio_playing:
+        return False
+    now = default_now()
+    # Hold the chat open through the post-turn processing gap. Non-streaming
+    # STT writes nothing during the turn, so at key-release
+    # ``last_activity_time`` is still the stale session-start value and the
+    # idle countdown below would close the chat before the transcription
+    # arrives.
+    #
+    # The hold release is keyed off ``last_activity_time`` itself — *not* a
+    # separate eagerly-cleared flag. ``store.dispatch`` only queues the
+    # post-turn bubble + ``last_activity_time`` bump (applied later on the
+    # scheduler thread); keying off a flag set in the report handler would
+    # expose the stale timestamp in the window before that bump lands and
+    # race a spurious dismiss. While ``last_activity_time <= turn_ended_at``
+    # no post-turn write has landed yet, so keep holding; the instant the
+    # bump lands the timestamp is fresh and the normal idle check keeps the
+    # chat open. The bounded timeout is the safety net for a turn that
+    # yields no output at all (empty transcription — no frames, no audio).
+    if (
+        _voice_state.awaiting_response
+        and chat.last_activity_time <= _voice_state.turn_ended_at
+        and now - _voice_state.turn_ended_at < _AWAITING_RESPONSE_TIMEOUT_SECONDS
+    ):
+        return False
+    return now - chat.last_activity_time >= _DISMISS_DELAY_SECONDS
 
 
 def _register_chat_menu_item() -> Subscriptions:
@@ -200,11 +273,17 @@ def _register_voice_handler() -> Subscriptions:  # noqa: C901, PLR0915
             _voice_state.is_listening = True
             _voice_state.user_message_id = ''
             _voice_state.assistant_message_id = ''
+            _voice_state.awaiting_response = False
             store.dispatch(ChatStartSessionAction())
         elif not is_listening and _voice_state.is_listening:
             _voice_state.is_listening = False
-            # No timer to arm: ``ChatState.last_activity_time`` and the
-            # background dismiss loop handle the countdown.
+            # The user just finished talking; the assistant is now
+            # processing. Non-streaming STT writes nothing during the turn,
+            # so ``last_activity_time`` is stale — hold the chat open until
+            # the first response frame (or the bounded grace timeout) rather
+            # than letting the idle countdown close it mid-processing.
+            _voice_state.awaiting_response = True
+            _voice_state.turn_ended_at = default_now()
 
     def _route_stt_frame(frame: AssistanceTextFrame) -> None:
         # STT interim frames are cumulative — overwrite, never append.
@@ -249,6 +328,14 @@ def _register_voice_handler() -> Subscriptions:  # noqa: C901, PLR0915
     def _on_report(event: AssistantHandleReportEvent) -> None:
         if event.source_id != LIVE_PIPELINE_SOURCE_ID:
             return
+        # NB: the processing hold is *not* released here. ``store.dispatch``
+        # only queues the bubble + ``last_activity_time`` bump (processed
+        # later on the scheduler thread), so eagerly clearing a flag here
+        # would momentarily expose the stale session-start
+        # ``last_activity_time`` to the dismiss loop (a different thread) and
+        # race a spurious dismiss. Instead the dismiss loop releases the
+        # hold by observing ``last_activity_time`` advance past
+        # ``turn_ended_at`` — read atomically with the idle check.
         frame = event.data
         # Audio frames keep the chat open via the reducer (which sees the
         # ``AudioPlayAudioSequenceAction`` dispatched by ``_communicate``);
@@ -268,6 +355,7 @@ def _register_voice_handler() -> Subscriptions:  # noqa: C901, PLR0915
         _voice_state.timer_initiated_dismiss = False
         _voice_state.user_message_id = ''
         _voice_state.assistant_message_id = ''
+        _voice_state.awaiting_response = False
         if not was_timer_dismiss:
             store.dispatch(AssistantStopListeningAction())
             store.dispatch(AssistantStopTalkingAction())
@@ -288,22 +376,7 @@ def _register_voice_handler() -> Subscriptions:  # noqa: C901, PLR0915
                 state = store._state  # noqa: SLF001
                 if state is None:
                     continue
-                chat = getattr(state, 'chat', None)
-                if chat is None or not chat.is_active:
-                    continue
-                if chat.last_activity_time is None:
-                    continue
-                if _voice_state.is_listening:
-                    continue
-                # Never dismiss while pipecat TTS audio is actually being
-                # played out — the reducer holds this flag True between
-                # the first ``AudioPlayAudioSequenceAction`` (chunk queued)
-                # and the matching ``AudioPlaybackDoneAction`` (audio
-                # service's play loop exited because the buffer drained).
-                if chat.is_audio_playing:
-                    continue
-                now = default_now()
-                if now - chat.last_activity_time < _DISMISS_DELAY_SECONDS:
+                if not _should_dismiss(getattr(state, 'chat', None)):
                     continue
                 # Mark the dispatch as "from our timer" so the session-
                 # ended handler doesn't broadcast ``AssistantStopTalkingAction``
