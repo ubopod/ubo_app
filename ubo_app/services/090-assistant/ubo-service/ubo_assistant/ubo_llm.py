@@ -360,13 +360,23 @@ class UboLLMService(UboLLMSwitchService):
 
         previous = self._config.selected_models.get(service_id)
         self._config.selected_models[service_id] = new_model
-        if previous == new_model:
-            return
 
         current_id = self._current_service_id
-        if current_id == service_id and (
+        is_active = current_id == service_id and (
             current_id in self._API_KEY_PROVIDERS or current_id == 'ollama'
-        ):
+        )
+        # Re-asserting the same model is normally a no-op, but for the active
+        # local-Ollama provider it's also how a just-finished model download
+        # signals readiness: the OLLamaLLMService built when Ollama was first
+        # selected may have started against a not-yet-running daemon (the model
+        # wasn't downloaded yet), so it must be rebuilt now that the model is
+        # available — otherwise the assistant stays silent until a restart.
+        # API-key providers have no such readiness handshake, so they keep the
+        # dedup to avoid churning their service on redundant re-selections.
+        if previous == new_model and not (is_active and current_id == 'ollama'):
+            return
+
+        if is_active and current_id is not None:
             logger.info(
                 'Selected model changed for active provider; refreshing',
                 extra={
