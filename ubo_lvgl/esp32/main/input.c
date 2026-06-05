@@ -17,6 +17,7 @@ static const char *TAG = "ubo_input";
 #define POLL_MS 20        /* ~50 Hz */
 #define TAP_MAX_MOVE 25 /* px: below this a press/release is a tap */
 #define SWIPE_MIN 50    /* px: minimum travel for a swipe */
+#define RELEASE_DEBOUNCE 2 /* empty reads (≈40ms) before a touch counts as ended */
 #define BOOT_RESET_MS 3000 /* hold BOOT this long -> clear WiFi creds + reboot */
 
 /* Gestures -> Ubo keys:
@@ -37,6 +38,7 @@ static void input_task(void *arg) {
 
     bool down = false;
     bool vol_mode = false; /* this touch started on the volume bar */
+    int release_polls = 0; /* consecutive empty reads while a touch is active */
     int sx = 0, sy = 0, cx = 0, cy = 0;
     bool boot_pressed_prev = false;
     int boot_held_ms = 0;
@@ -48,6 +50,7 @@ static void input_task(void *arg) {
         esp_lcd_touch_read_data(tp);
         bool pressed = esp_lcd_touch_get_coordinates(tp, tx, ty, NULL, &cnt, 1);
         if (pressed && cnt > 0) {
+            release_polls = 0;
             cx = tx[0];
             cy = ty[0];
             if (!down) {
@@ -67,8 +70,13 @@ static void input_task(void *arg) {
                     ubo_client_set_volume(v);
                 }
             }
-        } else if (down) {
+        } else if (down && ++release_polls >= RELEASE_DEBOUNCE) {
+            /* The FT3168 briefly reports no contact mid-drag; only end the touch
+             * after RELEASE_DEBOUNCE empty reads so one fast swipe isn't split
+             * into two gestures (which would skip a page). cx/cy keep their last
+             * values across the dropout, so the merged swipe is classified once. */
             down = false;
+            release_polls = 0;
             if (vol_mode) {
                 vol_mode = false; /* volume already applied during the slide */
             } else {

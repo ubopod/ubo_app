@@ -44,6 +44,7 @@ typedef struct {
     int prev_kind;
     int prev_depth;
     int prev_page;
+    uint32_t prev_transition_ms; /* tick of the last animated transition */
 } ubo_state_t;
 
 static ubo_state_t g = {0};
@@ -290,6 +291,9 @@ void ubo_lvgl_set_input_cb(ubo_input_cb cb, void *user)
 /* Render entry points                                                       */
 /* ------------------------------------------------------------------------- */
 
+/* Slide-animation duration (must match ubo_screen_transition in screen.c). */
+#define UBO_TRANSITION_MS 200u
+
 /* Compute the slide direction from the previous view and start the animation.
  * push/enter -> from right; pop/home -> from left; page down/up -> from
  * bottom/top. */
@@ -314,6 +318,17 @@ static void apply_transition(int kind, int depth, int page)
             dx = UBO_W;
         }
     }
+    /* Rapid successive transitions (scrolling faster than the ~200ms slide)
+     * would stack: the previous page never settles before the next replaces it,
+     * so a middle page looks skipped. When a transition follows the last one
+     * within the animation window, snap (no slide) so each page is placed and
+     * shown immediately; a single deliberate swipe still animates. */
+    const uint32_t now = ubo_tick_cb();
+    if ((dx || dy) && (uint32_t)(now - g.prev_transition_ms) < UBO_TRANSITION_MS) {
+        dx = 0;
+        dy = 0;
+    }
+    g.prev_transition_ms = now;
     g.prev_kind = kind;
     g.prev_depth = depth;
     g.prev_page = page;

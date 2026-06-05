@@ -38,6 +38,15 @@ static bool type_is(const char *type_url, const char *name) {
     return type_url && strstr(type_url, name) != NULL;
 }
 
+/* FNV-1a, for cheap change-detection of the re-delivered selector blobs. */
+static uint32_t blob_hash(const uint8_t *b, size_t n) {
+    uint32_t h = 2166136261u;
+    for (size_t i = 0; i < n; i++) {
+        h = (h ^ b[i]) * 16777619u;
+    }
+    return h;
+}
+
 /* ── store stream: [current_view, status_bar, is_blanked] ── */
 static void on_store(void *user, const ubo_client_Any *results, size_t count) {
     (void)user;
@@ -45,15 +54,29 @@ static void on_store(void *user, const ubo_client_Any *results, size_t count) {
         st.connected = true;
         ubo_lvgl_set_connected(true);
     }
+    /* SubscribeStore re-delivers ALL selectors whenever ANY one changes (e.g. a
+     * status-bar clock tick re-sends current_view unchanged). Apply each part
+     * only when it actually changed, so an unrelated tick can't rebuild and
+     * re-animate the menu mid page-transition. The hashes track what's on
+     * screen, so they stay correct across reconnects too. */
+    static uint32_t last_view, last_sbar;
     if (count > 1 && results[1].value &&
         type_is(results[1].type_url, "StatusBarData")) {
-        ubo_view_render_status_bar(results[1].value->bytes,
-                                   results[1].value->size);
+        uint32_t h = blob_hash(results[1].value->bytes, results[1].value->size);
+        if (h != last_sbar) {
+            last_sbar = h;
+            ubo_view_render_status_bar(results[1].value->bytes,
+                                       results[1].value->size);
+        }
     }
     if (count > 0 && results[0].value) {
-        /* out_stream_id = NULL: the camera viewfinder is deferred on-device. */
-        ubo_view_render(results[0].type_url, results[0].value->bytes,
-                        results[0].value->size, NULL);
+        uint32_t h = blob_hash(results[0].value->bytes, results[0].value->size);
+        if (h != last_view) {
+            last_view = h;
+            /* out_stream_id = NULL: the camera viewfinder is deferred on-device. */
+            ubo_view_render(results[0].type_url, results[0].value->bytes,
+                            results[0].value->size, NULL);
+        }
     }
     if (count > 2 && results[2].value &&
         type_is(results[2].type_url, "BoolValue")) {
