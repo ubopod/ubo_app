@@ -6,8 +6,10 @@ import {
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 
 const TARGET_SAMPLE_RATE = 16000;
-const CHUNK_DURATION_MS = 20;
-const SAMPLES_PER_CHUNK = (TARGET_SAMPLE_RATE * CHUNK_DURATION_MS) / 1000; // 320
+// Wall-clock audio per chunk. Each chunk becomes one unary DispatchAction, so a
+// small value floods the browser's connection budget (→ ERR_INSUFFICIENT_RESOURCES).
+// 100ms keeps it to ~10 dispatches/sec; streaming STT handles 100ms frames fine.
+const CHUNK_DURATION_MS = 100;
 
 let mediaStream: MediaStream | null = null;
 let audioContext: AudioContext | null = null;
@@ -18,7 +20,10 @@ class ChunkProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this._buffer = new Float32Array(0);
-    this._samplesPerChunk = ${SAMPLES_PER_CHUNK};
+    // Chunk by the context's NATIVE rate so each message is CHUNK_DURATION_MS of
+    // wall-clock audio. ('sampleRate' is a global in AudioWorkletGlobalScope =
+    // the native rate; the buffer holds native-rate samples.)
+    this._samplesPerChunk = Math.round((sampleRate * ${CHUNK_DURATION_MS}) / 1000);
   }
 
   process(inputs) {
@@ -79,6 +84,17 @@ export async function startBrowserMic(
   store: StoreServiceClient,
 ): Promise<void> {
   if (mediaStream) return;
+
+  // getUserMedia only exists in a secure context. Over plain HTTP on a LAN
+  // address navigator.mediaDevices is undefined, so guard with a clear message
+  // instead of throwing an opaque "Cannot read properties of undefined".
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error(
+      "Microphone needs a secure context. Open the web UI over HTTPS or via " +
+        "localhost (or whitelist this origin in the browser's insecure-origin " +
+        "flag).",
+    );
+  }
 
   mediaStream = await navigator.mediaDevices.getUserMedia({
     audio: {

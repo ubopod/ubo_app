@@ -70,6 +70,12 @@ export function triggerPostDispatch(): void {
 // buffered audio and reclaim a connection slot so it isn't queued behind them.
 const pendingAudioCalls = new Set<ClientReadableStream<DispatchActionResponse>>();
 
+// Hard cap on simultaneously in-flight audio dispatches. If the server stalls,
+// drop new samples rather than letting XHRs pile up until the browser throws
+// ERR_INSUFFICIENT_RESOURCES. Audio is lossy-tolerant — under backlog the data is
+// already too stale to be useful.
+const MAX_PENDING_AUDIO_CALLS = 16;
+
 export function cancelPendingAudioSamples(): void {
   for (const call of pendingAudioCalls) {
     call.cancel();
@@ -206,6 +212,11 @@ export function reportAudioSample(
   pcm16: Uint8Array,
   timestamp: number,
 ): void {
+  // Drop under backlog so audio dispatches can't exhaust browser resources.
+  if (pendingAudioCalls.size >= MAX_PENDING_AUDIO_CALLS) {
+    return;
+  }
+
   const reportAction = new AudioReportSampleAction();
   reportAction.setSampleSpeechRecognition(pcm16);
   reportAction.setTimestamp(timestamp);

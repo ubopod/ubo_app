@@ -51,7 +51,13 @@ export function StatusBar({ data, store }: StatusBarProps) {
       stopBrowserMic(store);
       setMicActive(false);
     } else {
-      startBrowserMic(store).then(() => setMicActive(true));
+      startBrowserMic(store)
+        .then(() => setMicActive(true))
+        .catch((error: unknown) => {
+          // Keep the icon idle and tell the user why (e.g. insecure context)
+          // instead of failing silently with an uncaught rejection.
+          window.alert(error instanceof Error ? error.message : String(error));
+        });
     }
   }, [store, micActive]);
 
