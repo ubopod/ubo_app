@@ -87,7 +87,13 @@ async def test_subscribe_event_runs_handler_in_service_thread(
     try:
         store.dispatch(DummyAction())
 
-        assert await result, (
+        try:
+            handler_ran_in_service_thread = await asyncio.wait_for(result, timeout=30)
+        except TimeoutError as exc:
+            msg = 'subscribe-event handler never fired — Side Effect Runner likely died'
+            raise AssertionError(msg) from exc
+
+        assert handler_ran_in_service_thread, (
             'handler for subscribe event did not run in service thread'
         )
     finally:

@@ -63,6 +63,20 @@ async def test_all_services_register(
 
     await wait_for_docker_menu_items()
 
+    @wait_for(run_async=True, timeout=60, wait=wait_fixed(1))
+    def wait_for_status_icons() -> None:
+        # ``is_started``/``stability`` don't guarantee the async service init has
+        # registered its status icons yet (mic is a queued dispatch, wifi comes
+        # from the async debounced ``update_wifi_list``). Wait for the icons
+        # themselves so the snapshot can't race ahead of them on a slow runner.
+        state = store._state  # noqa: SLF001
+        assert state is not None
+        icon_ids = {icon.id for icon in state.status_icons.icons}
+        assert 'audio:mic-state' in icon_ids, 'microphone icon not registered yet'
+        assert 'wifi:state' in icon_ids, 'wifi icon not registered yet'
+
+    await wait_for_status_icons()
+
     assert len(store._listeners) < MAX_EXPECTED_LISTENERS  # noqa: SLF001
     assert len(store._event_handlers) < MAX_EXPECTED_EVENT_HANDLERS  # noqa: SLF001
 

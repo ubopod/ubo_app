@@ -34,10 +34,51 @@ modules_snapshot = set(sys.modules).union(
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Iterable
     from types import TracebackType
 
     from _pytest.fixtures import SubRequest  # pyright: ignore[reportPrivateImportUsage]
+
+
+# Background threads that must fully exit before the per-test module cleanup
+# deletes their owning modules. A thread that outlives module deletion rebinds
+# to the next test's freshly re-imported singletons (e.g. a loop-less
+# ``worker_thread``), which crashes its Side Effect Runner and hangs the next
+# test waiting on an event that never fires.
+_BACKGROUND_THREAD_NAMES = ('Side Effect Runner', 'Scheduler Thread', 'Worker Thread')
+
+
+def _join_background_threads(
+    names: Iterable[str],
+    *,
+    timeout: float,
+) -> None:
+    """Block until the named background threads have stopped.
+
+    Returns once no thread in ``names`` is alive, or after ``timeout`` seconds.
+    Surviving threads are logged so a leak is visible rather than silently
+    corrupting the next test.
+    """
+    import threading
+    import time
+
+    wanted = set(names)
+    deadline = time.monotonic() + timeout
+
+    def _pending() -> list[threading.Thread]:
+        current = threading.current_thread()
+        return [
+            thread
+            for thread in threading.enumerate()
+            if thread.name in wanted and thread is not current and thread.is_alive()
+        ]
+
+    for thread in _pending():
+        thread.join(timeout=max(0.0, deadline - time.monotonic()))
+
+    survivors = [thread.name for thread in _pending()]
+    if survivors:
+        logger.warning('Background threads still alive after teardown: %s', survivors)
 
 
 class AppContext:
@@ -175,14 +216,20 @@ class AppContext:
         store.dispatch(FinishAction())
         store.wait_for_event_handlers()
 
+        # FinishAction enqueues the ``None`` sentinel that ends each Side Effect
+        # Runner's loop. Join those threads now so a leaked runner can't fire a
+        # side effect against the next test's freshly re-imported (loop-less)
+        # worker_thread and crash itself, hanging the next test.
+        _join_background_threads({'Side Effect Runner'}, timeout=10)
+
         # Belt-and-braces: FinishAction is already wired to scheduler.stop via
         # on_finish in ubo_app/store/main.py, but call it explicitly so a
         # missed/lost FinishAction can't strand the scheduler thread and hang
         # the entire pytest process during fixture teardown.
         scheduler.stop()
-        scheduler.join(timeout=5)
+        scheduler.join(timeout=10)
         if scheduler.is_alive():
-            logger.warning('scheduler did not join within 5s')
+            logger.warning('scheduler did not join within 10s')
 
         # Clean up subscriptions
         for cleanup in self._subscriptions:
@@ -199,8 +246,8 @@ class AppContext:
                 self.gui_process.wait()
             self.gui_process = None
 
-        if not ubo_app.service.worker_thread.is_finished.wait(timeout=5):
-            logger.warning('worker_thread did not finish within 5s')
+        if not ubo_app.service.worker_thread.is_finished.wait(timeout=10):
+            logger.warning('worker_thread did not finish within 10s')
 
         gc.collect()
 
@@ -342,6 +389,11 @@ async def app_context(
         # infinite recursion when Kivy is re-imported by the next test.
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
+
+        # Hard gate: never delete this test's modules while one of its background
+        # threads is still alive, or the survivor rebinds to the next test's
+        # half-initialized singletons and crashes/hangs it.
+        _join_background_threads(_BACKGROUND_THREAD_NAMES, timeout=10)
 
         for module_name in set(sys.modules) - modules_snapshot:
             if not module_name.startswith(('sdbus', 'gpiozero', 'lgpio')):
