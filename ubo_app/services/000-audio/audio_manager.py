@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import math
 import wave
 from asyncio import get_event_loop
 from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import alsaaudio
 import numpy as np
@@ -93,6 +94,10 @@ class AudioManager:
         ):
             self.has_microphones = True
 
+        self._is_closed = False
+        self._input_pcm: Any = None
+        self._read_executor: ThreadPoolExecutor | None = None
+
         create_task(self.find_card_index())
         create_task(self.stream_mic())
 
@@ -104,13 +109,28 @@ class AudioManager:
             self.pa = None
 
     def close(self) -> None:
-        """Close the audio manager."""
+        """Close the audio manager and release the audio devices."""
+        # Signal the mic-streaming loop to stop and free the (exclusive) ALSA
+        # capture device so the next AudioManager — e.g. after a service
+        # restart — can open it instead of hitting "Device or resource busy".
+        self._is_closed = True
         # Stop any in-progress playback so native threads don't outlive the process
         simpleaudio.stop_all()
+        self._release_input()
         # Close the audio buffers
         with self.audio_buffers_lock:
             self.audio_buffers.clear()
             self.audio_heads.clear()
+
+    def _release_input(self) -> None:
+        """Close the capture PCM and its read executor, freeing the ALSA device."""
+        if self._input_pcm is not None:
+            with contextlib.suppress(Exception):
+                self._input_pcm.close()
+            self._input_pcm = None
+        if self._read_executor is not None:
+            self._read_executor.shutdown(wait=False)
+            self._read_executor = None
 
     async def find_card_index(self) -> None:
         """Find the card index of the audio device."""
@@ -391,7 +411,20 @@ class AudioManager:
     async def _initialize_input_reader(  # noqa: C901
         self,
     ) -> Callable[[], Coroutine[None, None, tuple[int, bytes, int]]]:
-        read_executor = ThreadPoolExecutor(max_workers=1)
+        # Release any previously-opened capture handle before acquiring a new
+        # one — the ALSA capture device is exclusive, so a leaked handle makes
+        # the open below fail with "Device or resource busy".
+        self._release_input()
+
+        if self._is_closed:
+
+            async def read_audio_chunk() -> tuple[int, bytes, int]:
+                await asyncio.sleep(0.1)
+                return 0, b'', 1
+
+            return read_audio_chunk
+
+        self._read_executor = read_executor = ThreadPoolExecutor(max_workers=1)
 
         if self.pa:
             import pyaudio
@@ -411,6 +444,7 @@ class AudioManager:
                         input=True,
                         frames_per_buffer=INPUT_PERIOD_SIZE,
                     )
+                    self._input_pcm = input_audio
 
                     async def read_audio_chunk() -> tuple[int, bytes, int]:
                         data = await get_event_loop().run_in_executor(
@@ -473,6 +507,8 @@ class AudioManager:
                 msg = 'Failed to open audio capture after multiple trials'
                 raise RuntimeError(msg)
 
+            self._input_pcm = input_audio
+
             async def read_audio_chunk() -> tuple[int, bytes, int]:
                 result = await get_event_loop().run_in_executor(
                     read_executor,
@@ -487,13 +523,15 @@ class AudioManager:
         read_audio_chunk = await self._initialize_input_reader()
         event_loop = get_event_loop()
 
-        while True:
+        while not self._is_closed:
             try:
                 length, data, channels = await read_audio_chunk()
             except alsaaudio.ALSAAudioError:
+                if self._is_closed:
+                    break
                 logger.exception('Audio - Error reading audio capture')
                 read_audio_chunk = await self._initialize_input_reader()
-                break
+                continue
             else:
                 if length > 0:
                     data_speech_recognition = np.frombuffer(data, dtype=np.int16)
