@@ -9,6 +9,10 @@
     {
       "content": "test_file.txt removed",
       "title": "Removed"
+    },
+    {
+      "content": "Are you sure you want to remove \"<TEST>/dir_a/test_file.txt\"?",
+      "title": "Confirm Removal"
     }
   ]
 }

@@ -5,5 +5,10 @@
     "queue": [],
     "selector_depth": 0
   },
-  "notifications": []
+  "notifications": [
+    {
+      "content": "Are you sure you want to remove \"<TEST>/dir_a/test_file.txt\"?",
+      "title": "Confirm Removal"
+    }
+  ]
 }
