@@ -134,6 +134,7 @@ def _should_log_dispatched_action(action: object) -> bool:
     """Return whether generic gRPC dispatch logs should include an action."""
     return type(action).__name__ not in {
         'AssistantReportAction',
+        'AudioReportSampleAction',
         'CameraReportImageAction',
     }
 
