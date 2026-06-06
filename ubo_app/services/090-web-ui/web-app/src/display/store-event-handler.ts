@@ -136,39 +136,35 @@ function createWavFile(
   return new Blob([wavBuffer], { type: "audio/wav" });
 }
 
-function playAudioSample(
+async function playAudioSample(
   sample: AudioSample,
   volume: number,
 ): Promise<void> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const data = sample.getData_asU8();
-      const rate = sample.getRate();
-      const width = sample.getWidth();
-      const channels = sample.getChannels();
+  const data = sample.getData_asU8();
+  const rate = sample.getRate();
+  const width = sample.getWidth();
+  const channels = sample.getChannels();
 
-      const audioBlob = createWavFile(data, rate, channels, width * 8);
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  const audioBlob = createWavFile(data, rate, channels, width * 8);
+  const arrayBuffer = await audioBlob.arrayBuffer();
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
+  const source = audioContext.createBufferSource();
+  source.buffer = audioBuffer;
 
-      const gainNode = audioContext.createGain();
-      gainNode.gain.value = volume;
+  const gainNode = audioContext.createGain();
+  gainNode.gain.value = volume;
 
-      source.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+  source.connect(gainNode);
+  gainNode.connect(audioContext.destination);
 
-      if (audioContext.state === "suspended") {
-        await audioContext.resume();
-      }
+  if (audioContext.state === "suspended") {
+    await audioContext.resume();
+  }
 
-      source.onended = () => resolve();
-      source.start(audioContext.currentTime + 0.1);
-    } catch (err) {
-      reject(err);
-    }
+  await new Promise<void>((resolve) => {
+    source.onended = () => resolve();
+    source.start(audioContext.currentTime + 0.1);
   });
 }
 

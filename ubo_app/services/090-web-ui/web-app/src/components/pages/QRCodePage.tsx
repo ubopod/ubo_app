@@ -1,16 +1,12 @@
 import { Box, Link, Paper } from "@mui/material";
 import QRCode from "react-qr-code";
 
-import type { StoreServiceClient } from "../../bindings/store/v1/StoreServiceClientPb";
-
 interface QRCodePageProps {
-  title: string;
   url: string;
   label?: string;
-  store: StoreServiceClient;
 }
 
-export function QRCodePage({ title, url, label, store }: QRCodePageProps) {
+export function QRCodePage({ url, label }: QRCodePageProps) {
   return (
     <Box sx={{ width: "100%", p: 2 }}>
       <Paper

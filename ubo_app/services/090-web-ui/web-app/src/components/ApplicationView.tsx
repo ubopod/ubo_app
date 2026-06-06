@@ -1,11 +1,11 @@
 import { Box, Paper, Typography } from "@mui/material";
 
+import { pageRegistry } from "./pages/PageRegistry";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type {
   ApplicationViewData,
   BasicType,
 } from "../bindings/ubo/v1/ubo_pb";
-import { pageRegistry } from "./pages/PageRegistry";
 
 /**
  * Extract the scalar value from a BasicType oneof.

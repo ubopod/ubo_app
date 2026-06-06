@@ -58,46 +58,42 @@ function createWavFile(
   return new Blob([wavBuffer], { type: "audio/wav" });
 }
 
-function playAudioSample(
+async function playAudioSample(
   sample: AudioSample,
   volume: number,
 ): Promise<void> {
   const gen = audioGeneration;
-  return new Promise(async (resolve, reject) => {
-    try {
-      const data = sample.getData_asU8();
-      const rate = sample.getRate();
-      const width = sample.getWidth();
-      const channels = sample.getChannels();
+  const data = sample.getData_asU8();
+  const rate = sample.getRate();
+  const width = sample.getWidth();
+  const channels = sample.getChannels();
 
-      const audioBlob = createWavFile(data, rate, channels, width * 8);
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  const audioBlob = createWavFile(data, rate, channels, width * 8);
+  const arrayBuffer = await audioBlob.arrayBuffer();
+  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-      if (gen !== audioGeneration) { resolve(); return; }
+  if (gen !== audioGeneration) return;
 
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
+  const source = audioContext.createBufferSource();
+  source.buffer = audioBuffer;
 
-      const gainNode = audioContext.createGain();
-      gainNode.gain.value = volume;
+  const gainNode = audioContext.createGain();
+  gainNode.gain.value = volume;
 
-      source.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+  source.connect(gainNode);
+  gainNode.connect(audioContext.destination);
 
-      if (audioContext.state === "suspended") {
-        await audioContext.resume();
-      }
+  if (audioContext.state === "suspended") {
+    await audioContext.resume();
+  }
 
-      activeSources.add(source);
-      source.onended = () => {
-        activeSources.delete(source);
-        resolve();
-      };
-      source.start(audioContext.currentTime + 0.1);
-    } catch (err) {
-      reject(err);
-    }
+  await new Promise<void>((resolve) => {
+    activeSources.add(source);
+    source.onended = () => {
+      activeSources.delete(source);
+      resolve();
+    };
+    source.start(audioContext.currentTime + 0.1);
   });
 }
 
@@ -117,36 +113,41 @@ function scheduleAudioChunk(
 
   const duration = data.length / (rate * channels * (width));
 
-  const done = new Promise<void>(async (resolve, reject) => {
-    try {
-      const audioBlob = createWavFile(data, rate, channels, width * 8);
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  const done = new Promise<void>((resolve, reject) => {
+    void (async () => {
+      try {
+        const audioBlob = createWavFile(data, rate, channels, width * 8);
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-      if (gen !== audioGeneration) { resolve(); return; }
+        if (gen !== audioGeneration) {
+          resolve();
+          return;
+        }
 
-      const source = audioContext.createBufferSource();
-      source.buffer = audioBuffer;
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
 
-      const gainNode = audioContext.createGain();
-      gainNode.gain.value = volume;
+        const gainNode = audioContext.createGain();
+        gainNode.gain.value = volume;
 
-      source.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+        source.connect(gainNode);
+        gainNode.connect(audioContext.destination);
 
-      if (audioContext.state === "suspended") {
-        await audioContext.resume();
+        if (audioContext.state === "suspended") {
+          await audioContext.resume();
+        }
+
+        activeSources.add(source);
+        source.onended = () => {
+          activeSources.delete(source);
+          resolve();
+        };
+        source.start(startTime);
+      } catch (err) {
+        reject(err);
       }
-
-      activeSources.add(source);
-      source.onended = () => {
-        activeSources.delete(source);
-        resolve();
-      };
-      source.start(startTime);
-    } catch (err) {
-      reject(err);
-    }
+    })();
   });
 
   return { endTime: startTime + duration, done };

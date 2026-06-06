@@ -13,7 +13,6 @@ import { TileGrid } from "./TileGrid";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import { useKeyboardNavigation } from "../hooks/useKeyboardNavigation";
 import { navigateTo } from "../store/action-dispatcher";
-import { splitIconFromText } from "../utils/color-markup";
 import { subscribeToAudioEvents } from "../store/audio";
 import { unwrapItems } from "../store/helpers";
 import {
@@ -21,6 +20,7 @@ import {
   StateManagerContext,
 } from "../store/state-manager";
 import { useAppState } from "../store/useAppState";
+import { splitIconFromText } from "../utils/color-markup";
 
 function AppContent({ store }: { store: StoreServiceClient }) {
   const { currentView, statusBar, stack } = useAppState();

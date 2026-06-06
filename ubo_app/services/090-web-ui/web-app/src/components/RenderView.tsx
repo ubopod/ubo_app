@@ -13,8 +13,8 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import type { SubscribeEventResponse } from "../bindings/store/v1/store_pb";
+import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   Event,
   FrameStreamDataEvent,
@@ -83,7 +83,7 @@ function StatusRender({ data }: { data: RenderViewData.AsObject }) {
   );
 }
 
-function QRCodeCarousel({ data, store }: RenderViewProps) {
+function QRCodeCarousel({ data }: RenderViewProps) {
   const [index, setIndex] = useState(0);
   const values = propStringList(data, "values");
   const labels = propStringList(data, "labels");
@@ -92,7 +92,7 @@ function QRCodeCarousel({ data, store }: RenderViewProps) {
 
   return (
     <Box>
-      <QRCodePage title={data.title ?? ""} url={value} label={label} store={store} />
+      <QRCodePage url={value} label={label} />
       {values.length > 1 && (
         <Box sx={{ display: "flex", justifyContent: "center", gap: 1, mt: 1 }}>
           <Button
@@ -295,10 +295,8 @@ export function RenderView({ data, store }: RenderViewProps) {
     case "qr_code":
       return (
         <QRCodePage
-          title={data.title ?? ""}
           url={propString(data, "value")}
           label={propString(data, "label") || propString(data, "value")}
-          store={store}
         />
       );
     case "qr_code_carousel":

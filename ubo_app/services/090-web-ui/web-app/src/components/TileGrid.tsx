@@ -1,6 +1,5 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Typography , useMediaQuery, useTheme } from "@mui/material";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMediaQuery, useTheme } from "@mui/material";
 
 import { Tile } from "./Tile";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
