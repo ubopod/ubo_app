@@ -1,4 +1,9 @@
-import { DispatchActionRequest } from "../bindings/store/v1/store_pb";
+import type { ClientReadableStream } from "grpc-web";
+
+import {
+  DispatchActionRequest,
+  DispatchActionResponse,
+} from "../bindings/store/v1/store_pb";
 import { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   Action,
@@ -50,12 +55,30 @@ export function triggerPostDispatch(): void {
   }
 }
 
+// In-flight audio-sample dispatches. Audio is reported as ~50 unary
+// DispatchAction RPCs/sec, which can saturate the browser's limited HTTP/1.1
+// connection pool and starve latency-sensitive control actions (e.g. stop
+// listening, navigation). Tracking these lets a control dispatch abort the
+// buffered audio and reclaim a connection slot so it isn't queued behind them.
+const pendingAudioCalls = new Set<ClientReadableStream<DispatchActionResponse>>();
+
+export function cancelPendingAudioSamples(): void {
+  for (const call of pendingAudioCalls) {
+    call.cancel();
+  }
+  pendingAudioCalls.clear();
+}
+
 function dispatch(store: StoreServiceClient, action: Action): void {
   // Cancel page-specific streams to free connection slots for this request
   for (const cancel of pageStreams) {
     cancel();
   }
   pageStreams.clear();
+
+  // Control actions take priority over buffered mic audio: abort any in-flight
+  // audio-sample RPCs so this dispatch gets a connection slot immediately.
+  cancelPendingAudioSamples();
 
   const request = new DispatchActionRequest();
   request.setAction(action);
@@ -179,7 +202,18 @@ export function reportAudioSample(
   reportAction.setTimestamp(timestamp);
   const action = new Action();
   action.setAudioReportSampleAction(reportAction);
-  dispatch(store, action);
+
+  const request = new DispatchActionRequest();
+  request.setAction(action);
+  // Use the cancelable (callback) form rather than dispatch(): audio is a
+  // fire-and-forget data stream (a dropped trailing sample on stop is
+  // harmless), and a control dispatch must be able to abort these in-flight
+  // calls. Going through dispatch() would also cancel page streams 50x/sec.
+  const call: ClientReadableStream<DispatchActionResponse> =
+    store.dispatchAction(request, null, () => {
+      pendingAudioCalls.delete(call);
+    });
+  pendingAudioCalls.add(call);
 }
 
 export function setMicMute(

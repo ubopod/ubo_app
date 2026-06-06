@@ -1,9 +1,9 @@
-import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   reportAudioSample,
   startListening,
   stopListening,
 } from "./action-dispatcher";
+import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 
 const TARGET_SAMPLE_RATE = 16000;
 const CHUNK_DURATION_MS = 20;
@@ -115,8 +115,8 @@ export async function startBrowserMic(
 }
 
 export function stopBrowserMic(store: StoreServiceClient): void {
-  stopListening(store);
-
+  // Stop producing samples first so nothing is queued after the stop dispatch
+  // (below) aborts the buffered audio RPCs.
   if (workletNode) {
     workletNode.disconnect();
     workletNode = null;
@@ -132,6 +132,9 @@ export function stopBrowserMic(store: StoreServiceClient): void {
     mediaStream = null;
   }
 
+  // Dispatch stop last: dispatch() aborts any in-flight audio-sample RPCs
+  // first, so the stop isn't stuck behind them in the connection pool.
+  stopListening(store);
 }
 
 export function isBrowserMicActive(): boolean {

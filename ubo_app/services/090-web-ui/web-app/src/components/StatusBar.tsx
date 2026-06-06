@@ -3,6 +3,7 @@ import {
   Mic,
   PowerSettingsNew,
   RestartAlt,
+  Stop,
 } from "@mui/icons-material";
 import {
   Box,
@@ -45,14 +46,14 @@ export function StatusBar({ data, store }: StatusBarProps) {
   const menuOpen = Boolean(anchorEl);
   const [micActive, setMicActive] = useState(isBrowserMicActive());
 
-  const handleMicDown = useCallback(() => {
-    startBrowserMic(store).then(() => setMicActive(true));
-  }, [store]);
-
-  const handleMicUp = useCallback(() => {
-    stopBrowserMic(store);
-    setMicActive(false);
-  }, [store]);
+  const handleMicToggle = useCallback(() => {
+    if (micActive) {
+      stopBrowserMic(store);
+      setMicActive(false);
+    } else {
+      startBrowserMic(store).then(() => setMicActive(true));
+    }
+  }, [store, micActive]);
 
   return (
     <Box
@@ -143,17 +144,13 @@ export function StatusBar({ data, store }: StatusBarProps) {
       {/* Volume control */}
       <VolumeControl store={store} />
 
-      {/* Mic button (push-to-talk) */}
+      {/* Mic button (toggle: click to start, click again to stop) */}
       <IconButton
         size="small"
-        onMouseDown={handleMicDown}
-        onMouseUp={handleMicUp}
-        onMouseLeave={micActive ? handleMicUp : undefined}
-        onTouchStart={handleMicDown}
-        onTouchEnd={handleMicUp}
+        onClick={handleMicToggle}
         sx={{ color: micActive ? "error.main" : "text.secondary" }}
       >
-        <Mic fontSize="small" />
+        {micActive ? <Stop fontSize="small" /> : <Mic fontSize="small" />}
       </IconButton>
 
       {/* Notification bell */}
