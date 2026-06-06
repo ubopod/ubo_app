@@ -11,6 +11,10 @@ interface ChatViewProps {
   store: StoreServiceClient;
 }
 
+// Typed chat is not wired yet — hide the composer; chat is voice-only for now.
+// Flip to true to re-enable the text input field.
+const SHOW_CHAT_INPUT: boolean = false;
+
 function Waveform({
   bars,
   color,
@@ -142,29 +146,31 @@ export function ChatView({ data, store }: ChatViewProps) {
         ))}
         <div ref={endRef} />
       </Stack>
-      <Box sx={{ display: "flex", gap: 1 }}>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Type a message…"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              send();
-            }
-          }}
-        />
-        <IconButton
-          color="primary"
-          onClick={send}
-          disabled={draft.trim().length === 0}
-          aria-label="Send message"
-        >
-          <Send />
-        </IconButton>
-      </Box>
+      {SHOW_CHAT_INPUT && (
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Type a message…"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                send();
+              }
+            }}
+          />
+          <IconButton
+            color="primary"
+            onClick={send}
+            disabled={draft.trim().length === 0}
+            aria-label="Send message"
+          >
+            <Send />
+          </IconButton>
+        </Box>
+      )}
     </Box>
   );
 }

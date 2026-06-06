@@ -428,7 +428,12 @@ def setup(register_reducer: ReducerRegistrar) -> Subscriptions:
 
     register_reducer(reducer)
     subscriptions: list[object] = []
-    subscriptions.extend(_register_chat_menu_item())
+    # Manual chat entry is disabled until typed-chat is wired; chat opens
+    # reactively via the voice handler. Flip this to True to re-expose the
+    # "Chat" item under Settings → Assistant.
+    show_chat_menu_item = False
+    if show_chat_menu_item:
+        subscriptions.extend(_register_chat_menu_item())
     subscriptions.extend(_register_voice_handler())
     # The echo responder is dev/test scaffolding — register it only under
     # the test harness so it never collides with the real assistant
