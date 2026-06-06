@@ -27,6 +27,14 @@ import {
   StackPushMenuAction,
 } from "../bindings/ubo/v1/ubo_pb";
 
+// Identifies this browser session as a mic source so the core only feeds the
+// assistant audio from the source that started listening. Generated once per
+// page load (distinct tabs ⇒ distinct ids). Not using crypto.randomUUID() since
+// the device serves plain HTTP, a non-secure context where it's unavailable.
+const AUDIO_SOURCE = `web-ui:${Date.now().toString(36)}-${Math.random()
+  .toString(36)
+  .slice(2)}`;
+
 // Browsers limit concurrent HTTP/1.1 connections per origin to 6.
 // gRPC-web streaming subscriptions (view, stack, metrics, audio×2) use 5 slots.
 // Page-specific streams (e.g. camera viewfinder) use the 6th slot, leaving none
@@ -180,6 +188,7 @@ export function reboot(store: StoreServiceClient): void {
 
 export function startListening(store: StoreServiceClient): void {
   const startAction = new AssistantStartListeningAction();
+  startAction.setAudioSource(AUDIO_SOURCE);
   const action = new Action();
   action.setAssistantStartListeningAction(startAction);
   dispatch(store, action);
@@ -200,6 +209,7 @@ export function reportAudioSample(
   const reportAction = new AudioReportSampleAction();
   reportAction.setSampleSpeechRecognition(pcm16);
   reportAction.setTimestamp(timestamp);
+  reportAction.setAudioSource(AUDIO_SOURCE);
   const action = new Action();
   action.setAudioReportSampleAction(reportAction);
 

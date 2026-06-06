@@ -111,7 +111,14 @@ class EnginesManager:
         ]
 
     async def _queue_chunk(self, event: AudioReportSampleEvent) -> None:
-        """Queue audio chunk to all running speech recognition engines."""
+        """Queue audio chunk to all running speech recognition engines.
+
+        On-device wake-word/speech recognition only consumes the system mic;
+        audio streamed from remote clients (browser, mobile) carries a non-empty
+        ``audio_source`` and is ignored here.
+        """
+        if event.audio_source:
+            return
         self.mic_buffer.add(event.timestamp, event.sample)
         for engine in _running_engines(self.engines):
             await engine.queue_audio_chunk(event.sample_speech_recognition)

@@ -184,6 +184,7 @@ def reducer(
                         timestamp=action.timestamp,
                         sample=action.sample,
                         sample_speech_recognition=action.sample_speech_recognition,
+                        audio_source=action.audio_source,
                     ),
                 ],
             )

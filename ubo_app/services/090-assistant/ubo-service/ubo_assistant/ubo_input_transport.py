@@ -71,6 +71,9 @@ class UboInputTransport(BaseInputTransport):
         self.client = client
         self._audio_subscription: Callable[[], None] | None = None
         self._silence_task: asyncio.Task[None] | None = None
+        # Mic the active session listens to; '' = on-device system mic. Only
+        # samples whose audio_source matches are pushed into the pipeline.
+        self._active_audio_source: str = ''
 
         self._image_set_events: dict[VideoSource, asyncio.Event] = {
             key: asyncio.Event() for key in VideoSource
@@ -140,8 +143,18 @@ class UboInputTransport(BaseInputTransport):
             await self.push_video_frame(image_frame)
 
     def _queue_audio_sample(self, event: Event) -> None:
-        """Queue the audio sample from the event."""
+        """Queue the audio sample from the event.
+
+        Only samples whose ``audio_source`` matches the session's active source
+        are pushed; this is how a browser/mobile session and the on-device mic
+        are kept from feeding the same pipeline. ``None`` and ``''`` both mean
+        the system mic.
+        """
         if event.audio_report_sample_event:
+            if (event.audio_report_sample_event.audio_source or '') != (
+                self._active_audio_source or ''
+            ):
+                return
             audio = event.audio_report_sample_event.sample_speech_recognition
             self.task_manager.create_task(
                 self.push_audio_frame(
@@ -199,7 +212,12 @@ class UboInputTransport(BaseInputTransport):
             )
             self._image_set_events[VideoSource.CAMERA].set()
 
-    def _on_listening_state_changed(self, *, is_listening: bool) -> None:
+    def _on_listening_state_changed(
+        self,
+        *,
+        is_listening: bool,
+        active_audio_source: str = '',
+    ) -> None:
         """Subscribe to mic audio only while listening.
 
         At rest the pipeline is fed nothing (no idle CPU cost). When listening
@@ -208,7 +226,12 @@ class UboInputTransport(BaseInputTransport):
         observe trailing silence — otherwise the stream times out without ever
         finalizing and the user's turn never reaches the LLM. So on the way out
         we feed a bounded tail of silence to let the STT detect end-of-speech.
+
+        ``active_audio_source`` selects which mic this session consumes (see
+        :meth:`_queue_audio_sample`); it's tracked here so the filter applies as
+        soon as the session starts.
         """
+        self._active_audio_source = active_audio_source or ''
         if is_listening:
             logger.info('UboInputTransport is now listening for audio samples.')
             self._cancel_silence_flush()
@@ -275,9 +298,13 @@ class UboInputTransport(BaseInputTransport):
             callback=self._store_camera_image,
         )
 
-        # Monitor assistant listening state to conditionally subscribe to audio events
-        self.client.autorun(['state.assistant.is_listening'])(
+        # Monitor assistant listening state to conditionally subscribe to audio
+        # events, and the active audio source to filter them by origin.
+        self.client.autorun(
+            ['state.assistant.is_listening', 'state.assistant.active_audio_source'],
+        )(
             lambda results: self._on_listening_state_changed(
                 is_listening=results[0].value,
+                active_audio_source=results[1].value,
             ),
         )

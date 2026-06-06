@@ -2,6 +2,7 @@
 {
   "assistant": {
     "_type": "AssistantState",
+    "active_audio_source": "",
     "active_policy": null,
     "active_source": null,
     "enabled_mcp_servers": [],

@@ -298,6 +298,7 @@ def reducer(
                     is_listening=True,
                     active_source=action.source,
                     active_policy=resolve_policy(state.policies, action.source),
+                    active_audio_source=action.audio_source,
                 ),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],
             )
@@ -312,6 +313,7 @@ def reducer(
                     is_listening=False,
                     active_source=None,
                     active_policy=None,
+                    active_audio_source='',
                     last_stop_reason=action.reason,
                 ),
                 actions=[RgbRingBlankAction()],
@@ -355,6 +357,7 @@ def reducer(
                         is_listening=False,
                         active_source=None,
                         active_policy=None,
+                        active_audio_source='',
                         last_stop_reason=stop_reason,
                     ),
                     actions=[RgbRingBlankAction()],
@@ -381,6 +384,7 @@ def reducer(
                     is_listening=True,
                     active_source=action.source,
                     active_policy=resolve_policy(state.policies, action.source),
+                    active_audio_source=action.audio_source,
                 ),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],
             )

@@ -619,9 +619,15 @@ class AssistantStartListeningAction(AssistantAction):
     The optional ``source`` field carries structured metadata about *what*
     triggered the request (wake phrase, keypad button, infrared remote, …).
     Pipeline behaviour is selected per-source via ``AssistantState.policies``.
+
+    ``audio_source`` is a separate axis: it identifies *which mic's audio* the
+    session should consume (empty = on-device system mic; remote clients set a
+    unique id). It must match the ``audio_source`` on incoming
+    ``AudioReportSampleAction``s.
     """
 
     source: AssistantTriggerSourceUnion | None = None
+    audio_source: str = ''
 
 
 class AssistantStopListeningAction(AssistantAction):
@@ -642,6 +648,7 @@ class AssistantToggleListeningAction(AssistantAction):
     """
 
     source: AssistantTriggerSourceUnion | None = None
+    audio_source: str = ''
 
 
 class AssistantUpdateProvidersAction(AssistantAction):
@@ -953,6 +960,8 @@ class AssistantState(Immutable):
     # Trigger source / policy carried during the active listening session.
     active_source: AssistantTriggerSourceUnion | None = None
     active_policy: AssistantTriggerPolicy | None = None
+    # Mic the active listening session consumes audio from (empty = system mic).
+    active_audio_source: str = ''
     last_stop_reason: AssistantStopReasonUnion | None = None
     policies: tuple[AssistantTriggerPolicyEntry, ...] = field(
         default_factory=_default_policies,

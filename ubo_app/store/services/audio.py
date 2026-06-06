@@ -88,6 +88,9 @@ class AudioReportSampleAction(AudioAction):
     timestamp: float
     sample_speech_recognition: bytes
     sample: AudioSample
+    audio_source: str = ''
+    """Origin of the sample. Empty string = on-device system mic; remote clients
+    (browser, mobile) set a unique id so a listening session can bind to one."""
 
 
 class AudioPlaybackDoneAction(AudioAction):
@@ -126,6 +129,8 @@ class AudioReportSampleEvent(AudioEvent):
     timestamp: float
     sample_speech_recognition: bytes
     sample: AudioSample
+    audio_source: str = ''
+    """Origin of the sample, copied from the action. Empty string = system mic."""
 
 
 class AudioInstallDriverEvent(AudioEvent):
