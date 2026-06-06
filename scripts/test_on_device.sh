@@ -49,7 +49,16 @@ if [ "$copy" == "True" ]; then
   # Generate proto files locally before copying
   echo "Generating proto files locally..."
   uv run poe proto:generate:raw proto:compile:raw || echo "Proto generation failed, continuing anyway..."
-  
+
+  # Wipe the test-runner clean (except the built virtualenvs) so the fresh rsync
+  # below leaves the pod exactly matching the workspace, with no residual stale
+  # files. The two ancestor exclusions keep the nested ubo_app/gui/.venv alive.
+  run_on_pod 'cd /home/ubo/test-runner 2>/dev/null && find . -mindepth 1 \
+    -not -path "./.venv" -not -path "./.venv/*" \
+    -not -path "./ubo_app" -not -path "./ubo_app/gui" \
+    -not -path "./ubo_app/gui/.venv" -not -path "./ubo_app/gui/.venv/*" \
+    -delete 2>/dev/null; true'
+
   # Since rsync is not called with -r, it treats ./scripts as an empty directory and its content are ignored, it could be any other random directory inside "./". It is needed solely to create the root directory with ubo:ubo ownership.
   # Connect as pi user and use sudo rsync to copy files with ubo:ubo ownership
   (echo ./scripts; echo ./version.py; echo ./ubo_app/_version.py; echo ./ubo_app/rpc/ubo_bindings/__init__.py; find ./ubo_app/rpc/ubo_bindings/ubo -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/secrets -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/store -type f 2>/dev/null; find ./ubo_app/rpc/ubo_bindings/package_info -type f 2>/dev/null; git ls-files --others --exclude-standard --cached) | rsync --rsync-path="sudo rsync" --delete --info=progress2 -ae ssh --files-from=- --ignore-missing-args ./ pi@ubo-development-pod-$index:/home/ubo/test-runner/ --chown ubo:ubo
