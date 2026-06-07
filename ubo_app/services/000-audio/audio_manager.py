@@ -58,6 +58,57 @@ def _linear_to_logarithmic(volume_linear: float) -> int:
     return round(100 * math.log(volume_linear * 500) / math.log(500))
 
 
+def _describe_capture_device_holder(card_index: int | None) -> str:
+    """Best-effort: name the process holding the (exclusive) ALSA capture device.
+
+    Reads the kernel's ``/proc/asound`` PCM substream status files for the
+    ``owner_pid`` of whatever currently holds the capture device, then resolves
+    that pid to its ``comm``/``cmdline``. This turns a "Device or resource busy
+    [hw:0]" failure into a named culprit instead of a mystery. Never raises.
+    """
+    from pathlib import Path
+
+    pattern = (
+        f'card{card_index}/pcm*c/sub*/status'
+        if card_index is not None
+        else 'card*/pcm*c/sub*/status'
+    )
+    holders: list[str] = []
+    for status_path in Path('/proc/asound').glob(pattern):
+        with contextlib.suppress(OSError):
+            text = status_path.read_text()
+            owner_pid = next(
+                (
+                    line.split(':', 1)[1].strip()
+                    for line in text.splitlines()
+                    if line.startswith('owner_pid')
+                ),
+                None,
+            )
+            if not owner_pid:
+                continue
+            comm = cmdline = '?'
+            with contextlib.suppress(OSError):
+                comm = Path(f'/proc/{owner_pid}/comm').read_text().strip()
+            with contextlib.suppress(OSError):
+                cmdline = (
+                    Path(f'/proc/{owner_pid}/cmdline')
+                    .read_bytes()
+                    .replace(b'\x00', b' ')
+                    .decode('utf-8', 'replace')
+                    .strip()
+                )
+            holders.append(
+                f'{status_path}: pid={owner_pid} comm={comm} cmdline={cmdline}',
+            )
+    if not holders:
+        return (
+            'no ALSA owner_pid found (device may be held outside ALSA or already '
+            'released)'
+        )
+    return ' | '.join(holders)
+
+
 class AudioManager:
     """Class for managing audio playback and recording."""
 
@@ -534,6 +585,15 @@ class AudioManager:
                         logger.info(
                             'Audio - Reporting the audio capture issue to ubo-system',
                             extra={'attempt': attempt.retry_state.attempt_number},
+                        )
+                        logger.warning(
+                            'Audio - Capture device busy; identifying the holder',
+                            extra={
+                                'attempt': attempt.retry_state.attempt_number,
+                                'holder': _describe_capture_device_holder(
+                                    self.card_index,
+                                ),
+                            },
                         )
                         report_service_error(
                             exception=attempt.retry_state.outcome.exception(),
