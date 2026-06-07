@@ -370,7 +370,8 @@ class ChatWidget(UboPageWidget):
 
     def _arrow_y(self, slot: int) -> float:
         """Screen Y of the L1/L2/L3 arrow row for ``slot`` (0=L3..2=L1)."""
-        return self._root.y + _SLOT0_CENTER + slot * _ROW_PITCH
+        # Whole pixels so pointers/bubbles share the same integer grid.
+        return round(self._root.y + _SLOT0_CENTER + slot * _ROW_PITCH)
 
     def _relayout(self, *_: object) -> None:
         """Pin bubble centers to the row grid, apply scroll, draw overlays."""
@@ -397,7 +398,7 @@ class ChatWidget(UboPageWidget):
                     math.ceil(needed / _ROW_PITCH),
                 )
 
-            base = self._root.y + _SLOT0_CENTER  # newest center at scroll 0
+            base = round(self._root.y + _SLOT0_CENTER)  # integer grid base
             newest_half = self._bubbles[-1].height / 2
             oldest_half = self._bubbles[0].height / 2
             # Scroll bounds snapped to whole rows so centers stay on grid.
@@ -434,6 +435,11 @@ class ChatWidget(UboPageWidget):
                     bubble.right = self._viewport.right - _SCROLLBAR_GUTTER
                 else:
                     bubble.x = self._viewport.x + _LEFT_GUTTER
+                # Snap the bubble origin to whole pixels so its wrapped text
+                # always rasterizes on the same grid. Sub-pixel text positions
+                # anti-alias differently across render paths/frames and are the
+                # chat-only window-snapshot flake.
+                bubble.pos = (round(bubble.x), round(bubble.y))
 
             self._assign_arrows()
         else:
@@ -527,8 +533,8 @@ class ChatWidget(UboPageWidget):
                 if bubble.arrow_slot < 0:
                     continue
                 center_y = self._arrow_y(bubble.arrow_slot)
-                tip_x = bubble.x - _POINTER_WIDTH
-                base_x = bubble.x + dp(1)
+                tip_x = round(bubble.x - _POINTER_WIDTH)
+                base_x = round(bubble.x + dp(1))
                 Color(*bubble.bubble_color)
                 Triangle(
                     points=[
@@ -568,7 +574,7 @@ class ChatWidget(UboPageWidget):
             )
             Color(*_hex_to_rgba(_SCROLLBAR_COLOR))
             RoundedRectangle(
-                pos=(track_x, thumb_y),
-                size=(_SCROLLBAR_WIDTH, thumb_height),
+                pos=(round(track_x), round(thumb_y)),
+                size=(_SCROLLBAR_WIDTH, round(thumb_height)),
                 radius=[_SCROLLBAR_WIDTH / 2],
             )
