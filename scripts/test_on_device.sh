@@ -74,7 +74,7 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
   fi
 
   if [ "$copy" == "True" ] || [ "$deps" == "True" ]; then
-    cmd_list+=('sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"ubo_app/_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/pyproject.toml && sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"../_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/ubo_app/rpc/pyproject.toml && sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"../../../_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/ubo_app/services/090-assistant/ubo-service/pyproject.toml && echo "DEBUG: POST-SED PYPROJECT:" && cat /home/ubo/test-runner/ubo_app/rpc/pyproject.toml && echo "Patched pyproject.toml files" && cd /home/ubo/test-runner && uv python pin python3.11 && uv venv --system-site-packages && true')
+    cmd_list+=('sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"ubo_app/_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/pyproject.toml && sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"../_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/ubo_app/rpc/pyproject.toml && sed -i "/\\[tool.hatch.version\\]/,/^$/c\\[tool.hatch.version]\\nsource = \"regex\"\\npath = \"../../../_version.py\"\\npattern = \"version = .(?P<version>.+).\"" /home/ubo/test-runner/ubo_app/services/090-assistant/ubo-service/pyproject.toml && echo "DEBUG: POST-SED PYPROJECT:" && cat /home/ubo/test-runner/ubo_app/rpc/pyproject.toml && echo "Patched pyproject.toml files" && cd /home/ubo/test-runner && uv python pin python3.11 && ([ -d .venv ] || uv venv --system-site-packages) && true')
   fi
 
   if [ "$run" == "True" ]; then
@@ -83,11 +83,15 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
 
   # Common commands
   cmd_list+=("cd /home/ubo/test-runner &&")
-  cmd_list+=("uv venv --system-site-packages &&")
+  # ``uv venv`` errors out (rather than silently recreating) when ``.venv``
+  # already exists on newer uv versions. The device test-runner keeps its
+  # virtualenv between runs (``--copy`` deliberately preserves it), so only
+  # create it when missing — otherwise a plain ``--run`` aborts before pytest.
+  cmd_list+=("([ -d .venv ] || uv venv --system-site-packages) &&")
   cmd_list+=("uv python pin python3.11 &&")
 
   if [ "$deps" == "True" ]; then
-    cmd_list+=('SETUPTOOLS_SCM_PRETEND_VERSION=$(uv run poe version) uv run poe proto:generate:raw proto:compile:raw && uv sync --frozen && (cd ubo_app/gui && UV_PROJECT_ENVIRONMENT=.venv uv venv --system-site-packages .venv && UV_PROJECT_ENVIRONMENT=.venv uv sync --frozen) &&')
+    cmd_list+=('SETUPTOOLS_SCM_PRETEND_VERSION=$(uv run poe version) uv run poe proto:generate:raw proto:compile:raw && uv sync --frozen && (cd ubo_app/gui && ([ -d .venv ] || UV_PROJECT_ENVIRONMENT=.venv uv venv --system-site-packages .venv) && UV_PROJECT_ENVIRONMENT=.venv uv sync --frozen) &&')
   fi
 
   if [ "$run" == "True" ]; then
