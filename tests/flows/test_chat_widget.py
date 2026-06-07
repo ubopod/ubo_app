@@ -38,10 +38,9 @@ if TYPE_CHECKING:
     from tests.fixtures.snapshot import WindowSnapshot
     from ubo_app.store.main import RootState
 
-_ASSISTANT_TEXT = (
-    'dolore magna aliqua. ut enim ad minim veniam, quis nostrud '
-    'exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.'
-)
+# Kept short so the ``conversation-04`` snapshot shows two clean bubbles with
+# no partial text from this earlier reply clipping into the top of the frame.
+_ASSISTANT_TEXT = 'dolore magna aliqua. ut enim ad minim veniam, quis nostrud.'
 _USER_TEXT = 'what is the population of latin american countries combined?'
 
 # A reply far taller than the 240px screen, to exercise scrolling.
