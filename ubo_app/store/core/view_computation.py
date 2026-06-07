@@ -99,8 +99,15 @@ def visible_stack(state: RootState) -> tuple[StackItemType, ...]:
     )
 
 
-# Cache hostname at module load — it doesn't change at runtime
-_HOSTNAME_TITLE = f'󰋜{socket.gethostname()}.local'
+def _hostname_title() -> str:
+    """Status-bar title (the device hostname).
+
+    Read at call time — NOT cached in a module-level constant — so the test
+    ``socket.gethostname`` mock always applies. Freezing it at import races the
+    fixture and leaks the real hostname into snapshots non-deterministically.
+    ``gethostname(2)`` is a cheap syscall, so per-status-bar-update is fine.
+    """
+    return f'󰋜{socket.gethostname()}.local'
 
 __all__ = [
     'PAGE_SIZE',
@@ -390,7 +397,7 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
     )
 
     return StatusBarData(
-        title=_HOSTNAME_TITLE,
+        title=_hostname_title(),
         is_recording=is_recording,
         is_replaying=is_replaying,
         is_recording_audio=is_recording_audio,
