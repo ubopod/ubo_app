@@ -430,16 +430,27 @@ class ChatWidget(UboPageWidget):
             scroll_steps = round(self._scroll / _ROW_PITCH)
             for index, bubble in enumerate(self._bubbles):
                 bubble.center_slot = grid[index] - scroll_steps
-                bubble.center_y = base + bubble.center_slot * _ROW_PITCH
+                center_y = base + bubble.center_slot * _ROW_PITCH
                 if bubble.alignment == 'right':
-                    bubble.right = self._viewport.right - _SCROLLBAR_GUTTER
+                    bubble.x = round(
+                        self._viewport.right
+                        - _SCROLLBAR_GUTTER
+                        - bubble.width,
+                    )
                 else:
-                    bubble.x = self._viewport.x + _LEFT_GUTTER
-                # Snap the bubble origin to whole pixels so its wrapped text
-                # always rasterizes on the same grid. Sub-pixel text positions
-                # anti-alias differently across render paths/frames and are the
-                # chat-only window-snapshot flake.
-                bubble.pos = (round(bubble.x), round(bubble.y))
+                    bubble.x = round(self._viewport.x + _LEFT_GUTTER)
+                # Anchor an integer *top*, not the center, and quantise the
+                # height first. The label is ``valign='top'``, so its wrapped
+                # text rasterises downward from ``bubble.top`` — pinning the
+                # top to a whole pixel keeps the text on a fixed scanline no
+                # matter how the texture height settles. The old
+                # ``round(center_y - height/2)`` left the text origin at
+                # ``y + height``, carrying the still-settling fractional
+                # height, so a sub-pixel jitter slid the whole text block a
+                # pixel (the chat-only snapshot flake). Now only the bubble's
+                # soft bottom edge tracks the fractional height, which does
+                # not toggle pixels.
+                bubble.top = round(center_y + round(bubble.height) / 2)
 
             self._assign_arrows()
         else:
