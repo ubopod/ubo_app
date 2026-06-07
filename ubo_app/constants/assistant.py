@@ -17,7 +17,7 @@ ASSISTANT_CONVERSATION_END_PHRASES: tuple[str, ...] = tuple(
     phrase.strip()
     for phrase in os.environ.get(
         'UBO_ASSISTANT_CONVERSATION_END_PHRASES',
-        "i am done|i'm done|that's it|that's all|thanks bye",
+        "i am done talking|i'm done talking",
     ).split('|')
     if phrase.strip()
 )
