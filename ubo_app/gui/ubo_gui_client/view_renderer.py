@@ -302,6 +302,18 @@ class ViewRenderer:
                     self._view_changed_count,
                 )
 
+        # The hostname title must be present on EVERY home frame. Both
+        # _render_view (duplicate-view dedup above) and _render_status_bar (its
+        # own status-bar dedup) can skip on a dismiss->home update, leaving the
+        # title unset and a frame behind on slower hardware. Apply it here
+        # unconditionally whenever the home view is current so it can never lag.
+        from ubo_bindings.ubo.v1 import HomeViewData as ProtoHomeViewData
+
+        if isinstance(view_data, ProtoHomeViewData) and status_bar is not None:
+            title = getattr(status_bar, 'title', '') or ''
+            if title and getattr(self.app, 'root', None) is not None:
+                self.app.root.title = title
+
     def _cleanup_video_subscription(self) -> None:
         """Clean up any active video/frame stream subscription."""
         if self._video_unsubscribe is not None:
