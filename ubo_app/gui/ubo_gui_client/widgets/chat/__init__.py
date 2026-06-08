@@ -60,6 +60,10 @@ _POINTER_HEIGHT = dp(12)
 _BUBBLE_RADIUS = dp(9)
 _BUBBLE_PADDING_X = dp(8)
 _BUBBLE_PADDING_Y = dp(6)
+_TEXT_LINE_PX = dp(17)  # deterministic per-wrapped-line height; pins bubble
+# geometry to the integer line count instead of the timing-jittery freetype
+# ``texture_size[1]`` (which settles 1px differently across frames/boards and
+# slid the whole text block one scanline in the exact-hash window snapshot).
 _MIN_BUBBLE_GAP = dp(6)  # minimum gap kept between stacked bubbles
 _WAVEFORM_HEIGHT = dp(26)
 _SCROLLBAR_WIDTH = dp(4)
@@ -210,17 +214,28 @@ class ChatBubble(BoxLayout):
                     'text_size',
                     (width, None),
                 ),
-                texture_size=lambda widget, size: setattr(
-                    widget,
-                    'height',
-                    size[1],
-                ),
+                texture_size=self._on_label_texture,
             )
             self._content = label
             self.bind(text=label.setter('text'))
         self.add_widget(self._content)
         self.bind(minimum_height=self.setter('height'))
         self.bind(pos=self._redraw, size=self._redraw)
+
+    def _on_label_texture(self, label: Label, _size: tuple[float, float]) -> None:
+        """Pin the label height to the integer wrapped-line count.
+
+        ``label._label._cached_lines`` is the final wrapped-line list — Kivy's
+        ``Label.texture_update`` calls ``self._label.refresh()`` (which fills
+        it) before assigning ``texture_size``, so its length is settled when
+        this fires. Deriving the height from that integer count, instead of the
+        raw ``texture_size[1]`` that settles 1px differently across frames and
+        boards, keeps the whole bubble byte-identical in the exact-hash window
+        snapshot (the Pi-5-only 1px text-shift flake).
+        """
+        cached = getattr(label._label, '_cached_lines', None)  # noqa: SLF001
+        lines = max(1, len(cached)) if cached else 1
+        label.height = lines * _TEXT_LINE_PX
 
     def update_from(self, source: object) -> None:
         """Refresh the mutable fields of this bubble from fresh view data."""
@@ -449,8 +464,10 @@ class ChatWidget(UboPageWidget):
                 # height, so a sub-pixel jitter slid the whole text block a
                 # pixel (the chat-only snapshot flake). Now only the bubble's
                 # soft bottom edge tracks the fractional height, which does
-                # not toggle pixels.
-                bubble.top = round(center_y + round(bubble.height) / 2)
+                # not toggle pixels. ``(n + 1) // 2`` is an exact integer
+                # ceil-of-half so the top never forms an ``x.5`` that Python's
+                # banker's rounding could flip a pixel either way.
+                bubble.top = round(center_y) + (round(bubble.height) + 1) // 2
 
             self._assign_arrows()
         else:

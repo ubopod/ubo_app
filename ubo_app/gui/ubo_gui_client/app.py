@@ -310,12 +310,49 @@ class UboGUIApp(MenuAppCentral, MenuAppFooter, MenuAppHeader, UboApp):
         camera frames are streaming at high frequency: the async loop stays
         free to process state updates and camera events while the screenshot
         is captured on the main thread.
+
+        Forces a fresh full render of the *current* widget state, then defers
+        the actual grab by a couple of frames.  ``raw_data`` is updated through
+        an async pipeline (GL FBO redraw -> ``process_frame`` -> a thread-pool
+        ``render`` that writes ``raw_data``), so grabbing it inline can hash a
+        frame that is a tick behind (e.g. a just-painted footer/title) or that
+        the render thread is concurrently writing (an off-by-one pixel).  Both
+        manifest as snapshot hash flakes.
         """
+        from headless_kivy import HeadlessWidget
+
+        root = self.root
+        if isinstance(root, HeadlessWidget):
+            # Defeat the "no pixels changed" early-out and force the GL FBO to
+            # redraw with the latest widget state on the next frame.
+            root.previous_frame = None
+            root.fbo.ask_update()
+
+        # The FBO redraw + render-thread write happen over the next frames, not
+        # synchronously, so capture a couple of frames later (see
+        # ``_capture_and_send_screenshot`` for the render-thread join).
+        fps = root.fps if isinstance(root, HeadlessWidget) else 24
+        Clock.schedule_once(self._capture_and_send_screenshot, 2 / fps)
+
+    def _capture_and_send_screenshot(self: UboGUIApp, _dt: float = 0) -> None:
+        """Hash + PNG-encode ``raw_data`` and send it back to core via gRPC."""
+        import contextlib
         import hashlib
         import io
 
         import png
         from headless_kivy import HeadlessWidget
+
+        root = self.root
+        if isinstance(root, HeadlessWidget):
+            # Block until headless_kivy's render thread has finished writing the
+            # latest frame into raw_data so the capture is never torn mid-write
+            # or a frame behind.  ``render`` only does pixel maths + SPI display
+            # transfer, so joining it on the Kivy thread cannot deadlock.
+            task = root.last_render_task
+            if task is not None:
+                with contextlib.suppress(Exception):
+                    task.result(timeout=5)
 
         array = HeadlessWidget.raw_data
         # Hash on raw_data directly to match headless_kivy_pytest's
