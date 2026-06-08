@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import threading
+import time
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -180,6 +182,54 @@ class WindowSnapshot:
         return (
             f"""window-{prefix_element}{title_element}{self.test_counter[title]:03d}"""
         )
+
+    async def wait_for_render(
+        self: WindowSnapshot,
+        title: str | None = None,
+        *,
+        timeout: float = 30.0,  # noqa: ASYNC109
+        poll_interval: float = 1.0,
+    ) -> None:
+        """Wait until the GUI-rendered window converges to a reference hash.
+
+        Why this is needed (cross-process render-lag race)
+        --------------------------------------------------
+        The GUI runs in a SEPARATE process. Core state (e.g. a freshly
+        registered ``wifi:state`` / ``audio:mic-state`` status icon) reaches it
+        over a *latest-wins*, sequence-less gRPC channel, while the screenshot
+        request rides a *separate, unordered* event stream. So a grab can be
+        processed by the GUI BEFORE it applies the state update that adds an
+        icon — the icon is in the core store (the test's ``wait_for`` barriers
+        assert that) yet missing from the captured frame. ``stability`` doesn't
+        catch it either: it settles when the window hash and the store snapshot
+        are *each* independently stable, and the GUI can sit "stably lagged" on
+        the pre-icon frame for the whole settle window.
+
+        This barrier closes the gap from the test side: after the core store
+        holds the icons, it polls the rendered window and returns as soon as the
+        frame matches an accepted reference hash — i.e. the GUI has actually
+        rendered the settled state. It is bounded and honest: on ``--override``
+        (or with no reference yet) it is a no-op, and if the window never
+        converges (a genuine regression, not just lag) it falls through after
+        ``timeout`` so the subsequent ``take`` still fails with the real
+        mismatch. It never turns a real failure into a pass.
+        """
+        if self.override:
+            return
+        filename = self.get_filename(title)
+        hash_path = (self.results_dir / filename).with_suffix('.hash')
+        if not hash_path.exists():
+            return
+        accepted = read_accepted_hashes(hash_path)
+        if not accepted:
+            return
+        deadline = time.monotonic() + timeout
+        while True:
+            if self.hash in accepted:
+                return
+            if time.monotonic() >= deadline:
+                return
+            await asyncio.sleep(poll_interval)
 
     def take(self: WindowSnapshot, title: str | None = None) -> None:
         """Take a snapshot of the content of the window."""
