@@ -82,6 +82,15 @@ async def test_all_services_register(
 
     await stability(initial_wait=2, timeout=45)
 
+    # ``wait_for_status_icons`` proved the icons are in the CORE store, but the
+    # GUI renders in a separate process and receives state over a latest-wins,
+    # sequence-less channel that is unordered w.r.t. the screenshot request — so
+    # a grab can still race ahead of the GUI applying the icon update (the wifi
+    # icon then drops from the frame). Block until the rendered window actually
+    # converges to a committed reference before snapshotting; bounded, and a real
+    # regression still falls through to fail in ``window_snapshot.take`` below.
+    await window_snapshot.wait_for_render(timeout=30)
+
     from tests.conftest import exclude_dynamic_menus
 
     store_snapshot.take(selector=exclude_dynamic_menus)
