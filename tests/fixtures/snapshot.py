@@ -22,6 +22,27 @@ def write_png(image_path: Path, data: bytes) -> None:
         f.write(data)
 
 
+def read_accepted_hashes(hash_path: Path) -> list[str]:
+    """Return every accepted hash from a ``.hash`` file.
+
+    A window ``.hash`` file may list more than one accepted hash, one per
+    line after the ``// <filename>`` header comment. This supports boards
+    whose GPU rasterises a settled frame a single sub-pixel differently
+    (e.g. a Raspberry Pi 4's V3D 4.2 vs a Pi 5's V3D 7.1) — both values are
+    valid for the same reference, so the snapshot passes on either board.
+    """
+    return [
+        line.strip()
+        for line in hash_path.read_text().splitlines()
+        if line.strip() and not line.lstrip().startswith('//')
+    ]
+
+
+def format_hash_file(filename: str, hashes: list[str]) -> str:
+    """Serialise a ``.hash`` file: a header comment then one hash per line."""
+    return f'// {filename}\n' + '\n'.join(hashes) + '\n'
+
+
 class WindowSnapshot:
     """Context object for tests taking snapshots of the window via store events."""
 
@@ -52,12 +73,23 @@ class WindowSnapshot:
             prefix_element = ''
             if self.prefix:
                 prefix_element = self.prefix + '-'
-            for file_path in self.results_dir.glob(
-                f'window-{prefix_element}*'
+            # On ``--override`` we clear stale images/mismatches but deliberately
+            # KEEP existing ``.hash`` files: override is a *union* (see ``take``)
+            # so regenerating on a second board (e.g. Pi 5 after Pi 4) adds that
+            # board's hash to the file rather than wiping the first board's. To
+            # reset a reference from scratch after a genuine visual change,
+            # delete its ``.hash`` file by hand before regenerating.
+            globs = (
+                [
+                    f'window-{prefix_element}*.png',
+                    f'window-{prefix_element}*.mismatch.*',
+                ]
                 if override
-                else f'window-{prefix_element}*.mismatch.*',
-            ):
-                file_path.unlink()
+                else [f'window-{prefix_element}*.mismatch.*']
+            )
+            for glob in globs:
+                for file_path in self.results_dir.glob(glob):
+                    file_path.unlink(missing_ok=True)
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
     def _capture_screenshot(self: WindowSnapshot) -> None:
@@ -172,16 +204,43 @@ class WindowSnapshot:
             msg = 'No screenshot data available'
             raise RuntimeError(msg)
 
+        # Why a ``.hash`` may hold MORE THAN ONE accepted hash
+        # ----------------------------------------------------------------
+        # ``rpi`` window snapshots are shared by every Raspberry Pi runner,
+        # but the Pi 4 (VideoCore VI / V3D 4.2) and Pi 5 (VideoCore VII /
+        # V3D 7.1) GPUs rasterise the *same* settled, pixel-identical scene a
+        # single sub-pixel apart: one anti-aliased glyph-edge pixel comes out
+        # one intensity level different (e.g. 236 vs 237). It is deterministic
+        # per board, visually undetectable, and — unlike the genuine bugs we
+        # already fixed (the texture-height-driven 1px text shift and the
+        # screenshot render-thread race) — it is NOT removable in software:
+        # the divergence is in the GPU's blend/rasteriser rounding, which the
+        # GL spec does not pin down. Identical fonts, Mesa, SDL, layout and
+        # capture path all verified. With exact-hash comparison one reference
+        # can only ever satisfy one board, so the other ping-pongs to failure.
+        # Accepting either board's deterministic hash is the minimal, honest
+        # fix. ``divide_into_regions``-style tolerance was the alternative;
+        # we keep exact hashing + a small accepted set so a real regression
+        # (any *other* pixel changing) still fails loudly.
         if self.override:
-            hash_path.write_text(f'// {filename}\n{new_snapshot}\n')
+            # Union: add this board's hash to the file, preserving any other
+            # board's already-recorded hash (init keeps ``.hash`` on override).
+            existing = (
+                read_accepted_hashes(hash_path) if hash_path.exists() else []
+            )
+            accepted = (
+                [*existing, new_snapshot]
+                if new_snapshot not in existing
+                else existing
+            )
+            hash_path.write_text(format_hash_file(filename, accepted))
             if self.make_screenshots and self._latest_data is not None:
                 write_png(image_path, self._latest_data)
         else:
-            if hash_path.exists():
-                old_snapshot = hash_path.read_text().split('\n', 1)[1][:-1]
-            else:
-                old_snapshot = None
-            if old_snapshot != new_snapshot:
+            accepted = (
+                read_accepted_hashes(hash_path) if hash_path.exists() else []
+            )
+            if new_snapshot not in accepted:
                 self._is_failed = True
                 hash_mismatch_path.write_text(  # pragma: no cover
                     f'// MISMATCH: {filename}\n{new_snapshot}\n',
@@ -190,8 +249,9 @@ class WindowSnapshot:
                     write_png(image_mismatch_path, self._latest_data)
             elif self.make_screenshots and self._latest_data is not None:
                 write_png(image_path, self._latest_data)
-            assert new_snapshot == old_snapshot, (
-                f'Window snapshot mismatch - {filename}'
+            assert new_snapshot in accepted, (
+                f'Window snapshot mismatch - {filename} '
+                f'(produced {new_snapshot}, accepted {accepted})'
             )
 
         self.test_counter[title] += 1
