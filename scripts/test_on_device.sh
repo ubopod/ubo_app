@@ -92,6 +92,17 @@ if [ "$run" == "True" ] || [ "$deps" == "True" ] || [ "$copy" == "True" ]; then
 
   if [ "$deps" == "True" ]; then
     cmd_list+=('SETUPTOOLS_SCM_PRETEND_VERSION=$(uv run poe version) uv run poe proto:generate:raw proto:compile:raw && uv sync --frozen && (cd ubo_app/gui && ([ -d .venv ] || UV_PROJECT_ENVIRONMENT=.venv uv venv --system-site-packages .venv) && UV_PROJECT_ENVIRONMENT=.venv uv sync --frozen) &&')
+  elif [ "$copy" == "True" ]; then
+    # A ``--copy`` run refreshes the workspace source but deliberately preserves
+    # the prebuilt virtualenvs (the find above keeps ubo_app/gui/.venv). The GUI
+    # client is installed *editable* into that venv, so its import path is an
+    # ``_editable_impl_ubo_gui_client.pth`` written by ``uv sync``. Without a
+    # re-sync the preserved .pth keeps pointing at the previous source location
+    # (and ``--system-site-packages`` then shadows it with a stale build), so
+    # GUI/chat-widget edits never take effect on copy-only runs. Re-running the
+    # gui ``uv sync`` (cheap with --frozen, deps already present) re-points the
+    # editable install at the freshly-copied source.
+    cmd_list+=('(cd ubo_app/gui && ([ -d .venv ] || UV_PROJECT_ENVIRONMENT=.venv uv venv --system-site-packages .venv) && UV_PROJECT_ENVIRONMENT=.venv uv sync --frozen) &&')
   fi
 
   if [ "$run" == "True" ]; then
