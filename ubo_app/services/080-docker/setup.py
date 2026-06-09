@@ -257,7 +257,7 @@ async def stop_docker() -> None:
 
 async def sync_docker_containers() -> None:
     """Sync container states from Docker daemon."""
-    from docker_container import update_container
+    from docker_container import check_container, update_container
 
     with contextlib.suppress(Exception):
         docker_client = docker.from_env()
@@ -282,10 +282,19 @@ async def sync_docker_containers() -> None:
 
     # Bootstrap event monitors for all non-composition images so we get
     # live state updates without polling. start_event_monitor is idempotent.
+    #
+    # Also imperatively refresh each image's status: the container scan above
+    # only reflects existing *containers*, so an image that is already pulled
+    # but has no container would otherwise stay at the default NOT_AVAILABLE.
+    # Consumers that read the store without first opening the docker menu
+    # (e.g. the assistant's Ollama setup) would then see a stale NOT_AVAILABLE
+    # and offer to re-fetch an image that's already present. check_container
+    # reports AVAILABLE for a present image and reconciles container state too.
     for image_id, image_description in IMAGES.items():
         if image_description.is_composition:
             continue
         start_event_monitor(image_id)
+        check_container(image_id=image_id)
 
 
 async def check_docker() -> None:

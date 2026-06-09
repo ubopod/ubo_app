@@ -56,7 +56,7 @@ from ubo_app.engines.kokoro_catalog import (
 )
 from ubo_app.engines.kokoro_catalog import voice_for as kokoro_voice_for
 from ubo_app.engines.kokoro_catalog import voice_label as kokoro_voice_label
-from ubo_app.engines.ollama import OllamaEngine
+from ubo_app.engines.ollama import OllamaEngine, _ollama_status
 from ubo_app.engines.ollama_catalog import (
     OLLAMA_CATALOG,
     fits_in_ram,
@@ -2155,6 +2155,20 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
     register_path_menu_matcher('assistant:menus', _assistant_path_matcher)
 
 
+def _watch_ollama_container_status() -> None:
+    """Re-evaluate provider setup status when the Ollama container state changes.
+
+    ``OllamaEngine.is_setup`` requires the container to be RUNNING, so stopping
+    or removing it must refresh ``provider_setup_status`` to flip the menu back
+    to the setup (run) journey. The autorun persists via the store's listener
+    set (``keep_ref``), so it outlives this function.
+    """
+
+    @store.autorun(lambda state: _ollama_status(state))
+    def _on_ollama_status(_status: object) -> None:
+        store.dispatch(AssistantUpdateProvidersAction())
+
+
 async def init_service() -> None:
     """Initialize the assistant service."""
     _register_persistent_stores()
@@ -2376,6 +2390,8 @@ async def init_service() -> None:
         AssistantDownloadVoskModelEvent,
         handle_vosk_download,
     )
+
+    _watch_ollama_container_status()
 
     store.dispatch(AssistantUpdateProvidersAction())
     store.dispatch(AssistantSyncMcpServersAction())
