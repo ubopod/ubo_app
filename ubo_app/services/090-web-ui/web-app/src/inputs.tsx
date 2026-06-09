@@ -26,7 +26,6 @@ import {
   FileUploadChunkAction,
   FileUploadCompleteAction,
   FileUploadStartAction,
-  InputCancelAction,
   InputFieldType,
   InputMethod,
   InputProvideAction,
@@ -178,49 +177,60 @@ export function Inputs({
       }
     }
 
-    if (!store) {
-      alert("Store not available. Please refresh the page.");
-      return;
+    // Only file uploads still go over gRPC (chunked, in the background).
+    // Text "provide" and all "cancel" submissions are sent to the Flask
+    // backend instead, so they don't depend on gRPC/Envoy/Docker.
+    let hasFiles = false;
+    for (const entryValue of formData.values()) {
+      if (entryValue instanceof File && entryValue.size > 0) {
+        hasFiles = true;
+        break;
+      }
     }
-    if (!isGrpcConnected) {
-      alert("gRPC not connected. Please wait for connection.");
-      return;
-    }
-    // Extract value: if fields are defined, use the first non-file field's
-    // value; otherwise use the "value" field
-    let value = "";
-    if (input?.fields && input.fields.itemsList.length > 0) {
-      const firstField = input.fields.itemsList.find(
-        (f) => f.type !== InputFieldType.INPUT_FIELD_TYPE_FILE,
-      );
-      if (firstField) {
-        value = (formData.get(firstField.name) as string) || "";
+
+    if (action === "provide" && hasFiles) {
+      if (!store) {
+        alert("Store not available. Please refresh the page.");
+        return;
+      }
+      if (!isGrpcConnected) {
+        alert("gRPC not connected. Please wait for connection.");
+        return;
+      }
+      // Extract value: if fields are defined, use the first non-file field's
+      // value; otherwise use the "value" field
+      let value = "";
+      if (input?.fields && input.fields.itemsList.length > 0) {
+        const firstField = input.fields.itemsList.find(
+          (f) => f.type !== InputFieldType.INPUT_FIELD_TYPE_FILE,
+        );
+        if (firstField) {
+          value = (formData.get(firstField.name) as string) || "";
+          if (!value || value.trim() === "") {
+            const inputElement = form.querySelector(
+              `[name="${firstField.name}"]`,
+            ) as
+              | HTMLInputElement
+              | HTMLTextAreaElement
+              | HTMLSelectElement
+              | null;
+            if (inputElement) {
+              value = inputElement.value || "";
+            }
+          }
+        }
+      } else {
+        value = (formData.get("value") as string) || "";
         if (!value || value.trim() === "") {
           const inputElement = form.querySelector(
-            `[name="${firstField.name}"]`,
-          ) as
-            | HTMLInputElement
-            | HTMLTextAreaElement
-            | HTMLSelectElement
-            | null;
+            '[name="value"]',
+          ) as HTMLInputElement | null;
           if (inputElement) {
             value = inputElement.value || "";
           }
         }
       }
-    } else {
-      value = (formData.get("value") as string) || "";
-      if (!value || value.trim() === "") {
-        const inputElement = form.querySelector(
-          '[name="value"]',
-        ) as HTMLInputElement | null;
-        if (inputElement) {
-          value = inputElement.value || "";
-        }
-      }
-    }
 
-    if (action === "provide") {
       try {
         const inputResult = new InputResult();
         inputResult.setMethod(InputMethod.INPUT_METHOD_WEB_DASHBOARD);
@@ -277,21 +287,18 @@ export function Inputs({
           `Error submitting form: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
-    } else if (action === "cancel") {
+    } else {
+      // Submit to the Flask backend, which dispatches the action directly to
+      // the in-process store — no gRPC required.
+      formData.set("action", action);
       try {
-        const inputCancelAction = new InputCancelAction();
-        inputCancelAction.setId(id);
-
-        const cancelAction = new Action();
-        cancelAction.setInputCancelAction(inputCancelAction);
-
-        const dispatchActionRequest = new DispatchActionRequest();
-        dispatchActionRequest.setAction(cancelAction);
-
-        await store.dispatchAction(dispatchActionRequest);
+        await fetch("/", { method: "POST", body: formData });
       } catch (error) {
-        console.error("Error dispatching InputCancelAction:", error);
-        alert(`Error cancelling form: ${error instanceof Error ? error.message : String(error)}`);
+        console.error("Error submitting form to backend:", error);
+        alert(
+          `Error submitting form: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return;
       }
     }
 
