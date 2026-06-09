@@ -164,6 +164,35 @@ def _create_action_handler(notification: Notification, action_index: int) -> Non
         pass  # Already registered
 
 
+def _refresh_notification_action_handlers(notification: Notification) -> None:
+    """(Re)register a notification's action handlers, replacing any prior set.
+
+    A notification can be re-displayed under the same id with different actions
+    (e.g. a multi-step setup flow that advances Fetch → Run → Download). Clearing
+    the previous render's handlers first ensures the index-based
+    ``notification:action:{id}:{index}`` handlers bind to the *current* actions —
+    otherwise the stale handlers (which close over the old actions) stay bound,
+    because ``_create_action_handler`` skips re-registration as "already
+    registered", and the button keeps firing the old action.
+    """
+    from ubo_app.store.core.action_registry import unregister_action
+
+    with _actions_lock:
+        stale_action_ids = _registered_actions.pop(notification.id, [])
+    for action_id in stale_action_ids:
+        unregister_action(action_id)
+
+    if notification.extra_information:
+        _create_extra_info_handler(notification)
+
+    for i in range(len(notification.actions)):
+        _create_action_handler(notification, i)
+
+    show_dismiss = getattr(notification, 'show_dismiss_action', True)
+    if show_dismiss:
+        _create_dismiss_handler(notification)
+
+
 def _register_notification_action_handlers() -> None:
     """Register action handlers for notification actions."""
     from ubo_app.logger import logger
@@ -176,15 +205,7 @@ def _register_notification_action_handlers() -> None:
 
     def on_display(event: NotificationsDisplayEvent) -> None:
         notification = event.notification
-        if notification.extra_information:
-            _create_extra_info_handler(notification)
-
-        for i in range(len(notification.actions)):
-            _create_action_handler(notification, i)
-
-        show_dismiss = getattr(notification, 'show_dismiss_action', True)
-        if show_dismiss:
-            _create_dismiss_handler(notification)
+        _refresh_notification_action_handlers(notification)
 
         with _actions_lock:
             if notification.id in _registered_actions:
