@@ -19,7 +19,7 @@
     "ollama_downloaded_models": [],
     "ollama_downloaded_models_refreshed": true,
     "ollama_model_capabilities": {
-      "gemma3:1b": []
+      "liquidai/lfm2.5-350m": []
     },
     "ollama_thinking_enabled": {},
     "piper_downloaded_voices": [],
@@ -127,7 +127,7 @@
       "google_vertex": "gemini-2.5-flash-preview-05-20",
       "grok": "grok-4-0709",
       "mistral": "mistral-small-latest",
-      "ollama": "gemma3:1b",
+      "ollama": "liquidai/lfm2.5-350m",
       "ollama_onprem": "granite3.3:8b",
       "openai": "gpt-4o",
       "openrouter": "openai/gpt-4o-mini",
