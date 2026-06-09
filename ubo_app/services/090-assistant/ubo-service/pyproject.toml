@@ -6,7 +6,7 @@ license = "Apache-2.0"
 authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
 maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 keywords = ['ubo', 'ubo-pod', 'ubo-service', 'pipecat', 'assistant']
 dependencies = [
   "pipecat-ai[google,openai,grok,fal,silero,elevenlabs,mcp,deepgram,cerebras,assemblyai,rime,anthropic,mistral,kokoro]==1.3.0",
