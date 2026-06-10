@@ -7,29 +7,52 @@ from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast
 
-from ubo_app.store.services.assistant import (
-    AssistantAddGenericLLMProviderAction,
-    AssistantRemoveGenericLLMProviderAction,
-)
 from ubo_app.utils import secrets
 
 if TYPE_CHECKING:
     import pytest
     from redux import BaseAction
 
+    # Type-only: used solely to annotate the name-filtered actions below. Kept
+    # out of runtime imports so the dispatched action's class identity is never
+    # compared (see the class-name matching note in the tests).
+    from ubo_app.store.services.assistant import (
+        AssistantAddGenericLLMProviderAction,
+        AssistantRemoveGenericLLMProviderAction,
+    )
+
 
 DOCKER_SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app' / 'services' / '080-docker'
 
-# Minimal stand-in for the upstream compose file so prepare_hermes never
-# touches the network in tests.
+# Stand-in mirroring the *current* upstream compose so prepare_hermes never
+# touches the network in tests. Faithful to the real three-container layout:
+# agent + dashboard both carry HERMES_HOME=/home/hermes/.hermes (so the
+# inject-once logic is exercised), hermes-home is shared at two container
+# paths, hermes-agent-src is the disposable source volume, and the workspace
+# bind uses the ${HERMES_WORKSPACE:-${HOME}/workspace} form.
 UPSTREAM_COMPOSE = """services:
   hermes-agent:
-    image: ghcr.io/nesquena/hermes-agent:latest
-    environment:
-      - HERMES_HOME=/root/.hermes
+    image: nousresearch/hermes-agent:latest
     volumes:
-      - hermes-home:/root/.hermes
-      - ~/workspace:/workspace
+      - hermes-home:/home/hermes/.hermes
+      - hermes-agent-src:/opt/hermes
+    environment:
+      - HERMES_HOME=/home/hermes/.hermes
+  hermes-dashboard:
+    image: nousresearch/hermes-agent:latest
+    volumes:
+      - hermes-home:/home/hermes/.hermes
+    environment:
+      - HERMES_HOME=/home/hermes/.hermes
+  hermes-webui:
+    image: ghcr.io/nesquena/hermes-webui:latest
+    volumes:
+      - hermes-home:/home/hermeswebui/.hermes
+      - hermes-agent-src:/home/hermeswebui/.hermes/hermes-agent:ro
+      - ${HERMES_WORKSPACE:-${HOME}/workspace}:/workspace
+volumes:
+  hermes-home:
+  hermes-agent-src:
 """
 
 
@@ -58,6 +81,7 @@ class HermesModule(Protocol):
     """Protocol for the Hermes module members used by these tests."""
 
     COMPOSITIONS_PATH: Path
+    HERMES_DATA_PATH: Path
     HERMES_API_SERVER_KEY_SECRET: str
     HERMES_LLM_PROVIDER_SECRET_KEYS: tuple[str, str, str]
     ENTRY: ContainerEntryProtocol
@@ -102,6 +126,7 @@ def _prepare(
     hermes = _import_hermes()
     _use_temp_secrets(monkeypatch, tmp_path, hermes)
     monkeypatch.setattr(hermes, 'COMPOSITIONS_PATH', tmp_path)
+    monkeypatch.setattr(hermes, 'HERMES_DATA_PATH', tmp_path / 'hermes-data')
     fake_store = _FakeStore()
     monkeypatch.setattr(hermes, 'store', fake_store)
 
@@ -128,6 +153,46 @@ async def test_prepare_hermes_writes_env_with_api_server_enabled(
     assert f'HERMES_API_SERVER_KEY={api_server_key}' in env
 
 
+async def test_prepare_hermes_converts_volumes_to_host_bind_mounts(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The prepare phase decouples Hermes state from the disposable image.
+
+    Every ``hermes-home`` mount becomes a host bind mount at a single shared
+    persistent dir, the ``/workspace`` mount is redirected there too, and the
+    image-derived ``hermes-agent-src`` volume is left untouched.
+    """
+    hermes, _ = _prepare(monkeypatch, tmp_path)
+
+    assert await hermes.prepare_hermes()
+
+    compose = (tmp_path / 'hermes' / 'docker-compose.yml').read_text()
+    data_dir = tmp_path / 'hermes-data' / 'data'
+    workspace_dir = tmp_path / 'hermes-data' / 'workspace'
+
+    # hermes-home converted to a host bind mount at every container target,
+    # preserving the (upstream-defined) container-side path.
+    assert f'- {data_dir}:/home/hermes/.hermes' in compose
+    assert f'- {data_dir}:/home/hermeswebui/.hermes' in compose
+    assert '- hermes-home:' not in compose
+    # workspace redirected to the persistent dir.
+    assert f'- {workspace_dir}:/workspace' in compose
+    assert '${HERMES_WORKSPACE' not in compose
+    # hermes-agent-src (image-derived source) stays a named volume.
+    assert '- hermes-agent-src:/opt/hermes' in compose
+
+    # The gateway API server env vars are injected exactly once (into the agent
+    # service, after its HERMES_HOME), independent of the home path value.
+    assert compose.count('- API_SERVER_ENABLED=true') == 1
+    assert '- API_SERVER_KEY=${HERMES_API_SERVER_KEY}' in compose
+    assert '- GATEWAY_ALLOW_ALL_USERS=true' in compose
+
+    # The persistent dirs are created, idempotently.
+    assert data_dir.is_dir()
+    assert workspace_dir.is_dir()
+
+
 async def test_prepare_hermes_registers_assistant_provider(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -144,11 +209,18 @@ async def test_prepare_hermes_registers_assistant_provider(
     )
     assert secrets.read_secret(model_key) == 'hermes-agent'
 
-    add_actions = [
-        action
-        for action in fake_store.dispatched
-        if isinstance(action, AssistantAddGenericLLMProviderAction)
-    ]
+    # Match by class name, not isinstance: across the full unit suite the
+    # assistant action module can be re-imported under a different generation,
+    # so the dispatched action's class is not identity-equal to a top-level
+    # import (see the sys.modules isolation note in MEMORY.md).
+    add_actions = cast(
+        'list[AssistantAddGenericLLMProviderAction]',
+        [
+            action
+            for action in fake_store.dispatched
+            if type(action).__name__ == 'AssistantAddGenericLLMProviderAction'
+        ],
+    )
     assert len(add_actions) == 1
     assert add_actions[0].provider_id == 'hermes'
     assert add_actions[0].label == 'Hermes'
@@ -175,10 +247,14 @@ def test_cleanup_hermes_removes_assistant_provider(
 
     hermes._cleanup_hermes()  # noqa: SLF001
 
-    remove_actions = [
-        action
-        for action in fake_store.dispatched
-        if isinstance(action, AssistantRemoveGenericLLMProviderAction)
-    ]
+    # Match by class name, not isinstance (see note in the register test).
+    remove_actions = cast(
+        'list[AssistantRemoveGenericLLMProviderAction]',
+        [
+            action
+            for action in fake_store.dispatched
+            if type(action).__name__ == 'AssistantRemoveGenericLLMProviderAction'
+        ],
+    )
     assert len(remove_actions) == 1
     assert remove_actions[0].provider_id == 'hermes'
