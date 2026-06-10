@@ -37,6 +37,7 @@ from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
     AssistanceTextFrame,
+    AssistantGenericLlmProviderChangedEvent,
     AssistantLlmName,
     AssistantModelChangedEvent,
     AssistantOllamaThinkingChangedEvent,
@@ -339,6 +340,20 @@ class UboLLMService(UboLLMSwitchService):
             ),
             callback=self._handle_model_changed_event,
         )
+        # The active named generic-LLM provider changed (or its credentials
+        # were edited). The parent's ``selected_llm`` autorun won't refire
+        # while its value stays ``generic_llm``, so this event is the only
+        # signal — refresh unconditionally from the canonical secrets; the
+        # rebuild is cheap and a refresh while generic isn't active is
+        # harmless (the proxy only routes frames when selected).
+        self.client.subscribe_event(
+            event_type=Event(
+                assistant_generic_llm_provider_changed_event=(
+                    AssistantGenericLlmProviderChangedEvent()
+                ),
+            ),
+            callback=self._handle_generic_llm_provider_changed_event,
+        )
         # Same pattern for Ollama thinking toggle (covers both runtime toggles
         # and the cold-start replay of ``ollama_thinking_enabled``).
         self.client.subscribe_event(
@@ -392,6 +407,19 @@ class UboLLMService(UboLLMSwitchService):
                 task_runner(self._refresh_ollama_service())
             else:
                 task_runner(self._refresh_api_key_service(current_id))
+
+    def _handle_generic_llm_provider_changed_event(self, event: Event) -> None:
+        """Rebuild the generic LLM service from the canonical secrets."""
+        payload = event.assistant_generic_llm_provider_changed_event
+        if payload is None:
+            return
+        logger.info(
+            'Active generic LLM provider changed; refreshing {extra}',
+            extra={'provider_id': payload.provider_id},
+        )
+        cast('ServiceSwitcher', self).create_task(
+            self._refresh_generic_llm_service(),
+        )
 
     def _handle_ollama_thinking_changed_event(self, event: Event) -> None:
         """Cache thinking-toggle changes and refresh the Ollama service."""

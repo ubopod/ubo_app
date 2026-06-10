@@ -52,6 +52,10 @@ class ContainerEntry(Immutable):
     ) = None
     category: str | None = None
     prepare: Callable[[], Awaitable[bool] | bool] | None = None
+    # Called when the app/composition is removed, before its secret_keys are
+    # cleared — for app-specific teardown beyond secrets (e.g. Hermes
+    # deregistering its assistant LLM provider).
+    cleanup: Callable[[], Awaitable[None] | None] | None = None
     is_composition: bool = False
     secret_keys: tuple[str, ...] = ()
     menu_actions: (

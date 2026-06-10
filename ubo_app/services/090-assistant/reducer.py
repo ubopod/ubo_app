@@ -17,6 +17,7 @@ from ubo_app.logger import logger
 from ubo_app.store.services.assistant import (
     DEFAULT_MODELS,
     AssistantAction,
+    AssistantAddGenericLLMProviderAction,
     AssistantAddMcpServerAction,
     AssistantAddMcpServerEvent,
     AssistantCompleteAction,
@@ -31,14 +32,18 @@ from ubo_app.store.services.assistant import (
     AssistantDownloadVoskModelAction,
     AssistantDownloadVoskModelEvent,
     AssistantEvent,
+    AssistantGenericLLMProviderChangedEvent,
+    AssistantGenericLLMProviderRemovedEvent,
     AssistantHandleReportEvent,
     AssistantLLMName,
     AssistantModelChangedEvent,
     AssistantOllamaThinkingChangedEvent,
     AssistantPipelineStage,
+    AssistantRemoveGenericLLMProviderAction,
     AssistantReportAction,
     AssistantRunPipelineAction,
     AssistantRunPipelineEvent,
+    AssistantSelectGenericLLMProviderAction,
     AssistantSetIsActiveAction,
     AssistantSetKokoroDownloadedAction,
     AssistantSetMcpServersAction,
@@ -71,6 +76,7 @@ from ubo_app.store.services.assistant import (
     AssistantTTSName,
     AssistantUpdateProvidersAction,
     EnabledMcpServersWithMetadata,
+    GenericLLMProvider,
     StopTalkingPhraseStopReason,
     UserStopReason,
     resolve_policy,
@@ -307,6 +313,66 @@ def reducer(
             return replace(
                 state,
                 provider_setup_status=provider_setup_status,
+            )
+
+        case AssistantAddGenericLLMProviderAction():
+            # Upsert by id so re-running a registration (e.g. re-preparing the
+            # Hermes composition) replaces the entry instead of duplicating it.
+            providers = (
+                *(
+                    provider
+                    for provider in state.generic_llm_providers
+                    if provider.provider_id != action.provider_id
+                ),
+                GenericLLMProvider(
+                    provider_id=action.provider_id,
+                    label=action.label,
+                ),
+            )
+            return replace(state, generic_llm_providers=providers)
+
+        case AssistantRemoveGenericLLMProviderAction():
+            was_selected = state.selected_generic_llm_provider == action.provider_id
+            new_state = replace(
+                state,
+                generic_llm_providers=tuple(
+                    provider
+                    for provider in state.generic_llm_providers
+                    if provider.provider_id != action.provider_id
+                ),
+            )
+            if was_selected:
+                new_state = replace(new_state, selected_generic_llm_provider='')
+                if state.selected_llm == AssistantLLMName.GENERIC:
+                    new_state = replace(
+                        new_state,
+                        selected_llm=AssistantLLMName.OLLAMA,
+                    )
+            return CompleteReducerResult(
+                state=new_state,
+                events=[
+                    AssistantGenericLLMProviderRemovedEvent(
+                        provider_id=action.provider_id,
+                        was_selected=was_selected,
+                    ),
+                ],
+            )
+
+        case AssistantSelectGenericLLMProviderAction():
+            # The event is emitted even when the same provider is re-selected:
+            # the subprocess must re-read the canonical secrets after
+            # credential edits, and its ``selected_llm`` autorun won't refire
+            # while the value stays ``generic_llm``.
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    selected_generic_llm_provider=action.provider_id,
+                ),
+                events=[
+                    AssistantGenericLLMProviderChangedEvent(
+                        provider_id=action.provider_id,
+                    ),
+                ],
             )
 
         case AssistantReportAction():

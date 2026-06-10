@@ -117,6 +117,22 @@ async def run_composition(event: DockerImageRunCompositionEvent) -> None:
     await check_composition(id=id)
 
 
+async def _run_cleanup_hook(id: str) -> None:
+    """Run an app's cleanup hook, if any, tolerating its failure."""
+    cleanup = IMAGES[id].cleanup
+    if cleanup is None:
+        return
+    try:
+        result = cleanup()
+        if result is not None:
+            await result
+    except Exception:
+        logger.exception(
+            'Composition cleanup hook failed',
+            extra={'composition_id': id},
+        )
+
+
 async def remove_composition(event: DockerImageRemoveCompositionEvent) -> None:
     """Remove the composition."""
     id = event.image
@@ -175,8 +191,9 @@ async def remove_composition(event: DockerImageRemoveCompositionEvent) -> None:
             extra={'composition_id': id},
         )
 
-    # Clear stored secrets for this composition
+    # Run app-specific cleanup, then clear stored secrets for this composition
     if id in IMAGES:
+        await _run_cleanup_hook(id)
         for key in IMAGES[id].secret_keys:
             secrets.clear_secret(key)
 

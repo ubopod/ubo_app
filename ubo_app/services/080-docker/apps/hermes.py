@@ -9,7 +9,17 @@ from typing import TYPE_CHECKING
 import aiohttp
 
 from apps._registry import COMPOSITIONS_PATH, ContainerEntry
+from ubo_app.constants.assistant import (
+    GENERIC_LLM_PROVIDER_API_KEY_SECRET_TEMPLATE,
+    GENERIC_LLM_PROVIDER_BASE_URL_SECRET_TEMPLATE,
+    GENERIC_LLM_PROVIDER_MODEL_SECRET_TEMPLATE,
+)
 from ubo_app.logger import logger
+from ubo_app.store.main import store
+from ubo_app.store.services.assistant import (
+    AssistantAddGenericLLMProviderAction,
+    AssistantRemoveGenericLLMProviderAction,
+)
 from ubo_app.utils import secrets
 
 if TYPE_CHECKING:
@@ -24,6 +34,24 @@ HERMES_GATEWAY_PORT = 8642
 HERMES_DASHBOARD_PORT = 9119
 HERMES_WEBUI_PORT = 8787
 HERMES_API_SERVER_KEY_SECRET = 'hermes_api_server_key'  # noqa: S105
+
+# Auto-registered assistant LLM provider backed by the Hermes gateway's
+# OpenAI-compatible API server.
+HERMES_LLM_PROVIDER_ID = 'hermes'
+HERMES_LLM_PROVIDER_LABEL = 'Hermes'
+HERMES_LLM_BASE_URL = f'http://127.0.0.1:{HERMES_GATEWAY_PORT}/v1'
+HERMES_LLM_MODEL = 'hermes-agent'
+HERMES_LLM_PROVIDER_SECRET_KEYS = (
+    GENERIC_LLM_PROVIDER_BASE_URL_SECRET_TEMPLATE.format(
+        provider_id=HERMES_LLM_PROVIDER_ID,
+    ),
+    GENERIC_LLM_PROVIDER_API_KEY_SECRET_TEMPLATE.format(
+        provider_id=HERMES_LLM_PROVIDER_ID,
+    ),
+    GENERIC_LLM_PROVIDER_MODEL_SECRET_TEMPLATE.format(
+        provider_id=HERMES_LLM_PROVIDER_ID,
+    ),
+)
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +139,41 @@ def _write_hermes_env(composition_path: Path) -> None:
         'GID=10000\n'
         'HERMES_UID=10000\n'
         'HERMES_GID=10000\n'
+        'API_SERVER_ENABLED=true\n'
         f'HERMES_API_SERVER_KEY={api_server_key}\n',
+    )
+
+
+def _register_assistant_provider(api_server_key: str) -> None:
+    """Register the Hermes gateway as a named generic LLM provider.
+
+    Writes the per-provider credentials and upserts the provider entry so it
+    shows up under Assistant → Language Model without any manual setup. It
+    is *not* auto-selected — the user picks it like any other provider.
+    """
+    base_url_key, api_key_key, model_key = HERMES_LLM_PROVIDER_SECRET_KEYS
+    secrets.write_secret(key=base_url_key, value=HERMES_LLM_BASE_URL)
+    secrets.write_secret(key=api_key_key, value=api_server_key)
+    secrets.write_secret(key=model_key, value=HERMES_LLM_MODEL)
+    store.dispatch(
+        AssistantAddGenericLLMProviderAction(
+            provider_id=HERMES_LLM_PROVIDER_ID,
+            label=HERMES_LLM_PROVIDER_LABEL,
+        ),
+    )
+
+
+def _cleanup_hermes() -> None:
+    """Deregister the Hermes assistant LLM provider on uninstall.
+
+    The provider's secrets are cleared by the assistant service's
+    removed-event handler (and ``ENTRY.secret_keys`` as a fallback when the
+    assistant service isn't loaded).
+    """
+    store.dispatch(
+        AssistantRemoveGenericLLMProviderAction(
+            provider_id=HERMES_LLM_PROVIDER_ID,
+        ),
     )
 
 
@@ -156,6 +218,8 @@ async def prepare_hermes() -> bool:
 
         _write_hermes_env(composition_path)
 
+        _register_assistant_provider(_get_or_create_api_server_key())
+
         metadata = {
             'label': 'Hermes Agent',
             'icon': '󱚣',
@@ -185,8 +249,13 @@ ENTRY = ContainerEntry(
     path='nesquena/hermes-webui:latest',
     registry='ghcr.io',
     prepare=prepare_hermes,
+    cleanup=_cleanup_hermes,
     is_composition=True,
     category='AI Agents',
+    secret_keys=(
+        HERMES_API_SERVER_KEY_SECRET,
+        *HERMES_LLM_PROVIDER_SECRET_KEYS,
+    ),
     ports={
         f'{HERMES_GATEWAY_PORT}/tcp': HERMES_GATEWAY_PORT,
         f'{HERMES_DASHBOARD_PORT}/tcp': HERMES_DASHBOARD_PORT,
