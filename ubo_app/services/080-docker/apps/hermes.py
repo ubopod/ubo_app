@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets as py_secrets
 from typing import TYPE_CHECKING
 
 import aiohttp
 
 from apps._registry import COMPOSITIONS_PATH, ContainerEntry
+from ubo_app.constants import CONFIG_PATH
 from ubo_app.constants.assistant import (
     GENERIC_LLM_PROVIDER_API_KEY_SECRET_TEMPLATE,
     GENERIC_LLM_PROVIDER_BASE_URL_SECRET_TEMPLATE,
@@ -26,6 +28,11 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 HERMES_COMPOSITION_ID = 'hermes'
+# Persistent host directory for all Hermes state, kept outside the composition
+# directory so neither `docker compose down -v` nor the composition-directory
+# removal on uninstall can destroy it. This decouples config/skills/sessions/
+# memories/API keys from the disposable Docker image.
+HERMES_DATA_PATH = CONFIG_PATH / 'hermes-data'
 HERMES_COMPOSE_URL = (
     'https://raw.githubusercontent.com/nesquena/hermes-webui'
     '/master/docker-compose.three-container.yml'
@@ -62,40 +69,53 @@ HERMES_LLM_PROVIDER_SECRET_KEYS = (
 def _patch_compose(content: str) -> str:
     """Patch the upstream compose file for headless Ubo deployment.
 
-    - Replace workspace bind mount with ./workspace for self-contained deploy.
-    - Fix hermes-agent HERMES_HOME to /opt/data (avoids privilege-drop bug).
+    Convert the named ``hermes-home`` volume and the ``/workspace`` bind mount
+    into host bind mounts under ``HERMES_DATA_PATH`` (which lives outside the
+    composition directory). This decouples all Hermes state — config, skills,
+    sessions, memories, API keys — from the Docker image so it survives
+    ``docker compose down -v`` and an app delete/reinstall.
+
+    Regexes (not literal strings) are used so the patch keeps working when the
+    upstream compose renames the in-container mount targets. The
+    ``hermes-agent-src`` volume is left untouched: it is image-derived source
+    code, not user data.
     """
-    patched = content.replace('~/workspace:/workspace', './workspace:/workspace')
-    patched = patched.replace(
-        '${HERMES_WORKSPACE:-~/workspace}:/workspace',
-        './workspace:/workspace',
+    data_path = HERMES_DATA_PATH / 'data'
+    workspace_path = HERMES_DATA_PATH / 'workspace'
+    # Point every `hermes-home:<target>` mount at the same shared host dir,
+    # preserving the container-side path so all three containers keep sharing
+    # state (agent/dashboard at /opt/data, webui at /home/hermeswebui/.hermes).
+    patched = re.sub(
+        r'- hermes-home:(\S+)',
+        rf'- {data_path}:\1',
+        content,
     )
-    patched = patched.replace(
-        '- hermes-home:/root/.hermes',
-        '- hermes-home:/opt/data',
-    )
-    patched = patched.replace(
-        '- hermes-home:/home/hermes/.hermes',
-        '- hermes-home:/opt/data',
-    )
-    patched = patched.replace(
-        '- HERMES_HOME=/root/.hermes',
-        '- HERMES_HOME=/opt/data',
-    )
-    patched = patched.replace(
-        '- HERMES_HOME=/home/hermes/.hermes',
-        '- HERMES_HOME=/opt/data',
+    # Redirect whatever is bind-mounted at /workspace to our persistent dir,
+    # regardless of the upstream source expression (e.g. ~/workspace or
+    # ${HERMES_WORKSPACE:-${HOME}/workspace}).
+    patched = re.sub(
+        r'- \S+:/workspace\b',
+        rf'- {workspace_path}:/workspace',
+        patched,
     )
     return _inject_api_server_env(patched)
 
 
 def _inject_api_server_env(content: str) -> str:
-    """Ensure the Hermes gateway API server env vars are in compose."""
+    """Ensure the Hermes gateway API server env vars are in compose.
+
+    The vars are injected right after the agent service's ``HERMES_HOME`` env
+    line. The first ``HERMES_HOME`` in the file belongs to ``hermes-agent``
+    (which runs the gateway); the dashboard's identical line comes later, so a
+    single replacement targets the agent only. ``HERMES_HOME`` is matched by
+    name — not a fixed value — so this keeps working when upstream changes the
+    home path (e.g. ``/opt/data`` → ``/home/hermes/.hermes``).
+    """
     required_env_lines = [
-        '      - API_SERVER_ENABLED=true',
-        '      - API_SERVER_KEY=${HERMES_API_SERVER_KEY}',
-        '      - API_SERVER_HOST=0.0.0.0',
-        '      - GATEWAY_ALLOW_ALL_USERS=true',
+        '- API_SERVER_ENABLED=true',
+        '- API_SERVER_KEY=${HERMES_API_SERVER_KEY}',
+        '- API_SERVER_HOST=0.0.0.0',
+        '- GATEWAY_ALLOW_ALL_USERS=true',
     ]
     missing_env_lines = [
         line
@@ -105,12 +125,16 @@ def _inject_api_server_env(content: str) -> str:
     if not missing_env_lines:
         return content
 
-    needle = '- HERMES_HOME=/opt/data'
-    if needle not in content:
+    match = re.search(r'^([ \t]*)- HERMES_HOME=.*$', content, flags=re.MULTILINE)
+    if match is None:
         logger.warning('Unable to inject Hermes API server env vars')
         return content
 
-    replacement = '\n'.join([needle, *missing_env_lines])
+    indent = match.group(1)
+    needle = match.group(0)
+    replacement = '\n'.join(
+        [needle, *(f'{indent}{line}' for line in missing_env_lines)],
+    )
     return content.replace(needle, replacement, 1)
 
 
@@ -200,7 +224,10 @@ async def prepare_hermes() -> bool:
         )
 
         composition_path.mkdir(exist_ok=True, parents=True)
-        (composition_path / 'workspace').mkdir(exist_ok=True, parents=True)
+        # Persistent, image-independent state dirs (idempotent — never clobbers
+        # data preserved across a delete/reinstall).
+        (HERMES_DATA_PATH / 'data').mkdir(exist_ok=True, parents=True)
+        (HERMES_DATA_PATH / 'workspace').mkdir(exist_ok=True, parents=True)
 
         compose_path = composition_path / 'docker-compose.yml'
         if compose_path.exists():
