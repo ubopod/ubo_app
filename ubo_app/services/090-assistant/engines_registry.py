@@ -56,6 +56,10 @@ LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
     AssistantLLMName.OPENROUTER: OpenRouterEngine(),
     AssistantLLMName.MISTRAL: MistralEngine(),
     AssistantLLMName.VENICE: _VENICE_ENGINE,
+    # The id-less GenericLLMEngine is the "Add Generic LLM" adder: it is
+    # permanently not-setup and its setup flow registers a new named
+    # provider. Named provider instances are built dynamically from
+    # ``state.assistant.generic_llm_providers`` in setup.py menus.
     AssistantLLMName.GENERIC: GenericLLMEngine(),
 }
 

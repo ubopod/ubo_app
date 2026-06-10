@@ -136,11 +136,18 @@ OLLAMA_ONPREM_URL_SECRET_ID = 'ollama_onprem_url'  # noqa: S105
 OLLAMA_ONPREM_URL_PATTERN = r'^https?://[a-zA-Z0-9.-]+(:[0-9]+)?/?$'
 OLLAMA_ONPREM_SETUP_NOTIFICATION_ID = 'assistant:ollama_onprem:setup'
 
+# Canonical "active copy" keys — the assistant subprocess reads these. The
+# core copies the selected named provider's credentials into them on select.
 GENERIC_LLM_BASE_URL_SECRET_ID = 'generic_llm_base_url'  # noqa: S105
 GENERIC_LLM_API_KEY_SECRET_ID = 'generic_llm_api_key'  # noqa: S105
 GENERIC_LLM_MODEL_SECRET_ID = 'generic_llm_model'  # noqa: S105
 GENERIC_LLM_BASE_URL_PATTERN = r'^https?://\S+$'
 GENERIC_LLM_SETUP_NOTIFICATION_ID = 'assistant:generic_llm:setup'
+# Per-provider credential keys for named generic LLM providers. Provider ids
+# are slugs limited to [a-z0-9_] so the resulting keys stay dotenv-safe.
+GENERIC_LLM_PROVIDER_BASE_URL_SECRET_TEMPLATE = 'generic_llm_{provider_id}_base_url'  # noqa: S105
+GENERIC_LLM_PROVIDER_API_KEY_SECRET_TEMPLATE = 'generic_llm_{provider_id}_api_key'  # noqa: S105
+GENERIC_LLM_PROVIDER_MODEL_SECRET_TEMPLATE = 'generic_llm_{provider_id}_model'  # noqa: S105
 
 PIPER_MODEL = 'en/en_US/kristin/medium/en_US-kristin-medium'
 PIPER_MODEL_URL = (

@@ -101,6 +101,39 @@ def _load_selected_models(value: str) -> dict[AssistantLLMName, str]:
     return selected_models
 
 
+class GenericLLMProvider(Immutable):
+    """A named OpenAI-compatible LLM provider added by the user (or a service)."""
+
+    provider_id: str
+    label: str
+
+
+def generic_llm_instance_key(provider_id: str) -> str:
+    """Menu/engine instance key for a named generic LLM provider."""
+    return f'{AssistantLLMName.GENERIC}:{provider_id}'
+
+
+def _load_generic_llm_providers(value: str) -> tuple[GenericLLMProvider, ...]:
+    """Load named generic LLM providers from persistent storage."""
+    try:
+        entries = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return ()
+    if not isinstance(entries, list):
+        return ()
+    providers: list[GenericLLMProvider] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        provider_id = entry.get('provider_id')
+        label = entry.get('label')
+        if isinstance(provider_id, str) and provider_id and isinstance(label, str):
+            providers.append(
+                GenericLLMProvider(provider_id=provider_id, label=label),
+            )
+    return tuple(providers)
+
+
 def _load_ollama_thinking_enabled(value: str) -> dict[str, bool]:
     """Load per-model Ollama thinking flags from persistent storage."""
     try:
@@ -694,6 +727,31 @@ class AssistantUpdateProvidersAction(AssistantAction):
     """Action to signal change in the state of available providers."""
 
 
+class AssistantAddGenericLLMProviderAction(AssistantAction):
+    """Action to add (or upsert by id) a named generic LLM provider."""
+
+    provider_id: str
+    label: str
+
+
+class AssistantRemoveGenericLLMProviderAction(AssistantAction):
+    """Action to remove a named generic LLM provider."""
+
+    provider_id: str
+
+
+class AssistantSelectGenericLLMProviderAction(AssistantAction):
+    """Action to mark a named generic LLM provider as the active one.
+
+    Dispatched by ``activate_provider`` *after* the provider's credentials
+    have been copied into the canonical generic-LLM secret keys, so the
+    resulting ``AssistantGenericLLMProviderChangedEvent`` always observes
+    fresh secrets.
+    """
+
+    provider_id: str
+
+
 class AssistantAddMcpServerAction(AssistantAction):
     """Action to add a new MCP server."""
 
@@ -830,6 +888,32 @@ class AssistantModelChangedEvent(AssistantEvent):
 
     llm_name: AssistantLLMName
     model: str
+
+
+class AssistantGenericLLMProviderChangedEvent(AssistantEvent):
+    """Event signalling that the active named generic LLM provider changed.
+
+    Emitted on *every* ``AssistantSelectGenericLLMProviderAction`` — even a
+    re-select of the same id — because the ``selected_llm`` gRPC autorun in
+    the assistant subprocess won't refire while its value stays
+    ``generic_llm``, and credential edits of the active provider also need
+    to reach the subprocess. The subprocess refreshes its generic LLM
+    service from the canonical secret keys on this event.
+    """
+
+    provider_id: str
+
+
+class AssistantGenericLLMProviderRemovedEvent(AssistantEvent):
+    """Event signalling that a named generic LLM provider was removed.
+
+    Handled by the assistant service (core side) to clear the provider's
+    per-provider secrets — and the canonical copies when ``was_selected``
+    is set — outside the reduce cycle.
+    """
+
+    provider_id: str
+    was_selected: bool
 
 
 class AssistantOllamaThinkingChangedEvent(AssistantEvent):
@@ -970,6 +1054,24 @@ class AssistantState(Immutable):
             'assistant:selected_llm_model',
             default=DEFAULT_MODELS,
             mapper=_load_selected_models,
+        ),
+    )
+    # Named generic LLM providers added by the user (or auto-registered by
+    # services like the Hermes Docker composition). Credentials live in the
+    # secrets file under per-provider keys; this slice only tracks identity.
+    generic_llm_providers: tuple[GenericLLMProvider, ...] = field(
+        default_factory=lambda: read_from_persistent_store(
+            'assistant:generic_llm_providers',
+            default=(),
+            mapper=_load_generic_llm_providers,
+        ),
+    )
+    # The provider id whose credentials are currently copied into the
+    # canonical generic-LLM secret keys. Empty = none selected.
+    selected_generic_llm_provider: str = field(
+        default=read_from_persistent_store(
+            'assistant:selected_generic_llm_provider',
+            default='',
         ),
     )
     # Cached `ollama.Client.show(model).capabilities` per model id. Populated

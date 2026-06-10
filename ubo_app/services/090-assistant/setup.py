@@ -45,6 +45,11 @@ from ubo_app.constants.assistant import (
 )
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
+from ubo_app.engines.generic_llm import (
+    activate_provider,
+    build_generic_llm_engines,
+    clear_provider_secrets,
+)
 from ubo_app.engines.kokoro import KokoroEngine
 from ubo_app.engines.kokoro_catalog import (
     DEFAULT_KOKORO_VOICE_ID,
@@ -116,6 +121,7 @@ from ubo_app.store.services.assistant import (
     AssistantDownloadPiperVoiceEvent,
     AssistantDownloadVoskModelAction,
     AssistantDownloadVoskModelEvent,
+    AssistantGenericLLMProviderRemovedEvent,
     AssistantHandleReportEvent,
     AssistantImageGeneratorName,
     AssistantLLMName,
@@ -135,8 +141,10 @@ from ubo_app.store.services.assistant import (
     AssistantToggleMcpServerEvent,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
+    GenericLLMProvider,
     McpServerMetadata,
     McpServerType,
+    generic_llm_instance_key,
 )
 from ubo_app.store.services.audio import (
     AudioPlayAudioSequenceAction,
@@ -381,6 +389,19 @@ def _register_persistent_stores() -> None:
         lambda state: json.dumps(state.assistant.selected_models),
     )
     register_persistent_store(
+        'assistant:generic_llm_providers',
+        lambda state: json.dumps(
+            [
+                {'provider_id': provider.provider_id, 'label': provider.label}
+                for provider in state.assistant.generic_llm_providers
+            ],
+        ),
+    )
+    register_persistent_store(
+        'assistant:selected_generic_llm_provider',
+        lambda state: state.assistant.selected_generic_llm_provider,
+    )
+    register_persistent_store(
         'assistant:ollama_thinking_enabled',
         lambda state: json.dumps(state.assistant.ollama_thinking_enabled),
     )
@@ -468,19 +489,28 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             'rime': secrets.read_secret(RIME_API_KEY_SECRET_ID),
         }
 
-    def _deduped_providers() -> list[AIProviderMixin]:
-        """Return all engines deduplicated by class, sorted for display."""
+    def _deduped_providers(
+        generic_llm_providers: tuple[GenericLLMProvider, ...] = (),
+    ) -> list[AIProviderMixin]:
+        """Return all engines deduplicated by class, sorted for display.
+
+        Named generic LLM provider instances are appended outside the
+        type-dedupe map — they all share ``GenericLLMEngine`` with the
+        static "Add Generic LLM" adder but must each get their own row.
+        """
+        static_engines = {
+            type(engine): engine
+            for engine in {
+                *STT_ENGINES.values(),
+                *LLM_ENGINES.values(),
+                *TTS_ENGINES.values(),
+                *IMAGE_GENERATOR_ENGINES.values(),
+            }
+            if engine is not None
+        }.values()
+        instances = build_generic_llm_engines(generic_llm_providers).values()
         return sorted(
-            {
-                type(engine): engine
-                for engine in {
-                    *STT_ENGINES.values(),
-                    *LLM_ENGINES.values(),
-                    *TTS_ENGINES.values(),
-                    *IMAGE_GENERATOR_ENGINES.values(),
-                }
-                if engine is not None
-            }.values(),
+            [*static_engines, *instances],
             key=lambda p: (
                 isinstance(p, RemoteMixin),
                 p.label.lower(),
@@ -502,16 +532,23 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         lambda state: (
             secrets_monitor.value,
             state.assistant.provider_setup_status,
+            state.assistant.generic_llm_providers,
         ),
     )
-    def providers(_: tuple[dict[str, str | None], dict[str, bool]]) -> None:
+    def providers(
+        data: tuple[
+            dict[str, str | None],
+            dict[str, bool],
+            tuple[GenericLLMProvider, ...],
+        ],
+    ) -> None:
         """Update dynamic menu for provider management."""
         for action_id in _provider_action_ids:
             unregister_action(action_id)
         _provider_action_ids.clear()
 
         items: list[MenuItemData] = []
-        for provider in _deduped_providers():
+        for provider in _deduped_providers(data[2]):
             if isinstance(
                 provider,
                 (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine),
@@ -619,6 +656,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.selected_piper_voice,
             state.assistant.selected_kokoro_voice,
             state.assistant.selected_vosk_model,
+            state.assistant.generic_llm_providers,
         ),
     )
     def provider_details(  # noqa: C901, PLR0915
@@ -631,6 +669,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             str,
             str,
             str,
+            tuple[GenericLLMProvider, ...],
         ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
@@ -645,7 +684,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             unregister_action(action_id)
         _provider_detail_action_ids.clear()
 
-        for provider in _deduped_providers():
+        for provider in _deduped_providers(data[8]):
             if not isinstance(provider, NeedsSetupMixin):
                 continue
             if not provider.is_setup and not isinstance(
@@ -1009,27 +1048,63 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.selected_llm,
             secrets_monitor.value,
             state.assistant.provider_setup_status,
+            state.assistant.generic_llm_providers,
+            state.assistant.selected_generic_llm_provider,
         ),
     )
     def llm_providers(
-        data: tuple[AssistantLLMName, dict[str, str | None], dict[str, bool]],
+        data: tuple[
+            AssistantLLMName,
+            dict[str, str | None],
+            dict[str, bool],
+            tuple[GenericLLMProvider, ...],
+            str,
+        ],
     ) -> None:
         """Update dynamic menu for LLM engine selection."""
         from engine_menu_builder import build_engine_menu
 
+        selected_llm = data[0]
+        generic_llm_providers = data[3]
+        selected_generic_llm_provider = data[4]
+
+        # Named generic providers each get their own row; the static GENERIC
+        # entry (the "Add Generic LLM" adder) always renders last.
+        engines: dict[str, object] = {
+            str(name): engine
+            for name, engine in LLM_ENGINES.items()
+            if name is not AssistantLLMName.GENERIC
+        }
+        engines.update(build_generic_llm_engines(generic_llm_providers))
+        engines[str(AssistantLLMName.GENERIC)] = LLM_ENGINES[
+            AssistantLLMName.GENERIC
+        ]
+
+        selected_name = (
+            generic_llm_instance_key(selected_generic_llm_provider)
+            if selected_llm == AssistantLLMName.GENERIC
+            else str(selected_llm)
+        )
+
+        generic_prefix = f'{AssistantLLMName.GENERIC}:'
+
+        def select_action_factory(engine_name: str) -> Callable[[], None]:
+            if engine_name.startswith(generic_prefix):
+                provider_id = engine_name[len(generic_prefix) :]
+                return lambda: activate_provider(provider_id)
+            return lambda: store.dispatch(
+                AssistantSetSelectedLLMAction(
+                    llm_name=AssistantLLMName(engine_name),
+                ),
+            )
+
         build_engine_menu(
-            engines=LLM_ENGINES,
-            selected_name=data[0],
+            engines=engines,
+            selected_name=selected_name,
             menu_id='assistant:llm',
             title='Language Model',
             action_prefix='llm',
-            select_action_factory=lambda en: (
-                lambda: store.dispatch(
-                    AssistantSetSelectedLLMAction(
-                        llm_name=AssistantLLMName(en),
-                    ),
-                )
-            ),
+            select_action_factory=select_action_factory,
             action_ids_list=_llm_action_ids,
         )
 
@@ -2081,6 +2156,18 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     )
 
 
+def _handle_generic_llm_provider_removed(
+    event: AssistantGenericLLMProviderRemovedEvent,
+) -> None:
+    """Forget a removed generic LLM provider's secrets.
+
+    Centralized here (rather than in the engine) so both the manual delete
+    flow and service-driven removals (e.g. uninstalling the Hermes Docker
+    composition) share one cleanup path, outside the reduce cycle.
+    """
+    clear_provider_secrets(event.provider_id, was_selected=event.was_selected)
+
+
 def _register_assistant_path_matchers() -> None:  # noqa: C901
     """Register path matchers for assistant sub-pages."""
     from ubo_app.store.core.view_registry import register_path_menu_matcher
@@ -2180,7 +2267,11 @@ async def init_service() -> None:
     )
     register_menu_content_dependency(
         'assistant:llm',
-        lambda s: s.assistant.selected_llm,
+        lambda s: (
+            s.assistant.selected_llm,
+            s.assistant.generic_llm_providers,
+            s.assistant.selected_generic_llm_provider,
+        ),
     )
     # Model picker submenus depend on the user's per-provider selection
     for _llm_name in LLM_ENGINES:
@@ -2374,6 +2465,10 @@ async def init_service() -> None:
     store.subscribe_event(AssistantDeleteMcpServerEvent, handle_delete_mcp_server)
     store.subscribe_event(AssistantToggleMcpServerEvent, handle_toggle_mcp_server)
     store.subscribe_event(AssistantSyncMcpServersEvent, handle_sync_mcp_servers)
+    store.subscribe_event(
+        AssistantGenericLLMProviderRemovedEvent,
+        _handle_generic_llm_provider_removed,
+    )
     store.subscribe_event(
         AssistantDownloadOllamaModelEvent,
         handle_ollama_download,

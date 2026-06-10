@@ -10,6 +10,7 @@
       "_type": "EnabledMcpServersWithMetadata",
       "items": []
     },
+    "generic_llm_providers": [],
     "is_active": false,
     "is_listening": false,
     "is_microphone_mute": true,
@@ -116,6 +117,7 @@
       "venice": false,
       "vosk": false
     },
+    "selected_generic_llm_provider": "",
     "selected_image_generator": "google",
     "selected_kokoro_voice": "af_heart",
     "selected_llm": "ollama",
@@ -307,6 +309,7 @@
     },
     "service": {
       "_type": "DockerServiceState",
+      "expose_to_lan": {},
       "status": "running",
       "usernames": {}
     },
