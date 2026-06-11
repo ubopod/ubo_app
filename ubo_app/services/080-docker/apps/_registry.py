@@ -66,6 +66,10 @@ class ContainerEntry(Immutable):
     menu_actions: (
         Callable[[str, list[MenuItemData], dict[str, list[str]]], None] | None
     ) = None
+    # Called before (re)starting the app with the current expose_to_lan value,
+    # so the app can sync any config that depends on LAN exposure (e.g. OpenClaw
+    # toggling Control UI device auth for plain-HTTP LAN access).
+    apply_lan_config: Callable[[bool], Awaitable[None] | None] | None = None
 
     @property
     def full_path(self) -> str:
