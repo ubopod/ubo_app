@@ -25,6 +25,7 @@ from ubo_app.store.services.docker import (
     DockerImageRemoveAction,
     DockerImageRemoveContainerAction,
     DockerImageRunAction,
+    DockerImageSetExposeToLanAction,
     DockerImageSetStatusAction,
     DockerImageStopAction,
     DockerItemStatus,
@@ -88,6 +89,8 @@ _image_action_ids: dict[str, list[str]] = {}
 def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
     image: ImageState,
     interfaces: Sequence[IpNetworkInterface] | None,
+    *,
+    expose_to_lan: bool,
 ) -> None:
     """Update the dynamic menu for a docker image."""
     menu_id = get_docker_image_menu_id(image.id)
@@ -345,6 +348,36 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
     elif image.status == DockerItemStatus.PROCESSING:
         pass
 
+    # LAN exposure toggle for apps with weak/no auth (loopback by default).
+    entry = IMAGES.get(image.id)
+    if (
+        entry is not None
+        and entry.supports_lan_toggle
+        and image.status
+        in (
+            DockerItemStatus.AVAILABLE,
+            DockerItemStatus.CREATED,
+            DockerItemStatus.STARTING,
+            DockerItemStatus.RUNNING,
+        )
+    ):
+        toggle_id = f'docker:toggle-lan:{image.id}'
+        _image_action_ids[menu_id].append(toggle_id)
+        register_action(
+            toggle_id,
+            lambda _id=image.id, _exposed=expose_to_lan: store.dispatch(
+                DockerImageSetExposeToLanAction(image=_id, expose_to_lan=not _exposed),
+            ),
+        )
+        items.append(
+            MenuItemData(
+                key='toggle-lan',
+                label='Loopback only' if expose_to_lan else 'Expose to LAN',
+                icon='󰒋' if expose_to_lan else '󰌐',
+                action_id=toggle_id,
+            ),
+        )
+
     # Status messages
     if is_composition:
         messages = {
@@ -396,6 +429,7 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
         lambda state: (
             getattr(state.docker, image_id, None),
             state.ip.interfaces if hasattr(state, 'ip') else None,
+            state.docker.service.expose_to_lan.get(image_id, False),
             _secrets_modification_time() if has_secrets else None,
         ),
         options=AutorunOptions(default_value=None, memoization=not has_secrets),
@@ -413,7 +447,15 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
         ) -> Sequence[IpNetworkInterface] | None:
             return interfaces
 
-        _update_docker_image_menu(image, _get_interfaces())
+        @store.with_state(lambda state: state.docker.service.expose_to_lan)
+        def _get_expose_to_lan(expose_to_lan: dict[str, bool]) -> bool:
+            return expose_to_lan.get(image_id, False)
+
+        _update_docker_image_menu(
+            image,
+            _get_interfaces(),
+            expose_to_lan=_get_expose_to_lan(),
+        )
 
         if (
             image.status == DockerItemStatus.STARTING

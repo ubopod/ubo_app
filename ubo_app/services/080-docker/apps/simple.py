@@ -57,6 +57,8 @@ ENTRIES: list[ContainerEntry] = [
         registry='docker.io',
         ports={'11434/tcp': 11434},
         category='AI Engines',
+        # Ollama's inference API has no authentication; default to loopback.
+        supports_lan_toggle=True,
     ),
     ContainerEntry(
         id='open_webui',

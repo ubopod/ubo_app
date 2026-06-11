@@ -256,7 +256,10 @@ async def prepare_hermes() -> bool:
                 f'Dashboard: http://{{{{hostname}}}}:{HERMES_DASHBOARD_PORT}\n'
                 f'WebUI: http://{{{{hostname}}}}:{HERMES_WEBUI_PORT}\n\n'
                 'Use the WebUI to chat with Hermes, and use the dashboard to '
-                'monitor agent activity, sessions, and resource usage.'
+                'monitor agent activity, sessions, and resource usage.\n\n'
+                'For security these ports are reachable from this device only '
+                '(loopback) by default. To open them to your local network, use '
+                '"Expose to LAN" in the Hermes menu.'
             ),
             'compose_id': HERMES_COMPOSITION_ID,
         }
@@ -279,6 +282,8 @@ ENTRY = ContainerEntry(
     cleanup=_cleanup_hermes,
     is_composition=True,
     category='AI Agents',
+    # Dashboard (9119) and WebUI (8787) have no auth; default to loopback.
+    supports_lan_toggle=True,
     secret_keys=(
         HERMES_API_SERVER_KEY_SECRET,
         *HERMES_LLM_PROVIDER_SECRET_KEYS,

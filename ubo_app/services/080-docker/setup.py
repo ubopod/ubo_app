@@ -61,21 +61,27 @@ from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageFetchCompositionEvent,
     DockerImageFetchEvent,
+    DockerImageRebindEvent,
     DockerImageRegisterAppEvent,
     DockerImageReleaseCompositionEvent,
     DockerImageRemoveCompositionEvent,
+    DockerImageRemoveContainerAction,
     DockerImageRemoveContainerEvent,
     DockerImageRemoveEvent,
+    DockerImageRunAction,
     DockerImageRunCompositionEvent,
     DockerImageRunContainerEvent,
+    DockerImageStopAction,
     DockerImageStopCompositionEvent,
     DockerImageStopContainerEvent,
     DockerInstallAction,
     DockerInstallEvent,
+    DockerItemStatus,
     DockerRemoveUsernameAction,
     DockerSetStatusAction,
     DockerStartAction,
     DockerStartEvent,
+    DockerState,
     DockerStatus,
     DockerStopAction,
     DockerStopEvent,
@@ -918,6 +924,36 @@ def _load_images() -> None:
     )
 
 
+@store.with_state(lambda state: state.docker)
+def handle_rebind(docker_state: DockerState, event: DockerImageRebindEvent) -> None:
+    """Recreate/restart an app so a changed port binding takes effect.
+
+    Only acts when the app is currently up. Compositions are recreated by
+    ``docker compose up -d`` (which re-patches the compose ports first); a
+    single container keeps its original binding until removed, so it is
+    stopped, removed and re-run with the new binding.
+    """
+    image = event.image
+    image_state = getattr(docker_state, image, None)
+    if image_state is None or image_state.status not in (
+        DockerItemStatus.RUNNING,
+        DockerItemStatus.STARTING,
+        DockerItemStatus.CREATED,
+    ):
+        return
+    entry = IMAGES.get(image)
+    if entry is None:
+        return
+    if entry.is_composition:
+        store.dispatch(DockerImageRunAction(image=image))
+    else:
+        store.dispatch(
+            DockerImageStopAction(image=image),
+            DockerImageRemoveContainerAction(image=image),
+            DockerImageRunAction(image=image),
+        )
+
+
 async def init_service() -> Subscriptions:
     """Initialize the service."""
     # Register apps menu title
@@ -932,6 +968,11 @@ async def init_service() -> Subscriptions:
     register_persistent_store(
         'docker_usernames',
         lambda state: state.docker.service.usernames,
+    )
+
+    register_persistent_store(
+        'docker_expose_to_lan',
+        lambda state: state.docker.service.expose_to_lan,
     )
 
     from ubo_app.store.core.action_registry import register_action
@@ -981,6 +1022,7 @@ async def init_service() -> Subscriptions:
         store.subscribe_event(DockerImageStopContainerEvent, stop_container),
         store.subscribe_event(DockerImageReleaseCompositionEvent, release_composition),
         store.subscribe_event(DockerImageRemoveContainerEvent, remove_container),
+        store.subscribe_event(DockerImageRebindEvent, handle_rebind),
     ]
 
     async def handle_docker_status(status: str) -> None:

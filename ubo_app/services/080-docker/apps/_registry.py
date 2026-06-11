@@ -57,6 +57,11 @@ class ContainerEntry(Immutable):
     # deregistering its assistant LLM provider).
     cleanup: Callable[[], Awaitable[None] | None] | None = None
     is_composition: bool = False
+    # When True, the app exposes a web UI/API with weak or no authentication,
+    # so its published ports default to loopback (127.0.0.1) and a per-app menu
+    # toggle lets the user opt into LAN (0.0.0.0) exposure. Apps that ship their
+    # own login leave this False and keep their default 0.0.0.0 binding.
+    supports_lan_toggle: bool = False
     secret_keys: tuple[str, ...] = ()
     menu_actions: (
         Callable[[str, list[MenuItemData], dict[str, list[str]]], None] | None
