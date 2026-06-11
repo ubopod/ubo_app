@@ -317,6 +317,15 @@ export function Inputs({
     return (
       <Dialog key={id} open>
         <DialogTitle>{input.prompt}</DialogTitle>
+        {input.title && (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ px: 3, mt: -1, mb: 1 }}
+          >
+            {input.title}
+          </Typography>
+        )}
         <DialogContent sx={{ "&&.MuiDialogContent-root": { pt: 1 } }}>
           <Stack
             component="form"

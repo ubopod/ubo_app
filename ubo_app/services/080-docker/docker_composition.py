@@ -109,6 +109,16 @@ def _apply_composition_port_binding(id: str, *, expose_to_lan: bool) -> None:
         compose_path.write_text(patched)
 
 
+async def _apply_composition_lan_config(id: str, *, expose_to_lan: bool) -> None:
+    """Run an app's LAN-config hook, if any (e.g. OpenClaw device auth)."""
+    entry = IMAGES.get(id)
+    if entry is None or entry.apply_lan_config is None:
+        return
+    result = entry.apply_lan_config(expose_to_lan)
+    if result is not None:
+        await result
+
+
 @store.with_state(lambda state: state.docker.service.expose_to_lan)
 async def run_composition(
     expose_to_lan: dict[str, bool],
@@ -118,6 +128,10 @@ async def run_composition(
     id = event.image
 
     _apply_composition_port_binding(
+        id,
+        expose_to_lan=expose_to_lan.get(id, False),
+    )
+    await _apply_composition_lan_config(
         id,
         expose_to_lan=expose_to_lan.get(id, False),
     )
