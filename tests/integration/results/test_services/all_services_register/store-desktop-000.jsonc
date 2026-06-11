@@ -302,6 +302,7 @@
     },
     "service": {
       "_type": "DockerServiceState",
+      "expose_to_lan": {},
       "status": "running",
       "usernames": {}
     },

@@ -5,28 +5,32 @@ from __future__ import annotations
 import sys
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pytest
-from redux import CompleteReducerResult, InitAction
-
-from ubo_app.store.services.docker import (
-    DockerImageRebindEvent,
-    DockerImageSetExposeToLanAction,
-)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from types import ModuleType
 
 DOCKER_SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app' / 'services' / '080-docker'
 
 
-def _service_reducer() -> Callable:
+def _reducer_module() -> ModuleType:
+    """Import the Docker reducer the way the service loader does.
+
+    Every identity-sensitive symbol (the action/event classes the reducer
+    matches against, ``CompleteReducerResult``, ``InitAction``) is read back off
+    the returned module so the test always uses the same module generation as
+    the reducer. Integration/flows tests earlier in the full suite churn
+    ``sys.modules``; importing these classes at the top of this file instead
+    would leave the test holding a stale generation, making the reducer's
+    ``match`` / ``isinstance`` checks silently fall through to ``case _``.
+    """
     docker_path = str(DOCKER_SERVICE_PATH)
     if docker_path not in sys.path:
         sys.path.insert(0, docker_path)
     try:
-        return cast('Callable', import_module('reducer').service_reducer)
+        return import_module('reducer')
     finally:
         if docker_path in sys.path:
             sys.path.remove(docker_path)
@@ -48,34 +52,41 @@ def _isolated_persistent_store(
 
 def test_set_expose_to_lan_updates_map_and_emits_rebind() -> None:
     """Setting exposure updates the map and emits a rebind event."""
-    service_reducer = _service_reducer()
-    state = service_reducer(None, InitAction())
+    reducer_module = _reducer_module()
+    service_reducer = reducer_module.service_reducer
+    state = service_reducer(None, reducer_module.InitAction())
 
     result = service_reducer(
         state,
-        DockerImageSetExposeToLanAction(image='ollama', expose_to_lan=True),
+        reducer_module.DockerImageSetExposeToLanAction(
+            image='ollama',
+            expose_to_lan=True,
+        ),
     )
 
-    assert isinstance(result, CompleteReducerResult)
+    assert isinstance(result, reducer_module.CompleteReducerResult)
     assert result.state.expose_to_lan == {'ollama': True}
     assert any(
-        isinstance(event, DockerImageRebindEvent) and event.image == 'ollama'
+        isinstance(event, reducer_module.DockerImageRebindEvent)
+        and event.image == 'ollama'
         for event in (result.events or [])
     )
 
 
 def test_set_expose_to_lan_preserves_other_apps() -> None:
     """Toggling one app does not disturb another app's setting."""
-    service_reducer = _service_reducer()
-    state = service_reducer(None, InitAction())
+    reducer_module = _reducer_module()
+    service_reducer = reducer_module.service_reducer
+    set_expose = reducer_module.DockerImageSetExposeToLanAction
 
+    state = service_reducer(None, reducer_module.InitAction())
     state = service_reducer(
         state,
-        DockerImageSetExposeToLanAction(image='hermes', expose_to_lan=True),
+        set_expose(image='hermes', expose_to_lan=True),
     ).state
     result = service_reducer(
         state,
-        DockerImageSetExposeToLanAction(image='openclaw', expose_to_lan=False),
+        set_expose(image='openclaw', expose_to_lan=False),
     )
 
     assert result.state.expose_to_lan == {'hermes': True, 'openclaw': False}
