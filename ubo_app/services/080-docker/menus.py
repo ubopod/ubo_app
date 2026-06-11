@@ -408,6 +408,12 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             DockerItemStatus.PROCESSING: 'Waiting...',
         }
 
+    # The terminal destructive item ("Delete Application" / "Remove Image" /
+    # "Remove Container") must always be the last item in every app menu,
+    # regardless of where it (or items like the LAN toggle) were appended above.
+    # `list.sort` is stable, so the relative order of all other items is kept.
+    items.sort(key=lambda item: item.key in ('delete', 'remove', 'remove_container'))
+
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=menu_id,
