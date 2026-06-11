@@ -301,8 +301,11 @@ def _dispatch_openclaw_notification(token: str) -> None:
                 id='docker:openclaw:gateway_token',
                 title='OpenClaw installed',
                 content=(
-                    f'Dashboard: http://<device-ip>:{OPENCLAW_GATEWAY_PORT}\n'
-                    f'Token: {token}'
+                    f'Dashboard: http://localhost:{OPENCLAW_GATEWAY_PORT}\n'
+                    f'Token: {token}\n\n'
+                    'The dashboard is reachable from this device only by '
+                    'default. Use "Expose to LAN" in the OpenClaw menu to open '
+                    'it to your local network.'
                 ),
                 importance=Importance.MEDIUM,
                 icon='󰒍',
@@ -385,7 +388,10 @@ async def prepare_openclaw() -> bool:
                 'OpenClaw is installed and running!\n\n'
                 f'Dashboard: http://{{{{hostname}}}}:{OPENCLAW_GATEWAY_PORT}\n\n'
                 'Your gateway token is available from the OpenClaw menu → '
-                '"Show gateway token".'
+                '"Show gateway token".\n\n'
+                'For security the dashboard is reachable from this device only '
+                '(loopback) by default. Use "Expose to LAN" in the OpenClaw '
+                'menu to open it to your local network.'
             ),
             'compose_id': OPENCLAW_COMPOSITION_ID,
         }
@@ -651,6 +657,8 @@ ENTRY = ContainerEntry(
     prepare=prepare_openclaw,
     is_composition=True,
     category='AI Agents',
+    # Token-gated, but expose to the LAN only when the user opts in.
+    supports_lan_toggle=True,
     ports={
         f'{OPENCLAW_GATEWAY_PORT}/tcp': OPENCLAW_GATEWAY_PORT,
         f'{OPENCLAW_BRIDGE_PORT}/tcp': OPENCLAW_BRIDGE_PORT,

@@ -25,6 +25,7 @@ from ubo_app.store.services.docker import (
     DockerImageFetchAction,
     DockerImageFetchCompositionEvent,
     DockerImageFetchEvent,
+    DockerImageRebindEvent,
     DockerImageRegisterAppEvent,
     DockerImageReleaseAction,
     DockerImageReleaseCompositionEvent,
@@ -37,6 +38,7 @@ from ubo_app.store.services.docker import (
     DockerImageRunCompositionEvent,
     DockerImageRunContainerEvent,
     DockerImageSetDockerIdAction,
+    DockerImageSetExposeToLanAction,
     DockerImageSetStatusAction,
     DockerImageStopAction,
     DockerImageStopCompositionEvent,
@@ -92,6 +94,18 @@ def service_reducer(
                     for registry, username in state.usernames.items()
                     if registry != action.registry
                 },
+            )
+
+        case DockerImageSetExposeToLanAction():
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    expose_to_lan={
+                        **state.expose_to_lan,
+                        action.image: action.expose_to_lan,
+                    },
+                ),
+                events=[DockerImageRebindEvent(image=action.image)],
             )
 
         case DockerInstallAction():

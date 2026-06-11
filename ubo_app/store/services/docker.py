@@ -71,6 +71,18 @@ class DockerRemoveUsernameAction(DockerAction):
     registry: str
 
 
+class DockerImageSetExposeToLanAction(DockerAction):
+    """Set whether an app's published ports bind to the LAN (0.0.0.0).
+
+    When ``False`` the app's ports bind to loopback (``127.0.0.1``) only. The
+    flag is keyed by image id and lives in ``DockerServiceState`` so it can be
+    persisted alongside the other service-level settings.
+    """
+
+    image: str
+    expose_to_lan: bool
+
+
 class DockerImageAction(DockerAction):
     """Docker image action."""
 
@@ -148,6 +160,16 @@ class DockerServiceState(Immutable):
             output_type=dict[str, str],
         ),
     )
+    # Per-app LAN exposure, keyed by image id. Missing/``False`` means the
+    # app's published ports bind to loopback only. Only apps that opt into the
+    # toggle (``ContainerEntry.supports_lan_toggle``) consult this map.
+    expose_to_lan: dict[str, bool] = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            'docker_expose_to_lan',
+            output_type=dict[str, bool],
+        ),
+    )
 
 
 class DockerImageEvent(DockerEvent):
@@ -198,6 +220,11 @@ class DockerImageReleaseCompositionEvent(DockerImageEvent):
 
 class DockerImageRemoveContainerEvent(DockerImageEvent):
     """Remove container."""
+
+
+class DockerImageRebindEvent(DockerImageEvent):
+    """Re-apply an app's port binding (recreate/restart so it takes effect)."""
+
 
 class ImageState(Immutable):
     """Image state."""

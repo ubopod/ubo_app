@@ -9,6 +9,7 @@ import shutil
 from dataclasses import replace
 
 from apps import IMAGES, PREDEFINED_IMAGE_IDS
+from apps._port_binding import apply_compose_port_binding
 from calculate_progress import (
     LayerProgressTracker,
     ServiceTrackers,
@@ -90,9 +91,36 @@ async def stop_composition(event: DockerImageStopCompositionEvent) -> None:
     await check_composition(id=id)
 
 
-async def run_composition(event: DockerImageRunCompositionEvent) -> None:
+def _apply_composition_port_binding(id: str, *, expose_to_lan: bool) -> None:
+    """Rewrite an opt-in composition's compose ports for the current binding.
+
+    Only apps that opt into the toggle are touched, so user-imported
+    compositions keep whatever bindings they declared.
+    """
+    entry = IMAGES.get(id)
+    if entry is None or not entry.supports_lan_toggle:
+        return
+    compose_path = COMPOSITIONS_PATH / id / 'docker-compose.yml'
+    if not compose_path.exists():
+        return
+    text = compose_path.read_text()
+    patched = apply_compose_port_binding(text, expose_to_lan=expose_to_lan)
+    if patched != text:
+        compose_path.write_text(patched)
+
+
+@store.with_state(lambda state: state.docker.service.expose_to_lan)
+async def run_composition(
+    expose_to_lan: dict[str, bool],
+    event: DockerImageRunCompositionEvent,
+) -> None:
     """Run the composition."""
     id = event.image
+
+    _apply_composition_port_binding(
+        id,
+        expose_to_lan=expose_to_lan.get(id, False),
+    )
 
     store.dispatch(
         DockerImageSetStatusAction(image=id, status=DockerItemStatus.PROCESSING),

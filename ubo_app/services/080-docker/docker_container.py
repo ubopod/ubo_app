@@ -6,11 +6,12 @@ import contextlib
 import ipaddress
 import threading
 from inspect import isawaitable
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, cast, overload
 
 import docker
 import docker.errors
 from apps import IMAGES
+from apps._port_binding import loopback_ports
 from docker.models.containers import Container
 from docker.models.images import Image
 from redux import FinishEvent
@@ -214,13 +215,25 @@ async def run_container(
             docker_client.close()
             return
 
+        # Bind to loopback only for apps that opt into the LAN toggle and have
+        # not been switched to LAN. publish_all_ports must be off in that case
+        # so undeclared EXPOSEd ports aren't leaked to 0.0.0.0.
+        loopback = IMAGES[id].supports_lan_toggle and not (
+            docker_state.service.expose_to_lan.get(id, False)
+        )
+        # docker-py accepts ``('127.0.0.1', port)`` host bindings at runtime but
+        # its stub only types ``int | list[int] | tuple[str, int] | None``.
+        ports = cast(
+            'dict[str, int | list[int] | tuple[str, int] | None]',
+            loopback_ports(IMAGES[id].ports) if loopback else IMAGES[id].ports,
+        )
         docker_client.containers.run(
             IMAGES[id].full_path,
             hostname=id,
-            publish_all_ports=True,
+            publish_all_ports=not loopback,
             detach=True,
             volumes=IMAGES[id].volumes,
-            ports=IMAGES[id].ports,
+            ports=ports,
             network_mode=IMAGES[id].network_mode,
             environment=await _process_environment_variables(id),
             extra_hosts=hosts,
