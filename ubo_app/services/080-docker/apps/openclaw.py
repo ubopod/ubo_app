@@ -95,7 +95,12 @@ def is_openclaw_configured() -> bool:
 
 
 async def _prompt_openclaw_providers() -> list[str] | None:
-    """Step 1: which model providers should be configured."""
+    """Step 1: which model providers should be configured.
+
+    Returns ``None`` only when the form is dismissed/cancelled. An empty list
+    means the user submitted without selecting any provider, which is valid —
+    providers can be configured later in the OpenClaw dashboard.
+    """
     provider_fields = [
         InputFieldDescription(
             name=slug,
@@ -108,16 +113,17 @@ async def _prompt_openclaw_providers() -> list[str] | None:
     ]
     _, result = await ubo_input(
         prompt='OpenClaw — select the AI providers you want to configure',
+        title='Selecting providers is optional. Leave everything unchecked to '
+        'skip this step and add your API keys later in the OpenClaw dashboard.',
         descriptions=[WebUIInputDescription(fields=provider_fields)],
     )
     if not result:
         return None
-    chosen = [
+    return [
         slug
         for slug in OPENCLAW_PROVIDER_MAP
         if is_checkbox_on(result.data.get(slug))
     ]
-    return chosen or None
 
 
 async def _prompt_openclaw_keys(
@@ -166,8 +172,9 @@ async def _prompt_openclaw_channels(*, resolved: dict[str, str]) -> None:
         )
     try:
         _, result = await ubo_input(
-            prompt='Optional: channel tokens — leave blank to configure these '
-            'later in the OpenClaw dashboard',
+            prompt='OpenClaw — connect messaging channels',
+            title='This step is optional. Leave the fields blank to skip and '
+            'configure your channels later in the OpenClaw dashboard.',
             descriptions=[WebUIInputDescription(fields=channel_fields)],
         )
     except asyncio.CancelledError:
@@ -184,10 +191,13 @@ async def configure_openclaw() -> dict[str, str] | None:
     """Run the three-step OpenClaw configuration flow."""
     try:
         providers = await _prompt_openclaw_providers()
-        if not providers:
+        if providers is None:
             return None
         resolved: dict[str, str] = {}
-        if not await _prompt_openclaw_keys(providers, resolved=resolved):
+        if providers and not await _prompt_openclaw_keys(
+            providers,
+            resolved=resolved,
+        ):
             return None
         await _prompt_openclaw_channels(resolved=resolved)
     except asyncio.CancelledError:
@@ -210,6 +220,27 @@ async def _fetch_openclaw_compose() -> str:
     ) as response:
         response.raise_for_status()
         return await response.text()
+
+
+def _inject_openclaw_user_directive(content: str) -> str:
+    """Pin each service to run as the UID/GID that owns the host bind mounts.
+
+    Upstream declares no ``user:``, so the image's built-in ``node`` user
+    (UID 1000) runs the process and cannot create state under the host-owned
+    bind mounts (the reported ``EACCES: mkdir '/home/node/.openclaw/state'``).
+    Running as the ubo-core UID/GID (from ``.env``) fixes it without a
+    privileged host chown. Matched by name, not value, so it survives upstream
+    image-line changes.
+    """
+    if re.search(r'^[ \t]*user:[ \t]', content, flags=re.MULTILINE):
+        return content
+    return re.sub(
+        r'^([ \t]*)image:[ \t]*\$\{OPENCLAW_IMAGE.*$',
+        lambda match: f'{match.group(0)}\n{match.group(1)}'
+        'user: "${OPENCLAW_UID:-1000}:${OPENCLAW_GID:-1000}"',
+        content,
+        flags=re.MULTILINE,
+    )
 
 
 def _write_openclaw_user_env(
@@ -237,12 +268,38 @@ def _build_allowed_origins() -> list[str]:
     return origins
 
 
-def _ensure_openclaw_json_config(composition_path: Path) -> None:
+def _read_openclaw_device_auth_disabled(composition_path: Path) -> bool:
+    """Return whether ``openclaw.json`` currently disables device auth."""
+    config_path = composition_path / 'config' / 'openclaw.json'
+    if not config_path.exists():
+        return False
+    try:
+        config = json.loads(config_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+    return bool(
+        config.get('gateway', {})
+        .get('controlUi', {})
+        .get('dangerouslyDisableDeviceAuth', False),
+    )
+
+
+def _ensure_openclaw_json_config(
+    composition_path: Path,
+    *,
+    expose_to_lan: bool = False,
+) -> None:
     """Seed or update ``openclaw.json`` with required gateway settings.
 
     Always ensures ``gateway.mode`` and ``gateway.controlUi.allowedOrigins``
     are set, merging into an existing config if one was already written (e.g.,
     by a previous OpenClaw startup).
+
+    Browsers only expose the WebCrypto API needed to mint the gateway's device
+    identity in a secure context (HTTPS or localhost), so the Control UI fails
+    over plain-HTTP LAN access. When the user opts into LAN exposure we drop to
+    token-only auth (``dangerouslyDisableDeviceAuth``); otherwise we keep the
+    secure default.
     """
     config_dir = composition_path / 'config'
     config_dir.mkdir(exist_ok=True, parents=True)
@@ -260,22 +317,48 @@ def _ensure_openclaw_json_config(composition_path: Path) -> None:
     gateway.setdefault('mode', 'local')
     control_ui = gateway.setdefault('controlUi', {})
     control_ui['allowedOrigins'] = _build_allowed_origins()
+    control_ui['dangerouslyDisableDeviceAuth'] = expose_to_lan
+    control_ui['allowInsecureAuth'] = expose_to_lan
 
     config_path.write_text(json.dumps(config, indent=2))
+
+
+async def apply_openclaw_lan_config(expose_to_lan: bool) -> None:  # noqa: FBT001
+    """Sync OpenClaw's Control UI auth with the current LAN-exposure setting.
+
+    Called before each (re)start. Warns the user the first time device auth is
+    dropped for LAN access, since it is a security downgrade.
+    """
+    composition_path = COMPOSITIONS_PATH / OPENCLAW_COMPOSITION_ID
+    was_disabled = _read_openclaw_device_auth_disabled(composition_path)
+    _ensure_openclaw_json_config(composition_path, expose_to_lan=expose_to_lan)
+    if expose_to_lan and not was_disabled:
+        _dispatch_openclaw_lan_warning_notification()
 
 
 def _write_openclaw_docker_env(
     composition_path: Path,
     token: str,
 ) -> None:
+    # The OpenClaw image runs as its built-in `node` user (UID 1000) and creates
+    # state inside the bind-mounted config dir. The host dirs are created and
+    # owned by the ubo-core process, so run the container under that same UID/GID
+    # (see `_inject_openclaw_user_directive`). This lets the container write to
+    # the mounts and keeps ubo-core able to rewrite openclaw.json/.env without a
+    # privileged host-side chown. The image pins HOME/OPENCLAW_HOME, so an
+    # arbitrary UID with no /etc/passwd entry is fine.
     docker_env = (
         f'OPENCLAW_IMAGE={OPENCLAW_IMAGE_REF}\n'
         f'OPENCLAW_GATEWAY_TOKEN={token}\n'
         f'OPENCLAW_GATEWAY_PORT={OPENCLAW_GATEWAY_PORT}\n'
         f'OPENCLAW_BRIDGE_PORT={OPENCLAW_BRIDGE_PORT}\n'
         f'OPENCLAW_GATEWAY_BIND=lan\n'
+        f'OPENCLAW_UID={os.getuid()}\n'
+        f'OPENCLAW_GID={os.getgid()}\n'
         f'OPENCLAW_CONFIG_DIR={composition_path / "config"}\n'
         f'OPENCLAW_WORKSPACE_DIR={composition_path / "workspace"}\n'
+        f'OPENCLAW_AUTH_PROFILE_SECRET_DIR='
+        f'{composition_path / "auth-profile-secrets"}\n'
         f'OPENCLAW_TZ={os.environ.get("TZ", "UTC")}\n'
     )
     (composition_path / '.env').write_text(docker_env)
@@ -309,6 +392,40 @@ def _dispatch_openclaw_notification(token: str) -> None:
                 ),
                 importance=Importance.MEDIUM,
                 icon='󰒍',
+                display_type=NotificationDisplayType.STICKY,
+                show_dismiss_action=True,
+                dismiss_on_close=True,
+            ),
+        ),
+    )
+
+
+def _dispatch_openclaw_lan_warning_notification() -> None:
+    from ubo_app.colors import DANGER_COLOR
+    from ubo_app.store.main import store
+    from ubo_app.store.services.notifications import (
+        Importance,
+        Notification,
+        NotificationDisplayType,
+        NotificationsAddAction,
+    )
+
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='docker:openclaw:lan_auth_warning',
+                title='OpenClaw security downgrade',
+                content=(
+                    'Exposing OpenClaw to the LAN disables device-identity '
+                    'authentication so the dashboard works over plain HTTP. '
+                    'Access is now guarded only by the gateway token — anyone '
+                    'on your network who has it can control OpenClaw. Switch '
+                    'back to "Loopback only", or use HTTPS / Tailscale for '
+                    'stronger protection.'
+                ),
+                importance=Importance.HIGH,
+                icon='󰒍',
+                color=DANGER_COLOR,
                 display_type=NotificationDisplayType.STICKY,
                 show_dismiss_action=True,
                 dismiss_on_close=True,
@@ -355,15 +472,22 @@ async def prepare_openclaw() -> bool:
             resolved = await configure_openclaw()
             if resolved is None:
                 _dispatch_openclaw_cancelled_notification(
-                    'Install cancelled before any API keys were provided. '
-                    'Select at least one AI provider and submit to continue.',
+                    'Installation was cancelled. Open OpenClaw again to retry. '
+                    'You can install without any API keys and configure '
+                    'providers later in the OpenClaw dashboard.',
                 )
                 return False
         else:
             resolved = None
 
         composition_path.mkdir(exist_ok=True, parents=True)
+        # All three bind-mount sources are created here, owned by the ubo-core
+        # process, so the container (run as that same UID/GID) can write to them.
         (composition_path / 'workspace').mkdir(exist_ok=True, parents=True)
+        (composition_path / 'auth-profile-secrets').mkdir(
+            exist_ok=True,
+            parents=True,
+        )
 
         gateway_token = (
             secrets.read_secret(OPENCLAW_GATEWAY_TOKEN_SECRET)
@@ -373,7 +497,9 @@ async def prepare_openclaw() -> bool:
             key=OPENCLAW_GATEWAY_TOKEN_SECRET, value=gateway_token,
         )
 
-        compose_content = await _fetch_openclaw_compose()
+        compose_content = _inject_openclaw_user_directive(
+            await _fetch_openclaw_compose(),
+        )
         (composition_path / 'docker-compose.yml').write_text(compose_content)
 
         _write_openclaw_docker_env(composition_path, gateway_token)
@@ -659,6 +785,8 @@ ENTRY = ContainerEntry(
     category='AI Agents',
     # Token-gated, but expose to the LAN only when the user opts in.
     supports_lan_toggle=True,
+    # LAN exposure drops Control UI device auth (plain-HTTP requirement).
+    apply_lan_config=apply_openclaw_lan_config,
     ports={
         f'{OPENCLAW_GATEWAY_PORT}/tcp': OPENCLAW_GATEWAY_PORT,
         f'{OPENCLAW_BRIDGE_PORT}/tcp': OPENCLAW_BRIDGE_PORT,
