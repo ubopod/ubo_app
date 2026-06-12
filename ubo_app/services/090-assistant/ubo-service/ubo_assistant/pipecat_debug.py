@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from pipecat.observers.base_observer import BaseObserver
     from pipecat.pipeline.base_pipeline import BasePipeline
     from pipecat.pipeline.worker import PipelineWorker
+    from pipecat.workers.base_worker import BaseWorker
 
 TRUTHY_VALUES = frozenset({'1', 'true', 'yes', 'on'})
 WHISKER_ENABLED_ENV = 'UBO_ASSISTANT_WHISKER_ENABLED'
@@ -37,20 +38,27 @@ def is_whisker_enabled(environ: Mapping[str, str] | None = None) -> bool:
     return environment.get(WHISKER_ENABLED_ENV, '').strip().lower() in TRUTHY_VALUES
 
 
-def attach_whisker_observer(task: SupportsWhiskerObserver) -> bool:
-    """Attach Whisker to a Pipecat pipeline task when explicitly enabled."""
+def attach_whisker_observer(task: SupportsWhiskerObserver) -> BaseWorker | None:
+    """Attach Whisker to a Pipecat pipeline task when explicitly enabled.
+
+    Returns the Whisker sink so the caller can register it with the
+    ``WorkerRunner`` via ``add_workers``. The sink is a Whisker 2.0 worker:
+    its ``start()`` is what opens the recording file and the WS server, so it
+    MUST be run as a worker — attaching the observer alone records nothing.
+    Returns ``None`` when Whisker is disabled or fails to initialize.
+    """
     if not is_whisker_enabled():
         logger.debug('Whisker debugging disabled')
-        return False
+        return None
 
     try:
-        from pipecat_whisker import WhiskerObserver, WhiskerServer
+        from pipecat_whisker import WhiskerFile, WhiskerObserver, WhiskerServer
 
-        # Whisker 2.0 takes the worker plus an explicit sink; WhiskerServer
-        # doubles as a file sink when ``file_name`` is set, matching the old
-        # file-or-live behavior.
+        # Whisker 2.0 takes the worker plus an explicit sink. A bare file
+        # capture uses the file-only sink (no WS server to bind); fall back to
+        # the WS server (which also records to file) when no file is given.
         file_name = os.environ.get(WHISKER_FILE_ENV) or None
-        sink = WhiskerServer(file_name=file_name)
+        sink = WhiskerFile(file_name) if file_name else WhiskerServer()
         observer = WhiskerObserver(cast('PipelineWorker', task), sink)
         task.add_observer(observer)
     except Exception as exception:  # noqa: BLE001
@@ -58,10 +66,10 @@ def attach_whisker_observer(task: SupportsWhiskerObserver) -> bool:
             'Whisker debugging failed to initialize {extra}',
             extra={'exception': exception},
         )
-        return False
+        return None
 
     logger.info(
         'Whisker debugging enabled {extra}',
         extra={'file_name': os.environ.get(WHISKER_FILE_ENV)},
     )
-    return True
+    return cast('BaseWorker', sink)
