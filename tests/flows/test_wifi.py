@@ -172,7 +172,7 @@ async def test_setup_flow(
     # connection profile is created. Activation can lag behind that on hidden
     # networks, so wait for the notification first instead of the connected
     # status icon.
-    await wait_for_menu_item(label='', icon='')
+    await wait_for_menu_item(label='Dismiss', icon='')
     await check_icon('󰤨')
     window_snapshot.take()
     await dispatcher.choose_by_icon('', via=next(via))  # direct
@@ -227,7 +227,7 @@ async def test_setup_flow(
     store_snapshot.take(selector=store_snapshot_selector)
 
     # Dismiss the notification informing the user that the connection was deleted
-    await wait_for_menu_item(label='', icon='')
+    await wait_for_menu_item(label='Dismiss', icon='')
     window_snapshot.take()
     await dispatcher.choose_by_icon('', via=next(via))  # direct
 
