@@ -278,6 +278,12 @@ class UboLLMService(UboLLMSwitchService):
         # twice. Dropping a re-delivery of the same frame id collapses it back
         # to one inference.
         self._last_llm_context_frame_id: int | None = None
+        # Id of the most recent input image mirrored to the output stream. The
+        # captured frame can be delivered to this switcher more than once via
+        # the same nested-ParallelPipeline fan-out, which would mirror it twice
+        # and open the image_viewer twice (one render overriding the other).
+        # Mirroring each unique frame once keeps a single image_viewer render.
+        self._last_mirrored_image_frame_id: int | None = None
 
         # Initialize all services. Cloud providers that take a runtime API key
         # are wrapped in GenericLLMProxy so they always live in Pipecat's
@@ -905,7 +911,11 @@ class UboLLMService(UboLLMSwitchService):
 
         await super().process_frame(frame, direction)
 
-        if isinstance(frame, InputImageRawFrame):
+        if (
+            isinstance(frame, InputImageRawFrame)
+            and frame.id != self._last_mirrored_image_frame_id
+        ):
+            self._last_mirrored_image_frame_id = frame.id
             output_frame = OutputImageRawFrame(
                 image=frame.image,
                 size=frame.size,
