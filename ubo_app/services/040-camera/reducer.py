@@ -79,6 +79,7 @@ def prompt_notification(description: QRCodeInputDescription) -> NotificationsAdd
                     store_action=CameraStartViewfinderAction(
                         pattern=description.pattern,
                     ),
+                    label='Open Camera',
                     icon='󰄀',
                     close_notification=False,
                 ),

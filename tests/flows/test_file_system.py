@@ -151,7 +151,7 @@ async def test_move_copy_remove(  # noqa: C901
 
     async def dismiss_notification_via_l3() -> None:
         """Dismiss a FLASH notification by pressing its dismiss button (L3)."""
-        await wait_for_view_item('')
+        await wait_for_view_item('Dismiss')
         await press(Key.L3)
 
     async def select_destination_and_verify(*dirs: str) -> None:
