@@ -314,8 +314,13 @@ class Assistant:
             params=PipelineParams(audio_in_sample_rate=16000),
             cancel_on_idle_timeout=False,
         )
-        attach_whisker_observer(worker)
+        whisker_sink = attach_whisker_observer(worker)
         runner = WorkerRunner(handle_sigint=True)
+        if whisker_sink is not None:
+            # The sink is a Whisker worker; its start() opens the recording
+            # file / WS server. Without registering it the observer records
+            # nothing.
+            await runner.add_workers(whisker_sink)
 
         await runner.run(worker)
 
