@@ -185,7 +185,7 @@ ANTHROPIC_API_KEY_SECRET_ID = 'anthropic_api_key'  # noqa: S105
 ANTHROPIC_API_KEY_PATTERN = r'^sk-ant-[a-zA-Z0-9_-]{40,}$'
 
 QWEN_API_KEY_SECRET_ID = 'qwen_api_key'  # noqa: S105
-QWEN_API_KEY_PATTERN = r'^sk-[a-zA-Z0-9]{32,}$'
+QWEN_API_KEY_PATTERN = r'^sk-[a-zA-Z0-9._-]{32,}$'
 
 DEEPSEEK_API_KEY_SECRET_ID = 'deepseek_api_key'  # noqa: S105
 DEEPSEEK_API_KEY_PATTERN = r'^sk-[a-zA-Z0-9]{32,}$'
