@@ -445,6 +445,7 @@ async def _install_camera_driver(event: CameraInstallDriverEvent) -> None:
                     show_dismiss_action=True,
                     actions=[
                         NotificationDispatchItem(
+                            label='Reboot',
                             icon='󰜉',
                             store_action=RebootAction(),
                         ),
@@ -518,6 +519,7 @@ async def _restore_default_camera(_: CameraRestoreDefaultEvent) -> None:
                     show_dismiss_action=True,
                     actions=[
                         NotificationDispatchItem(
+                            label='Reboot',
                             icon='󰜉',
                             store_action=RebootAction(),
                         ),

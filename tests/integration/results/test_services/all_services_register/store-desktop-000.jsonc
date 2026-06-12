@@ -393,7 +393,7 @@
           "icon": "󰍜",
           "is_short": true,
           "key": "main",
-          "label": ""
+          "label": "Main"
         },
         {
           "_type": "MenuItemData",
@@ -403,7 +403,7 @@
           "icon": "",
           "is_short": true,
           "key": "notifications",
-          "label": ""
+          "label": "Notifications"
         },
         {
           "_type": "MenuItemData",
@@ -413,7 +413,7 @@
           "icon": "󰐥",
           "is_short": true,
           "key": "power",
-          "label": ""
+          "label": "Power"
         }
       ],
       "ram_percent": 50,

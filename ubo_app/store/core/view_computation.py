@@ -194,7 +194,7 @@ def get_notification_view_data(
             items.append(
                 MenuItemData(
                     key='extra_info',
-                    label='',
+                    label='More Info',
                     icon='\U000f02fc',  # info icon
                     color='#ffffff',
                     is_short=True,
@@ -228,7 +228,7 @@ def get_notification_view_data(
             items.append(
                 MenuItemData(
                     key='dismiss',
-                    label='',
+                    label='Dismiss',
                     icon='\uf00d',  # close/X icon
                     color='#ffffff',
                     is_short=True,

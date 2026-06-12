@@ -256,21 +256,21 @@ def update_home_dynamic_menu() -> None:
             items=(
                 MenuItemData(
                     key='main',
-                    label='',
+                    label='Main',
                     icon='\U000f035c',
                     is_short=True,
                     action_id=f'{MENU_NAVIGATE_PREFIX}main',
                 ),
                 MenuItemData(
                     key='notifications',
-                    label='',
+                    label='Notifications',
                     icon='\ueaa2',
                     is_short=True,
                     action_id=f'{MENU_NAVIGATE_PREFIX}notifications',
                 ),
                 MenuItemData(
                     key='power',
-                    label='',
+                    label='Power',
                     icon='\U000f0425',
                     is_short=True,
                     action_id=f'{MENU_NAVIGATE_PREFIX}power',

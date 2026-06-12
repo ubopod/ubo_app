@@ -110,6 +110,7 @@ async def _check_connection() -> None:
                         'text_font_size': 19,
                     },
                 ),
+                label='Add WiFi',
                 icon='󱚾',
                 background_color=INFO_COLOR,
                 dismiss_notification=True,

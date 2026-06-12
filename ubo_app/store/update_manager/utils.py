@@ -422,6 +422,7 @@ def _build_recent_versions_submenu(
                         show_dismiss_action=True,
                         actions=[
                             NotificationDispatchItem(
+                                label='Install',
                                 icon='󰜉',
                                 store_action=UpdateManagerRequestUpdateAction(
                                     version=_v,
@@ -621,6 +622,7 @@ def about_menu_items(data: tuple[UpdateManagerState, bool]) -> None:
                             show_dismiss_action=True,
                             actions=[
                                 NotificationDispatchItem(
+                                    label='Install',
                                     icon='󰬬',
                                     store_action=UpdateManagerRequestUpdateAction(
                                         version=_v,
