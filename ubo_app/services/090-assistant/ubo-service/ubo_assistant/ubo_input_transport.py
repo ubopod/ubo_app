@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+import uuid
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
@@ -31,6 +32,7 @@ from ubo_bindings.ubo.v1 import (
     DisplayRenderEvent,
     Event,
     InputDemandAction,
+    InputProvideAction,
     QrCodeInputDescription,
 )
 
@@ -107,6 +109,10 @@ class UboInputTransport(BaseInputTransport):
         ):
             video_source = VideoSource(frame.video_source)
 
+            # Owned client-side so we can resolve this exact demand after the
+            # frame is captured. The id round-trips over gRPC unchanged.
+            description_id = uuid.uuid4().hex
+
             if video_source == VideoSource.CAMERA:
                 timestamp = time.time()
                 self.client.dispatch(
@@ -114,6 +120,7 @@ class UboInputTransport(BaseInputTransport):
                         input_demand_action=InputDemandAction(
                             description=AvailableInputDescription(
                                 qr_code_input_description=QrCodeInputDescription(
+                                    id=description_id,
                                     pattern=None,
                                     title='Assistant Vision',
                                     prompt=f'For prompt: {frame.text}',
@@ -139,8 +146,27 @@ class UboInputTransport(BaseInputTransport):
                 size=(w, h),
                 format='RGB',
             )
+            # Carry the originating request so the context aggregator can match
+            # this image to its in-progress function call (single completion).
+            image_frame.request = frame
             image_frame.transport_source = video_source
             await self.push_video_frame(image_frame)
+
+            if video_source == VideoSource.CAMERA:
+                # Resolve the demand we opened above now that the snapshot is
+                # captured. This clears the "Assistant Vision" notification and
+                # pops the viewfinder (frame_stream) via the camera service's
+                # InputProvideEvent handler, so back-navigation returns to the
+                # page shown before the camera opened. `result` is left unset
+                # (None) — there is no structured QR payload to report.
+                self.client.dispatch(
+                    action=Action(
+                        input_provide_action=InputProvideAction(
+                            id=description_id,
+                            value='',
+                        ),
+                    ),
+                )
 
     def _queue_audio_sample(self, event: Event) -> None:
         """Queue the audio sample from the event.

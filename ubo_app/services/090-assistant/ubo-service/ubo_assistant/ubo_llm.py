@@ -9,6 +9,7 @@ from loguru import logger
 from pipecat.frames.frames import (
     Frame,
     InputImageRawFrame,
+    LLMContextFrame,
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
     LLMTextFrame,
@@ -269,6 +270,14 @@ class UboLLMService(UboLLMSwitchService):
     ) -> None:
         """Initialize LLM service with various services including remote Ollama."""
         self._config = config
+        # Id of the most recent LLMContextFrame routed to the active LLM.
+        # The assistant aggregator sits outside the ParallelPipeline and pushes
+        # its trigger context frame UPSTREAM into it; the nested parallel
+        # pipelines + producer/consumer pair fan that single frame out so it
+        # reaches the switcher twice, making the LLM describe a captured image
+        # twice. Dropping a re-delivery of the same frame id collapses it back
+        # to one inference.
+        self._last_llm_context_frame_id: int | None = None
 
         # Initialize all services. Cloud providers that take a runtime API key
         # are wrapped in GenericLLMProxy so they always live in Pipecat's
@@ -858,18 +867,42 @@ class UboLLMService(UboLLMSwitchService):
         """Get an image from the video stream based on a question."""
         prompt = params.arguments['prompt']
         source = params.arguments['source']
+        # Link the image request back to this function call (tool_call_id +
+        # result_callback). The context aggregator then routes the returned
+        # image through the function-result path, which appends it and runs
+        # inference exactly once. A bare request (no linkage) instead appends
+        # the image *and* leaves the call dangling, making the assistant
+        # describe the picture twice.
         await params.llm.push_frame(
             UserImageRequestFrame(
                 user_id='-',
                 text=prompt,
                 video_source=source,
                 append_to_context=True,
+                function_name=params.function_name,
+                tool_call_id=params.tool_call_id,
+                result_callback=params.result_callback,
             ),
             FrameDirection.UPSTREAM,
         )
 
     async def process_frame(self, frame: Frame, direction: FrameDirection) -> None:
         """Mirror input images in output stream."""
+        # Drop a duplicate delivery of the same context frame so the active LLM
+        # only runs once per trigger. The frame fans out through the nested
+        # ParallelPipelines (see ``_last_llm_context_frame_id``) and would
+        # otherwise reach the switcher — and the LLM — twice. Not routing it
+        # (skipping ``super().process_frame``) is the drop; a genuine new
+        # trigger always carries a fresh frame id.
+        if isinstance(frame, LLMContextFrame):
+            if frame.id == self._last_llm_context_frame_id:
+                logger.warning(
+                    'Dropping duplicate LLMContextFrame delivery {extra}',
+                    extra={'frame_id': frame.id, 'frame_name': frame.name},
+                )
+                return
+            self._last_llm_context_frame_id = frame.id
+
         await super().process_frame(frame, direction)
 
         if isinstance(frame, InputImageRawFrame):
