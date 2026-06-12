@@ -43,6 +43,13 @@ _SILENCE_FLUSH_SECONDS = 2.0
 _SILENCE_FRAME_BYTES = b'\x00' * (int(16000 * _SILENCE_FRAME_INTERVAL_SECONDS) * 2)
 """One 50ms frame of int16 mono silence at 16kHz."""
 
+_VIEWFINDER_PREVIEW_SECONDS = 1.5
+"""How long to keep the viewfinder visible before freezing a camera frame.
+
+Gives the user a moment to see what the camera is framing; the viewfinder keeps
+streaming during the wait, so the frame we capture afterwards is the latest one.
+"""
+
 
 class VideoSource(StrEnum):
     """Enum for video sources."""
@@ -134,6 +141,11 @@ class UboInputTransport(BaseInputTransport):
                 while self._image[video_source].timestamp < timestamp - 1:
                     await event.wait()
                     event.clear()
+
+                # Let the viewfinder linger so the user can see what the camera
+                # is framing, then capture the most recent frame below (the
+                # viewfinder keeps streaming during this wait).
+                await asyncio.sleep(_VIEWFINDER_PREVIEW_SECONDS)
 
             last_reported_image = self._image[video_source]
             (h, w, *_) = last_reported_image.data.shape
