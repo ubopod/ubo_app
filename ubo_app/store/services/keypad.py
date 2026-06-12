@@ -49,6 +49,7 @@ class KeypadReportContextAction(BaseAction):
     depth: int
     is_on_notification: bool
     is_on_chat: bool
+    is_on_application: bool
     is_display_blanked: bool
 
 
@@ -57,4 +58,5 @@ class KeypadState(Immutable):
     depth: int = 0
     is_on_notification: bool = False
     is_on_chat: bool = False
+    is_on_application: bool = False
     is_display_blanked: bool = False

@@ -65,6 +65,7 @@ class TestContextMirror:
                 depth=3,
                 is_on_notification=True,
                 is_on_chat=True,
+                is_on_application=True,
                 is_display_blanked=True,
             ),
         )
@@ -72,6 +73,7 @@ class TestContextMirror:
         assert result.depth == 3
         assert result.is_on_notification is True
         assert result.is_on_chat is True
+        assert result.is_on_application is True
         assert result.is_display_blanked is True
 
 
@@ -94,6 +96,23 @@ class TestDepthDependentBehaviour:
         assert any(
             isinstance(action, MenuScrollAction) for action in result.actions or ()
         )
+
+    def test_up_on_application_view_scrolls_not_volume(self) -> None:
+        """UP on a render/application view (e.g. image viewer) at depth 1 scrolls.
+
+        The view owns up/down for pan/zoom, so the home-screen volume shortcut
+        must not fire even though depth is 1.
+        """
+        result = reducer(
+            KeypadState(depth=1, is_on_application=True),
+            _press(Key.UP),
+        )
+        assert isinstance(result, CompleteReducerResult)
+        actions = result.actions or ()
+        assert not any(
+            isinstance(action, AudioChangeVolumeAction) for action in actions
+        )
+        assert any(isinstance(action, MenuScrollAction) for action in actions)
 
 
 class TestScreenWake:

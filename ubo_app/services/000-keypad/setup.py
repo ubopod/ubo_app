@@ -12,9 +12,11 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
+    ApplicationStackItem,
     ChatStackItem,
     MenuStackItem,
     NotificationStackItem,
+    RenderStackItem,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioDevice, AudioSetMuteStatusAction
@@ -74,15 +76,29 @@ def _is_on_chat(stack: tuple[StackItemType, ...]) -> bool:
     return bool(stack) and isinstance(stack[-1], ChatStackItem)
 
 
+def _is_on_application(stack: tuple[StackItemType, ...]) -> bool:
+    """Whether the top of the stack is a render/application view.
+
+    These views (e.g. the image viewer) handle up/down themselves for
+    pan/zoom/scroll, so the home-screen volume shortcut must not consume those
+    keys while one is on top.
+    """
+    return bool(stack) and isinstance(
+        stack[-1],
+        (RenderStackItem, ApplicationStackItem),
+    )
+
+
 @store.autorun(
     lambda state: (
         _compute_depth_from_stack(state.main.stack),
         _is_on_notification(state.main.stack),
         _is_on_chat(state.main.stack),
+        _is_on_application(state.main.stack),
         state.display.is_blanked if hasattr(state, 'display') else False,
     ),
 )
-def _sync_keypad_context(context: tuple[int, bool, bool, bool]) -> None:
+def _sync_keypad_context(context: tuple[int, bool, bool, bool, bool]) -> None:
     """Mirror navigation/display context into the keypad slice.
 
     The selector is deliberately cheap (stack + display flag only) so it can run on
@@ -91,12 +107,19 @@ def _sync_keypad_context(context: tuple[int, bool, bool, bool]) -> None:
     slice instead of reaching into the live store mid-reduce. Active regardless of
     `IS_RPI`, since key events also arrive from the GUI client, the web UI and infrared.
     """
-    depth, is_on_notification, is_on_chat, is_display_blanked = context
+    (
+        depth,
+        is_on_notification,
+        is_on_chat,
+        is_on_application,
+        is_display_blanked,
+    ) = context
     store.dispatch(
         KeypadReportContextAction(
             depth=depth,
             is_on_notification=is_on_notification,
             is_on_chat=is_on_chat,
+            is_on_application=is_on_application,
             is_display_blanked=is_display_blanked,
         ),
     )
