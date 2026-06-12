@@ -95,6 +95,7 @@ def reducer(
             depth=action.depth,
             is_on_notification=action.is_on_notification,
             is_on_chat=action.is_on_chat,
+            is_on_application=action.is_on_application,
             is_display_blanked=action.is_display_blanked,
         )
 
@@ -104,6 +105,9 @@ def reducer(
     depth = state.depth
     on_notification = state.is_on_notification
     on_chat = state.is_on_chat
+    # A render/application view (e.g. the image viewer) owns up/down for its own
+    # pan/zoom/scroll, so the home-screen volume shortcut must not steal them.
+    on_application = state.is_on_application
 
     if isinstance(action, KeypadKeyPressAction):
         logger.info(
@@ -131,6 +135,7 @@ def reducer(
             depth == 1
             and not on_notification
             and not on_chat
+            and not on_application
             and set(action.pressed_keys) == {action.key}
         ):
             return CompleteReducerResult(
@@ -147,6 +152,7 @@ def reducer(
             depth == 1
             and not on_notification
             and not on_chat
+            and not on_application
             and set(action.pressed_keys) == {action.key}
         ):
             return CompleteReducerResult(
