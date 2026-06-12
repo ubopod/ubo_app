@@ -31,6 +31,7 @@ from ubo_bindings.client import UboRPCClient
 from ubo_assistant.barge_in import BargeInOnListenSignal
 from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
 from ubo_assistant.end_of_turn import EndOfTurnPhraseDetector
+from ubo_assistant.error_notification import attach_error_notifier
 from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.logging import setup_file_logging
 from ubo_assistant.pipecat_debug import attach_whisker_observer
@@ -314,6 +315,7 @@ class Assistant:
             params=PipelineParams(audio_in_sample_rate=16000),
             cancel_on_idle_timeout=False,
         )
+        attach_error_notifier(worker, self.client)
         whisker_sink = attach_whisker_observer(worker)
         runner = WorkerRunner(handle_sigint=True)
         if whisker_sink is not None:
