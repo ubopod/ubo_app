@@ -11,7 +11,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { SubscribeEventResponse } from "../bindings/store/v1/store_pb";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
@@ -42,8 +42,7 @@ function propNumber(data: RenderViewData.AsObject, key: string): number {
   return value?.int64 ?? value?.pb_float ?? 0;
 }
 
-function propBytes(data: RenderViewData.AsObject, key: string): Uint8Array | null {
-  const bytes = propEntry(data, key)?.[1].basicType?.bytes;
+function bytesToRgb(bytes: Uint8Array | string | undefined): Uint8Array | null {
   if (!bytes) return null;
   if (bytes instanceof Uint8Array) return bytes;
   const binary = atob(bytes);
@@ -149,14 +148,20 @@ function ImageViewer({ data }: { data: RenderViewData.AsObject }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState<number | null>(null);
-  const drawnRef = useRef(false);
-  const rgb = propBytes(data, "image");
+  const fittedRef = useRef(false);
+  // Memoise on the raw (stable) bytes value so the decode + redraw effect
+  // only fires when the image actually changes — not on every re-render
+  // (bytesToRgb decodes base64 into a fresh array each call). This is what
+  // lets an in-place image_viewer update (same stack item, new picture)
+  // repaint the canvas instead of showing the first image forever.
+  const rawImage = propEntry(data, "image")?.[1].basicType?.bytes;
+  const rgb = useMemo(() => bytesToRgb(rawImage), [rawImage]);
   const width = propNumber(data, "width");
   const height = propNumber(data, "height");
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !rgb || width === 0 || height === 0 || drawnRef.current) return;
+    if (!canvas || !rgb || width === 0 || height === 0) return;
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d");
@@ -169,10 +174,14 @@ function ImageViewer({ data }: { data: RenderViewData.AsObject }) {
       rgba[j + 3] = 255;
     }
     ctx.putImageData(new ImageData(rgba, width, height), 0, 0);
-    drawnRef.current = true;
-    const container = containerRef.current;
-    if (container) {
-      setZoom(Math.min(container.clientWidth / width, (window.innerHeight * 0.7) / height));
+    // Fit to screen once (on the first painted frame), then preserve the
+    // user's chosen zoom across subsequent in-place image updates.
+    if (!fittedRef.current) {
+      fittedRef.current = true;
+      const container = containerRef.current;
+      if (container) {
+        setZoom(Math.min(container.clientWidth / width, (window.innerHeight * 0.7) / height));
+      }
     }
   }, [rgb, width, height]);
 

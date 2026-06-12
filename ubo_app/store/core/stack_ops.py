@@ -124,9 +124,35 @@ def push_render(  # noqa: PLR0913
     items: tuple[MenuItemData, ...] = (),
     stream_id: str = '',
 ) -> MainState:
-    """Push a generic reusable render view onto the navigation stack."""
+    """Push a generic reusable render view onto the navigation stack.
+
+    Idempotent by ``stream_id``: when ``stream_id`` is non-empty and a
+    ``RenderStackItem`` with the same ``stream_id`` is already on the stack,
+    that item is updated in place (its ``id`` and position preserved, props
+    merged) instead of appending a new one. This mirrors ``push_notification``
+    and lets callers re-open a stream-backed view (e.g. the assistant's
+    ``image_viewer``) freely without stacking duplicate pages. Views opened
+    with an empty ``stream_id`` always append.
+    """
     if props is None:
         props = {}
+    if stream_id and any(
+        isinstance(item, RenderStackItem) and item.stream_id == stream_id
+        for item in state.stack
+    ):
+        new_stack = tuple(
+            replace(
+                item,
+                kind=kind or item.kind,
+                title=title or item.title,
+                props={**item.props, **props},
+                items=items or item.items,
+            )
+            if isinstance(item, RenderStackItem) and item.stream_id == stream_id
+            else item
+            for item in state.stack
+        )
+        return replace(state, stack=new_stack)
     new_item = RenderStackItem(
         id=uuid.uuid4().hex,
         kind=kind,
