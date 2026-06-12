@@ -350,6 +350,7 @@
     "depth": 1,
     "is_consumed": false,
     "is_display_blanked": false,
+    "is_on_application": false,
     "is_on_chat": false,
     "is_on_notification": false
   },
@@ -499,7 +500,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Hardware",
-        "icon": "",
+        "icon": "",
         "key": "camera:",
         "label": "Camera",
         "priority": 1
