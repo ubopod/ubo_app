@@ -286,6 +286,57 @@ class TestPushRender:
         assert item.stream_id == ''
         assert item.title == ''
 
+    def test_dedups_by_stream_id(self) -> None:
+        """Verify re-opening a stream-backed view updates in place.
+
+        A second push with the same non-empty stream_id must not append a
+        second item; it updates the existing one's props (merging) and keeps
+        its id. This is what collapses duplicate ``image_viewer`` pages.
+        """
+        state = _make_state()
+        state = push_render(
+            state,
+            'image_viewer',
+            stream_id='assistant:image',
+            props={'image': 'first', 'width': 10},
+        )
+        first_item = state.stack[-1]
+        assert isinstance(first_item, RenderStackItem)
+
+        new_state = push_render(
+            state,
+            'image_viewer',
+            stream_id='assistant:image',
+            props={'image': 'second'},
+        )
+
+        # No new item appended.
+        assert len(new_state.stack) == len(state.stack)
+        item = new_state.stack[-1]
+        assert isinstance(item, RenderStackItem)
+        # Same stack item (id preserved), props merged/updated in place.
+        assert item.id == first_item.id
+        assert item.props == {'image': 'second', 'width': 10}
+
+    def test_empty_stream_id_still_appends(self) -> None:
+        """Verify views without a stream_id keep stacking (no dedup)."""
+        state = _make_state()
+        state = push_render(state, 'status')
+        new_state = push_render(state, 'status')
+        # Both status views are present plus the root item.
+        assert len(new_state.stack) == 3
+        assert all(
+            isinstance(item, RenderStackItem)
+            for item in new_state.stack[1:]
+        )
+
+    def test_different_stream_ids_both_appended(self) -> None:
+        """Verify distinct non-empty stream_ids do not dedup against each other."""
+        state = _make_state()
+        state = push_render(state, 'frame_stream', stream_id='camera:viewfinder')
+        new_state = push_render(state, 'image_viewer', stream_id='assistant:image')
+        assert len(new_state.stack) == 3
+
 
 class TestPushNotification:
     """Tests for push_notification."""

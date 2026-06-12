@@ -357,6 +357,7 @@ def _communicate(event: AssistantHandleReportEvent) -> None:
             store.dispatch(
                 OpenRenderAction(
                     kind='image_viewer',
+                    stream_id='assistant:image',
                     props={
                         'image': image.image,
                         'width': image.width,
