@@ -41,7 +41,7 @@ def _get_interface_icon(name: str) -> str:
     if name.startswith('eth'):
         return '󰈀'
     if name.startswith('wlan'):
-        return ''
+        return ''
     if name.startswith('lo'):
         return '󰕇'
     return '󰛳'

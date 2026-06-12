@@ -762,7 +762,7 @@ def init_service() -> Subscriptions:
             priority=1,
             category=SettingsCategory.HARDWARE,
             label='Camera',
-            icon='',
+            icon='',
         ),
     )
 
