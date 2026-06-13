@@ -39,8 +39,12 @@ _STATUS_CODE_PATTERN = re.compile(
     r'(?:error code|status(?:[ _]code)?|http)\D{0,4}(\d{3})',
     re.IGNORECASE,
 )
+# The message value is delimited by whichever quote the provider used; it
+# commonly contains the *other* quote (e.g. ``"The model 'dall-e-3' does not
+# exist."``). Capture the opening quote and stop at the matching closing quote
+# so inner quotes don't truncate the message.
 _PROVIDER_MESSAGE_PATTERN = re.compile(
-    r"['\"]message['\"]\s*:\s*['\"]([^'\"]+)['\"]",
+    r"['\"]message['\"]\s*:\s*(?P<quote>['\"])(?P<message>.*?)(?P=quote)",
 )
 
 _CODE_MESSAGES = {
@@ -90,7 +94,7 @@ def _extract_status_code(error: str) -> int | None:
 
 def _provider_message(error: str) -> str:
     match = _PROVIDER_MESSAGE_PATTERN.search(error)
-    message = match.group(1).strip() if match else error.strip()
+    message = match.group('message').strip() if match else error.strip()
     if len(message) > _MAX_CONTENT_LENGTH:
         message = message[: _MAX_CONTENT_LENGTH - 1].rstrip() + '…'
     return message or 'The provider reported an error.'
