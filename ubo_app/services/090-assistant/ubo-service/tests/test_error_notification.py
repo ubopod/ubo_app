@@ -16,6 +16,10 @@ class DeepSeekLLMService:
     """Fake LLM provider service (name drives stage detection)."""
 
 
+class OpenAIImageGenService:
+    """Fake image-generation provider service."""
+
+
 class DeepgramSTTService:
     """Fake STT provider service."""
 
@@ -75,6 +79,27 @@ class TestClassifyError(unittest.TestCase):
             ),
         )
         self.assertEqual(result.content, 'Model is overloaded')  # noqa: PT009
+
+    def test_message_with_inner_quotes_is_not_truncated(self) -> None:
+        """A double-quoted message containing apostrophes is captured whole.
+
+        Regression: the OpenAI 400 ``"The model 'dall-e-3' does not exist."``
+        was truncated to ``"The model"`` because the capture stopped at the
+        first inner quote.
+        """
+        result = classify_error(
+            _frame(
+                'Error processing frame: Error code: 400 - '
+                '{\'error\': {\'message\': "The model \'dall-e-3\' does not '
+                'exist.", \'type\': \'image_generation_user_error\'}}',
+                OpenAIImageGenService(),
+            ),
+        )
+        self.assertEqual(result.title, 'Image generator provider error')  # noqa: PT009
+        self.assertEqual(  # noqa: PT009
+            result.content,
+            "The model 'dall-e-3' does not exist.",
+        )
 
     def test_unknown_processor_uses_generic_stage(self) -> None:
         """An unrecognised/absent processor falls back to the Assistant stage."""
