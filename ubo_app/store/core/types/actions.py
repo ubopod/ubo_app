@@ -266,7 +266,12 @@ class UpdateApplicationKwargsAction(StackAction):
 
 
 class UpdateRenderPropsAction(StackAction):
-    """Merge props into an open generic render view by kind or stream_id."""
+    """Update props of an open generic render view by kind or stream_id.
+
+    Props are merged into the existing ones, except when ``next_kind`` switches
+    the view to a different widget kind, in which case ``props`` fully replaces
+    the previous (now-incompatible) props.
+    """
 
     kind: str = ''
     stream_id: str = ''

@@ -362,6 +362,9 @@ class TestRenderActions:
         assert isinstance(item, RenderStackItem)
         assert item.kind == 'qr_code'
         assert item.props['value'] == 'https://example.com'
+        # Props from the previous widget kind must not leak into the new one,
+        # otherwise the new widget is instantiated with foreign properties.
+        assert 'text' not in item.props
 
     def test_update_render_props_by_stream_id(self) -> None:
         """Verify UpdateRenderPropsAction matches by stream_id."""

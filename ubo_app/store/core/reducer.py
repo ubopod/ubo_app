@@ -374,7 +374,9 @@ def reducer(
                     item,
                     kind=action.next_kind or item.kind,
                     title=action.title or item.title,
-                    props={
+                    props=action.props
+                    if action.next_kind and action.next_kind != item.kind
+                    else {
                         **item.props,
                         **action.props,
                     },
