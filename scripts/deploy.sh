@@ -73,12 +73,6 @@ $(if [ "$restart" == "True" ]; then echo "systemctl restart ubo-system.service &
 true"
 fi
 
-if [ "$kill" == "True" ] || [ "$restart" == "True" ]; then
-  run_on_pod "$(if [ "$kill" == "True" ]; then echo "(killall -9 ubo || true) &&"; fi)
-$(if [ "$restart" == "True" ]; then echo "systemctl --user restart ubo-app.service &&"; fi)
-true"
-fi
-
 for service in ubo_app/services/*/ubo-service; do
   args=(--index="$index")
   [[ "$skip_deps" == "True" ]] && args+=("--skip_deps")
@@ -91,3 +85,11 @@ gui_args=(--index="$index")
 [[ "$skip_deps" != "True" ]] && gui_args+=("--deps")
 [[ "$offline" == "True" ]] && gui_args+=("--offline")
 uv run --directory ubo_app/gui poe deploy-to-device "${gui_args[@]}"
+
+# Restart the app last, after every wheel (core, services, gui-client) is installed,
+# so the running processes load the freshly deployed code.
+if [ "$kill" == "True" ] || [ "$restart" == "True" ]; then
+  run_on_pod "$(if [ "$kill" == "True" ]; then echo "(killall -9 ubo || true) &&"; fi)
+$(if [ "$restart" == "True" ]; then echo "systemctl --user restart ubo-app.service &&"; fi)
+true"
+fi
