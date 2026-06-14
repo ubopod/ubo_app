@@ -719,6 +719,19 @@ def _setup_reducer_barrier(to_run_services: list[UboServiceThread]) -> None:
         service.set_reducer_barrier(reducer_barrier, release_once)
 
 
+def is_loadable_service_dir(path: Path) -> bool:
+    """Return whether *path* is a real service directory worth loading.
+
+    Skips non-directories and names starting with ``~`` or ``.``. The ``~``
+    case matters: an interrupted in-place ``pip install --force-reinstall``
+    can leave orphaned backup copies of a service dir with its first character
+    replaced by ``~`` (e.g. ``090-web-ui`` → ``~90-web-ui``). Because ``~``
+    sorts after ``0``, such a stale twin would otherwise load *after* the
+    canonical dir and silently win its ``service_id``.
+    """
+    return path.is_dir() and not path.name.startswith(('~', '.'))
+
+
 def load_services(
     service_ids: Sequence[str] | None = None,
     gap_duration: float = 0,
@@ -733,7 +746,10 @@ def load_services(
         directory_path = Path(services_directory_path).absolute()
         if directory_path.is_dir():
             for service_path in sorted(directory_path.iterdir()):
-                if not service_path.is_dir() or service_path in SERVICES_BY_PATH.copy():
+                if (
+                    not is_loadable_service_dir(service_path)
+                    or service_path in SERVICES_BY_PATH.copy()
+                ):
                     continue
                 service = UboServiceThread(
                     service_path.absolute(),
