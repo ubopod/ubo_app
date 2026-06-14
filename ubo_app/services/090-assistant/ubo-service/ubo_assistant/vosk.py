@@ -66,10 +66,15 @@ class VoskSTTService(STTService):
         # reconciles the two before every chunk, so a missed signal or a
         # not-yet-downloaded model self-heals on the next utterance instead
         # of needing the user to toggle repeatedly.
+        #
+        # The model is loaded lazily (``_loaded_model_id`` starts ``None`` and
+        # ``_client`` starts ``None``) rather than eagerly here. An eager load
+        # would raise if the model isn't on disk yet — e.g. it's still being
+        # downloaded/extracted when this subprocess starts — and that exception
+        # permanently kills the whole Vosk slot, defeating the self-heal above.
         self._requested_model_id = model_id
-        self._loaded_model_id = model_id
-        model = Model(model_path=_model_path(model_id).as_posix())
-        self._client = KaldiRecognizer(model, 16000)
+        self._loaded_model_id: str | None = None
+        self._client: KaldiRecognizer | None = None
 
     def request_model(self, model_id: str) -> None:
         """Record the Vosk model the user selected.
@@ -155,14 +160,17 @@ class VoskSTTService(STTService):
         """Process an audio chunk for STT transcription."""
         if self._streaming_task:
             # Reconcile the loaded model with the user's selection *before*
-            # queueing — this is the single point where a model switch
-            # actually takes effect.
+            # queueing — this is the single point where a model switch (and
+            # the initial load) actually takes effect.
             async with self._reload_lock:
                 await self._ensure_model_loaded()
-            # Queue the audio data
-            await self.start_ttfb_metrics()
-            await self.start_processing_metrics()
-            await self._request_queue.put(audio)
+            # Skip queueing until a model is actually loaded; otherwise
+            # ``_process_responses`` would dereference a ``None`` client. The
+            # model self-heals on a later chunk once it's available on disk.
+            if self._client is not None:
+                await self.start_ttfb_metrics()
+                await self.start_processing_metrics()
+                await self._request_queue.put(audio)
         yield None
 
     @traced_stt
@@ -205,6 +213,10 @@ class VoskSTTService(STTService):
                     continue
 
                 data = await self._request_queue.get()
+                if self._client is None:
+                    # ``run_stt`` only enqueues once a model is loaded, but
+                    # guard anyway so the recognizer is never None here.
+                    continue
                 if (
                     int(time.time() * 1000) - self._stream_start_time
                 ) > self.STREAMING_LIMIT:
