@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 
 INPUT_FRAME_RATE = 48_000
 INPUT_CHANNELS = 2
-INPUT_PERIOD_SIZE = int(INPUT_FRAME_RATE / 1000) * 20  # 20ms
+INPUT_PERIOD_SIZE = int(INPUT_FRAME_RATE / 1000) * 50  # 50ms
 
 
 def _linear_to_logarithmic(volume_linear: float) -> int:
