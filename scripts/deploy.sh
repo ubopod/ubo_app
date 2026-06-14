@@ -57,7 +57,13 @@ run_on_pod_as_root "rm /tmp/ubo*.whl || true"
 scp dist/$LATEST_UBO_APP_WHEEL ubo-development-pod-$index:/tmp/
 scp dist/$LATEST_BINDINGS_WHEEL ubo-development-pod-$index:/tmp/
 
-run_on_pod "$(if [ "$skip_deps" != "True" ]; then echo "pip install --upgrade /tmp/$LATEST_UBO_APP_WHEEL &&"; fi)
+# Sweep orphaned `~`-prefixed service dirs left by a prior interrupted in-place
+# `--force-reinstall` (e.g. `090-web-ui` -> `~90-web-ui`). They sort after the
+# canonical `0NN-*` dirs and would otherwise shadow them at load time. The
+# loader also skips them defensively (see is_loadable_service_dir), but cleaning
+# them here keeps the install tree tidy.
+run_on_pod "rm -rf /opt/ubo/env/lib/python*/site-packages/ubo_app/services/~* 2>/dev/null || true
+$(if [ "$skip_deps" != "True" ]; then echo "pip install --upgrade /tmp/$LATEST_UBO_APP_WHEEL &&"; fi)
 pip install --no-index --upgrade --force-reinstall --no-deps /tmp/$LATEST_UBO_APP_WHEEL &&
 pip install --no-index --upgrade --force-reinstall --no-deps /tmp/$LATEST_BINDINGS_WHEEL
 true"
