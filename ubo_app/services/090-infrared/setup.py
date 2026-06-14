@@ -13,6 +13,8 @@ from ubo_app.store.core.bindable_actions import (
     BindableActionContext,
     get_bindable_action,
     get_bindable_actions,
+    register_bindable_action,
+    unregister_bindable_action,
 )
 from ubo_app.store.core.types import (
     CloseInstructionAction,
@@ -410,6 +412,60 @@ def _handle_bound_action_triggered(
     store.dispatch(triggered_action)
 
 
+# Bindable-action keys currently registered for managed IR devices.
+_registered_send_keys: set[str] = set()
+
+
+def _register_receive_bindable_actions() -> None:
+    """Expose IR receive on/off as bindable actions (e.g. for voice commands)."""
+    register_bindable_action(
+        'infrared:receive-on',
+        'Infrared: Start Receiving',
+        lambda _ctx: InfraredSetShouldReceiveAction(should_receive=True),
+        allow_reregister=True,
+    )
+    register_bindable_action(
+        'infrared:receive-off',
+        'Infrared: Stop Receiving',
+        lambda _ctx: InfraredSetShouldReceiveAction(should_receive=False),
+        allow_reregister=True,
+    )
+
+
+def _sync_send_bindable_actions(devices: list[InfraredDevice]) -> None:
+    """Keep one ``infrared:send:*`` bindable action per managed device.
+
+    Registered via an autorun so it also fires on startup with the persisted
+    device list. Registry labels must be unique, so a colliding device name is
+    disambiguated with its scancode.
+    """
+    seen_labels: set[str] = set()
+    desired: dict[str, tuple[str, InfraredDevice]] = {}
+    for device in devices:
+        key = f'infrared:send:{device.protocol}:{device.scancode}'
+        label = f'IR Send: {device.name}'
+        if label in seen_labels:
+            label = f'{label} ({device.scancode})'
+        seen_labels.add(label)
+        desired[key] = (label, device)
+
+    for stale_key in _registered_send_keys - desired.keys():
+        unregister_bindable_action(stale_key)
+
+    _registered_send_keys.clear()
+    for key, (label, device) in desired.items():
+        register_bindable_action(
+            key,
+            label,
+            lambda _ctx, d=device: InfraredSendCodeAction(
+                protocol=d.protocol,
+                scancode=d.scancode,
+            ),
+            allow_reregister=True,
+        )
+        _registered_send_keys.add(key)
+
+
 def _register_core_actions() -> None:
     """Register core action handlers for the infrared service."""
 
@@ -465,6 +521,14 @@ def _register_core_actions() -> None:
 def _register_menus_and_actions() -> None:  # noqa: C901
     """Register all menus, actions, and path matchers for the infrared service."""
     _register_core_actions()
+    _register_receive_bindable_actions()
+
+    # Expose each managed device as an `infrared:send:*` bindable action so it
+    # can be bound to other triggers (e.g. a voice command). The autorun also
+    # fires on startup with the persisted device list.
+    @store.autorun(lambda state: state.infrared.registered_devices)
+    def _sync_send_actions(devices: list[InfraredDevice]) -> None:
+        _sync_send_bindable_actions(devices)
 
     # Register remove-device action handlers dynamically
     @store.autorun(lambda state: state.infrared.registered_devices)

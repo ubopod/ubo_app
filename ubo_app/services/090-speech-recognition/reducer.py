@@ -4,8 +4,8 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from commands import load_or_seed_commands
 from redux import (
-    BaseAction,
     CompleteReducerResult,
     InitAction,
     InitializationActionError,
@@ -17,37 +17,21 @@ from ubo_app.constants.assistant import (
     ASSISTANT_STOP_TALKING_PHRASE,
     INTENTS_WAKE_WORD,
 )
-from ubo_app.store.core.types import (
-    MenuChooseByIndexAction,
-    MenuGoBackAction,
-    MenuGoHomeAction,
-    MenuScrollAction,
-    MenuScrollDirection,
-    OpenRenderAction,
-)
 from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
     AssistantStopTalkingAction,
     WakePhraseTriggerSource,
 )
-from ubo_app.store.services.audio import (
-    AudioChangeVolumeAction,
-    AudioDevice,
-)
-from ubo_app.store.services.infrared import (
-    InfraredSendCodeAction,
-    InfraredSetShouldReceiveAction,
-)
 from ubo_app.store.services.rgb_ring import (
     RgbRingBlankAction,
-    RgbRingCommandAction,
-    RgbRingRainbowAction,
-    RgbRingSequenceAction,
     RgbRingSetAllAction,
 )
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionAction,
+    SpeechRecognitionAddCommandAction,
+    SpeechRecognitionBoundActionTriggeredEvent,
     SpeechRecognitionIntent,
+    SpeechRecognitionRemoveCommandAction,
     SpeechRecognitionReportIntentDetectionAction,
     SpeechRecognitionReportSpeechAction,
     SpeechRecognitionReportWakeWordDetectionAction,
@@ -56,11 +40,10 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionSetSelectedEngineAction,
     SpeechRecognitionState,
     SpeechRecognitionStatus,
+    SpeechRecognitionUpdateCommandAction,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from redux import ReducerResult
 
     from ubo_app.store.main import UboAction
@@ -68,207 +51,18 @@ if TYPE_CHECKING:
 
 ACKNOWLEDGMENT_ACTION = RgbRingBlankAction()
 
-# Registry mapping intent action_ids to their actions
-_intent_actions: dict[str, list[UboAction]] = {}
-
-
-def _register_intent(
-    action_id: str,
-    phrase: str | Sequence[str],
-    action: UboAction | Sequence[UboAction],
-) -> SpeechRecognitionIntent:
-    """Register an intent action and return the intent with an action_id."""
-    _intent_actions[action_id] = (
-        list(action) if not isinstance(action, BaseAction) else [action]
-    )
-    return SpeechRecognitionIntent(phrase=phrase, action_id=action_id)
-
 
 def reducer(
     state: SpeechRecognitionState | None,
     action: SpeechRecognitionAction,
-) -> ReducerResult[SpeechRecognitionState, UboAction, None]:
+) -> ReducerResult[
+    SpeechRecognitionState,
+    UboAction,
+    SpeechRecognitionBoundActionTriggeredEvent,
+]:
     if state is None:
         if isinstance(action, InitAction):
-            return SpeechRecognitionState(
-                intents=[
-                    _register_intent(
-                        'speech:assistant-on',
-                        'Turn on Assistant',
-                        SpeechRecognitionSetIsAssistantActiveAction(is_active=True),
-                    ),
-                    _register_intent(
-                        'speech:assistant-off',
-                        'Turn off Assistant',
-                        SpeechRecognitionSetIsAssistantActiveAction(is_active=False),
-                    ),
-                    _register_intent(
-                        'speech:wifi-camera',
-                        [
-                            'Create WiFi Connection with Camera',
-                            'Create WiFi Connection with QR Code',
-                            'Create WiFi Connection using Camera',
-                            'Create WiFi Connection using QR Code',
-                        ],
-                        OpenRenderAction(
-                            kind='status',
-                            title='Creating WiFi Connection',
-                            props={
-                                'icon': '󱛃',
-                                'text': 'Creating Scanned WiFi Connection',
-                                'icon_size': 56,
-                                'text_font_size': 19,
-                            },
-                        ),
-                    ),
-                    _register_intent(
-                        'speech:wifi-web',
-                        [
-                            'Create WiFi Connection with Web Dashboard',
-                            'Create WiFi Connection with Web',
-                            'Create WiFi Connection with Web UI',
-                            'Create WiFi Connection using Web Dashboard',
-                            'Create WiFi Connection using Web UI',
-                            'Create WiFi Connection using Web',
-                        ],
-                        OpenRenderAction(
-                            kind='status',
-                            title='Creating WiFi Connection',
-                            props={
-                                'icon': '󱛃',
-                                'text': 'Creating WiFi Connection via Web',
-                                'icon_size': 56,
-                                'text_font_size': 19,
-                            },
-                        ),
-                    ),
-                    _register_intent(
-                        'speech:light-strip-toggle',
-                        ['Turn on light strip', 'Turn off light strip'],
-                        InfraredSendCodeAction(protocol='nec', scancode='0x40'),
-                    ),
-                    _register_intent(
-                        'speech:lights-on',
-                        'Turn on Lights',
-                        RgbRingSetAllAction(color=(255, 255, 255)),
-                    ),
-                    _register_intent(
-                        'speech:lights-off',
-                        'Turn off Lights',
-                        RgbRingSetAllAction(color=(0, 0, 0)),
-                    ),
-                    _register_intent(
-                        'speech:lights-red',
-                        'Turn Lights Red',
-                        RgbRingSetAllAction(color=(255, 0, 0)),
-                    ),
-                    _register_intent(
-                        'speech:lights-green',
-                        'Turn Lights Green',
-                        RgbRingSetAllAction(color=(0, 255, 0)),
-                    ),
-                    _register_intent(
-                        'speech:lights-blue',
-                        'Turn Lights Blue',
-                        RgbRingSetAllAction(color=(0, 0, 255)),
-                    ),
-                    _register_intent(
-                        'speech:lights-yellow',
-                        'Turn Lights Yellow',
-                        RgbRingSetAllAction(color=(255, 255, 0)),
-                    ),
-                    _register_intent(
-                        'speech:lights-purple',
-                        'Turn Lights Purple',
-                        RgbRingSetAllAction(color=(255, 0, 255)),
-                    ),
-                    _register_intent(
-                        'speech:lights-cyan',
-                        'Turn Lights Cyan',
-                        RgbRingSetAllAction(color=(0, 255, 255)),
-                    ),
-                    _register_intent(
-                        'speech:lights-orange',
-                        'Turn Lights Orange',
-                        RgbRingSetAllAction(color=(255, 100, 0)),
-                    ),
-                    _register_intent(
-                        'speech:lights-white',
-                        'Turn Lights White',
-                        RgbRingSetAllAction(color=(255, 255, 255)),
-                    ),
-                    _register_intent(
-                        'speech:lights-rainbow',
-                        'Turn Lights Rainbow',
-                        RgbRingRainbowAction(rounds=0, wait=2500),
-                    ),
-                    _register_intent(
-                        'speech:volume-up',
-                        'Turn Volume Up',
-                        AudioChangeVolumeAction(amount=0.1, device=AudioDevice.OUTPUT),
-                    ),
-                    _register_intent(
-                        'speech:volume-down',
-                        'Turn Volume Down',
-                        AudioChangeVolumeAction(amount=-0.1, device=AudioDevice.OUTPUT),
-                    ),
-                    _register_intent(
-                        'speech:button-one',
-                        'Activate Button One',
-                        MenuChooseByIndexAction(index=0),
-                    ),
-                    _register_intent(
-                        'speech:button-two',
-                        'Activate Button Two',
-                        MenuChooseByIndexAction(index=1),
-                    ),
-                    _register_intent(
-                        'speech:button-three',
-                        'Activate Button Three',
-                        MenuChooseByIndexAction(index=1),
-                    ),
-                    _register_intent(
-                        'speech:go-back',
-                        ['Activate Back Button', 'Go Back'],
-                        MenuGoBackAction(),
-                    ),
-                    _register_intent(
-                        'speech:go-home',
-                        ['Activate Home Button', 'Go Home'],
-                        MenuGoHomeAction(),
-                    ),
-                    _register_intent(
-                        'speech:scroll-up',
-                        ['Activate Up Button', 'Scroll Up'],
-                        MenuScrollAction(direction=MenuScrollDirection.UP),
-                    ),
-                    _register_intent(
-                        'speech:scroll-down',
-                        ['Activate Down Button', 'Scroll Down'],
-                        MenuScrollAction(direction=MenuScrollDirection.DOWN),
-                    ),
-                    _register_intent(
-                        'speech:ir-receive-on',
-                        [
-                            'Enable Receive Keys',
-                            'Turn on Receive Keys',
-                            'Start Receiving IR',
-                            'Enable IR Receiver',
-                        ],
-                        InfraredSetShouldReceiveAction(should_receive=True),
-                    ),
-                    _register_intent(
-                        'speech:ir-receive-off',
-                        [
-                            'Disable Receive Keys',
-                            'Turn off Receive Keys',
-                            'Stop Receiving IR',
-                            'Disable IR Receiver',
-                        ],
-                        InfraredSetShouldReceiveAction(should_receive=False),
-                    ),
-                ],
-            )
+            return SpeechRecognitionState(intents=load_or_seed_commands())
 
         raise InitializationActionError(action)
 
@@ -298,6 +92,44 @@ def reducer(
                 else state.status,
             )
 
+        case SpeechRecognitionAddCommandAction():
+            return replace(
+                state,
+                intents=[
+                    *state.intents,
+                    SpeechRecognitionIntent(
+                        id=action.id,
+                        label=action.label,
+                        phrases=action.phrases,
+                        action_keys=action.action_keys,
+                    ),
+                ],
+            )
+
+        case SpeechRecognitionUpdateCommandAction():
+            return replace(
+                state,
+                intents=[
+                    SpeechRecognitionIntent(
+                        id=action.id,
+                        label=action.label,
+                        phrases=action.phrases,
+                        action_keys=action.action_keys,
+                    )
+                    if intent.id == action.id
+                    else intent
+                    for intent in state.intents
+                ],
+            )
+
+        case SpeechRecognitionRemoveCommandAction():
+            return replace(
+                state,
+                intents=[
+                    intent for intent in state.intents if intent.id != action.id
+                ],
+            )
+
         case SpeechRecognitionReportWakeWordDetectionAction(
             wake_word=wake_word,
         ):
@@ -305,9 +137,7 @@ def reducer(
                 wake_word == INTENTS_WAKE_WORD
                 and state.status is SpeechRecognitionStatus.IDLE
             ):
-                new_status = (
-                SpeechRecognitionStatus.INTENTS_WAITING
-            )
+                new_status = SpeechRecognitionStatus.INTENTS_WAITING
                 return CompleteReducerResult(
                     state=replace(state, status=new_status),
                     actions=[RgbRingSetAllAction(color=(0, 0, 255))],
@@ -339,22 +169,16 @@ def reducer(
             )
 
         case SpeechRecognitionReportIntentDetectionAction():
-            resolved = _intent_actions.get(action.intent.action_id)
-            if resolved is None:
-                return replace(state, status=SpeechRecognitionStatus.IDLE)
-            rgb_ring_actions = [
-                a for a in resolved if isinstance(a, RgbRingCommandAction)
-            ]
-            non_rgb_ring_actions = [
-                a for a in resolved if not isinstance(a, RgbRingCommandAction)
-            ]
+            # Stay pure: emit the event and let the service handler resolve the
+            # action keys against the bindable-actions registry and dispatch
+            # them (with the acknowledgment sequence).
             return CompleteReducerResult(
                 state=replace(state, status=SpeechRecognitionStatus.IDLE),
-                actions=[
-                    RgbRingSequenceAction(
-                        sequence=[ACKNOWLEDGMENT_ACTION, *rgb_ring_actions],
+                events=[
+                    SpeechRecognitionBoundActionTriggeredEvent(
+                        action_keys=action.intent.action_keys,
+                        phrase=action.text,
                     ),
-                    *non_rgb_ring_actions,
                 ],
             )
 
