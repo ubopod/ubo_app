@@ -193,7 +193,21 @@ Contributions following Python best practices are welcome.
 
 #### Setting up the development environment
 
-To set up the development environment, you need to [have `uv` installed](https://docs.astral.sh/uv/).
+##### Quick start (automated)
+
+After cloning the repository, you can set up the whole development environment with a single script. It detects your platform (macOS or Raspberry Pi/Linux), installs the required tooling (`uv`, `buf`, `git-lfs`, `node`), and bootstraps the project (virtual env, dependencies, protobuf, web app). It is safe to re-run and never requires `sudo` on the Raspberry Pi (run it as the `ubo` user):
+
+```bash
+./scripts/setup-dev.sh
+```
+
+Useful flags: `--tools-only` (install tools, skip project bootstrap), `--skip-web` (skip the web app build), `--help`. Pinned tool versions can be overridden via environment variables (e.g. `NODE_VERSION=22 ./scripts/setup-dev.sh`).
+
+When it finishes, it prints the command to run the app in development mode.
+
+##### Manual setup
+
+To set up the development environment manually, you need to [have `uv` installed](https://docs.astral.sh/uv/).
 
 First, clone the repository (you need to have [git-lfs installed](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage)):
 
