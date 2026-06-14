@@ -272,6 +272,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'Importance': 'ubo_app.store.services.notifications',
     'InfraredAction': 'ubo_app.store.services.infrared',
     'InfraredAddDeviceAction': 'ubo_app.store.services.infrared',
+    'InfraredBoundActionTriggeredEvent': 'ubo_app.store.services.infrared',
     'InfraredDevice': 'ubo_app.store.services.infrared',
     'InfraredDeviceRegistrationCompleteEvent': 'ubo_app.store.services.infrared',
     'InfraredDeviceRegistrationStartedEvent': 'ubo_app.store.services.infrared',

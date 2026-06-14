@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING
 
 from redux import (
     CompleteReducerResult,
@@ -13,16 +12,10 @@ from redux import (
 )
 
 from ubo_app.logger import logger
-from ubo_app.store.services.assistant import (
-    AssistantStartListeningAction,
-    AssistantStopListeningAction,
-    AssistantToggleListeningAction,
-    InfraredTriggerSource,
-    UserStopReason,
-)
 from ubo_app.store.services.infrared import (
     InfraredAction,
     InfraredAddDeviceAction,
+    InfraredBoundActionTriggeredEvent,
     InfraredDevice,
     InfraredDeviceRegistrationCompleteEvent,
     InfraredDeviceRegistrationStartedEvent,
@@ -43,15 +36,6 @@ from ubo_app.store.services.keypad import (
     KeypadKeyReleaseAction,
 )
 from ubo_app.store.services.rgb_ring import RgbRingBlankAction, RgbRingBlinkAction
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-AssistantListeningAction = (
-    AssistantStartListeningAction
-    | AssistantStopListeningAction
-    | AssistantToggleListeningAction
-)
 
 REGISTRATION_REPEAT_COUNT = 5
 
@@ -84,48 +68,6 @@ INFRARED_CODES_TO_KEY: dict[tuple[str, str], tuple[KeyActionType, Key]] = {
 }
 
 
-def _infrared_assistant_start(
-    protocol: str,
-    scancode: str,
-) -> AssistantListeningAction:
-    return AssistantStartListeningAction(
-        source=InfraredTriggerSource(protocol=protocol, scancode=scancode),
-    )
-
-
-def _infrared_assistant_stop(
-    protocol: str,
-    scancode: str,
-) -> AssistantListeningAction:
-    return AssistantStopListeningAction(
-        reason=UserStopReason(
-            source=InfraredTriggerSource(protocol=protocol, scancode=scancode),
-        ),
-    )
-
-
-def _infrared_assistant_toggle(
-    protocol: str,
-    scancode: str,
-) -> AssistantListeningAction:
-    return AssistantToggleListeningAction(
-        source=InfraredTriggerSource(protocol=protocol, scancode=scancode),
-    )
-
-
-# IR codes that should trigger Assistant listening actions. Each entry is a
-# factory that builds the action with the originating IR code as the trigger
-# source so per-source policies can dispatch on it.
-ASSISTANT_IR_CODES: dict[
-    tuple[str, str],
-    Callable[[str, str], AssistantListeningAction],
-] = {
-    ('necx', '0xbf04'): _infrared_assistant_start,
-    ('necx', '0xbf06'): _infrared_assistant_stop,
-    ('nec', '0xa01b'): _infrared_assistant_toggle,
-}
-
-
 def reducer(
     state: InfraredState | None,
     action: InfraredAction | KeypadAction,
@@ -135,13 +77,11 @@ def reducer(
     | KeypadKeyPressAction
     | KeypadKeyReleaseAction
     | RgbRingBlinkAction
-    | RgbRingBlankAction
-    | AssistantStartListeningAction
-    | AssistantStopListeningAction
-    | AssistantToggleListeningAction,
+    | RgbRingBlankAction,
     InfraredSendCodeEvent
     | InfraredDeviceRegistrationStartedEvent
-    | InfraredDeviceRegistrationCompleteEvent,
+    | InfraredDeviceRegistrationCompleteEvent
+    | InfraredBoundActionTriggeredEvent,
 ]:
     """Reducer for infrared actions."""
     if state is None:
@@ -253,29 +193,34 @@ def reducer(
                 ),
                 None,
             )
+            new_device = InfraredDevice(
+                name=action.name,
+                protocol=action.protocol,
+                scancode=action.scancode,
+                description=action.description,
+                bound_action_key=action.bound_action_key,
+            )
             if existing_device:
                 new_devices = [
-                    InfraredDevice(
-                        name=action.name,
-                        protocol=action.protocol,
-                        scancode=action.scancode,
-                    )
+                    new_device
                     if (device.protocol, device.scancode) == device_key
                     else device
                     for device in state.registered_devices
                 ]
             else:
-                new_devices = [
-                    *state.registered_devices,
-                    InfraredDevice(
-                        name=action.name,
-                        protocol=action.protocol,
-                        scancode=action.scancode,
-                    ),
-                ]
-            return replace(
-                state,
-                registered_devices=new_devices,
+                new_devices = [*state.registered_devices, new_device]
+            # A bound key is useless unless codes are being received; enable
+            # receiving so the freshly bound key works immediately (device
+            # registration restores the prior flag, which may be off).
+            enable_receive = (
+                [InfraredSetShouldReceiveAction(should_receive=True)]
+                if action.bound_action_key is not None
+                and not state.should_receive_keypad_actions
+                else []
+            )
+            return CompleteReducerResult(
+                state=replace(state, registered_devices=new_devices),
+                actions=enable_receive,
             )
 
         case InfraredRemoveDeviceAction():
@@ -385,17 +330,32 @@ def reducer(
                 action.scancode,
             )
             ir_code = (action.protocol, action.scancode)
-            if ir_code in ASSISTANT_IR_CODES:
-                factory = ASSISTANT_IR_CODES[ir_code]
-                triggered_action = factory(action.protocol, action.scancode)
-                logger.info(
-                    'Triggered Assistant action: %s',
-                    type(triggered_action).__name__,
-                )
+            # A registered device takes precedence over the built-in keypad
+            # defaults: it either fires its bound action or (replay-only, no
+            # binding) does nothing — it never falls through to the keypad map.
+            device = next(
+                (
+                    device
+                    for device in state.registered_devices
+                    if (device.protocol, device.scancode) == ir_code
+                ),
+                None,
+            )
+            if device is not None:
+                if device.bound_action_key is None:
+                    return state
                 return CompleteReducerResult(
                     state=state,
-                    actions=[triggered_action],
+                    events=[
+                        InfraredBoundActionTriggeredEvent(
+                            bound_action_key=device.bound_action_key,
+                            protocol=action.protocol,
+                            scancode=action.scancode,
+                            device_name=device.name,
+                        ),
+                    ],
                 )
+
             if ir_code not in INFRARED_CODES_TO_KEY:
                 return state
 
