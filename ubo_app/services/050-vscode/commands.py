@@ -18,12 +18,54 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
+    NotificationsClearByIdAction,
 )
 from ubo_app.store.services.vscode import (
     VSCodeSetPendingAction,
     VSCodeSetStatusAction,
     VSCodeStatus,
 )
+
+# Serializes binary (re)downloads against status probes: `check_status` exec's
+# the `code` binary, and while a download is rewriting it on disk exec'ing
+# raises `OSError(26, 'Text file busy')` (ETXTBSY).
+download_lock = asyncio.Lock()
+
+# `_monitor_status` polls `check_status` every second; a single slow/timed-out
+# `code tunnel` subcommand is normal jitter, not a fault. Count consecutive
+# failures (module-level list, not a global) and only surface the sticky error
+# + failure chime once the CLI has been unreachable for several polls in a row,
+# clearing it again as soon as a poll succeeds. This stops a transient timeout
+# from flashing an error and replaying the chime on screen.
+_consecutive_failures = [0]
+_FAILURE_NOTIFICATION_THRESHOLD = 3
+
+
+def _note_status_failure(notification_id: str, content: str) -> None:
+    """Record a failed status poll; notify only when it becomes persistent."""
+    _consecutive_failures[0] += 1
+    if _consecutive_failures[0] == _FAILURE_NOTIFICATION_THRESHOLD:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id=notification_id,
+                    title='VSCode',
+                    content=content,
+                    display_type=NotificationDisplayType.STICKY,
+                    color=DANGER_COLOR,
+                    icon='󰜺',
+                    chime=Chime.FAILURE,
+                ),
+            ),
+        )
+
+
+def _note_status_success() -> None:
+    """Reset the failure counter and clear any sticky error after recovery."""
+    if _consecutive_failures[0] >= _FAILURE_NOTIFICATION_THRESHOLD:
+        store.dispatch(NotificationsClearByIdAction(id='vscode:error:user'))
+        store.dispatch(NotificationsClearByIdAction(id='vscode:error:status'))
+    _consecutive_failures[0] = 0
 
 
 class TunnelStatus(TypedDict):
@@ -41,6 +83,15 @@ class TunnelServiceStatus(TypedDict):
     options=DebounceOptions(leading=True, trailing=False, time_window=1),
 )
 async def check_status() -> None:
+    # While a (re)download is in progress the `code` binary on disk is being
+    # written/replaced by `tar`/`code version use`. Exec'ing it concurrently
+    # raises `OSError(26, 'Text file busy')` (ETXTBSY), and the
+    # `_monitor_status` loop polls this every second. `download_code` holds
+    # `download_lock` for the duration of the download, so skip the probe
+    # while it is held — `download_code` calls `check_status` again from its
+    # `finally`, once the lock is released and the binary is closed.
+    if download_lock.locked():
+        return
     is_binary_installed = CODE_BINARY_PATH.exists()
     status_data: TunnelServiceStatus | None = None
     is_logged_in = False
@@ -66,20 +117,11 @@ async def check_status() -> None:
                 raise
             is_logged_in = process.returncode == 0
         except (subprocess.CalledProcessError, TimeoutError):
-            store.dispatch(
-                NotificationsAddAction(
-                    notification=Notification(
-                        id='vscode:error:user',
-                        title='VSCode',
-                        content='Failed to get status: "user show" subcommand',
-                        display_type=NotificationDisplayType.STICKY,
-                        color=DANGER_COLOR,
-                        icon='󰜺',
-                        chime=Chime.FAILURE,
-                    ),
-                ),
+            _note_status_failure(
+                'vscode:error:user',
+                'Failed to get status: "user show" subcommand',
             )
-            raise
+            return
 
         if is_logged_in:
             try:
@@ -103,20 +145,12 @@ async def check_status() -> None:
                 if process.returncode == 0 and stdout_bytes:
                     status_data = json.loads(stdout_bytes)
             except (subprocess.CalledProcessError, TimeoutError):
-                store.dispatch(
-                    NotificationsAddAction(
-                        notification=Notification(
-                            id='vscode:error:status',
-                            title='VSCode',
-                            content='Failed to get status: "status" subcommand',
-                            display_type=NotificationDisplayType.STICKY,
-                            color=DANGER_COLOR,
-                            icon='󰜺',
-                            chime=Chime.FAILURE,
-                        ),
-                    ),
+                _note_status_failure(
+                    'vscode:error:status',
+                    'Failed to get status: "status" subcommand',
                 )
-                raise
+                return
+    _note_status_success()
     logger.debug(
         'Checked VSCode Tunnel Status',
         extra={
