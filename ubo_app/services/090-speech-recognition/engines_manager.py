@@ -173,7 +173,7 @@ class EnginesManager:
             'Syncing speech recognition status',
             extra={
                 'status': status,
-                'intents': [intent.phrase for intent in intents],
+                'intents': [intent.phrases for intent in intents],
             },
         )
         if self.engines['speech'] is None:
@@ -189,11 +189,7 @@ class EnginesManager:
                 phrases=[
                     phrase.lower()
                     for intent in intents
-                    for phrase in (
-                        [intent.phrase]
-                        if isinstance(intent.phrase, str)
-                        else intent.phrase
-                    )
+                    for phrase in intent.phrases
                 ],
             )
         elif status is SpeechRecognitionStatus.ASSISTANT_WAITING:
@@ -217,12 +213,8 @@ class EnginesManager:
                 (
                     intent
                     for intent in intents
-                    if (
-                        intent.phrase.lower() == recognition.text.lower()
-                        if isinstance(intent.phrase, str)
-                        else recognition.text.lower()
-                        in [phrase.lower() for phrase in intent.phrase]
-                    )
+                    if recognition.text.lower()
+                    in [phrase.lower() for phrase in intent.phrases]
                 ),
                 None,
             ):
@@ -235,7 +227,10 @@ class EnginesManager:
                     },
                 )
                 store.dispatch(
-                    SpeechRecognitionReportIntentDetectionAction(intent=intent),
+                    SpeechRecognitionReportIntentDetectionAction(
+                        intent=intent,
+                        text=recognition.text,
+                    ),
                 )
         elif status is SpeechRecognitionStatus.ASSISTANT_WAITING:
             logger.info(

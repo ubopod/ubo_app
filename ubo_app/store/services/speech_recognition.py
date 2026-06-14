@@ -4,13 +4,9 @@ from __future__ import annotations
 
 from dataclasses import field
 from enum import StrEnum
-from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
@@ -37,11 +33,42 @@ class SpeechRecognitionSetIsAssistantActiveAction(SpeechRecognitionAction):
     is_active: bool
 
 
-class SpeechRecognitionIntent(Immutable):
-    """Intent for speech recognition service."""
+class SpeechRecognitionAddCommandAction(SpeechRecognitionAction):
+    """Action to add a custom voice command."""
 
-    phrase: str | Sequence[str]
-    action_id: str
+    id: str
+    label: str
+    phrases: list[str]
+    action_keys: list[str]
+
+
+class SpeechRecognitionUpdateCommandAction(SpeechRecognitionAction):
+    """Action to replace the command with the matching ``id``."""
+
+    id: str
+    label: str
+    phrases: list[str]
+    action_keys: list[str]
+
+
+class SpeechRecognitionRemoveCommandAction(SpeechRecognitionAction):
+    """Action to remove the command with the matching ``id``."""
+
+    id: str
+
+
+class SpeechRecognitionIntent(Immutable):
+    """A voice command: example phrases mapped to bindable-action keys.
+
+    ``action_keys`` reference entries in the bindable-actions registry
+    (:mod:`ubo_app.store.core.bindable_actions`); they are resolved and
+    dispatched when one of the ``phrases`` is recognised.
+    """
+
+    id: str
+    label: str
+    phrases: list[str]
+    action_keys: list[str]
 
 
 class SpeechRecognitionReportWakeWordDetectionAction(SpeechRecognitionAction):
@@ -54,6 +81,7 @@ class SpeechRecognitionReportIntentDetectionAction(SpeechRecognitionAction):
     """Action to report intent detection."""
 
     intent: SpeechRecognitionIntent
+    text: str
 
 
 class SpeechRecognitionReportSpeechAction(SpeechRecognitionAction):
@@ -73,6 +101,18 @@ class SpeechRecognitionReportTextEvent(SpeechRecognitionEvent):
 
     timestamp: float
     text: str
+
+
+class SpeechRecognitionBoundActionTriggeredEvent(SpeechRecognitionEvent):
+    """Event emitted when a recognised command's action keys should fire.
+
+    The speech-recognition service's handler resolves each ``action_keys``
+    entry against the bindable-actions registry and dispatches the produced
+    actions (keeping the reducer pure).
+    """
+
+    action_keys: list[str]
+    phrase: str
 
 
 class SpeechRecognitionStatus(StrEnum):
@@ -102,7 +142,7 @@ class SpeechRecognitionState(Immutable):
             default=SpeechRecognitionEngineName.VOSK,
         ),
     )
-    intents: list[SpeechRecognitionIntent]
+    intents: list[SpeechRecognitionIntent] = field(default_factory=list)
     is_intents_active: bool = field(
         default=read_from_persistent_store(
             'speech_recognition:is_intents_active',

@@ -1191,18 +1191,34 @@
     "intents": [
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:assistant-on",
-        "phrase": "Turn on Assistant"
+        "action_keys": [
+          "speech:assistant-on"
+        ],
+        "id": "default:assistant-on",
+        "label": "Turn on Assistant",
+        "phrases": [
+          "Turn on Assistant"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:assistant-off",
-        "phrase": "Turn off Assistant"
+        "action_keys": [
+          "speech:assistant-off"
+        ],
+        "id": "default:assistant-off",
+        "label": "Turn off Assistant",
+        "phrases": [
+          "Turn off Assistant"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:wifi-camera",
-        "phrase": [
+        "action_keys": [
+          "speech:wifi-camera"
+        ],
+        "id": "default:wifi-camera",
+        "label": "WiFi Setup via Camera",
+        "phrases": [
           "Create WiFi Connection with Camera",
           "Create WiFi Connection with QR Code",
           "Create WiFi Connection using Camera",
@@ -1211,8 +1227,12 @@
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:wifi-web",
-        "phrase": [
+        "action_keys": [
+          "speech:wifi-web"
+        ],
+        "id": "default:wifi-web",
+        "label": "WiFi Setup via Web",
+        "phrases": [
           "Create WiFi Connection with Web Dashboard",
           "Create WiFi Connection with Web",
           "Create WiFi Connection with Web UI",
@@ -1223,128 +1243,204 @@
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:light-strip-toggle",
-        "phrase": [
+        "action_keys": [
+          "speech:light-strip"
+        ],
+        "id": "default:light-strip-toggle",
+        "label": "Toggle Light Strip",
+        "phrases": [
           "Turn on light strip",
           "Turn off light strip"
         ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-on",
-        "phrase": "Turn on Lights"
+        "action_keys": [
+          "rgb:white"
+        ],
+        "id": "default:lights-on",
+        "label": "Turn on Lights",
+        "phrases": [
+          "Turn on Lights"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-off",
-        "phrase": "Turn off Lights"
+        "action_keys": [
+          "rgb:off"
+        ],
+        "id": "default:lights-off",
+        "label": "Turn off Lights",
+        "phrases": [
+          "Turn off Lights"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-red",
-        "phrase": "Turn Lights Red"
+        "action_keys": [
+          "rgb:red"
+        ],
+        "id": "default:lights-red",
+        "label": "Turn Lights Red",
+        "phrases": [
+          "Turn Lights Red"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-green",
-        "phrase": "Turn Lights Green"
+        "action_keys": [
+          "rgb:green"
+        ],
+        "id": "default:lights-green",
+        "label": "Turn Lights Green",
+        "phrases": [
+          "Turn Lights Green"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-blue",
-        "phrase": "Turn Lights Blue"
+        "action_keys": [
+          "rgb:blue"
+        ],
+        "id": "default:lights-blue",
+        "label": "Turn Lights Blue",
+        "phrases": [
+          "Turn Lights Blue"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-yellow",
-        "phrase": "Turn Lights Yellow"
+        "action_keys": [
+          "rgb:white"
+        ],
+        "id": "default:lights-white",
+        "label": "Turn Lights White",
+        "phrases": [
+          "Turn Lights White"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-purple",
-        "phrase": "Turn Lights Purple"
+        "action_keys": [
+          "rgb:rainbow"
+        ],
+        "id": "default:lights-rainbow",
+        "label": "Turn Lights Rainbow",
+        "phrases": [
+          "Turn Lights Rainbow"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-cyan",
-        "phrase": "Turn Lights Cyan"
+        "action_keys": [
+          "audio:volume-up"
+        ],
+        "id": "default:volume-up",
+        "label": "Turn Volume Up",
+        "phrases": [
+          "Turn Volume Up"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-orange",
-        "phrase": "Turn Lights Orange"
+        "action_keys": [
+          "audio:volume-down"
+        ],
+        "id": "default:volume-down",
+        "label": "Turn Volume Down",
+        "phrases": [
+          "Turn Volume Down"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-white",
-        "phrase": "Turn Lights White"
+        "action_keys": [
+          "menu:choose-1"
+        ],
+        "id": "default:button-one",
+        "label": "Activate Button One",
+        "phrases": [
+          "Activate Button One"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:lights-rainbow",
-        "phrase": "Turn Lights Rainbow"
+        "action_keys": [
+          "menu:choose-2"
+        ],
+        "id": "default:button-two",
+        "label": "Activate Button Two",
+        "phrases": [
+          "Activate Button Two"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:volume-up",
-        "phrase": "Turn Volume Up"
+        "action_keys": [
+          "menu:choose-3"
+        ],
+        "id": "default:button-three",
+        "label": "Activate Button Three",
+        "phrases": [
+          "Activate Button Three"
+        ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:volume-down",
-        "phrase": "Turn Volume Down"
-      },
-      {
-        "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:button-one",
-        "phrase": "Activate Button One"
-      },
-      {
-        "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:button-two",
-        "phrase": "Activate Button Two"
-      },
-      {
-        "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:button-three",
-        "phrase": "Activate Button Three"
-      },
-      {
-        "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:go-back",
-        "phrase": [
+        "action_keys": [
+          "menu:back"
+        ],
+        "id": "default:go-back",
+        "label": "Go Back",
+        "phrases": [
           "Activate Back Button",
           "Go Back"
         ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:go-home",
-        "phrase": [
+        "action_keys": [
+          "menu:home"
+        ],
+        "id": "default:go-home",
+        "label": "Go Home",
+        "phrases": [
           "Activate Home Button",
           "Go Home"
         ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:scroll-up",
-        "phrase": [
+        "action_keys": [
+          "menu:scroll-up"
+        ],
+        "id": "default:scroll-up",
+        "label": "Scroll Up",
+        "phrases": [
           "Activate Up Button",
           "Scroll Up"
         ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:scroll-down",
-        "phrase": [
+        "action_keys": [
+          "menu:scroll-down"
+        ],
+        "id": "default:scroll-down",
+        "label": "Scroll Down",
+        "phrases": [
           "Activate Down Button",
           "Scroll Down"
         ]
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:ir-receive-on",
-        "phrase": [
+        "action_keys": [
+          "infrared:receive-on"
+        ],
+        "id": "default:ir-receive-on",
+        "label": "Enable IR Receiver",
+        "phrases": [
           "Enable Receive Keys",
           "Turn on Receive Keys",
           "Start Receiving IR",
@@ -1353,8 +1449,12 @@
       },
       {
         "_type": "SpeechRecognitionIntent",
-        "action_id": "speech:ir-receive-off",
-        "phrase": [
+        "action_keys": [
+          "infrared:receive-off"
+        ],
+        "id": "default:ir-receive-off",
+        "label": "Disable IR Receiver",
+        "phrases": [
           "Disable Receive Keys",
           "Turn off Receive Keys",
           "Stop Receiving IR",

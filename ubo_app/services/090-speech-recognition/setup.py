@@ -2,30 +2,63 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from abstraction.speech_recognition_mixin import SpeechRecognitionMixin
+from commands import (
+    COMMANDS_PERSISTENT_KEY,
+    register_default_bindable_actions,
+    register_shortcut_actions,
+)
 from constants import OFFLINE_ENGINES
 from engines_manager import EnginesManager
 from redux import AutorunOptions
 
 from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
+from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
+from ubo_app.store.core.bindable_actions import (
+    BindableActionContext,
+    get_bindable_action,
+    get_bindable_actions,
+)
 from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPopAction,
     StackPushMenuAction,
+    StackPushPromptAction,
     UpdateDynamicMenuAction,
 )
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    WebUIInputDescription,
+)
 from ubo_app.store.main import store
+from ubo_app.store.services.rgb_ring import (
+    RgbRingBlankAction,
+    RgbRingCommandAction,
+    RgbRingSequenceAction,
+)
 from ubo_app.store.services.speech_recognition import (
+    SpeechRecognitionAddCommandAction,
+    SpeechRecognitionBoundActionTriggeredEvent,
     SpeechRecognitionEngineName,
+    SpeechRecognitionIntent,
+    SpeechRecognitionRemoveCommandAction,
     SpeechRecognitionSetIsAssistantActiveAction,
     SpeechRecognitionSetIsIntentsActiveAction,
     SpeechRecognitionSetSelectedEngineAction,
+    SpeechRecognitionUpdateCommandAction,
 )
+from ubo_app.utils.async_ import create_task
+from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
@@ -35,6 +68,11 @@ from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
     from ubo_app.utils.types import Subscriptions
+
+# Dropdown label representing "no action selected" for optional action slots.
+NO_ACTION_LABEL = 'None'
+# Number of action dropdown slots offered when creating/editing a command.
+COMMAND_ACTION_SLOTS = 3
 
 
 def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
@@ -109,6 +147,12 @@ def _register_static_menus() -> None:
             StackPushMenuAction(menu_key='speech-recognition:engines'),
         ),
     )
+    register_action(
+        'speech-recognition:open_commands',
+        lambda: store.dispatch(
+            StackPushMenuAction(menu_key='speech-recognition:commands'),
+        ),
+    )
 
     store.dispatch(
         UpdateDynamicMenuAction(
@@ -122,6 +166,12 @@ def _register_static_menus() -> None:
                     label='Services',
                     icon='\uf4a7',
                     action_id='speech-recognition:open_services',
+                ),
+                MenuItemData(
+                    key='commands',
+                    label='Commands',
+                    icon='\U000f036e',
+                    action_id='speech-recognition:open_commands',
                 ),
                 MenuItemData(
                     key='engine',
@@ -153,6 +203,269 @@ def _speech_recognition_path_matcher(path: tuple[str, ...]) -> str | None:
     return None
 
 
+def _handle_bound_action_triggered(
+    event: SpeechRecognitionBoundActionTriggeredEvent,
+) -> None:
+    """Resolve a recognised command's action keys and dispatch them.
+
+    Mirrors the infrared bound-action handler: the reducer stays pure and emits
+    the event; this handler resolves each key against the bindable-actions
+    registry and dispatches the produced actions, owning the acknowledgment
+    sequence (an RGB blank followed by any RGB ring actions, then the rest).
+    """
+    # Voice commands carry no meaningful trigger source (placeholder context).
+    context = BindableActionContext(protocol='', scancode='', device_name=event.phrase)
+    rgb_ring_actions: list[RgbRingCommandAction] = []
+    other_actions = []
+    for key in event.action_keys:
+        bindable = get_bindable_action(key)
+        if bindable is None:
+            logger.warning(
+                'No bindable action registered for key',
+                extra={'action_key': key},
+            )
+            continue
+        try:
+            resolved = bindable.factory(context)
+        except Exception:
+            logger.exception(
+                'Bindable action factory failed',
+                extra={'action_key': key},
+            )
+            continue
+        if isinstance(resolved, RgbRingCommandAction):
+            rgb_ring_actions.append(resolved)
+        else:
+            other_actions.append(resolved)
+
+    store.dispatch(
+        RgbRingSequenceAction(sequence=[RgbRingBlankAction(), *rgb_ring_actions]),
+    )
+    for action in other_actions:
+        store.dispatch(action)
+
+
+@store.with_state(lambda state: state.speech_recognition.intents)
+def _find_intent(
+    intents: list[SpeechRecognitionIntent],
+    intent_id: str,
+) -> SpeechRecognitionIntent | None:
+    """Return the command with *intent_id*, or None."""
+    return next((intent for intent in intents if intent.id == intent_id), None)
+
+
+def _normalize_phrases(raw: str) -> list[str]:
+    """Strip, drop blanks, and de-duplicate (case-insensitively) the lines."""
+    seen: set[str] = set()
+    phrases: list[str] = []
+    for line in raw.splitlines():
+        phrase = line.strip()
+        if not phrase or phrase.casefold() in seen:
+            continue
+        seen.add(phrase.casefold())
+        phrases.append(phrase)
+    return phrases
+
+
+def _collect_action_keys(
+    data: dict[str, str],
+    label_to_key: dict[str, str],
+) -> list[str]:
+    """Map selected slot labels back to keys, dropping None/unknown/duplicates."""
+    keys: list[str] = []
+    for slot in range(1, COMMAND_ACTION_SLOTS + 1):
+        label = data.get(f'action_{slot}', NO_ACTION_LABEL)
+        if not label or label == NO_ACTION_LABEL:
+            continue
+        key = label_to_key.get(label)
+        if key is None:
+            logger.warning('Unknown action label selected', extra={'label': label})
+            continue
+        if key not in keys:
+            keys.append(key)
+    return keys
+
+
+async def _command_form(existing: SpeechRecognitionIntent | None) -> None:
+    """Add or edit a voice command via a Web UI form."""
+    bindables = get_bindable_actions()
+    label_to_key = {bindable.label: bindable.key for bindable in bindables}
+    key_to_label = {bindable.key: bindable.label for bindable in bindables}
+    action_options = [NO_ACTION_LABEL, *label_to_key]
+
+    existing_labels = (
+        [
+            key_to_label[key]
+            for key in existing.action_keys
+            if key in key_to_label
+        ]
+        if existing
+        else []
+    )
+
+    fields = [
+        InputFieldDescription(
+            name='label',
+            label='Name',
+            type=InputFieldType.TEXT,
+            description='A short name for this command',
+            default_value=existing.label if existing else None,
+            required=True,
+        ),
+        InputFieldDescription(
+            name='phrases',
+            label='Example Utterances',
+            type=InputFieldType.LONG,
+            description='One utterance per line',
+            default_value='\n'.join(existing.phrases) if existing else None,
+            required=True,
+        ),
+        *[
+            InputFieldDescription(
+                name=f'action_{slot}',
+                label=f'Action {slot}',
+                type=InputFieldType.SELECT,
+                description='Action to run when an utterance is recognised'
+                if slot == 1
+                else 'Optional additional action',
+                options=action_options,
+                default_value=(
+                    existing_labels[slot - 1]
+                    if slot - 1 < len(existing_labels)
+                    else NO_ACTION_LABEL
+                ),
+                required=slot == 1,
+            )
+            for slot in range(1, COMMAND_ACTION_SLOTS + 1)
+        ],
+    ]
+
+    try:
+        _, result = await ubo_input(
+            prompt='Edit voice command'
+            if existing
+            else 'Create a voice command',
+            descriptions=[WebUIInputDescription(fields=fields)],
+        )
+    except asyncio.CancelledError:
+        logger.info('Voice command form cancelled')
+        return
+
+    data = result.data if result else {}
+    label = (data.get('label', '') or '').strip()
+    phrases = _normalize_phrases(data.get('phrases', '') or '')
+    action_keys = _collect_action_keys(dict(data), label_to_key)
+
+    if not label or not phrases or not action_keys:
+        logger.warning(
+            'Voice command incomplete; not saving',
+            extra={
+                'has_label': bool(label),
+                'phrase_count': len(phrases),
+                'action_count': len(action_keys),
+            },
+        )
+        return
+
+    if existing:
+        store.dispatch(
+            SpeechRecognitionUpdateCommandAction(
+                id=existing.id,
+                label=label,
+                phrases=phrases,
+                action_keys=action_keys,
+            ),
+        )
+    else:
+        store.dispatch(
+            SpeechRecognitionAddCommandAction(
+                id=str(uuid4()),
+                label=label,
+                phrases=phrases,
+                action_keys=action_keys,
+            ),
+        )
+
+
+def _register_command_actions() -> None:
+    """Register the add/open/edit/remove action handlers for commands."""
+
+    def _add_command() -> None:
+        # Must return None: a non-None action-handler result makes the core
+        # push an (empty) menu frame keyed by the item, leaving a stray
+        # "Add Command" page behind the input form. ``create_task`` returns a
+        # Task, so call it as a statement rather than returning it.
+        create_task(_command_form(None))
+
+    register_action(
+        'speech-recognition:add-command',
+        _add_command,
+        allow_reregister=True,
+    )
+
+    def _open_command(action_id: str) -> None:
+        intent_id = action_id.removeprefix('speech-recognition:open-command:')
+        intent = _find_intent(intent_id)
+        if intent is None:
+            return
+        # A prompt is a two-option widget on the GUI client (the bottom two
+        # buttons; Back cancels). Keep it to exactly two items — Edit / Remove —
+        # so the rendered buttons line up with the core's item indices. A third
+        # item would shift the mapping and mis-fire (Edit -> Remove).
+        store.dispatch(
+            StackPushPromptAction(
+                title=intent.label,
+                prompt='Edit or remove this command?',
+                icon='󰗋',
+                items=(
+                    MenuItemData(
+                        key='edit',
+                        label='Edit',
+                        icon='󰏫',
+                        action_id=f'speech-recognition:edit-command:{intent.id}',
+                    ),
+                    MenuItemData(
+                        key='remove',
+                        label='Remove',
+                        icon='󰆴',
+                        action_id=(
+                            f'speech-recognition:remove-command:{intent.id}'
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+    def _edit_command(action_id: str) -> None:
+        intent_id = action_id.removeprefix('speech-recognition:edit-command:')
+        intent = _find_intent(intent_id)
+        if intent is None:
+            return
+        store.dispatch(StackPopAction())
+        create_task(_command_form(intent))
+
+    def _remove_command(action_id: str) -> None:
+        intent_id = action_id.removeprefix('speech-recognition:remove-command:')
+        store.dispatch(StackPopAction())
+        store.dispatch(SpeechRecognitionRemoveCommandAction(id=intent_id))
+
+    register_action(
+        'speech-recognition:open-command:*',
+        _open_command,
+        allow_reregister=True,
+    )
+    register_action(
+        'speech-recognition:edit-command:*',
+        _edit_command,
+        allow_reregister=True,
+    )
+    register_action(
+        'speech-recognition:remove-command:*',
+        _remove_command,
+        allow_reregister=True,
+    )
+
+
 def init_service() -> Subscriptions:
     """Initialize speech recognition service."""
     register_persistent_store(
@@ -167,6 +480,23 @@ def init_service() -> Subscriptions:
         'speech_recognition:is_assistant_active',
         lambda state: state.speech_recognition.is_assistant_active,
     )
+    register_persistent_store(
+        COMMANDS_PERSISTENT_KEY,
+        lambda state: json.dumps(
+            [
+                {
+                    'id': command.id,
+                    'label': command.label,
+                    'phrases': command.phrases,
+                    'action_keys': command.action_keys,
+                }
+                for command in state.speech_recognition.intents
+            ],
+        ),
+    )
+
+    register_default_bindable_actions()
+    register_shortcut_actions()
 
     engines_manager = EnginesManager()
     _engine_action_ids: list[str] = []
@@ -298,6 +628,38 @@ def init_service() -> Subscriptions:
             ),
         )
 
+    @store.autorun(lambda state: state.speech_recognition.intents)
+    def speech_recognition_command_items(
+        intents: list[SpeechRecognitionIntent],
+    ) -> None:
+        """Update the Commands menu listing each voice command."""
+        items: tuple[MenuItemData, ...] = (
+            MenuItemData(
+                key='add-command',
+                label='Add Command',
+                icon='󰐕',
+                action_id='speech-recognition:add-command',
+            ),
+            *(
+                MenuItemData(
+                    key=f'command-{intent.id}',
+                    label=intent.label,
+                    icon='󰗋',
+                    action_id=f'speech-recognition:open-command:{intent.id}',
+                )
+                for intent in intents
+            ),
+        )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='speech-recognition:commands',
+                title='Commands',
+                items=items,
+                placeholder='No commands yet',
+            ),
+        )
+
+    _register_command_actions()
     _register_static_menus()
 
     from ubo_app.store.core.view_registry import register_path_menu_matcher
@@ -307,4 +669,10 @@ def init_service() -> Subscriptions:
         _speech_recognition_path_matcher,
     )
 
-    return engines_manager.subscriptions
+    return [
+        *engines_manager.subscriptions,
+        store.subscribe_event(
+            SpeechRecognitionBoundActionTriggeredEvent,
+            _handle_bound_action_triggered,
+        ),
+    ]
