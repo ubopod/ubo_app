@@ -89,6 +89,7 @@ from ubo_app.engines.vosk_catalog import model_label as vosk_model_label
 from ubo_app.engines.vosk_catalog import visible_languages as vosk_visible_languages
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
+from ubo_app.store.core.bindable_actions import register_bindable_action
 from ubo_app.store.core.types import (
     MenuGoBackAction,
     MenuItemData,
@@ -135,15 +136,21 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
     AssistantSetSelectedVoskModelAction,
+    AssistantStartListeningAction,
+    AssistantStopListeningAction,
+    AssistantStopTalkingAction,
     AssistantSTTName,
     AssistantSyncMcpServersAction,
     AssistantSyncMcpServersEvent,
+    AssistantToggleListeningAction,
     AssistantToggleMcpServerEvent,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
     GenericLLMProvider,
+    InfraredTriggerSource,
     McpServerMetadata,
     McpServerType,
+    UserStopReason,
     generic_llm_instance_key,
 )
 from ubo_app.store.services.audio import (
@@ -2257,9 +2264,63 @@ def _watch_ollama_container_status() -> None:
         store.dispatch(AssistantUpdateProvidersAction())
 
 
+def _register_bindable_actions() -> None:
+    """Expose the assistant listening actions for binding (e.g. to IR keys).
+
+    The factory carries the originating trigger metadata via the context so
+    per-source policies can dispatch on it, and uses the registered device name
+    as the trigger source label.
+    """
+    register_bindable_action(
+        'assistant:toggle',
+        'Assistant: Toggle Listening',
+        lambda ctx: AssistantToggleListeningAction(
+            source=InfraredTriggerSource(
+                protocol=ctx.protocol,
+                scancode=ctx.scancode,
+                label=ctx.device_name,
+            ),
+        ),
+        allow_reregister=True,
+    )
+    register_bindable_action(
+        'assistant:start',
+        'Assistant: Start Listening',
+        lambda ctx: AssistantStartListeningAction(
+            source=InfraredTriggerSource(
+                protocol=ctx.protocol,
+                scancode=ctx.scancode,
+                label=ctx.device_name,
+            ),
+        ),
+        allow_reregister=True,
+    )
+    register_bindable_action(
+        'assistant:stop',
+        'Assistant: Stop Listening',
+        lambda ctx: AssistantStopListeningAction(
+            reason=UserStopReason(
+                source=InfraredTriggerSource(
+                    protocol=ctx.protocol,
+                    scancode=ctx.scancode,
+                    label=ctx.device_name,
+                ),
+            ),
+        ),
+        allow_reregister=True,
+    )
+    register_bindable_action(
+        'assistant:stop-talking',
+        'Assistant: Stop Talking',
+        lambda _ctx: AssistantStopTalkingAction(),
+        allow_reregister=True,
+    )
+
+
 async def init_service() -> None:
     """Initialize the assistant service."""
     _register_persistent_stores()
+    _register_bindable_actions()
 
     # Register view dependencies for menu content updates
     register_menu_content_dependency(

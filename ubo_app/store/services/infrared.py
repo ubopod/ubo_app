@@ -60,6 +60,8 @@ class InfraredAddDeviceAction(InfraredAction):
     name: str
     protocol: str
     scancode: str
+    description: str | None = None
+    bound_action_key: str | None = None
 
 
 class InfraredRemoveDeviceAction(InfraredAction):
@@ -87,12 +89,27 @@ class InfraredDeviceRegistrationCompleteEvent(InfraredEvent):
     scancode: str
 
 
+class InfraredBoundActionTriggeredEvent(InfraredEvent):
+    """Event when a received code matches a device with a bound action.
+
+    The infrared service's handler resolves ``bound_action_key`` against the
+    bindable-actions registry and dispatches the produced action.
+    """
+
+    bound_action_key: str
+    protocol: str
+    scancode: str
+    device_name: str
+
+
 class InfraredDevice(Immutable):
     """Represents a registered infrared device."""
 
     name: str
     protocol: str
     scancode: str
+    description: str | None = None
+    bound_action_key: str | None = None
 
 
 class InfraredState(Immutable):

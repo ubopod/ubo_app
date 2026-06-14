@@ -9,6 +9,11 @@ from typing import TYPE_CHECKING
 
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action
+from ubo_app.store.core.bindable_actions import (
+    BindableActionContext,
+    get_bindable_action,
+    get_bindable_actions,
+)
 from ubo_app.store.core.types import (
     CloseInstructionAction,
     MenuChooseByLabelAction,
@@ -29,6 +34,7 @@ from ubo_app.store.input.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.infrared import (
     InfraredAddDeviceAction,
+    InfraredBoundActionTriggeredEvent,
     InfraredDevice,
     InfraredDeviceRegistrationCompleteEvent,
     InfraredDeviceRegistrationStartedEvent,
@@ -60,6 +66,9 @@ def _should_receive_keypad_actions(value: bool) -> bool:  # noqa: FBT001
 
 
 MIN_ZERO_BITS_FOR_VALID_IMON = 6
+
+# Dropdown label for "no bound action" (replay-only key).
+NO_ACTION_LABEL = 'None'
 
 
 def _is_ir_noise(protocol: str, scancode: str) -> bool:
@@ -263,6 +272,16 @@ async def _handle_device_registration_complete(
     # pops both the notification (from ubo_input) and the instruction.
     async def collect_device_name() -> None:
         try:
+            # Build the action dropdown from the bindable-actions registry.
+            # 'None' = a replay-only key (e.g. a TV power code) that triggers
+            # no action when received. Labels are unique (registry guard), so
+            # we can map the chosen label back to its stable key.
+            label_to_key = {
+                bindable.label: bindable.key
+                for bindable in get_bindable_actions()
+            }
+            action_options = [NO_ACTION_LABEL, *label_to_key]
+
             value, result = await ubo_input(
                 prompt='Please enter device name on the Web UI',
                 descriptions=[
@@ -279,14 +298,40 @@ async def _handle_device_registration_complete(
                                 ),
                                 required=True,
                             ),
+                            InputFieldDescription(
+                                name='description',
+                                label='Description',
+                                type=InputFieldType.TEXT,
+                                description=(
+                                    'Optional: what this key does'
+                                    ' (e.g. turns the TV on/off)'
+                                ),
+                                required=False,
+                            ),
+                            InputFieldDescription(
+                                name='bound_action_key',
+                                label='Action',
+                                type=InputFieldType.SELECT,
+                                description=(
+                                    'Optional: action to run when this key is'
+                                    ' received'
+                                ),
+                                options=action_options,
+                                default_value=NO_ACTION_LABEL,
+                                required=False,
+                            ),
                         ],
                     ),
                 ],
             )
-            if result and result.data:
-                device_name = result.data.get('device_name', '').strip()
+            data = result.data if result else {}
+            if data:
+                device_name = data.get('device_name', '').strip()
             else:
                 device_name = (value or '').strip()
+            description = (data.get('description', '') or '').strip() or None
+            selected_label = data.get('bound_action_key', NO_ACTION_LABEL)
+            bound_action_key = label_to_key.get(selected_label)
 
             if not device_name:
                 logger.warning('Device registration: Device name is empty')
@@ -297,6 +342,7 @@ async def _handle_device_registration_complete(
                     'device_name': device_name,
                     'protocol': event.protocol,
                     'scancode': event.scancode,
+                    'bound_action_key': bound_action_key,
                 },
             )
             store.dispatch(
@@ -304,6 +350,8 @@ async def _handle_device_registration_complete(
                     name=device_name,
                     protocol=event.protocol,
                     scancode=event.scancode,
+                    description=description,
+                    bound_action_key=bound_action_key,
                 ),
             )
             # Pop notification + instruction, then navigate to Replay Keys
@@ -323,6 +371,43 @@ async def _handle_device_registration_complete(
             )
 
     create_task(collect_device_name())
+
+
+def _handle_bound_action_triggered(
+    event: InfraredBoundActionTriggeredEvent,
+) -> None:
+    """Resolve a device's bound action against the registry and dispatch it.
+
+    Mirrors the action-registry side-effect pattern (``_handle_execute_menu_action``):
+    the reducer stays pure and emits the event; this handler does the lookup and
+    dispatch.
+    """
+    bindable = get_bindable_action(event.bound_action_key)
+    if bindable is None:
+        logger.warning(
+            'No bindable action registered for key',
+            extra={'bound_action_key': event.bound_action_key},
+        )
+        return
+    try:
+        triggered_action = bindable.factory(
+            BindableActionContext(
+                protocol=event.protocol,
+                scancode=event.scancode,
+                device_name=event.device_name,
+            ),
+        )
+    except Exception:
+        logger.exception(
+            'Bindable action factory failed',
+            extra={'bound_action_key': event.bound_action_key},
+        )
+        return
+    logger.info(
+        'Triggered bound action: %s',
+        type(triggered_action).__name__,
+    )
+    store.dispatch(triggered_action)
 
 
 def _register_core_actions() -> None:
@@ -666,6 +751,8 @@ def init_service() -> Subscriptions:
                     'name': device.name,
                     'protocol': device.protocol,
                     'scancode': device.scancode,
+                    'description': device.description,
+                    'bound_action_key': device.bound_action_key,
                 }
                 for device in state.infrared.registered_devices
             ],
@@ -692,5 +779,9 @@ def init_service() -> Subscriptions:
         store.subscribe_event(
             InfraredDeviceRegistrationCompleteEvent,
             _handle_device_registration_complete,
+        ),
+        store.subscribe_event(
+            InfraredBoundActionTriggeredEvent,
+            _handle_bound_action_triggered,
         ),
     ]
