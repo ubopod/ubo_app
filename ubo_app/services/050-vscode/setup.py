@@ -5,7 +5,7 @@ import asyncio
 import subprocess
 from typing import TYPE_CHECKING
 
-from commands import check_status, restart, uninstall_service
+from commands import check_status, download_lock, restart, uninstall_service
 from constants_ import CODE_BINARY_PATH, CODE_BINARY_URL, CODE_DOWNLOAD_PATH
 
 from ubo_app.colors import DANGER_COLOR
@@ -146,48 +146,54 @@ def download_code() -> None:
 
     async def act() -> None:
         try:
-            process = await asyncio.create_subprocess_exec(
-                '/usr/bin/env',
-                'curl',
-                '-Lk',
-                CODE_BINARY_URL,
-                '--output',
-                CODE_DOWNLOAD_PATH,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await process.wait()
-            store.dispatch(
-                await log_async_process(process, message='Downloading VSCode'),
-            )
+            # Hold the lock for the whole rewrite of the `code` binary so the
+            # `_monitor_status` poll doesn't exec a half-written/open binary
+            # and hit `OSError(26, 'Text file busy')` (ETXTBSY).
+            async with download_lock:
+                process = await asyncio.create_subprocess_exec(
+                    '/usr/bin/env',
+                    'curl',
+                    '-Lk',
+                    CODE_BINARY_URL,
+                    '--output',
+                    CODE_DOWNLOAD_PATH,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                await process.wait()
+                store.dispatch(
+                    await log_async_process(process, message='Downloading VSCode'),
+                )
 
-            process = await asyncio.create_subprocess_exec(
-                '/usr/bin/env',
-                'tar',
-                'zxf',
-                CODE_DOWNLOAD_PATH,
-                '-C',
-                CODE_BINARY_PATH.parent,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await process.wait()
-            store.dispatch(await log_async_process(process, message='Unpacking VSCode'))
+                process = await asyncio.create_subprocess_exec(
+                    '/usr/bin/env',
+                    'tar',
+                    'zxf',
+                    CODE_DOWNLOAD_PATH,
+                    '-C',
+                    CODE_BINARY_PATH.parent,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                await process.wait()
+                store.dispatch(
+                    await log_async_process(process, message='Unpacking VSCode'),
+                )
 
-            process = await asyncio.create_subprocess_exec(
-                CODE_BINARY_PATH,
-                'version',
-                'use',
-                'stable',
-                '--install-dir',
-                CODE_BINARY_PATH,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL,
-            )
-            await process.wait()
-            store.dispatch(
-                await log_async_process(process, message='Installing VSCode'),
-            )
+                process = await asyncio.create_subprocess_exec(
+                    CODE_BINARY_PATH,
+                    'version',
+                    'use',
+                    'stable',
+                    '--install-dir',
+                    CODE_BINARY_PATH,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                await process.wait()
+                store.dispatch(
+                    await log_async_process(process, message='Installing VSCode'),
+                )
         except subprocess.CalledProcessError:
             store.dispatch(
                 NotificationsAddAction(
