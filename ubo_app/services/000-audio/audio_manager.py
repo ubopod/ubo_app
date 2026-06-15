@@ -150,7 +150,13 @@ class AudioManager:
         self._input_pcm: Any = None
         self._read_executor: ThreadPoolExecutor | None = None
 
-        create_task(self.find_card_index())
+        self.initialized = asyncio.Event()
+
+        def signal_initialized(task: asyncio.Task) -> None:
+            del task
+            self.initialized.set()
+
+        create_task(self.find_card_index(), callback=signal_initialized)
         create_task(self.stream_mic())
 
         if not IS_RPI:

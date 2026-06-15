@@ -24,6 +24,7 @@ from ubo_app.store.services.audio import (
     AudioPlayAudioSampleAction,
     AudioPlayAudioSampleEvent,
     AudioPlayAudioSequenceEvent,
+    AudioPlayChimeAction,
     AudioPlayChimeEvent,
     AudioSample,
     AudioSetMuteStatusAction,
@@ -35,7 +36,7 @@ from ubo_app.store.services.notifications import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
-from ubo_app.utils.async_ import ToThreadOptions, to_thread
+from ubo_app.utils.async_ import ToThreadOptions, create_task, to_thread
 from ubo_app.utils.error_handlers import loop_exception_handler
 from ubo_app.utils.persistent_store import (
     read_from_persistent_store,
@@ -117,6 +118,12 @@ async def _install_driver() -> None:
 
 def init_service() -> Subscriptions:
     audio_manager = AudioManager()
+
+    async def _play_ready_chime() -> None:
+        await audio_manager.initialized.wait()
+        store.dispatch(AudioPlayChimeAction(name='ready'))
+
+    create_task(_play_ready_chime())
 
     # Register view dependencies for home view and status bar
     unregister_volume = register_home_view_dependency(
