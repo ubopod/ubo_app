@@ -43,6 +43,7 @@ from ubo_app.store.core.types import (
 from ubo_app.store.core.view_helpers import find_dynamic_menu_for_position
 from ubo_app.store.core.view_registry import (
     get_home_view_data,
+    get_menu_id_for_path,
     get_registered_dependencies,
     get_registered_status_bar_dependencies,
 )
@@ -600,6 +601,18 @@ def compute_view_from_root_state(state: RootState) -> ViewData:  # noqa: C901, P
         if dynamic_match is not None:
             menu_id, _ = dynamic_match
             direct_menu = dynamic_menus_state.menus.get(menu_id)
+
+    if direct_menu is None:
+        # Final fallback: resolve the top item's menu_key as a single-element
+        # path. A top-level menu (e.g. 'main', 'power', 'notifications') can be
+        # pushed onto a non-root stack by a racing client, yielding a full path
+        # like ('settings', 'main') that no path matcher recognises. Matching the
+        # top key alone still renders the real menu instead of a blank, stuck
+        # view. Only genuine top-level keys are registered as single-element
+        # paths, so this never resolves to the wrong menu.
+        fallback_id = get_menu_id_for_path((top_item.menu_key,))
+        if fallback_id is not None:
+            direct_menu = dynamic_menus_state.menus.get(fallback_id)
 
     if direct_menu is not None:
         items = direct_menu.items
