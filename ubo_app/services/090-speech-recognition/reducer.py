@@ -33,6 +33,7 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionIntent,
     SpeechRecognitionRemoveCommandAction,
     SpeechRecognitionReportIntentDetectionAction,
+    SpeechRecognitionReportIntentTimeoutAction,
     SpeechRecognitionReportSpeechAction,
     SpeechRecognitionReportWakeWordDetectionAction,
     SpeechRecognitionSetIsAssistantActiveAction,
@@ -181,6 +182,16 @@ def reducer(
                     ),
                 ],
             )
+
+        case SpeechRecognitionReportIntentTimeoutAction():
+            # No command was recognised within the listening window; leave
+            # listening mode and clear the listening indicator.
+            if state.status is SpeechRecognitionStatus.INTENTS_WAITING:
+                return CompleteReducerResult(
+                    state=replace(state, status=SpeechRecognitionStatus.IDLE),
+                    actions=[ACKNOWLEDGMENT_ACTION],
+                )
+            return state
 
         case SpeechRecognitionReportSpeechAction():
             return CompleteReducerResult(

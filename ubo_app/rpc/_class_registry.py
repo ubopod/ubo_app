@@ -468,6 +468,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'SpeechRecognitionIntent': 'ubo_app.store.services.speech_recognition',
     'SpeechRecognitionRemoveCommandAction': 'ubo_app.store.services.speech_recognition',
     'SpeechRecognitionReportIntentDetectionAction': 'ubo_app.store.services.speech_recognition',
+    'SpeechRecognitionReportIntentTimeoutAction': 'ubo_app.store.services.speech_recognition',
     'SpeechRecognitionReportSpeechAction': 'ubo_app.store.services.speech_recognition',
     'SpeechRecognitionReportTextEvent': 'ubo_app.store.services.speech_recognition',
     'SpeechRecognitionReportWakeWordDetectionAction': 'ubo_app.store.services.speech_recognition',
