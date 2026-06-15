@@ -115,6 +115,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Setup Python
         if: matrix.runner == 'ubuntu-latest'
