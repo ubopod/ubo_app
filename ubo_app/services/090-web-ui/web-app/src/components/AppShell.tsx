@@ -19,23 +19,32 @@ import { unwrapItems } from "../store/helpers";
 import {
   StateManager,
   StateManagerContext,
+  useStateManager,
 } from "../store/state-manager";
 import { useAppState } from "../store/useAppState";
 import { splitIconFromText } from "../utils/color-markup";
 
 function AppContent({ store }: { store: StoreServiceClient }) {
   const { currentView, statusBar, stack } = useAppState();
+  const stateManager = useStateManager();
   useKeyboardNavigation(store);
 
-  // Auto-navigate past home view to main menu (debounced to avoid rapid-fire)
+  // Auto-navigate past home view to main menu (debounced to avoid rapid-fire).
+  // The dispatch re-checks the *freshest* state at fire time: if the device
+  // navigated into a menu during the debounce window, the closed-over
+  // `currentView` is stale and pushing 'main' onto a non-root stack would
+  // strand the GUI in a blank, unresolvable view. Only push when still at root.
   useEffect(() => {
     if (currentView?.homeViewData) {
       const timer = setTimeout(() => {
-        navigateTo(store, "main");
+        const latest = stateManager.getState();
+        if (latest.currentView?.homeViewData && (latest.stack?.length ?? 0) <= 1) {
+          navigateTo(store, "main");
+        }
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [currentView, store]);
+  }, [currentView, store, stateManager]);
 
   // Derive current title (icon + text) from view data
   const { currentTitle, currentTitleIcon, currentTitleText } = (() => {
