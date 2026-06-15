@@ -118,6 +118,14 @@ jobs:
         with:
           lfs: true
 
+      # Self-hosted Pi pods reuse their work dir, so actions/checkout only
+      # re-materializes LFS files whose commit changed and leaves the rest as
+      # stale pointer files (e.g. sounds/*.wav). The boot chime reads
+      # sounds/ready.wav, so force every LFS object to real content here.
+      - name: Materialize Git LFS
+        if: startsWith(matrix.runner, 'ubo-pod')
+        run: git lfs pull
+
       - name: Setup Python
         if: matrix.runner == 'ubuntu-latest'
         uses: actions/setup-python@v5
