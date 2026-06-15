@@ -21,17 +21,14 @@ import importlib
 import importlib.util
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
 import pytest
 
-from ubo_app.store.core.bindable_actions import (
-    BindableActionContext,
-    clear_all_bindable_actions,
-    get_bindable_action,
-)
+from ubo_app.store.core.bindable_actions import BindableActionContext
 
 if TYPE_CHECKING:
     from redux import CompleteReducerResult
@@ -46,12 +43,6 @@ SERVICE_PATH = (
 )
 
 _CTX = BindableActionContext(protocol='', scancode='', device_name='test')
-
-
-@pytest.fixture(autouse=True)
-def _clean_registry() -> None:
-    """Keep the module-level bindable-actions registry isolated."""
-    clear_all_bindable_actions()
 
 
 def _patch_store(monkeypatch: pytest.MonkeyPatch, path: Path) -> None:
@@ -73,6 +64,13 @@ def speech(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     monkeypatch.syspath_prepend(SERVICE_PATH.as_posix())
     commands_module = importlib.reload(importlib.import_module('commands'))
 
+    # Resolve the bindable-actions registry from the *same* module generation
+    # that ``commands`` registers into. ``app_context``-based tests can evict
+    # ``ubo_app.store.core.bindable_actions`` from ``sys.modules``; a top-level
+    # import here would then read a stale, empty registry (see module docstring).
+    bindable_actions = commands_module.register_bindable_action.__globals__
+    bindable_actions['clear_all_bindable_actions']()
+
     spec = importlib.util.spec_from_file_location(
         'speech_recognition_commands_reducer',
         SERVICE_PATH / 'reducer.py',
@@ -85,6 +83,8 @@ def speech(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 
     return SimpleNamespace(
         commands=commands_module,
+        get_bindable_action=bindable_actions['get_bindable_action'],
+        get_bindable_actions=bindable_actions['get_bindable_actions'],
         reducer=reducer_module.reducer,
         InitAction=reducer_module.reducer.__globals__['InitAction'],
         SpeechRecognitionState=reducer_module.SpeechRecognitionState,
@@ -95,6 +95,9 @@ def speech(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         RemoveCommandAction=reducer_module.SpeechRecognitionRemoveCommandAction,
         ReportIntentDetectionAction=(
             reducer_module.SpeechRecognitionReportIntentDetectionAction
+        ),
+        IntentTimeoutAction=(
+            reducer_module.SpeechRecognitionReportIntentTimeoutAction
         ),
     )
 
@@ -152,7 +155,7 @@ class TestBindableCatalog:
     ) -> None:
         """The rgb:red key resolves to RgbRingSetAllAction(color=red)."""
         speech.commands.register_default_bindable_actions()
-        bindable = get_bindable_action(speech.commands.RGB_RED)
+        bindable = speech.get_bindable_action(speech.commands.RGB_RED)
         assert bindable is not None
         action = bindable.factory(_CTX)
         assert type(action).__name__ == 'RgbRingSetAllAction'
@@ -164,7 +167,7 @@ class TestBindableCatalog:
     ) -> None:
         """The menu:choose-3 key selects item index 2 (the fixed mapping)."""
         speech.commands.register_default_bindable_actions()
-        bindable = get_bindable_action(speech.commands.MENU_CHOOSE_3)
+        bindable = speech.get_bindable_action(speech.commands.MENU_CHOOSE_3)
         assert bindable is not None
         action = bindable.factory(_CTX)
         assert getattr(action, 'index', None) == 2
@@ -187,7 +190,7 @@ class TestShortcutActions:
     ) -> None:
         """infrared:register-device resolves to InfraredRegisterDeviceAction."""
         speech.commands.register_shortcut_actions()
-        bindable = get_bindable_action('infrared:register-device')
+        bindable = speech.get_bindable_action('infrared:register-device')
         assert bindable is not None
         action = bindable.factory(_CTX)
         assert type(action).__name__ == 'InfraredRegisterDeviceAction'
@@ -203,7 +206,7 @@ class TestShortcutActions:
             'flow:add-application': 'docker:import_composition',
         }
         for key, action_id in expected.items():
-            bindable = get_bindable_action(key)
+            bindable = speech.get_bindable_action(key)
             assert bindable is not None, key
             action = bindable.factory(_CTX)
             assert type(action).__name__ == 'ExecuteMenuActionAction'
@@ -214,11 +217,9 @@ class TestShortcutActions:
         speech: SimpleNamespace,
     ) -> None:
         """Default + shortcut registrations have unique keys and labels."""
-        from ubo_app.store.core.bindable_actions import get_bindable_actions
-
         speech.commands.register_default_bindable_actions()
         speech.commands.register_shortcut_actions()
-        bindables = get_bindable_actions()
+        bindables = speech.get_bindable_actions()
         keys = [bindable.key for bindable in bindables]
         labels = [bindable.label for bindable in bindables]
         assert len(keys) == len(set(keys))
@@ -383,3 +384,38 @@ class TestIntentDetection:
         assert len(events) == 1
         assert events[0].action_keys == ['infrared:send:nec:0x1', 'rgb:red']
         assert events[0].phrase == 'turn on tv'
+
+
+class TestIntentTimeout:
+    """Listening returns to idle when no command arrives in time."""
+
+    def test_timeout_while_waiting_returns_to_idle(
+        self,
+        speech: SimpleNamespace,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """A timeout in INTENTS_WAITING resets to IDLE with a blank ack."""
+        state = _init_state(speech, monkeypatch, tmp_path)
+        waiting = replace(
+            state,
+            status=speech.SpeechRecognitionStatus.INTENTS_WAITING,
+        )
+        result = cast(
+            'CompleteReducerResult',
+            speech.reducer(waiting, speech.IntentTimeoutAction()),
+        )
+        assert result.state.status is speech.SpeechRecognitionStatus.IDLE
+        assert result.actions  # RGB blank acknowledgment clears the indicator
+
+    def test_timeout_when_not_waiting_is_noop(
+        self,
+        speech: SimpleNamespace,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """A timeout while idle leaves the state untouched."""
+        state = _init_state(speech, monkeypatch, tmp_path)
+        result = speech.reducer(state, speech.IntentTimeoutAction())
+        # Not in a CompleteReducerResult; the plain state is returned unchanged.
+        assert result.status is speech.SpeechRecognitionStatus.IDLE

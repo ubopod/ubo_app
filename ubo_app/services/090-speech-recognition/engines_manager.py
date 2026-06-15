@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, TypedDict, cast
 
+from constants import INTENTS_LISTENING_TIMEOUT_SECONDS
 from google_engine import GoogleSpeechRecognitionEngine
 from mic_buffer import MicBuffer
 from pattern import PatternError, expand_pattern
@@ -24,6 +25,7 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionEngineName,
     SpeechRecognitionIntent,
     SpeechRecognitionReportIntentDetectionAction,
+    SpeechRecognitionReportIntentTimeoutAction,
     SpeechRecognitionReportSpeechAction,
     SpeechRecognitionReportWakeWordDetectionAction,
     SpeechRecognitionStatus,
@@ -97,6 +99,7 @@ class EnginesManager:
             SpeechRecognitionEngineName.GOOGLE: google_engine,
         }
         self.engines: _Engines = {'wake_word': vosk_engine, 'speech': vosk_engine}
+        self._intents_timeout_handle: asyncio.Handle | None = None
         self.mic_buffer = MicBuffer(
             duration_seconds=_MIC_BUFFER_DURATION_SECONDS,
             output_dir=_MIC_BUFFER_OUTPUT_DIR,
@@ -203,6 +206,7 @@ class EnginesManager:
             )
             return
         if status is SpeechRecognitionStatus.IDLE:
+            self._cancel_intents_timeout()
             await self.engines['speech'].deactivate_speech_recognition()
         elif status is SpeechRecognitionStatus.INTENTS_WAITING:
             await self.engines['speech'].activate_speech_recognition(
@@ -212,8 +216,27 @@ class EnginesManager:
                     for phrase in _expand_phrases(intent.phrases)
                 ],
             )
+            self._start_intents_timeout()
         elif status is SpeechRecognitionStatus.ASSISTANT_WAITING:
+            self._cancel_intents_timeout()
             await self.engines['speech'].deactivate_speech_recognition()
+
+    def _start_intents_timeout(self) -> None:
+        """(Re)arm the timer that ends intent-listening if no command arrives."""
+        self._cancel_intents_timeout()
+        self._intents_timeout_handle = create_task(self._intents_timeout())
+
+    def _cancel_intents_timeout(self) -> None:
+        """Cancel a pending intent-listening timeout, if any."""
+        if self._intents_timeout_handle is not None:
+            self._intents_timeout_handle.cancel()
+            self._intents_timeout_handle = None
+
+    async def _intents_timeout(self) -> None:
+        """Leave intent-listening mode after the timeout with no command."""
+        await asyncio.sleep(INTENTS_LISTENING_TIMEOUT_SECONDS)
+        logger.info('Intent listening timed out; returning to idle')
+        store.dispatch(SpeechRecognitionReportIntentTimeoutAction())
 
     @store.with_state(
         lambda state: (

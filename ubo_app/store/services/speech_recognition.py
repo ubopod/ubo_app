@@ -84,6 +84,10 @@ class SpeechRecognitionReportIntentDetectionAction(SpeechRecognitionAction):
     text: str
 
 
+class SpeechRecognitionReportIntentTimeoutAction(SpeechRecognitionAction):
+    """Action reporting that intent listening elapsed without a command."""
+
+
 class SpeechRecognitionReportSpeechAction(SpeechRecognitionAction):
     """Action to report speech raw audio and recognized text."""
 
