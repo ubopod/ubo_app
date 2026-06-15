@@ -329,6 +329,31 @@ def _monkeypatch_pyaudio() -> None:
     sys.modules['pyaudio'] = Fake(_Fake__attrs={'paInt16': 8})
 
 
+def _monkeypatch_simpleaudio() -> None:
+    """Mock simpleaudio in Docker, where there is no PCM device to open.
+
+    A real Pi (``IS_RPI``) has the audio HAT and plays back fine, so it is left
+    untouched; only the Docker/desktop runner — which has no PCM device and would
+    raise ``SimpleaudioError`` (e.g. from the boot chime) — gets the fake.
+    """
+    from ubo_app.utils import IS_RPI
+
+    if IS_RPI:
+        return
+
+    from fake import Fake
+
+    sys.modules['simpleaudio'] = Fake(
+        _Fake__attrs={
+            '_simpleaudio': Fake(
+                _Fake__attrs={
+                    'SimpleaudioError': type('SimpleaudioError', (Exception,), {}),
+                },
+            ),
+        },
+    )
+
+
 @pytest.fixture
 def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
@@ -436,5 +461,6 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     _monkeypatch_piper()
     _monkeypatch_rpi_modules()
     _monkeypatch_pyaudio()
+    _monkeypatch_simpleaudio()
     _monkeypatch_subprocess(monkeypatch)
     _monkeypatch_asyncio_subprocess(monkeypatch)
