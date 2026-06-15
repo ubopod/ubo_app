@@ -1,4 +1,4 @@
-import { Clear } from "@mui/icons-material";
+import { Clear, InfoOutlined } from "@mui/icons-material";
 import {
   Typography,
   TextField,
@@ -13,6 +13,7 @@ import {
   FormControlLabel,
   Switch,
   IconButton,
+  Popover,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -38,6 +39,43 @@ import { inputFieldTypes } from "./types";
 const CHUNK_SIZE = 512 * 1024; // 512 KB (gRPC-web base64 inflates ~33%)
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
+
+function HelpButton({ text }: { text: string }) {
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  return (
+    <>
+      <IconButton
+        size="small"
+        edge="end"
+        aria-label="syntax help"
+        onClick={(event) => setAnchorEl(event.currentTarget)}
+      >
+        <InfoOutlined fontSize="small" />
+      </IconButton>
+      <Popover
+        open={Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Typography
+          component="pre"
+          variant="body2"
+          sx={{
+            p: 2,
+            m: 0,
+            whiteSpace: "pre-wrap",
+            maxWidth: 380,
+            fontFamily: "monospace",
+          }}
+        >
+          {text}
+        </Typography>
+      </Popover>
+    </>
+  );
+}
 
 function dispatchActionAsync(
   store: StoreServiceClient,
@@ -375,6 +413,12 @@ export function Inputs({
                       htmlInput: {
                         pattern: field.pattern || undefined,
                       },
+                      input: field.help
+                        ? {
+                            endAdornment: <HelpButton text={field.help} />,
+                            sx: { alignItems: "flex-start" },
+                          }
+                        : undefined,
                     }}
                     required={field.required}
                     fullWidth

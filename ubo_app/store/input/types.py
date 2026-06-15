@@ -61,6 +61,8 @@ class InputFieldDescription(Immutable):
     default_value: str | None = None
     options: list[str] | None = None
     required: bool = False
+    # Optional longer-form guidance shown behind an info (ⓘ) button.
+    help: str | None = None
 
 
 class InputDescription(Immutable):
