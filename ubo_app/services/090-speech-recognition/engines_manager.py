@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, TypedDict, cast
 
 from google_engine import GoogleSpeechRecognitionEngine
 from mic_buffer import MicBuffer
+from pattern import PatternError, expand_pattern
 from vosk_engine import VoskEngine
 
 from ubo_app.constants import DATA_PATH
@@ -60,6 +61,25 @@ _PHRASES_THAT_TRIGGER_BUFFER_DUMP = frozenset(
         ASSISTANT_STOP_TALKING_PHRASE,
     },
 )
+
+
+def _expand_phrases(phrases: Sequence[str]) -> list[str]:
+    """Expand each utterance pattern to its concrete phrases (lowercased).
+
+    A malformed pattern falls back to the raw line as a literal so a bad pattern
+    can never break recognition for the whole command set.
+    """
+    expanded: list[str] = []
+    for phrase in phrases:
+        try:
+            expanded.extend(expand_pattern(phrase))
+        except PatternError:
+            logger.warning(
+                'Invalid utterance pattern; using it as a literal phrase',
+                extra={'pattern': phrase},
+            )
+            expanded.append(phrase)
+    return [phrase.lower() for phrase in expanded]
 
 
 class EnginesManager:
@@ -187,9 +207,9 @@ class EnginesManager:
         elif status is SpeechRecognitionStatus.INTENTS_WAITING:
             await self.engines['speech'].activate_speech_recognition(
                 phrases=[
-                    phrase.lower()
+                    phrase
                     for intent in intents
-                    for phrase in intent.phrases
+                    for phrase in _expand_phrases(intent.phrases)
                 ],
             )
         elif status is SpeechRecognitionStatus.ASSISTANT_WAITING:
@@ -213,8 +233,7 @@ class EnginesManager:
                 (
                     intent
                     for intent in intents
-                    if recognition.text.lower()
-                    in [phrase.lower() for phrase in intent.phrases]
+                    if recognition.text.lower() in _expand_phrases(intent.phrases)
                 ),
                 None,
             ):

@@ -15,6 +15,7 @@ from commands import (
 )
 from constants import OFFLINE_ENGINES
 from engines_manager import EnginesManager
+from pattern import PatternError, expand_pattern
 from redux import AutorunOptions
 
 from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
@@ -73,6 +74,24 @@ if TYPE_CHECKING:
 NO_ACTION_LABEL = 'None'
 # Number of action dropdown slots offered when creating/editing a command.
 COMMAND_ACTION_SLOTS = 3
+
+# Syntax guide shown behind the (ⓘ) button next to the utterances field.
+PATTERN_HELP = """Patterns expand to many spoken variations, so you don't have to \
+list every phrasing.
+
+  [a, b, c]    choose one (required)    e.g.  [create, set up] wifi
+  (x)          optional word           e.g.  (please) help
+  (a, b)       optional choice         e.g.  turn (it) off
+  plain text   matched exactly
+
+Groups can be combined and nested. Put one pattern per line; a plain sentence \
+(no brackets) still works as-is.
+
+Example:
+  [create, set up] [wifi, wireless] (connection) [via, using] [web, web ui]
+
+matches "create wifi via web", "set up wireless connection using web ui", and \
+many more."""
 
 
 def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
@@ -255,12 +274,25 @@ def _find_intent(
 
 
 def _normalize_phrases(raw: str) -> list[str]:
-    """Strip, drop blanks, and de-duplicate (case-insensitively) the lines."""
+    """Strip, drop blanks/dupes, and drop unparseable patterns.
+
+    Lines are stored as compact patterns (see ``pattern.expand_pattern``); a
+    line that doesn't parse or expands beyond the cap is logged and skipped so
+    one bad line doesn't reject the whole command.
+    """
     seen: set[str] = set()
     phrases: list[str] = []
     for line in raw.splitlines():
         phrase = line.strip()
         if not phrase or phrase.casefold() in seen:
+            continue
+        try:
+            expand_pattern(phrase)
+        except PatternError:
+            logger.warning(
+                'Skipping invalid utterance pattern',
+                extra={'pattern': phrase},
+            )
             continue
         seen.add(phrase.casefold())
         phrases.append(phrase)
@@ -316,7 +348,9 @@ async def _command_form(existing: SpeechRecognitionIntent | None) -> None:
             name='phrases',
             label='Example Utterances',
             type=InputFieldType.LONG,
-            description='One utterance per line',
+            description='One pattern per line — e.g. [turn on, switch on] lights. '
+            'Tap the ⓘ for syntax.',
+            help=PATTERN_HELP,
             default_value='\n'.join(existing.phrases) if existing else None,
             required=True,
         ),
