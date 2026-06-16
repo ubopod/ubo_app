@@ -201,10 +201,14 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         self.rime_tts = GenericTTSProxy()
         self.venice_tts = GenericTTSProxy()
 
-        # Initialize Piper TTS with the default voice — the store autorun
-        # registered in `_ensure_autoruns_started` reconciles it to the
-        # user's persisted voice (it fires once on subscription with the
-        # current value, then on every change).
+        # Initialize Piper TTS. The model loads lazily: PiperTTSService
+        # constructs even when no voice is on disk yet (first-time setup), so
+        # this slot is never None and Piper always stays a selectable target in
+        # the switcher's frozen init list. The store autorun registered in
+        # `_ensure_autoruns_started` reconciles it to the user's persisted
+        # voice (firing once on subscription, then on every change), and
+        # `PiperTTSService.run_tts` loads the requested voice before the first
+        # utterance — so a freshly-downloaded voice works without a restart.
         self.piper_tts = self._initialize_service(
             'Piper',
             lambda: PiperTTSService(voice_id=DEFAULT_PIPER_VOICE_ID)
