@@ -1,9 +1,245 @@
 # Changelog
 
-## Upcoming
+Starting with [2.0.0](docs/releases/2.0.0.md), user-facing release notes live
+under `docs/releases/`. This changelog keeps the historical pre-2.0 release
+history and may still collect terse maintainer-oriented entries during a release
+cycle.
 
-- feat(assistant): attach trigger source metadata to `AssistantStartListeningAction` and `AssistantStopListeningAction` (wake phrase, keypad, IR, desktop, gRPC); per-trigger policy table on `AssistantState.policies` with sensible defaults selectable by source
-- feat(assistant): pipecat pipeline now dispatches stop on long silence (policy-driven `UboPolicyAwareUserTurnStopStrategy`, subclassing pipecat's built-in `SpeechTimeoutUserTurnStopStrategy`) and on end-of-turn phrase match (`EndOfTurnPhraseDetector`), both driven by the active policy. Default conversation wake phrase `"let's have a conversation"` uses end-of-turn phrases (`i'm done`, `that's it`, …); short wake phrase uses 2 s VAD silence. Configurable via `UBO_ASSISTANT_CONVERSATION_WAKE_WORD`, `UBO_ASSISTANT_CONVERSATION_END_PHRASES` (pipe-separated), `UBO_ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS`
+## Version 2.0.0
+- fix(speech-recognition): start Vosk wake-word engine at boot without its model
+- fix(speech-recognition): load Vosk model lazily so first-time setup works without restart
+- test(assistant): update stale Whisker tests for the WhiskerFile/WhiskerServer split
+- fix(assistant): load Piper TTS voice lazily so first-time setup works without restart
+- test(view-computation): add regression tests for top-level menu fallback
+- ci: force-materialize Git LFS on self-hosted pods before tests
+- ci: fetch Git LFS in the test job so the boot chime can read ready.wav
+- test(audio): mock simpleaudio in Docker so the boot-ready chime can't error
+- feat(audio): play a ready chime when the audio service is ready at boot
+- feat(speech-recognition): time out intent listening after 10s
+- feat(speech-recognition): compact pattern syntax for utterances
+- feat(speech-recognition): user-defined voice commands
+- docs(assistant): document exposed gRPC API
+- chore(dev): add cross-platform dev environment setup script
+- fix(deploy): ignore orphaned ~-prefixed service dirs
+- feat(infrared): map registered IR keys to core actions
+- fix(audio): increase input capture period size from 20ms to 50ms
+- test(assistant): cover Vosk lazy model loading and self-heal
+- fix(assistant): lazy-load Vosk model so a missing model can't kill the STT slot
+- fix(vscode): stop status-flow crashes from spamming on-screen errors
+- fix(deploy): restart the app after all wheels are installed
+- fix(render): replace props on render-view kind transition
+- feat(assistant): default OpenAI image generation to gpt-image-1
+- fix(assistant): don't truncate provider error messages at inner quotes
+- fix(test): update menu item label for dismiss action in notifications
+- fix(menu): update menu item labels for clarity and consistency
+- fix(camera): update camera icon representation and add application state flag
+- fix(assistant): surface live-pipeline provider errors as notifications
+- fix(assistant): accept DashScope sk-ws- keys in Qwen API key pattern
+- fix(assistant): linger viewfinder before capture and dedup mirrored image
+- fix(keypad): keep up/down for pan/zoom on render/application views
+- fix(assistant): wire Whisker file recording so the sink is started
+- fix(assistant): clean up camera capture flow and stop double description
+- fix(assistant): collapse camera vision to a single image_viewer
+- fix(tests): fix docker LAN toggle test and update snapshot
+- feat(openclaw): enhance provider selection prompts and LAN exposure configuration
+- feat(docker): sort app items so that remove/delete is always last
+- feat(docker): implement LAN exposure toggle for Docker apps
+- fix(docker): decouple Hermes state from the image via host bind mounts
+- feat(assistant): support multiple named generic LLM providers; auto-register Hermes
+- fix(web-ui): submit text inputs via Flask instead of gRPC
+- chore(env): set max python version for assistant and ubo gui client
+- fix(ollama): enhance Ollama engine with container status handling and model download fallback
+- feat(notifications): add notification action handler re-binding to support dynamic actions
+- fix(constants): update default Ollama model to liquidai/lfm2.5-350m
+- fix(tests): add wait_for_render method to WindowSnapshot for stable GUI state synchronization
+- chore(tests): update hash values for multiple window conversation and scroll snapshots (dual snapshot for pi 4 & 5)
+- fix(tests): enhance hash file handling to support multiple accepted hashes for window snapshots
+- fix(chat): improve bubble height calculation to eliminate text rendering discrepancies
+- fix(scripts): enhance copy behavior to ensure GUI client reflects source changes
+- fix(tests): update hash values for chat widget conversation snapshots
+- fix(tests): update hash values for chat widget flow window desktop snapshots
+- fix(tests): improve chat widget bubble positioning to eliminate sub-pixel rendering issues
+- fix(store): read hostname title at call time so the test mock applies
+- fix(gui): pixel-align chat layout so text stops flaking window snapshots
+- fix(gui): always paint hostname title on home updates to kill snapshot race
+- fix(script): ensure virtualenv is only created if missing to prevent errors during device testing
+- fix(tests): shorten assistant text in multiple snapshot files for clarity and address flaky window snapshot issue
+- test(audio): log the process holding the capture device on "busy"
+- fix(assistant): set conversation end-of-turn phrases to talking variants
+- feat(chat): gate typed-chat entry points behind feature flags
+- fix(assistant): type one-shot LLM factories as LLMService[Any]
+- fix(docker): match container events by registry-stripped image path
+- fix(chat): keep chat overlay open through non-streaming STT processing gap
+- chore(snapshots): Add chat widget flow store and window snapshot for pi runners
+- fix(keypad): add is_on_chat state to KeypadState snapshot for improved UI context handling
+- feat(chat): add message_id to user messages and update echo handler to use it. This makes tests more stable
+- test(snapshots): update conversation hashes and adjust end-of-turn phrases in store snapshots
+- fix(chat): import kivy graphics from submodules to satisfy pyright
+- refactor(chat,assistant,audio): address review findings on chat-widget branch
+- feat(chat): wire pipecat assistant into chat widget
+- style(assistant): lint-clean the TTS->STT round-trip script
+- test(assistant): make the e2e test skip (not fail) on absent providers
+- test(assistant): add LLM multi-stage chain scenarios + harden the runner
+- feat(assistant): role-tag and complete the live pipeline's text feed
+- test(assistant): add per-provider LLM scenarios to the round-trip script
+- fix(assistant): use TTSSpeakFrame for standalone TTS requests
+- test(assistant): add disposable TTS->STT round-trip script
+- feat(assistant): handle parametrized pipeline requests in the ubo-service
+- feat(assistant): add parametrized run-pipeline action/event to the store
+- feat(chat): add send/echo test path, fix GUI scrolling, merge flow tests
+- feat(chat): add chat widget for GUI client and Web UI
+- fix(audio): release the exclusive ALSA capture device on close
+- test(flaky): de-flake Pi-4-only service-register and subscribe-event tests
+- tests(snapshots): updating desktop and pi store and window snapshots for added tests
+- fix(scripts): wipe test-runner before copy so it mirrors the workspace
+- fix(web-ui): harden browser mic against resource exhaustion and insecure context
+- chore(rpc): stop logging high-frequency AudioReportSampleAction dispatches
+- feat(assistant): route a listening session to a single audio source
+- feat(web-ui): toggle mic button and stop audio dispatch from starving control actions
+- fix(web-ui): resolve eslint errors fundamentally
+- fix(assistant): rebuild active Ollama service when model download completes
+- fix(notifications): dismiss the visible notification, not the raw stack top
+- fix(assistant): match end phrases with trailing words and drop them from LLM context
+- fix(assistant): flush trailing silence on push-to-talk release so streaming STT finalizes
+- feat(assistant): upgrade pipecat to 1.3.0 and drop idle zero-frame keepalive
+- fix(imports): never service-prefix ubo_app.* in the import override
+- fix(rpc): bind betterproto casing helpers via direct import
+- refactor(reducers): make all reducers pure functions
+- fix(keypad): make reducers pure to fix flaky off-main-thread store error
+- fix(gui): restore visible window on desktop (headless-kivy window_mode)
+- chore(dependencies): update headless-kivy to version 0.13.0 across project files
+- fix(tests): restore missing wifi_setup.sh referenced by test_wifi fixture
+- fix(tests): update destination selector ID for consistency in file system tests
+- perf(tests): early-exit stability fixture to cut snapshot-test wait time
+- fix(tests): increase timeout for test_all_services_register to improve stability
+- fix(tests): reload modules in test setup to avoid stale references
+- fix(core): attribute loop-exception-handler errors to the owning loop
+- fix(core): serialize each autorun's reactions to prevent action-registry race
+- fix(tests): unblock on-device test suite
+- chore(snapshot): update desktop snapshot to capture venice as provider plus .gitignore uodate
+- feat(assistant): add Venice AI provider (LLM/STT/TTS) and live-refresh cloud STT/TTS keys
+- test(snapshots): fixing some test issues and updating snapshots
+- fix(vscode): unblock status check and return to menu after login
+- feat(camera): allow clients to select camera source and feed video stream
+- chore: untrack sibling client repos
+- feat(assistant): user-selectable Vosk STT model per system language
+- feat(assistant): add Kokoro offline TTS engine
+- feat(speech-recognition): dump 5s mic buffer on wake/stop-talking phrase
+- feat(assistant): stop-talking phrase also ends the listening session
+- feat(assistant): conversation mode, barge-in, stop-talking phrase
+- test(snapshots): updating rpi store and window snapshots
+- test(store): type reducer helpers with the real state classes
+- test(docker): make envoy backend-address assertion IS_RPI-aware
+- test: regenerate snapshots after notifications + assistant changes
+- test(store): pin class identity across spec_from_file_location reloads
+- fix(camera): decouple viewfinder close from input-queue drain
+- fix(notifications): auto-clear notification state on generic stack pop
+- chore(rpc): register new class entries in the gRPC registry
+- fix(docker): isolate event monitor bootstrap and skip exec_* noise
+- test(conftest): redirect persistent store to tmp_path
+- feat(download): opt-in 5% progress_step gate on download_file
+- test: notification lifecycle E2E suite + flood regression
+- fix(rpc): latest-wins coalescing in subscribe_store
+- fix(gui-client): latest-wins transition queue
+- fix(views): filter BG notifications and recompute view from inputs
+- fix(notifications): move stack push/pop into the ordered reducer
+- feat(piper): multi-voice catalog and per-voice download lifecycle
+- feat(localization): new localization service for system language
+- fix(assistant): move Ollama setup checks off dispatch path; fix cold-start gear icon
+- style(infrared): unquote Callable annotation in assistant dispatch table
+- refactor(tui): clean up lint and typecheck across client and tests
+- feat(assistant): Ollama on-device catalog, RAM gating, and thinking toggle
+- feat(assistant): gate credential UI on secrets file as source of truth
+- fix(assistant): use event subscription for model changes instead of dict autorun
+- feat(assistant): confirm before deleting provider credentials
+- refactor(assistant): move model selection to provider detail submenu
+- feat(assistant): per-provider model picker driven by selected_models
+- feat(assistant): add Anthropic, Qwen, DeepSeek, OpenRouter, Mistral LLM providers
+- fix(file-system): downscale large images for preview instead of refusing
+- feat(tui): close WebUI parity gap with input forms, file flows, and progress visibility
+- feat(assistant): per-trigger source metadata and policy-driven stop
+- feat(assistant): integrate optional Pipecat Whisker debugging via environment configuration
+- refactor(assistant): remove unused user turn stop strategies and simplify LLMContextAggregatorPair configuration
+- refactor(assistant): introduce GenericLLMProxy for dynamic LLM/TTS/STT switching and fix UboSwitchService initialization parameters
+- log(assistant): log assistant loguru output to file
+- feat(docker): implement categorized app nesting and navigation support for Docker apps
+- feat(web-ui): route grpc-web through envoy frontend
+- feat(docker): add pangolin site runner for remote access
+- Fix MCP client lifecycle for Pipecat 1.0
+- Log assistant STT transcripts
+- Fix assistant listening key repeat
+- feat(assistant): integrate generic LLM support and update service dependencies to Pipecat 1.0 API
+- Add Hermes Docker composition
+- feat(docker): add OpenClaw app, per-app module structure, and startup port monitoring
+- chore(tests): increase wifi test timeout and add notification test snapshots
+- fix(test): normalize timestamps in notification scroll store snapshots
+- fix(gui): fix notification scrolling and add proportional text scroll
+- fix(gui): fix prompt item typing in GUI renderer
+- fix(gui): update prompt views in-place to avoid transition animation
+- refactor(ui): add generic render views for shared application UI
+- wip: ui logic refactor
+- refactor(filesystem): harden uploads and file previews
+- Improve UI core reducer update flow
+- chore(snapshots): update rpi snapshots for filesystem with normalized owner/group name
+- fix(snapshot): address owner/group permission string difference in docker snapshots on github runner
+- chore(snapshots): add rpi store snapshots for filesystem tests
+- fix: move types used in annotations to top-level imports to fix pyright errors
+- fix(web-ui): stop audio instantly by cancelling in-flight async decodes
+- feat(rpc): multiplex gRPC event subscriptions to fix HTTP/1.1 connection limit
+- feat(audio): implement gapless audio sequence streaming with global playback interruption support
+- fix(web-ui): arrange notification action buttons in a proper grid
+- fix(web-ui): truncate long tile labels instead of expanding grid
+- fix(web-ui): make tile grid responsive on mobile screens
+- fix(web-ui): prevent status bar and breadcrumb from scrolling off-screen
+- refactor(filesystem): encapsulate file browser state into a dataclass and consolidate copy/move logic
+- fix(audio): eliminate clicking artifacts and fix video playback speed
+- fix: resolve all pyright type errors and ruff lint issues
+- fix(filesystem): race condition in upload completion signaling
+- feat(filesystem): add file/directory download via web UI
+- fix(filesystem): race condition in file upload
+- fix(filesystem): avoid force setting selector depth to zero
+- fix(web-ui): support http endpoint for file upload
+- fix(ubo-gui): change path look up priority for ubo-gui-client
+- fix(gui): enable image viewer zoom/scroll from physical keypad
+- feat(filesystem): add file upload capability via gRPC as chunks through webUI
+- feat(filesystem): add audio & video playback capability to GUI and web UI
+- feat(audio): add stop playback action/event and kill simpleaudio thread at shutdown
+- wip: filesystem improvements and test
+- fix: update GUI deploy script for isolated gui-client venv
+- fix: pin all internal packages to TARGET_VERSION during updates
+- chore(image): increase image size for desktop image
+- fix: install ubo-gui-client in isolated venv during OTA updates
+- fix: install ubo-gui-client in isolated venv during OTA updates
+- fix(ci): disable attestations in manual publish workflow to fix 400 error
+- fix(snapshots): update store snapshots reflect changes in infrared store/service
+- fix: use PyPI JSON API for reliable sdist URLs and add skip-existing to publish
+- fix: accept has_output_stream in headless send_command mock
+- wip: allow user to register and replay IR keys with UI
+- fix: run screenshot handler on Kivy main thread to prevent async loop deadlock
+- fix(tests): increase subsequent screenshot timeout from 3s to 10s with retry
+- fix(tests): improve Pi 4 test reliability with increased timeouts and retry logic
+- fix(lint): fix minor lint issues
+- fix(tests): address stability issue in wifi test flow
+- fix: preserve gpiozero/lgpio modules across test cleanup to prevent GPIO busy
+- fix: release display GPIO on exit and prevent Kivy logger recursion
+- fix: release GPIO pin on keypad service cleanup to prevent busy errors
+- fix: create GUI client venv with --system-site-packages for Pi runners
+- fix: install GUI client in CI so integration tests can take screenshots
+- fix: rename parameter to match FileLoader.get_filename signature
+- chore: bump pyright minimum to >=1.1.408 across all subprojects
+- fix: use cast instead of self annotation for ViewRenderer type mismatch
+- fix: resolve GUI client typecheck errors in menu_central.py
+- fix: add dynamic attribute access to EventDispatcher stub to fix CI typecheck
+- refactor(wifi): remove hacky _return_to_connections, fix button index mapping, add navigation test
+- refactor(camera): handle camera stop and pop actions inside reducer
+- fix(docker): avoid starving fetch workers with event monitors
+- fix: default microphone mute to True, fix view autorun and screenshot hash
+- fix: stabilize test_services store snapshot determinism
+- chore: update lock files
+- chore: sync GUI venv in Docker/device tests, reduce pytest timeout
+- refactor: rewrite test fixtures for subprocess GUI architecture
+- fix(rpc): thread-safe queue operations and server lifecycle management
+- refactor: improve GUI client for test and non-RPi environments
 
 ## Version 1.7.0
 

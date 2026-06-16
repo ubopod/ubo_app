@@ -606,10 +606,17 @@ jobs:
             fi
           done
 
-      - name: Extract Changelog
+      - name: Extract Release Notes
         id: changelog
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          perl -0777 -ne 'while (/## Version ${{ needs.version.outputs.version }}\n(\s*\n)*(.*?)(\s*\n)*## Version \d+\.\d+\.\d+\n/sg) {print "$2\n"}' CHANGELOG.md >CURRENT_CHANGELOG.md
+          NOTES_FILE="docs/releases/${VERSION}.md"
+          if [ ! -f "$NOTES_FILE" ]; then
+            echo "::error file=${NOTES_FILE}::Release notes are required for GitHub releases."
+            exit 1
+          fi
+          cp "$NOTES_FILE" CURRENT_CHANGELOG.md
           {
             echo "CONTENT<<EOF"
             cat CURRENT_CHANGELOG.md

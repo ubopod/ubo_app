@@ -77,8 +77,11 @@ Be aware that at the moment, Ubo app sends crash reports to Sentry. Soon we will
   - Network management
   - File system operations
 - Natural language interactions for tool calling (voice AI) (experimental)
+- User-defined short voice commands with regex-style phrase patterns that map
+  utterances to bindable actions
 - Web UI
-- Infrared remote control (send/receive)
+- Infrared remote control (send/receive), including Web UI assignment of
+  registered IR keys to bindable actions
 - gRPC API for remote control - find sample clients [here](https://github.com/ubopod/ubo-grpc-clients)
 
 Check [roadmap section](#🗺️-roadmap) below for upcoming features.
@@ -608,7 +611,6 @@ This is a tentative roadmap for future features. It is subject to change.
 - Allow users to pick their camera for video via GUI (e.g. USB camera)
 - Option to turn Ubo pod into a voice satellite with wyoming protocol with Home Assistant
 - Make all on-board sensors and infrared discoverable and accessible by Home Assistant
-- Let users record Infrared signals and assign them to trigger custom actions
 - Expose `pipecat-ai` preset pipeline configuration via GUI
 - Support for Debian Trixie (13)
 
