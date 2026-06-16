@@ -29,6 +29,12 @@ if TYPE_CHECKING:
 
 DEFAULT_PIPER_VOICE_ID = 'en/en_US/kristin/medium/en_US-kristin-medium'
 
+# Placeholder sample rate used before any voice model is loaded. Piper
+# "medium"/"high" voices (including the default ``kristin/medium``) are
+# 22050 Hz; ``_ensure_voice_loaded`` overwrites ``_sample_rate`` from the real
+# model the moment one is loaded, so this only applies pre-first-load.
+_DEFAULT_SAMPLE_RATE = 22050
+
 
 def _voice_path(voice_id: str) -> Path:
     """Build the on-disk path for *voice_id*'s ``.onnx`` model file."""
@@ -77,9 +83,22 @@ class PiperTTSService(TTSService):
         # ``run_tts`` reconciles the two before every utterance, so a
         # missed signal or a not-yet-downloaded voice self-heals on the
         # next turn instead of needing the user to toggle repeatedly.
+        #
+        # The model is loaded lazily: when the voice file isn't on disk yet
+        # (first-time setup — the core process downloads it on demand) we
+        # construct with no client and ``_loaded_voice_id = None``. Keeping
+        # this service alive (rather than failing construction) is what lets
+        # the switcher list it as a selectable target; ``_ensure_voice_loaded``
+        # then loads the model before the first utterance once it's downloaded,
+        # so the user never has to restart the app.
         self._requested_voice_id = voice_id
-        self._loaded_voice_id = voice_id
-        self._client = PiperVoice.load(_voice_path(voice_id))
+        self._loaded_voice_id: str | None = None
+        self._client: PiperVoice | None = None
+        sample_rate = _DEFAULT_SAMPLE_RATE
+        if _voice_path(voice_id).exists():
+            self._client = PiperVoice.load(_voice_path(voice_id))
+            self._loaded_voice_id = voice_id
+            sample_rate = self._client.config.sample_rate
 
         self.tasks: list[asyncio.Handle] = []
 
@@ -91,7 +110,7 @@ class PiperTTSService(TTSService):
             push_silence_after_stop=push_silence_after_stop,
             silence_time_s=silence_time_s,
             pause_frame_processing=pause_frame_processing,
-            sample_rate=self._client.config.sample_rate,
+            sample_rate=sample_rate,
             text_filters=text_filters,
             transport_destination=transport_destination,
             settings=TTSSettings(
@@ -166,6 +185,14 @@ class PiperTTSService(TTSService):
 
     def synthesize(self, text: str) -> None:
         """Synthesize audio from text."""
+        if self._client is None:
+            # No voice loaded yet (none downloaded). Signal end-of-stream so
+            # the consumer in ``run_tts`` doesn't block on the queue.
+            self.get_event_loop().call_soon_threadsafe(
+                self.create_task,
+                self._sample_queue.put(None),
+            )
+            return
         for audio_chunk in self._client.synthesize(text=text):
             if audio_chunk:
                 sample = audio_chunk.audio_int16_bytes
@@ -208,6 +235,18 @@ class PiperTTSService(TTSService):
                 # utterance uses the requested voice (or the current one
                 # if the new model isn't downloaded yet).
                 await self._ensure_voice_loaded()
+
+                if self._client is None:
+                    # Piper is selected but no voice has been downloaded yet.
+                    # End the turn quietly; the next utterance retries once the
+                    # core process has fetched the model.
+                    logger.warning(
+                        'Piper selected but no voice downloaded yet; '
+                        'skipping synthesis',
+                        extra={'requested_voice_id': self._requested_voice_id},
+                    )
+                    yield TTSStoppedFrame()
+                    return
 
                 self.get_event_loop().run_in_executor(
                     self._process_executor,
