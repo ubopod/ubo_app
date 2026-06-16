@@ -30,6 +30,15 @@ class WakeWordRecognitionMixin(BaseSpeechRecognitionEngine, abc.ABC):
 
     def set_wake_words(self, wake_words: Sequence[str] | None) -> None:
         """Set the wake words for detection."""
+        from ubo_app.logger import logger
+
+        logger.debug(
+            'Setting wake words',
+            extra={
+                'engine_name': self.name,
+                'wake_words': list(wake_words) if wake_words else None,
+            },
+        )
         self.wake_words = wake_words
 
         self.decide_running_state()

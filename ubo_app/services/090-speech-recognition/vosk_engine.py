@@ -36,23 +36,48 @@ def _read_selected_model(selected_model: str) -> str:
     return selected_model or DEFAULT_VOSK_MODEL_ID
 
 
+# Minimum gap between attempts to (re)load a not-yet-ready model. ``_run``
+# reconciles before every ~50ms mic chunk; without this throttle a model that
+# is missing or mid-extraction would be retried (and logged) ~20 times/second.
+_MODEL_RETRY_INTERVAL_SECONDS = 1.0
+
+
 class _RecognizerState(NamedTuple):
     """The loaded Vosk model/recognizer and what they were built for."""
 
     model: Model | None
     recognizer: KaldiRecognizer | None
-    model_id: str | None
+    # The model id actually loaded into ``recognizer``. Only advances on a
+    # successful load, so a selected-but-not-ready model keeps being retried
+    # instead of being abandoned while the previous recognizer lingers.
+    loaded_model_id: str | None
     phrases: tuple[str, ...] | None
+    # Loop time before which a failed (re)load must not be re-attempted.
+    retry_at: float
 
 
 def _load_model(model_id: str) -> Model | None:
-    """Load the Vosk model if it's on disk, else None (not downloaded yet)."""
+    """Load the Vosk model if it's on disk and valid, else None (retry later).
+
+    Returns None — never raises — when the model isn't ready: the directory may
+    not exist yet, or it may exist but be mid-extraction (``Model()`` then
+    raises "Failed to create a model"). The caller keeps the engine alive and
+    retries on the next audio chunk, so a just-downloaded model loads cleanly
+    once extraction finishes instead of crashing the recognition loop.
+    """
     from vosk import Model
 
     model_dir = Path(str(model_path_for(model_id)))
     if not model_dir.exists():
         return None
-    return Model(model_path=model_dir.resolve().as_posix())
+    try:
+        return Model(model_path=model_dir.resolve().as_posix())
+    except Exception as exception:  # noqa: BLE001
+        logger.warning(
+            'Vosk - Could not load model yet (incomplete download?); will retry',
+            extra={'model_id': model_id, 'error': str(exception)},
+        )
+        return None
 
 
 def _make_recognizer(
@@ -83,6 +108,26 @@ class VoskEngine(
 
         super().__init__(label='Vosk')
 
+    @override
+    def _checked_run(self) -> bool:
+        """Run the wake-word engine even when the model isn't downloaded yet.
+
+        The base ``NeedsSetupMixin._checked_run`` blocks the engine (returns
+        without starting ``_run``) while ``is_setup`` is False, and only the
+        download flow's ``decide_running_state`` ever restarts it — a fragile
+        path that leaves recognition dead until an app restart. That gate is a
+        regression from unifying this engine with the assistant's NeedsSetup
+        lifecycle (commit b0fb29f3, v1.7); before it, the speech-recognition
+        Vosk engine ran its own lifecycle and started at boot.
+
+        Unlike credential-based engines, the Vosk wake-word engine is safe to
+        run without its model: ``_run``/``_reconcile`` keep the loop alive,
+        drop audio while the model is missing, and load it the moment it's
+        downloaded — so the engine started at boot self-heals on the next audio
+        chunk with no restart.
+        """
+        return self._original_run()
+
     async def _reconcile(self, state: _RecognizerState) -> _RecognizerState:
         """Reconcile the recognizer with the selected model and phrases.
 
@@ -99,37 +144,51 @@ class VoskEngine(
             model = state.model
             recognizer = state.recognizer
 
-            if requested_model_id != state.model_id or recognizer is None:
-                model_changed = requested_model_id != state.model_id
+            if requested_model_id != state.loaded_model_id:
+                # The selection differs from what's loaded (changed, or never
+                # loaded). Attempt a load, but no more than once per
+                # ``_MODEL_RETRY_INTERVAL_SECONDS`` so a missing / mid-extraction
+                # model doesn't get hammered (and logged) on every mic chunk.
+                now = get_event_loop().time()
+                if now < state.retry_at:
+                    return state
                 new_model = _load_model(requested_model_id)
                 if new_model is not None:
                     logger.debug(
                         'Vosk - Loaded model',
                         extra={'model_id': requested_model_id},
                     )
+                    # ``loaded_model_id`` advances only here, on success.
                     return _RecognizerState(
                         new_model,
                         _make_recognizer(new_model, phrases),
                         requested_model_id,
                         phrases,
+                        0.0,
                     )
+                # Not ready yet. Keep the current recognizer (if any) and the
+                # current ``loaded_model_id`` so the requested model is retried;
+                # back off until the next interval.
                 if recognizer is not None:
-                    # Switched to a not-yet-downloaded model; keep the working
-                    # one rather than going silent.
                     logger.warning(
-                        'Vosk - Requested model not on disk, staying on '
-                        'previous model',
+                        'Vosk - Requested model not ready; staying on previous '
+                        'model',
                         extra={'model_id': requested_model_id},
                     )
-                elif model_changed:
+                else:
                     logger.debug(
-                        'Vosk - Selected model not on disk yet; waiting for '
-                        'download',
+                        'Vosk - Selected model not ready; waiting',
                         extra={'model_id': requested_model_id},
                     )
-                return state._replace(model_id=requested_model_id)
+                return state._replace(
+                    retry_at=now + _MODEL_RETRY_INTERVAL_SECONDS,
+                )
 
-            if phrases != state.phrases and model is not None:
+            if (
+                phrases != state.phrases
+                and model is not None
+                and recognizer is not None
+            ):
                 logger.debug('Vosk - Updating phrases', extra={'new_phrases': phrases})
                 if IS_RPI:
                     recognizer.Reset()
@@ -159,8 +218,9 @@ class VoskEngine(
         state = _RecognizerState(
             model=None,
             recognizer=None,
-            model_id=None,
+            loaded_model_id=None,
             phrases=None,
+            retry_at=0.0,
         )
 
         while self.should_be_running():

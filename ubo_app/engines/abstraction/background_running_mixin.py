@@ -32,6 +32,13 @@ class BackgroundRunningMixin(EngineMixin, abc.ABC):
     def _task_done_callback(self, task: asyncio.Task[None]) -> None:
         self._is_running = False
         self._task = None
+        logger.debug(
+            'Engine run task finished',
+            extra={
+                'engine_name': self.name,
+                'cancelled': task.cancelled(),
+            },
+        )
         if not task.cancelled() and task.exception():
             logger.exception(
                 'An error occurred while running the engine',
@@ -69,6 +76,10 @@ class BackgroundRunningMixin(EngineMixin, abc.ABC):
             if self._is_running:
                 return True
             self._is_running = True
+            logger.debug(
+                'Starting engine run task',
+                extra={'engine_name': self.name},
+            )
             create_task(
                 self._run(),
                 callback=self._set_task,
@@ -90,7 +101,16 @@ class BackgroundRunningMixin(EngineMixin, abc.ABC):
     @final
     def decide_running_state(self) -> None:
         """Decide whether the engine should be running based on the state."""
-        if self.should_be_running():
+        should_be_running = self.should_be_running()
+        logger.debug(
+            'Deciding engine running state',
+            extra={
+                'engine_name': self.name,
+                'should_be_running': should_be_running,
+                'is_running': self._is_running,
+            },
+        )
+        if should_be_running:
             self.run()
         else:
             self.stop()
