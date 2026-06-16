@@ -72,22 +72,26 @@ async def test_reconcile_waits_then_self_heals_when_model_appears(
     state = module._RecognizerState(  # noqa: SLF001
         model=None,
         recognizer=None,
-        model_id=None,
+        loaded_model_id=None,
         phrases=None,
+        retry_at=0.0,
     )
 
-    # Model not downloaded yet: engine stays unloaded, no crash.
+    # Model not downloaded yet: engine stays unloaded, no crash, and
+    # ``loaded_model_id`` does NOT advance so the model keeps being retried.
     state = await module.VoskEngine._reconcile(engine, state)  # noqa: SLF001
     assert state.recognizer is None
-    assert state.model_id == 'm1'
+    assert state.loaded_model_id is None
 
     # Download lands on disk: the next reconcile builds the recognizer with no
-    # app restart — the core of the fix.
+    # app restart — the core of the fix. Reset ``retry_at`` to bypass the
+    # back-off throttle (a wall-clock second would otherwise have to elapse).
     (tmp_path / 'm1').mkdir()
+    state = state._replace(retry_at=0.0)
     state = await module.VoskEngine._reconcile(engine, state)  # noqa: SLF001
     assert state.recognizer is not None
     assert state.model is not None
-    assert state.model_id == 'm1'
+    assert state.loaded_model_id == 'm1'
 
 
 async def test_reconcile_keeps_waiting_while_model_absent(
@@ -101,8 +105,54 @@ async def test_reconcile_keeps_waiting_while_model_absent(
     monkeypatch.setattr(module, 'model_path_for', lambda model_id: tmp_path / model_id)
 
     engine = SimpleNamespace(grammar_lock=asyncio.Lock(), _phrases=None)
-    state = module._RecognizerState(None, None, None, None)  # noqa: SLF001
+    state = module._RecognizerState(None, None, None, None, 0.0)  # noqa: SLF001
 
     for _ in range(3):
+        # Reset the back-off each iteration so every pass actually re-attempts
+        # the load (instead of being throttled out).
+        state = state._replace(retry_at=0.0)
         state = await module.VoskEngine._reconcile(engine, state)  # noqa: SLF001
         assert state.recognizer is None
+        assert state.loaded_model_id is None
+
+
+async def test_reconcile_retries_switched_model_without_abandoning_it(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Switching to a not-ready model keeps retrying it, not silently stuck.
+
+    Regression guard for the bug where ``loaded_model_id`` advanced to a
+    not-yet-ready model, so the previous recognizer lingered and the new model
+    was never loaded once it finished downloading.
+    """
+    module = _load_vosk_engine(monkeypatch)
+    _install_fake_vosk(monkeypatch)
+    monkeypatch.setattr(module, 'model_path_for', lambda model_id: tmp_path / model_id)
+
+    engine = SimpleNamespace(grammar_lock=asyncio.Lock(), _phrases=None)
+
+    # Start with model 'a' already loaded; the user then selects 'b' (absent).
+    previous_recognizer = SimpleNamespace(kind='recognizer-a')
+    state = module._RecognizerState(  # noqa: SLF001
+        model=SimpleNamespace(kind='model-a'),
+        recognizer=previous_recognizer,
+        loaded_model_id='a',
+        phrases=None,
+        retry_at=0.0,
+    )
+    monkeypatch.setattr(module, '_read_selected_model', lambda: 'b')
+
+    # 'b' isn't on disk yet: keep the working recognizer, do NOT advance
+    # loaded_model_id (so 'b' keeps being retried).
+    state = state._replace(retry_at=0.0)
+    state = await module.VoskEngine._reconcile(engine, state)  # noqa: SLF001
+    assert state.recognizer is previous_recognizer
+    assert state.loaded_model_id == 'a'
+
+    # 'b' finishes downloading: the retry loads it.
+    (tmp_path / 'b').mkdir()
+    state = state._replace(retry_at=0.0)
+    state = await module.VoskEngine._reconcile(engine, state)  # noqa: SLF001
+    assert state.recognizer is not previous_recognizer
+    assert state.loaded_model_id == 'b'
