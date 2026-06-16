@@ -19,11 +19,22 @@ from ubo_assistant.pipecat_debug import (
 
 
 class FakeWhiskerServer:
-    """Fake Whisker 2.0 sink that records its file_name."""
+    """Fake Whisker 2.0 WS-server sink (used when no file path is given)."""
 
     calls: ClassVar[list[str | None]] = []
 
     def __init__(self, *, file_name: str | None = None, **_kwargs: object) -> None:
+        """Record construction of the WS-server sink."""
+        self.file_name = file_name
+        self.calls.append(file_name)
+
+
+class FakeWhiskerFile:
+    """Fake Whisker 2.0 file sink that records its file_name."""
+
+    calls: ClassVar[list[str | None]] = []
+
+    def __init__(self, file_name: str | None = None, **_kwargs: object) -> None:
         """Record the configured sink file name."""
         self.file_name = file_name
         self.calls.append(file_name)
@@ -46,6 +57,7 @@ class FakeWhiskerModule(types.ModuleType):
 
     WhiskerObserver = FakeWhiskerObserver
     WhiskerServer = FakeWhiskerServer
+    WhiskerFile = FakeWhiskerFile
 
 
 class FakeTask:
@@ -68,6 +80,7 @@ class PipecatDebugTests(unittest.TestCase):
         """Reset fake observer state before each test."""
         FakeWhiskerObserver.calls = []
         FakeWhiskerServer.calls = []
+        FakeWhiskerFile.calls = []
 
     def test_whisker_is_disabled_by_default(self) -> None:
         """Whisker is opt-in and does not require the dependency when disabled."""
@@ -122,7 +135,9 @@ class PipecatDebugTests(unittest.TestCase):
         self.assertEqual(len(FakeWhiskerObserver.calls), 1)  # noqa: PT009
         worker, _sink = FakeWhiskerObserver.calls[0]
         self.assertIs(worker, task)  # noqa: PT009
+        # No file path → the WS-server sink is used, not the file sink.
         self.assertEqual(FakeWhiskerServer.calls, [None])  # noqa: PT009
+        self.assertEqual(FakeWhiskerFile.calls, [])  # noqa: PT009
 
     def test_attach_whisker_observer_passes_file_name(self) -> None:
         """The optional session file path is passed to Whisker."""
@@ -145,8 +160,10 @@ class PipecatDebugTests(unittest.TestCase):
                     attach_whisker_observer(cast('SupportsWhiskerObserver', task)),
                 )
 
-            # Whisker 2.0 passes the file path to the sink, not the observer.
-            self.assertEqual(FakeWhiskerServer.calls, [whisker_file])  # noqa: PT009
+            # Whisker 2.0: a file path selects the file sink (not the WS
+            # server), and the path goes to the sink, not the observer.
+            self.assertEqual(FakeWhiskerFile.calls, [whisker_file])  # noqa: PT009
+            self.assertEqual(FakeWhiskerServer.calls, [])  # noqa: PT009
             self.assertEqual(len(FakeWhiskerObserver.calls), 1)  # noqa: PT009
 
 
