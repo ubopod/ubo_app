@@ -125,11 +125,13 @@ Run these in order. Stop and fix on any failure — don't press on.
 
 Once the tag is shipped and the PyPI package + GitHub Release are verified, undo
 the release pins on `development` so everyday work resolves against the latest
-compatible dependencies again. This is the inverse of step 6, committed directly
-on `development` (precedent: v1.7.0 commit `9c8f0a38`).
+compatible dependencies again. This is the inverse of step 6 (precedent: v1.7.0
+commit `9c8f0a38`). `development`'s ruleset requires passing status checks, so it
+**cannot be committed directly** — do this on a short-lived branch and PR it back
+into `development`, the same as any other change.
 
-1. **Be on `development`** with a clean tree:
-   `git checkout development && git pull`.
+1. **Branch from `development`** with a clean tree:
+   `git checkout development && git pull && git checkout -b chore/post-release-unpin-vX.Y.Z`.
 2. **Unpin the release-introduced pins** in each pyproject — revert exactly what
    step 6 pinned, and nothing else:
    - **Root `pyproject.toml`** — `platformdirs==…` → `platformdirs`,
@@ -158,9 +160,11 @@ on `development` (precedent: v1.7.0 commit `9c8f0a38`).
    (cd ubo_app/services/090-assistant/ubo-service && uv lock)
    ```
    The `Missing version constraint` warnings for now-bare deps are expected.
-5. **Commit on `development`** (no tag, no `main` promotion — `development` just
-   continues from here):
-   `git commit -am 'chore(release): post-release unpin dependencies for development'`.
+5. **Commit, push the branch, and open a PR into `development`** (no tag, no
+   `main` promotion — `development` just continues from here once merged):
+   `git commit -am 'chore(release): post-release unpin dependencies for development'`,
+   then `git push -u origin HEAD` and
+   `gh pr create --base development`.
 
 ## Appendix — 2.0.0 dependency-pin reference
 
