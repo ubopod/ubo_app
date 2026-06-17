@@ -2540,8 +2540,8 @@ requires-dist = [
     { name = "pipecat-ai", extras = ["anthropic", "assemblyai", "cerebras", "deepgram", "elevenlabs", "fal", "google", "grok", "kokoro", "mcp", "mistral", "openai", "rime", "silero"], specifier = "==1.3.0" },
     { name = "pipecat-ai-whisker", specifier = "==2.0.0" },
     { name = "piper-tts", specifier = "==1.4.1" },
-    { name = "platformdirs", specifier = "==4.3.8" },
-    { name = "python-fake", specifier = "==0.2.0" },
+    { name = "platformdirs", specifier = ">=4.3.8" },
+    { name = "python-fake", specifier = ">=0.2.0" },
     { name = "ubo-app-raw-bindings", editable = "../../../rpc" },
     { name = "vosk", specifier = "==0.3.44" },
 ]
@@ -2555,7 +2555,6 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
-version = "1.7.1.dev260609103991024851"
 source = { editable = "../../../rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },

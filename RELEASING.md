@@ -121,6 +121,47 @@ Run these in order. Stop and fix on any failure — don't press on.
     - Release body shows the curated notes from `docs/releases/X.Y.Z.md` and the
       2GB-split footer.
 
+## Post-release — re-open `development` for the next cycle
+
+Once the tag is shipped and the PyPI package + GitHub Release are verified, undo
+the release pins on `development` so everyday work resolves against the latest
+compatible dependencies again. This is the inverse of step 6, committed directly
+on `development` (precedent: v1.7.0 commit `9c8f0a38`).
+
+1. **Be on `development`** with a clean tree:
+   `git checkout development && git pull`.
+2. **Unpin the release-introduced pins** in each pyproject — revert exactly what
+   step 6 pinned, and nothing else:
+   - **Root `pyproject.toml`** — `platformdirs==…` → `platformdirs`,
+     `ubo-app-raw-bindings==X.Y.Z` → `ubo-app-raw-bindings`,
+     `onnxruntime==1.22.1` → `onnxruntime>=1.22.0`, `pillow==…` → `pillow>=11.3.0`,
+     and **delete** the `# Transitive dependency pins (resolved from uv.lock)`
+     block. Leave the deps that ship exact-pinned regardless of release as-is.
+   - **`ubo_app/gui/pyproject.toml`** — revert the converted deps back to their
+     `>=`/bare forms and `ubo-app-raw-bindings==X.Y.Z` → bare.
+   - **`ubo_app/services/090-assistant/ubo-service/pyproject.toml`** —
+     `platformdirs==…` → `>=`, `python-fake==…` → `>=`,
+     `ubo-app-raw-bindings==X.Y.Z` → bare.
+   - **`ubo_app/rpc/pyproject.toml`** — nothing to do (it is never pinned per
+     release; its version is tag-derived).
+   > **Keep non-pin changes.** Anything bundled into the release commit that is
+   > not a version pin stays. (In 2.0.0 the release commit also carried the
+   > `build-web-app` `npm run compile` → `npm run proto:compile` fix — that is a
+   > bug fix, not a pin; do **not** revert it.) Unpin = revert pins only.
+3. **Re-open `CHANGELOG.md`** — add a fresh `## Upcoming` heading above the just-
+   released version.
+4. **Refresh every lock that carried pins** with plain `uv lock` (no
+   `PRETEND_VERSION`), so the dev `.devNNN` versions come back:
+   ```bash
+   uv lock
+   (cd ubo_app/gui && uv lock)
+   (cd ubo_app/services/090-assistant/ubo-service && uv lock)
+   ```
+   The `Missing version constraint` warnings for now-bare deps are expected.
+5. **Commit on `development`** (no tag, no `main` promotion — `development` just
+   continues from here):
+   `git commit -am 'chore(release): post-release unpin dependencies for development'`.
+
 ## Appendix — 2.0.0 dependency-pin reference
 
 The original template was the v1.7.0 release commit (`7a3cb7b3`). As of 2.0.0 the
