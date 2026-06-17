@@ -5,6 +5,8 @@ under `docs/releases/`. This changelog keeps the historical pre-2.0 release
 history and may still collect terse maintainer-oriented entries during a release
 cycle.
 
+## Upcoming
+
 ## Version 2.0.0
 - fix(speech-recognition): start Vosk wake-word engine at boot without its model
 - fix(speech-recognition): load Vosk model lazily so first-time setup works without restart

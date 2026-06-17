@@ -1053,7 +1053,6 @@ wheels = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
-version = "1.7.1.dev260609103991024851"
 source = { editable = "../rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },
@@ -1112,18 +1111,18 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "adafruit-circuitpython-rgb-display", specifier = "==3.14.3" },
-    { name = "betterproto", specifier = "==2.0.0b7" },
-    { name = "grpclib", specifier = "==0.4.9" },
-    { name = "headless-kivy", specifier = "==0.13.0" },
-    { name = "numpy", specifier = "==1.26.4" },
-    { name = "pillow", specifier = "==12.1.1" },
-    { name = "platformdirs", specifier = "==4.9.2" },
-    { name = "pypng", specifier = "==0.20220715.0" },
-    { name = "python-fake", specifier = "==0.2.0" },
-    { name = "python-strtobool", specifier = "==1.0.3" },
+    { name = "adafruit-circuitpython-rgb-display", specifier = ">=3.14.0" },
+    { name = "betterproto", specifier = ">=2.0.0b7" },
+    { name = "grpclib", specifier = ">=0.4.7" },
+    { name = "headless-kivy", specifier = ">=0.13.0" },
+    { name = "numpy" },
+    { name = "pillow", specifier = ">=11.3.0" },
+    { name = "platformdirs" },
+    { name = "pypng", specifier = ">=0.20220715.0" },
+    { name = "python-fake", specifier = ">=0.2.0" },
+    { name = "python-strtobool", specifier = ">=1.0.3" },
     { name = "ubo-app-raw-bindings", editable = "../rpc" },
-    { name = "ubo-gui", specifier = "==0.13.17" },
+    { name = "ubo-gui", specifier = ">=0.13.17" },
 ]
 
 [package.metadata.requires-dev]
