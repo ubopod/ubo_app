@@ -126,6 +126,34 @@ typedef struct {
     const char *application_id;
 } ubo_application_view;
 
+/* One chat speech bubble (ChatBubbleData). Everything needed to draw it is
+ * precomputed by the core: alignment ("left"=assistant / "right"=user), colors,
+ * and (for kind=="audio") a normalized 0..1 waveform. */
+typedef struct {
+    const char *role;             /* "user" | "assistant" */
+    const char *alignment;        /* "left" | "right" */
+    const char *kind;             /* "text" | "audio" */
+    const char *text;
+    const char *color;            /* "#RRGGBB" foreground (text / waveform) */
+    const char *background_color; /* "#RRGGBB" bubble fill */
+    const char *pointer_key;      /* "" | "L1" | "L2" | "L3" */
+    bool is_playing;
+    const float *waveform;        /* normalized 0..1 bar heights (audio kind) */
+    int waveform_count;
+} ubo_chat_bubble;
+
+/* The chat overlay (ChatViewData): a scrollable conversation of bubbles, newest
+ * at the bottom, plus up to three L1/L2/L3 button bindings. */
+typedef struct {
+    bool show_status_bar;
+    const ubo_chat_bubble *bubbles;
+    int bubble_count;
+    const ubo_menu_item *items; /* L1/L2/L3 bindings */
+    int item_count;
+    int scroll_offset;
+    int total_bubbles;
+} ubo_chat_view;
+
 /* One generic render-widget property. Values are stringified ("42", "true");
  * list-valued props are newline-joined. Binary props (image bytes) are not
  * carried here — image/frame data uses dedicated paths. */
@@ -204,6 +232,7 @@ void ubo_lvgl_render_instruction(const ubo_instruction_view *v);
 void ubo_lvgl_render_prompt(const ubo_prompt_view *v);
 void ubo_lvgl_render_application(const ubo_application_view *v);
 void ubo_lvgl_render_render(const ubo_render_view *v);
+void ubo_lvgl_render_chat(const ubo_chat_view *v);
 
 /* Push a raw RGB888 (3 bytes/px, top-to-bottom) frame into the current
  * image_viewer/frame_stream view. One-shot for an image, repeated for a live

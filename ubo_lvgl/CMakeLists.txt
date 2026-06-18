@@ -56,6 +56,7 @@ set(UBO_SOURCES
     src/views/view_home.c
     src/views/view_notification.c
     src/views/view_instruction.c
+    src/views/view_chat.c
     src/views/view_prompt.c
     src/views/view_application.c
     src/views/view_render.c

@@ -20,6 +20,7 @@ idf_component_register(
         "${UBO_SRC}/views/overlays.c"
         "${UBO_SRC}/views/screen.c"
         "${UBO_SRC}/views/view_application.c"
+        "${UBO_SRC}/views/view_chat.c"
         "${UBO_SRC}/views/view_home.c"
         "${UBO_SRC}/views/view_instruction.c"
         "${UBO_SRC}/views/view_menu.c"

@@ -126,6 +126,7 @@ void ubo_build_menu(const ubo_menu_view *v);
 void ubo_build_home(const ubo_home_view *v);
 void ubo_build_notification(const ubo_notification_view *v);
 void ubo_build_instruction(const ubo_instruction_view *v);
+void ubo_build_chat(const ubo_chat_view *v);
 void ubo_build_prompt(const ubo_prompt_view *v);
 void ubo_build_application(const ubo_application_view *v);
 void ubo_build_render(const ubo_render_view *v);

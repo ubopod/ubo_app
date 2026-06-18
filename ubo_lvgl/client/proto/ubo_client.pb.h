@@ -316,6 +316,44 @@ typedef struct _ubo_client_RenderViewData_Items {
     struct _ubo_client_MenuItemData *items;
 } ubo_client_RenderViewData_Items;
 
+typedef struct _ubo_client_ChatBubbleData {
+    char *message_id;
+    char *role;
+    char *alignment;
+    char *kind;
+    char *text;
+    char *color;
+    char *background_color;
+    char *pointer_key;
+    bool *is_playing;
+    struct _ubo_client_ChatBubbleData_Waveform *waveform;
+} ubo_client_ChatBubbleData;
+
+typedef struct _ubo_client_ChatBubbleData_Waveform {
+    pb_size_t items_count;
+    float *items;
+} ubo_client_ChatBubbleData_Waveform;
+
+typedef struct _ubo_client_ChatViewData {
+    char *type;
+    bool *show_status_bar;
+    struct _ubo_client_ChatViewData_Bubbles *bubbles;
+    struct _ubo_client_ChatViewData_Items *items;
+    int64_t *scroll_offset;
+    int64_t *total_bubbles;
+    int64_t *stack_depth;
+} ubo_client_ChatViewData;
+
+typedef struct _ubo_client_ChatViewData_Bubbles {
+    pb_size_t items_count;
+    struct _ubo_client_ChatBubbleData *items;
+} ubo_client_ChatViewData_Bubbles;
+
+typedef struct _ubo_client_ChatViewData_Items {
+    pb_size_t items_count;
+    struct _ubo_client_MenuItemData *items;
+} ubo_client_ChatViewData_Items;
+
 typedef struct _ubo_client_NotificationViewData {
     char *type;
     bool *show_status_bar;
@@ -437,6 +475,11 @@ extern "C" {
 
 
 
+
+
+
+
+
 /* Initializer values for message structs */
 #define ubo_client_Any_init_default              {NULL, NULL}
 #define ubo_client_BoolValue_init_default        {NULL}
@@ -480,6 +523,11 @@ extern "C" {
 #define ubo_client_RenderViewData_PropsDict_init_default {0, NULL}
 #define ubo_client_RenderViewData_PropsDict_ItemsEntry_init_default {NULL, NULL}
 #define ubo_client_RenderViewData_Items_init_default {0, NULL}
+#define ubo_client_ChatBubbleData_init_default   {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+#define ubo_client_ChatBubbleData_Waveform_init_default {0, NULL}
+#define ubo_client_ChatViewData_init_default     {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+#define ubo_client_ChatViewData_Bubbles_init_default {0, NULL}
+#define ubo_client_ChatViewData_Items_init_default {0, NULL}
 #define ubo_client_NotificationViewData_init_default {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 #define ubo_client_NotificationViewData_ItemsItem_init_default {NULL}
 #define ubo_client_NotificationViewData_Items_init_default {0, NULL}
@@ -528,6 +576,11 @@ extern "C" {
 #define ubo_client_RenderViewData_PropsDict_init_zero {0, NULL}
 #define ubo_client_RenderViewData_PropsDict_ItemsEntry_init_zero {NULL, NULL}
 #define ubo_client_RenderViewData_Items_init_zero {0, NULL}
+#define ubo_client_ChatBubbleData_init_zero      {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+#define ubo_client_ChatBubbleData_Waveform_init_zero {0, NULL}
+#define ubo_client_ChatViewData_init_zero        {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
+#define ubo_client_ChatViewData_Bubbles_init_zero {0, NULL}
+#define ubo_client_ChatViewData_Items_init_zero  {0, NULL}
 #define ubo_client_NotificationViewData_init_zero {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 #define ubo_client_NotificationViewData_ItemsItem_init_zero {NULL}
 #define ubo_client_NotificationViewData_Items_init_zero {0, NULL}
@@ -647,6 +700,26 @@ extern "C" {
 #define ubo_client_RenderViewData_PropsDict_ItemsEntry_key_tag 1
 #define ubo_client_RenderViewData_PropsDict_ItemsEntry_value_tag 2
 #define ubo_client_RenderViewData_Items_items_tag 1
+#define ubo_client_ChatBubbleData_message_id_tag 2
+#define ubo_client_ChatBubbleData_role_tag       3
+#define ubo_client_ChatBubbleData_alignment_tag  4
+#define ubo_client_ChatBubbleData_kind_tag       5
+#define ubo_client_ChatBubbleData_text_tag       6
+#define ubo_client_ChatBubbleData_color_tag      7
+#define ubo_client_ChatBubbleData_background_color_tag 8
+#define ubo_client_ChatBubbleData_pointer_key_tag 9
+#define ubo_client_ChatBubbleData_is_playing_tag 10
+#define ubo_client_ChatBubbleData_waveform_tag   11
+#define ubo_client_ChatBubbleData_Waveform_items_tag 1
+#define ubo_client_ChatViewData_type_tag         2
+#define ubo_client_ChatViewData_show_status_bar_tag 3
+#define ubo_client_ChatViewData_bubbles_tag      4
+#define ubo_client_ChatViewData_items_tag        5
+#define ubo_client_ChatViewData_scroll_offset_tag 6
+#define ubo_client_ChatViewData_total_bubbles_tag 7
+#define ubo_client_ChatViewData_stack_depth_tag  8
+#define ubo_client_ChatViewData_Bubbles_items_tag 1
+#define ubo_client_ChatViewData_Items_items_tag  1
 #define ubo_client_NotificationViewData_type_tag 2
 #define ubo_client_NotificationViewData_show_status_bar_tag 3
 #define ubo_client_NotificationViewData_notification_id_tag 4
@@ -998,6 +1071,51 @@ X(a, POINTER,  REPEATED, MESSAGE,  items,             1)
 #define ubo_client_RenderViewData_Items_DEFAULT NULL
 #define ubo_client_RenderViewData_Items_items_MSGTYPE ubo_client_MenuItemData
 
+#define ubo_client_ChatBubbleData_FIELDLIST(X, a) \
+X(a, POINTER,  OPTIONAL, STRING,   message_id,        2) \
+X(a, POINTER,  OPTIONAL, STRING,   role,              3) \
+X(a, POINTER,  OPTIONAL, STRING,   alignment,         4) \
+X(a, POINTER,  OPTIONAL, STRING,   kind,              5) \
+X(a, POINTER,  OPTIONAL, STRING,   text,              6) \
+X(a, POINTER,  OPTIONAL, STRING,   color,             7) \
+X(a, POINTER,  OPTIONAL, STRING,   background_color,   8) \
+X(a, POINTER,  OPTIONAL, STRING,   pointer_key,       9) \
+X(a, POINTER,  OPTIONAL, BOOL,     is_playing,       10) \
+X(a, POINTER,  OPTIONAL, MESSAGE,  waveform,         11)
+#define ubo_client_ChatBubbleData_CALLBACK NULL
+#define ubo_client_ChatBubbleData_DEFAULT NULL
+#define ubo_client_ChatBubbleData_waveform_MSGTYPE ubo_client_ChatBubbleData_Waveform
+
+#define ubo_client_ChatBubbleData_Waveform_FIELDLIST(X, a) \
+X(a, POINTER,  REPEATED, FLOAT,    items,             1)
+#define ubo_client_ChatBubbleData_Waveform_CALLBACK NULL
+#define ubo_client_ChatBubbleData_Waveform_DEFAULT NULL
+
+#define ubo_client_ChatViewData_FIELDLIST(X, a) \
+X(a, POINTER,  OPTIONAL, STRING,   type,              2) \
+X(a, POINTER,  OPTIONAL, BOOL,     show_status_bar,   3) \
+X(a, POINTER,  OPTIONAL, MESSAGE,  bubbles,           4) \
+X(a, POINTER,  OPTIONAL, MESSAGE,  items,             5) \
+X(a, POINTER,  OPTIONAL, INT64,    scroll_offset,     6) \
+X(a, POINTER,  OPTIONAL, INT64,    total_bubbles,     7) \
+X(a, POINTER,  OPTIONAL, INT64,    stack_depth,       8)
+#define ubo_client_ChatViewData_CALLBACK NULL
+#define ubo_client_ChatViewData_DEFAULT NULL
+#define ubo_client_ChatViewData_bubbles_MSGTYPE ubo_client_ChatViewData_Bubbles
+#define ubo_client_ChatViewData_items_MSGTYPE ubo_client_ChatViewData_Items
+
+#define ubo_client_ChatViewData_Bubbles_FIELDLIST(X, a) \
+X(a, POINTER,  REPEATED, MESSAGE,  items,             1)
+#define ubo_client_ChatViewData_Bubbles_CALLBACK NULL
+#define ubo_client_ChatViewData_Bubbles_DEFAULT NULL
+#define ubo_client_ChatViewData_Bubbles_items_MSGTYPE ubo_client_ChatBubbleData
+
+#define ubo_client_ChatViewData_Items_FIELDLIST(X, a) \
+X(a, POINTER,  REPEATED, MESSAGE,  items,             1)
+#define ubo_client_ChatViewData_Items_CALLBACK NULL
+#define ubo_client_ChatViewData_Items_DEFAULT NULL
+#define ubo_client_ChatViewData_Items_items_MSGTYPE ubo_client_MenuItemData
+
 #define ubo_client_NotificationViewData_FIELDLIST(X, a) \
 X(a, POINTER,  OPTIONAL, STRING,   type,              2) \
 X(a, POINTER,  OPTIONAL, BOOL,     show_status_bar,   3) \
@@ -1101,6 +1219,11 @@ extern const pb_msgdesc_t ubo_client_RenderViewData_PropsValue_msg;
 extern const pb_msgdesc_t ubo_client_RenderViewData_PropsDict_msg;
 extern const pb_msgdesc_t ubo_client_RenderViewData_PropsDict_ItemsEntry_msg;
 extern const pb_msgdesc_t ubo_client_RenderViewData_Items_msg;
+extern const pb_msgdesc_t ubo_client_ChatBubbleData_msg;
+extern const pb_msgdesc_t ubo_client_ChatBubbleData_Waveform_msg;
+extern const pb_msgdesc_t ubo_client_ChatViewData_msg;
+extern const pb_msgdesc_t ubo_client_ChatViewData_Bubbles_msg;
+extern const pb_msgdesc_t ubo_client_ChatViewData_Items_msg;
 extern const pb_msgdesc_t ubo_client_NotificationViewData_msg;
 extern const pb_msgdesc_t ubo_client_NotificationViewData_ItemsItem_msg;
 extern const pb_msgdesc_t ubo_client_NotificationViewData_Items_msg;
@@ -1151,6 +1274,11 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 #define ubo_client_RenderViewData_PropsDict_fields &ubo_client_RenderViewData_PropsDict_msg
 #define ubo_client_RenderViewData_PropsDict_ItemsEntry_fields &ubo_client_RenderViewData_PropsDict_ItemsEntry_msg
 #define ubo_client_RenderViewData_Items_fields &ubo_client_RenderViewData_Items_msg
+#define ubo_client_ChatBubbleData_fields &ubo_client_ChatBubbleData_msg
+#define ubo_client_ChatBubbleData_Waveform_fields &ubo_client_ChatBubbleData_Waveform_msg
+#define ubo_client_ChatViewData_fields &ubo_client_ChatViewData_msg
+#define ubo_client_ChatViewData_Bubbles_fields &ubo_client_ChatViewData_Bubbles_msg
+#define ubo_client_ChatViewData_Items_fields &ubo_client_ChatViewData_Items_msg
 #define ubo_client_NotificationViewData_fields &ubo_client_NotificationViewData_msg
 #define ubo_client_NotificationViewData_ItemsItem_fields &ubo_client_NotificationViewData_ItemsItem_msg
 #define ubo_client_NotificationViewData_Items_fields &ubo_client_NotificationViewData_Items_msg
@@ -1194,6 +1322,11 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 /* ubo_client_RenderViewData_PropsDict_size depends on runtime parameters */
 /* ubo_client_RenderViewData_PropsDict_ItemsEntry_size depends on runtime parameters */
 /* ubo_client_RenderViewData_Items_size depends on runtime parameters */
+/* ubo_client_ChatBubbleData_size depends on runtime parameters */
+/* ubo_client_ChatBubbleData_Waveform_size depends on runtime parameters */
+/* ubo_client_ChatViewData_size depends on runtime parameters */
+/* ubo_client_ChatViewData_Bubbles_size depends on runtime parameters */
+/* ubo_client_ChatViewData_Items_size depends on runtime parameters */
 /* ubo_client_NotificationViewData_size depends on runtime parameters */
 /* ubo_client_NotificationViewData_ItemsItem_size depends on runtime parameters */
 /* ubo_client_NotificationViewData_Items_size depends on runtime parameters */

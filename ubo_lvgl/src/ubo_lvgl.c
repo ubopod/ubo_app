@@ -383,6 +383,18 @@ void ubo_lvgl_render_instruction(const ubo_instruction_view *v)
     ubo_unlock();
 }
 
+void ubo_lvgl_render_chat(const ubo_chat_view *v)
+{
+    if (!v) {
+        return;
+    }
+    ubo_lock();
+    ubo_overlay_splash_hide();
+    ubo_build_chat(v);
+    apply_transition(K_OTHER, 0, 0);
+    ubo_unlock();
+}
+
 void ubo_lvgl_render_prompt(const ubo_prompt_view *v)
 {
     if (!v) {

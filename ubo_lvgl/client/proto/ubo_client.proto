@@ -286,6 +286,38 @@ message RenderViewData {
   optional int64 stack_depth = 9;
 }
 
+message ChatBubbleData {
+  message Waveform {
+    repeated float items = 1;
+  }
+  optional string message_id = 2;
+  optional string role = 3;
+  optional string alignment = 4;
+  optional string kind = 5;
+  optional string text = 6;
+  optional string color = 7;
+  optional string background_color = 8;
+  optional string pointer_key = 9;
+  optional bool is_playing = 10;
+  optional Waveform waveform = 11;
+}
+
+message ChatViewData {
+  message Bubbles {
+    repeated ChatBubbleData items = 1;
+  }
+  message Items {
+    repeated MenuItemData items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional Bubbles bubbles = 4;
+  optional Items items = 5;
+  optional int64 scroll_offset = 6;
+  optional int64 total_bubbles = 7;
+  optional int64 stack_depth = 8;
+}
+
 message NotificationViewData {
   message ItemsItem {
     optional MenuItemData items = 1;

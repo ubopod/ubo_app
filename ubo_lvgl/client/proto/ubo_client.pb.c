@@ -132,6 +132,21 @@ PB_BIND(ubo_client_RenderViewData_PropsDict_ItemsEntry, ubo_client_RenderViewDat
 PB_BIND(ubo_client_RenderViewData_Items, ubo_client_RenderViewData_Items, AUTO)
 
 
+PB_BIND(ubo_client_ChatBubbleData, ubo_client_ChatBubbleData, AUTO)
+
+
+PB_BIND(ubo_client_ChatBubbleData_Waveform, ubo_client_ChatBubbleData_Waveform, AUTO)
+
+
+PB_BIND(ubo_client_ChatViewData, ubo_client_ChatViewData, AUTO)
+
+
+PB_BIND(ubo_client_ChatViewData_Bubbles, ubo_client_ChatViewData_Bubbles, AUTO)
+
+
+PB_BIND(ubo_client_ChatViewData_Items, ubo_client_ChatViewData_Items, AUTO)
+
+
 PB_BIND(ubo_client_NotificationViewData, ubo_client_NotificationViewData, AUTO)
 
 

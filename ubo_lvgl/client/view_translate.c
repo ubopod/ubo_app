@@ -453,6 +453,60 @@ static void render_application(arena *a, const uint8_t *value, size_t len) {
     pb_release(ubo_client_ApplicationViewData_fields, &m);
 }
 
+static void render_chat(arena *a, const uint8_t *value, size_t len) {
+    ubo_client_ChatViewData m = ubo_client_ChatViewData_init_zero;
+    pb_istream_t is = pb_istream_from_buffer(value, len);
+    if (pb_decode(&is, ubo_client_ChatViewData_fields, &m)) {
+        ubo_chat_view v;
+        memset(&v, 0, sizeof(v));
+        v.show_status_bar = m.show_status_bar ? *m.show_status_bar : false;
+        v.scroll_offset = m.scroll_offset ? (int)*m.scroll_offset : 0;
+        v.total_bubbles = m.total_bubbles ? (int)*m.total_bubbles : 0;
+        if (m.bubbles) {
+            size_t n = m.bubbles->items_count;
+            ubo_chat_bubble *arr =
+                arena_take(a, malloc((n ? n : 1) * sizeof(*arr)));
+            int count = 0;
+            for (size_t i = 0; arr && i < n; i++) {
+                const ubo_client_ChatBubbleData *src = &m.bubbles->items[i];
+                ubo_chat_bubble *d = &arr[count++];
+                memset(d, 0, sizeof(*d));
+                d->role = src->role ? src->role : "assistant";
+                d->alignment = src->alignment ? src->alignment : "left";
+                d->kind = src->kind ? src->kind : "text";
+                d->text = strip_markup(a, src->text);
+                if (!d->text) {
+                    d->text = "";
+                }
+                d->color = color_map(src->color);
+                d->background_color = color_map(src->background_color);
+                d->pointer_key = src->pointer_key ? src->pointer_key : "";
+                d->is_playing = src->is_playing ? *src->is_playing : false;
+                if (src->waveform && src->waveform->items_count) {
+                    /* Valid until pb_release below; the renderer copies it. */
+                    d->waveform = src->waveform->items;
+                    d->waveform_count = (int)src->waveform->items_count;
+                }
+            }
+            v.bubbles = arr;
+            v.bubble_count = count;
+        }
+        if (m.items) {
+            size_t n = m.items->items_count;
+            ubo_menu_item *arr =
+                arena_take(a, malloc((n ? n : 1) * sizeof(*arr)));
+            int count = 0;
+            for (size_t i = 0; arr && i < n; i++) {
+                fill_item(a, &arr[count++], &m.items->items[i]);
+            }
+            v.items = arr;
+            v.item_count = count;
+        }
+        ubo_lvgl_render_chat(&v);
+    }
+    pb_release(ubo_client_ChatViewData_fields, &m);
+}
+
 static void render_render(arena *a, const uint8_t *value, size_t len,
                           char **out_stream_id) {
     ubo_client_RenderViewData m = ubo_client_RenderViewData_init_zero;
@@ -537,6 +591,8 @@ void ubo_view_render(const char *type_url, const uint8_t *value, size_t value_le
         render_prompt(&a, value, value_len);
     } else if (strcmp(name, "ApplicationViewData") == 0) {
         render_application(&a, value, value_len);
+    } else if (strcmp(name, "ChatViewData") == 0) {
+        render_chat(&a, value, value_len);
     } else if (strcmp(name, "RenderViewData") == 0) {
         render_render(&a, value, value_len, out_stream_id);
     }
