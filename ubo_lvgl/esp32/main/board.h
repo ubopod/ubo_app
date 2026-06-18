@@ -10,6 +10,8 @@
 #ifndef UBO_BOARD_H
 #define UBO_BOARD_H
 
+#include <stdbool.h>
+
 #include "driver/i2c_master.h"
 #include "esp_lcd_touch.h"
 #include "esp_lcd_types.h"
@@ -33,6 +35,10 @@ esp_lcd_panel_handle_t board_display_init(i2c_master_bus_handle_t i2c,
 /* Initialize the FT3168 capacitive touch controller on the shared I2C bus.
  * Returns the touch handle (poll with esp_lcd_touch_read_data / _get_coordinates). */
 esp_lcd_touch_handle_t board_touch_init(i2c_master_bus_handle_t i2c);
+
+/* Enable/disable the speaker power amplifier (TCA9554 IO-expander pin 7).
+ * board_display_init() must have run first (it creates the expander). */
+void board_speaker_amp_enable(bool on);
 
 #ifdef __cplusplus
 }

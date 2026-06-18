@@ -25,6 +25,12 @@ void ubo_client_enqueue_key(const char *key);
  * sent, so a touch-slide doesn't flood the network. */
 void ubo_client_set_volume(int level);
 
+/* Push-to-talk: begin/end a microphone listening session. begin dispatches
+ * AssistantStartListening + starts mic streaming; end stops streaming +
+ * dispatches AssistantStopListening. Non-blocking; safe from the input task. */
+void ubo_client_talk_start(void);
+void ubo_client_talk_stop(void);
+
 #ifdef __cplusplus
 }
 #endif

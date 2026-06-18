@@ -7,6 +7,7 @@
  */
 #include <string.h>
 
+#include "audio.h"
 #include "board.h"
 #include "client_app.h"
 #include "display/backend_sh8601.h"
@@ -52,6 +53,12 @@ void app_main(void) {
     esp_lcd_panel_io_handle_t io = NULL;
     esp_lcd_panel_handle_t panel = board_display_init(i2c, &io);
     esp_lcd_touch_handle_t touch = board_touch_init(i2c);
+
+    /* 1b. Audio: ES8311 codec on the shared I2C bus + full-duplex I2S (speaker
+     * playback + push-to-talk mic). Non-fatal if it fails — the UI still runs. */
+    if (ubo_audio_init(i2c) != 0) {
+        ESP_LOGW(TAG, "audio init failed; continuing without audio");
+    }
 
     /* 2. Renderer: hand the panel to the SH8601 backend, then init LVGL. The
      * renderer shows its splash until the first view arrives from the store. */

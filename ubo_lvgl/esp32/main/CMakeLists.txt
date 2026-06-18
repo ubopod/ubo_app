@@ -6,6 +6,7 @@ idf_component_register(
         "client_app.c"
         "input.c"
         "provisioning.c"
+        "audio.c"
     INCLUDE_DIRS "."
     REQUIRES
         ubo_lvgl_renderer
@@ -14,6 +15,9 @@ idf_component_register(
         esp_lcd_touch
         esp_lcd_touch_ft5x06
         esp_driver_gpio
+        esp_driver_i2c
+        esp_driver_i2s
+        esp_codec_dev
         esp_wifi
         esp_event
         esp_netif

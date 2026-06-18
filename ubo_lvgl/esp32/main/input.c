@@ -18,13 +18,19 @@ static const char *TAG = "ubo_input";
 #define TAP_MAX_MOVE 25 /* px: below this a press/release is a tap */
 #define SWIPE_MIN 50    /* px: minimum travel for a swipe */
 #define RELEASE_DEBOUNCE 2 /* empty reads (≈40ms) before a touch counts as ended */
-#define BOOT_RESET_MS 3000 /* hold BOOT this long -> clear WiFi creds + reboot */
+#ifndef CONFIG_UBO_TALK_HOLD_MS
+#define CONFIG_UBO_TALK_HOLD_MS 350
+#endif
+#define TALK_HOLD_MS CONFIG_UBO_TALK_HOLD_MS /* hold BOOT this long -> push-to-talk */
+#define BOOT_RESET_MS 8000 /* hold BOOT this long -> clear WiFi creds + reboot */
 
 /* Gestures -> Ubo keys:
  *   tap        -> L1/L2/L3 by which vertical third was tapped (the slot)
  *   swipe up   -> UP        swipe down -> DOWN
  *   swipe horiz-> BACK
- *   BOOT tap   -> HOME       BOOT hold (>=3s) -> clear WiFi creds + reboot to setup
+ *   BOOT tap   -> HOME
+ *   BOOT hold  -> push-to-talk (stream mic while held; release stops)
+ *   BOOT hold (>=8s) -> clear WiFi creds + reboot to setup
  */
 static void input_task(void *arg) {
     esp_lcd_touch_handle_t tp = (esp_lcd_touch_handle_t)arg;
@@ -43,6 +49,7 @@ static void input_task(void *arg) {
     bool boot_pressed_prev = false;
     int boot_held_ms = 0;
     bool boot_reset_fired = false;
+    bool talk_active = false; /* a push-to-talk session is streaming */
 
     while (1) {
         uint16_t tx[1], ty[1];
@@ -104,20 +111,35 @@ static void input_task(void *arg) {
             }
         }
 
-        /* BOOT: short tap -> HOME (on release); hold >=3s -> clear WiFi creds
-         * and reboot so the device comes back up in the setup portal. */
+        /* BOOT button duration ladder: tap -> HOME, hold -> push-to-talk
+         * (stream while held), very long hold (>=8s) -> clear WiFi creds and
+         * reboot into the setup portal. Talk and reset don't collide: a normal
+         * utterance is far shorter than 8s. */
         const bool boot_pressed = gpio_get_level(BOOT_GPIO) == 0;
         if (boot_pressed) {
             boot_held_ms += POLL_MS;
+            if (!talk_active && !boot_reset_fired && boot_held_ms >= TALK_HOLD_MS) {
+                talk_active = true;
+                ubo_client_talk_start();
+            }
             if (!boot_reset_fired && boot_held_ms >= BOOT_RESET_MS) {
                 boot_reset_fired = true;
+                if (talk_active) {
+                    ubo_client_talk_stop();
+                    talk_active = false;
+                }
                 ESP_LOGW(TAG, "BOOT held: clearing WiFi creds, rebooting to setup");
                 ubo_net_creds_clear();
                 esp_restart();
             }
         } else {
-            if (boot_pressed_prev && !boot_reset_fired) {
-                ubo_client_enqueue_key("HOME");
+            if (boot_pressed_prev) {
+                if (talk_active) {
+                    ubo_client_talk_stop();
+                    talk_active = false;
+                } else if (!boot_reset_fired && boot_held_ms < TALK_HOLD_MS) {
+                    ubo_client_enqueue_key("HOME");
+                }
             }
             boot_held_ms = 0;
             boot_reset_fired = false;

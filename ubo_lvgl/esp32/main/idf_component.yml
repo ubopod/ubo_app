@@ -8,5 +8,8 @@ dependencies:
   espressif/esp_lcd_touch_ft5x06: "*"
   # TCA9554 I2C IO-expander: drives the panel reset lines on this board.
   espressif/esp_io_expander_tca9554: "*"
+  # ES8311 audio codec (speaker DAC + mic ADC) via the new I2C-master driver.
+  # Bundles the es8311 codec + i2s data interface used by main/audio.c.
+  espressif/esp_codec_dev: "^1.5.0"
   # (dns_server for the captive portal is vendored in-tree under
   #  esp32/components/dns_server/ — it is not a registry component.)

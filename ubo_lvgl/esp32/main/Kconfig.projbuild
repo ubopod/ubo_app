@@ -34,4 +34,21 @@ config UBO_CORE_GRPC_WEB_URL
         Base URL of ubo-core's Envoy gRPC-Web endpoint, e.g.
         http://<host-lan-ip>:50052/grpc. Plain HTTP (no TLS).
 
+config UBO_MIC_CHUNK_MS
+    int "Push-to-talk mic chunk size (ms)"
+    default 200
+    range 60 500
+    help
+        How much 16kHz/16-bit mic audio to accumulate per AudioReportSampleAction
+        dispatch. Each dispatch is a full HTTP unary POST (no keep-alive on the
+        C6), so larger chunks mean fewer requests/sec at the cost of latency.
+
+config UBO_TALK_HOLD_MS
+    int "BOOT hold-to-talk threshold (ms)"
+    default 350
+    range 150 1000
+    help
+        How long the BOOT button must be held before a push-to-talk session
+        starts. A shorter press is treated as a HOME tap.
+
 endmenu

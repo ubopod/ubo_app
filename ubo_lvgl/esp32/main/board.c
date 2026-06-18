@@ -13,6 +13,10 @@
 
 static const char *TAG = "ubo_board";
 
+/* TCA9554 IO-expander handle (panel reset on pins 4,5; speaker amp on pin 7).
+ * Created in board_display_init, reused by board_speaker_amp_enable. */
+static esp_io_expander_handle_t s_io_expander;
+
 /* ── Pin map (fixed for ESP32-C6-Touch-AMOLED-1.8) ── */
 #define LCD_HOST SPI2_HOST
 #define PIN_LCD_CS 5
@@ -60,6 +64,7 @@ esp_lcd_panel_handle_t board_display_init(i2c_master_bus_handle_t i2c,
     esp_io_expander_handle_t io_expander = NULL;
     ESP_ERROR_CHECK(esp_io_expander_new_i2c_tca9554(
         i2c, ESP_IO_EXPANDER_I2C_TCA9554_ADDRESS_000, &io_expander));
+    s_io_expander = io_expander; /* reused by board_speaker_amp_enable */
     esp_io_expander_set_dir(io_expander,
                             IO_EXPANDER_PIN_NUM_4 | IO_EXPANDER_PIN_NUM_5,
                             IO_EXPANDER_OUTPUT);
@@ -104,6 +109,17 @@ esp_lcd_panel_handle_t board_display_init(i2c_master_bus_handle_t i2c,
         *out_io = io_handle;
     }
     return panel;
+}
+
+void board_speaker_amp_enable(bool on) {
+    /* Speaker power amplifier enable = TCA9554 IO-expander pin 7
+     * (BSP_POWER_AMP_IO). Not an ESP32 GPIO; driven via the shared expander. */
+    if (!s_io_expander) {
+        return;
+    }
+    esp_io_expander_set_dir(s_io_expander, IO_EXPANDER_PIN_NUM_7,
+                            IO_EXPANDER_OUTPUT);
+    esp_io_expander_set_level(s_io_expander, IO_EXPANDER_PIN_NUM_7, on ? 1 : 0);
 }
 
 esp_lcd_touch_handle_t board_touch_init(i2c_master_bus_handle_t i2c) {
