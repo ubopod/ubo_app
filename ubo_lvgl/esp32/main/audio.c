@@ -40,6 +40,23 @@ static const char *TAG = "ubo_audio";
 
 #define PLAY_RING_BYTES 16384 /* ~0.5 s @ 16 kHz/16-bit/mono; smooths HTTP jitter */
 #define PLAY_DRAIN_CHUNK 1024
+
+#ifndef CONFIG_UBO_AUDIO_GAIN_PERCENT
+#define CONFIG_UBO_AUDIO_GAIN_PERCENT 300 /* tiny onboard speaker; 100 = unity */
+#endif
+
+/* Apply digital gain (with int16 hard-clamp) to a mono 16-bit PCM chunk. */
+static void apply_gain(uint8_t *buf, size_t n) {
+    if (CONFIG_UBO_AUDIO_GAIN_PERCENT == 100) {
+        return;
+    }
+    int16_t *s = (int16_t *)buf;
+    size_t count = n / sizeof(int16_t);
+    for (size_t i = 0; i < count; i++) {
+        int32_t v = (int32_t)s[i] * CONFIG_UBO_AUDIO_GAIN_PERCENT / 100;
+        s[i] = (int16_t)(v > 32767 ? 32767 : (v < -32768 ? -32768 : v));
+    }
+}
 #define PLAY_IDLE_CLOSE_US 200000 /* close output (PA off) 200 ms after drain */
 
 static struct {
@@ -104,6 +121,8 @@ static int open_out(int rate, int ch, int width, float vol) {
     }
     int v = (int)(vol * 100.0f);
     esp_codec_dev_set_out_vol(a.dev, v < 0 ? 0 : (v > 100 ? 100 : v));
+    ESP_LOGI(TAG, "codec open(out) ok: %d Hz, %d ch, %d-bit, vol=%d", rate, ch,
+             width * 8, v < 0 ? 0 : (v > 100 ? 100 : v));
     a.out_open = true;
     a.out_rate = rate;
     a.out_ch = ch;
@@ -142,6 +161,7 @@ static void play_task(void *arg) {
                 open_out(a.want_rate, a.want_ch, a.want_width, a.want_vol);
             }
             if (a.out_open) {
+                apply_gain(buf, n);
                 esp_codec_dev_write(a.dev, buf, (int)n);
                 a.last_feed_us = esp_timer_get_time();
             }

@@ -51,4 +51,15 @@ config UBO_TALK_HOLD_MS
         How long the BOOT button must be held before a push-to-talk session
         starts. A shorter press is treated as a HOME tap.
 
+config UBO_AUDIO_GAIN_PERCENT
+    int "Speaker software gain (%)"
+    default 300
+    range 100 800
+    help
+        Digital gain applied to playback PCM before the ES8311, to compensate
+        for the tiny onboard speaker. 100 = unity (no boost). Samples are hard-
+        clamped to int16 after scaling, so very high values will distort loud
+        passages; 200-400 is usually a good range. The core's relative volume
+        still applies via the codec DAC, so the volume control keeps working.
+
 endmenu
