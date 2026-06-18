@@ -60,6 +60,10 @@ add_executable(ubo_client_probe tests/probe.c)
 target_link_libraries(ubo_client_probe PRIVATE ubo_client_core)
 target_compile_options(ubo_client_probe PRIVATE -Wall -Wextra)
 
+add_executable(ubo_client_event_probe tests/event_probe.c)
+target_link_libraries(ubo_client_event_probe PRIVATE ubo_client_core)
+target_compile_options(ubo_client_event_probe PRIVATE -Wall -Wextra)
+
 # Phase-3 live render+snapshot harness (renders live views to BMP for parity).
 add_executable(ubo_client_render_snapshot tests/render_snapshot.c)
 target_link_libraries(ubo_client_render_snapshot PRIVATE ubo_client_core ubo_lvgl)
