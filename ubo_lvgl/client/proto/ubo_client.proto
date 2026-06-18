@@ -92,12 +92,37 @@ message AudioSetVolumeAction {
   AudioDevice device = 3;
 }
 
+// Raw audio (PCM) carried by playback events and report actions. `width` is
+// BYTES per sample (16-bit PCM => 2), matching ubo_app.store.services.audio.
+message AudioSample {
+  bytes data = 2;
+  int64 channels = 3;
+  int64 rate = 4;
+  int64 width = 5;
+}
+
+// Push-to-talk: start/stop a microphone listening session. The optional
+// source/reason fields (2) are intentionally omitted — we never set them.
+message AssistantStartListeningAction {}
+
+message AssistantStopListeningAction {}
+
+// Stream a captured mic chunk to the core (mirrors the web UI: only timestamp +
+// raw speech-recognition PCM bytes are set; the `sample` submessage is unused).
+message AudioReportSampleAction {
+  float timestamp = 2;
+  bytes sample_speech_recognition = 3;
+}
+
 message Action {
   oneof action {
-    AudioSetVolumeAction audio_set_volume_action = 42;
-    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 46;
-    KeypadKeyPressAction keypad_key_press_action = 122;
-    KeypadKeyReleaseAction keypad_key_release_action = 123;
+    AssistantStartListeningAction assistant_start_listening_action = 30;
+    AssistantStopListeningAction assistant_stop_listening_action = 31;
+    AudioReportSampleAction audio_report_sample_action = 47;
+    AudioSetVolumeAction audio_set_volume_action = 49;
+    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 53;
+    KeypadKeyPressAction keypad_key_press_action = 139;
+    KeypadKeyReleaseAction keypad_key_release_action = 140;
   }
 }
 
@@ -117,11 +142,28 @@ message FrameStreamDataEvent {
   int64 height = 5;
 }
 
+// Core -> client speaker playback. A one-shot sample, and a streamed sequence
+// (TTS): `sample` is optional (a chunk with no sample is a keepalive); `id` +
+// `index` identify the sequence ordering (the client trusts arrival order).
+message AudioPlayAudioSampleEvent {
+  float volume = 2;
+  AudioSample sample = 3;
+}
+
+message AudioPlayAudioSequenceEvent {
+  float volume = 2;
+  optional AudioSample sample = 3;
+  string id = 4;
+  int64 index = 5;
+}
+
 message Event {
   oneof event {
     ApplicationScrollEvent application_scroll_event = 1;
-    FrameStreamDataEvent frame_stream_data_event = 74;
-    MenuChooseByIndexEvent menu_choose_by_index_event = 88;
+    AudioPlayAudioSampleEvent audio_play_audio_sample_event = 22;
+    AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 23;
+    FrameStreamDataEvent frame_stream_data_event = 83;
+    MenuChooseByIndexEvent menu_choose_by_index_event = 98;
   }
 }
 

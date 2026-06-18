@@ -42,6 +42,18 @@ PB_BIND(ubo_client_AudioToggleMuteStatusAction, ubo_client_AudioToggleMuteStatus
 PB_BIND(ubo_client_AudioSetVolumeAction, ubo_client_AudioSetVolumeAction, AUTO)
 
 
+PB_BIND(ubo_client_AudioSample, ubo_client_AudioSample, AUTO)
+
+
+PB_BIND(ubo_client_AssistantStartListeningAction, ubo_client_AssistantStartListeningAction, AUTO)
+
+
+PB_BIND(ubo_client_AssistantStopListeningAction, ubo_client_AssistantStopListeningAction, AUTO)
+
+
+PB_BIND(ubo_client_AudioReportSampleAction, ubo_client_AudioReportSampleAction, AUTO)
+
+
 PB_BIND(ubo_client_Action, ubo_client_Action, 2)
 
 
@@ -52,6 +64,12 @@ PB_BIND(ubo_client_MenuChooseByIndexEvent, ubo_client_MenuChooseByIndexEvent, AU
 
 
 PB_BIND(ubo_client_FrameStreamDataEvent, ubo_client_FrameStreamDataEvent, AUTO)
+
+
+PB_BIND(ubo_client_AudioPlayAudioSampleEvent, ubo_client_AudioPlayAudioSampleEvent, AUTO)
+
+
+PB_BIND(ubo_client_AudioPlayAudioSequenceEvent, ubo_client_AudioPlayAudioSequenceEvent, AUTO)
 
 
 PB_BIND(ubo_client_Event, ubo_client_Event, 2)
