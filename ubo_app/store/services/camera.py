@@ -173,32 +173,8 @@ class CameraReinitializeEvent(CameraEvent):
     """Event to trigger camera reinitialization with new index."""
 
 
-def _resolve_initial_source_id() -> str:
-    """Pick the initial selected-source id, migrating from the old int key.
-
-    Older releases persisted `camera_selected_index` (int). Newer state lives
-    under `camera_selected_source_id` (str). If only the old key is present,
-    we synthesise `local:<index>` so the user's previous choice survives.
-    """
-    new_value = read_from_persistent_store(
-        'camera_selected_source_id',
-        default=None,
-        output_type=str,
-    )
-    if new_value:
-        return new_value
-    legacy_index = read_from_persistent_store(
-        'camera_selected_index',
-        default=None,
-        output_type=int,
-    )
-    if legacy_index is not None:
-        return f'local:{legacy_index}'
-    return 'local:0'
-
-
 class CameraState(Immutable):
     queue: list[QRCodeInputDescription]
-    selected_source_id: str = _resolve_initial_source_id()
+    selected_source_id: str = 'local:0'
     available_cameras: tuple[CameraSource, ...] = ()
     pending_remote_registrations: tuple[CameraSource, ...] = ()
