@@ -163,6 +163,19 @@ typedef struct _ubo_client_AudioPlayAudioSequenceEvent {
     int64_t *index;
 } ubo_client_AudioPlayAudioSequenceEvent;
 
+/* Subscribed only to ESTABLISH the event stream at connect: StackChangedEvent
+ has server "initial state" (sent the instant we subscribe, so the response
+ headers flush immediately instead of waiting for a first real event — without
+ it SubscribeEvent stays cold, gRPC-Web withholds headers, and a TTS reply
+ burst is missed before the stream comes up). Crucially it fires ONLY on
+ navigation, NOT on every view/status tick — so unlike ViewChangedEvent it does
+ not flood the server's shared 30-slot subscription queue during a chat reply
+ (which would drop the audio sequence burst). We never read its payload; the
+ empty message makes nanopb skip it on decode. */
+typedef struct _ubo_client_StackChangedEvent {
+    char dummy_field;
+} ubo_client_StackChangedEvent;
+
 typedef struct _ubo_client_Event {
     pb_size_t which_event;
     union _ubo_client_Event_event {
@@ -171,6 +184,7 @@ typedef struct _ubo_client_Event {
         struct _ubo_client_AudioPlayAudioSequenceEvent *audio_play_audio_sequence_event;
         struct _ubo_client_FrameStreamDataEvent *frame_stream_data_event;
         struct _ubo_client_MenuChooseByIndexEvent *menu_choose_by_index_event;
+        struct _ubo_client_StackChangedEvent *stack_changed_event;
     } event;
 } ubo_client_Event;
 
@@ -480,6 +494,7 @@ extern "C" {
 
 
 
+
 /* Initializer values for message structs */
 #define ubo_client_Any_init_default              {NULL, NULL}
 #define ubo_client_BoolValue_init_default        {NULL}
@@ -503,6 +518,7 @@ extern "C" {
 #define ubo_client_FrameStreamDataEvent_init_default {NULL, NULL, NULL, NULL}
 #define ubo_client_AudioPlayAudioSampleEvent_init_default {NULL, NULL}
 #define ubo_client_AudioPlayAudioSequenceEvent_init_default {NULL, NULL, NULL, NULL}
+#define ubo_client_StackChangedEvent_init_default {0}
 #define ubo_client_Event_init_default            {0, {NULL}}
 #define ubo_client_BasicType_init_default        {0, {NULL}}
 #define ubo_client_MenuItemData_init_default     {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
@@ -556,6 +572,7 @@ extern "C" {
 #define ubo_client_FrameStreamDataEvent_init_zero {NULL, NULL, NULL, NULL}
 #define ubo_client_AudioPlayAudioSampleEvent_init_zero {NULL, NULL}
 #define ubo_client_AudioPlayAudioSequenceEvent_init_zero {NULL, NULL, NULL, NULL}
+#define ubo_client_StackChangedEvent_init_zero   {0}
 #define ubo_client_Event_init_zero               {0, {NULL}}
 #define ubo_client_BasicType_init_zero           {0, {NULL}}
 #define ubo_client_MenuItemData_init_zero        {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
@@ -634,6 +651,7 @@ extern "C" {
 #define ubo_client_Event_audio_play_audio_sequence_event_tag 23
 #define ubo_client_Event_frame_stream_data_event_tag 83
 #define ubo_client_Event_menu_choose_by_index_event_tag 98
+#define ubo_client_Event_stack_changed_event_tag 124
 #define ubo_client_BasicType_bool_value_tag      1
 #define ubo_client_BasicType_bytes_value_tag     2
 #define ubo_client_BasicType_float_value_tag     3
@@ -898,12 +916,18 @@ X(a, POINTER,  SINGULAR, INT64,    index,             5)
 #define ubo_client_AudioPlayAudioSequenceEvent_DEFAULT NULL
 #define ubo_client_AudioPlayAudioSequenceEvent_sample_MSGTYPE ubo_client_AudioSample
 
+#define ubo_client_StackChangedEvent_FIELDLIST(X, a) \
+
+#define ubo_client_StackChangedEvent_CALLBACK NULL
+#define ubo_client_StackChangedEvent_DEFAULT NULL
+
 #define ubo_client_Event_FIELDLIST(X, a) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,application_scroll_event,event.application_scroll_event),   1) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sample_event,event.audio_play_audio_sample_event),  22) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sequence_event,event.audio_play_audio_sequence_event),  23) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_data_event,event.frame_stream_data_event),  83) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,menu_choose_by_index_event,event.menu_choose_by_index_event),  98)
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,menu_choose_by_index_event,event.menu_choose_by_index_event),  98) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,stack_changed_event,event.stack_changed_event), 124)
 #define ubo_client_Event_CALLBACK NULL
 #define ubo_client_Event_DEFAULT NULL
 #define ubo_client_Event_event_application_scroll_event_MSGTYPE ubo_client_ApplicationScrollEvent
@@ -911,6 +935,7 @@ X(a, POINTER,  ONEOF,    MESSAGE,  (event,menu_choose_by_index_event,event.menu_
 #define ubo_client_Event_event_audio_play_audio_sequence_event_MSGTYPE ubo_client_AudioPlayAudioSequenceEvent
 #define ubo_client_Event_event_frame_stream_data_event_MSGTYPE ubo_client_FrameStreamDataEvent
 #define ubo_client_Event_event_menu_choose_by_index_event_MSGTYPE ubo_client_MenuChooseByIndexEvent
+#define ubo_client_Event_event_stack_changed_event_MSGTYPE ubo_client_StackChangedEvent
 
 #define ubo_client_BasicType_FIELDLIST(X, a) \
 X(a, POINTER,  ONEOF,    BOOL,     (basic_type,bool_value,basic_type.bool_value),   1) \
@@ -1199,6 +1224,7 @@ extern const pb_msgdesc_t ubo_client_MenuChooseByIndexEvent_msg;
 extern const pb_msgdesc_t ubo_client_FrameStreamDataEvent_msg;
 extern const pb_msgdesc_t ubo_client_AudioPlayAudioSampleEvent_msg;
 extern const pb_msgdesc_t ubo_client_AudioPlayAudioSequenceEvent_msg;
+extern const pb_msgdesc_t ubo_client_StackChangedEvent_msg;
 extern const pb_msgdesc_t ubo_client_Event_msg;
 extern const pb_msgdesc_t ubo_client_BasicType_msg;
 extern const pb_msgdesc_t ubo_client_MenuItemData_msg;
@@ -1254,6 +1280,7 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 #define ubo_client_FrameStreamDataEvent_fields &ubo_client_FrameStreamDataEvent_msg
 #define ubo_client_AudioPlayAudioSampleEvent_fields &ubo_client_AudioPlayAudioSampleEvent_msg
 #define ubo_client_AudioPlayAudioSequenceEvent_fields &ubo_client_AudioPlayAudioSequenceEvent_msg
+#define ubo_client_StackChangedEvent_fields &ubo_client_StackChangedEvent_msg
 #define ubo_client_Event_fields &ubo_client_Event_msg
 #define ubo_client_BasicType_fields &ubo_client_BasicType_msg
 #define ubo_client_MenuItemData_fields &ubo_client_MenuItemData_msg
@@ -1341,6 +1368,7 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 #define ubo_client_BoolValue_size                2
 #define ubo_client_DispatchActionResponse_size   0
 #define ubo_client_MenuChooseByIndexEvent_size   11
+#define ubo_client_StackChangedEvent_size        0
 
 #ifdef __cplusplus
 } /* extern "C" */

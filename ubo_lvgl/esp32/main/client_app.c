@@ -213,6 +213,8 @@ static void on_event(void *user, const ubo_client_Event *ev) {
          * order (id/index reordering is a deliberate follow-up). */
         const ubo_client_AudioPlayAudioSequenceEvent *e =
             ev->event.audio_play_audio_sequence_event;
+        ESP_LOGI(TAG, "rx AudioPlayAudioSequenceEvent: sample=%s id=%s",
+                 (e && e->sample) ? "yes" : "no", (e && e->id) ? e->id : "?");
         if (e && e->sample) {
             play_sample(e->sample, e->volume ? *e->volume : 1.0f);
         }
@@ -233,7 +235,13 @@ static void event_task(void *arg) {
         ubo_client_AudioPlayAudioSampleEvent_init_zero;
     ubo_client_AudioPlayAudioSequenceEvent apsq =
         ubo_client_AudioPlayAudioSequenceEvent_init_zero;
-    ubo_client_Event evs[4];
+    /* Subscribed only to ESTABLISH the event stream at connect (StackChangedEvent
+     * has server initial state, flushing the response headers immediately so a
+     * cold stream never misses a TTS burst). It fires only on navigation, not on
+     * every view/status tick, so it doesn't flood the shared subscription queue
+     * during a chat reply. Ignored in on_event (default case). */
+    ubo_client_StackChangedEvent sce = ubo_client_StackChangedEvent_init_zero;
+    ubo_client_Event evs[5];
     memset(evs, 0, sizeof(evs));
     evs[0].which_event = ubo_client_Event_application_scroll_event_tag;
     evs[0].event.application_scroll_event = &ase;
@@ -243,11 +251,13 @@ static void event_task(void *arg) {
     evs[2].event.audio_play_audio_sample_event = &apse;
     evs[3].which_event = ubo_client_Event_audio_play_audio_sequence_event_tag;
     evs[3].event.audio_play_audio_sequence_event = &apsq;
+    evs[4].which_event = ubo_client_Event_stack_changed_event_tag;
+    evs[4].event.stack_changed_event = &sce;
 
     int delay = RECONNECT_INITIAL_DELAY_MS;
     while (!st.stop) {
         time_t start = time(NULL);
-        ubo_rpc_subscribe_event(st.rpc, evs, 4, on_event, NULL, &st.stop);
+        ubo_rpc_subscribe_event(st.rpc, evs, 5, on_event, NULL, &st.stop);
         if (st.stop) {
             break;
         }

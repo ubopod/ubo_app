@@ -157,6 +157,17 @@ message AudioPlayAudioSequenceEvent {
   int64 index = 5;
 }
 
+// Subscribed only to ESTABLISH the event stream at connect: StackChangedEvent
+// has server "initial state" (sent the instant we subscribe, so the response
+// headers flush immediately instead of waiting for a first real event — without
+// it SubscribeEvent stays cold, gRPC-Web withholds headers, and a TTS reply
+// burst is missed before the stream comes up). Crucially it fires ONLY on
+// navigation, NOT on every view/status tick — so unlike ViewChangedEvent it does
+// not flood the server's shared 30-slot subscription queue during a chat reply
+// (which would drop the audio sequence burst). We never read its payload; the
+// empty message makes nanopb skip it on decode.
+message StackChangedEvent {}
+
 message Event {
   oneof event {
     ApplicationScrollEvent application_scroll_event = 1;
@@ -164,6 +175,7 @@ message Event {
     AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 23;
     FrameStreamDataEvent frame_stream_data_event = 83;
     MenuChooseByIndexEvent menu_choose_by_index_event = 98;
+    StackChangedEvent stack_changed_event = 124;
   }
 }
 
