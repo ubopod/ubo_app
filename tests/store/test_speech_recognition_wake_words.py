@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, cast
 
 from ubo_app.constants.assistant import (
     ASSISTANT_CONVERSATION_END_PHRASES,
+    ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS,
     ASSISTANT_CONVERSATION_WAKE_WORD,
     ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
     ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
@@ -213,13 +214,13 @@ def test_default_policy_for_quick_chat_uses_silence_timeout(
     assert policy is not None
     assert policy.silence_timeout_seconds == ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS
     assert policy.end_of_turn_phrases == ()
-    assert policy.requires_phrase_for_stop is False
+    assert policy.completion_mode == 'silence'
 
 
 def test_default_policy_for_conversation_uses_end_phrases(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Conversation source → end-phrase policy, requires phrase to stop."""
+    """Conversation source → end-phrase policy with a long silence fallback."""
     ns = _load_speech_recognition(monkeypatch)
     policies = ns._default_policies()  # noqa: SLF001
     source = ns.WakePhraseTriggerSource(phrase=ASSISTANT_CONVERSATION_WAKE_WORD)
@@ -228,5 +229,7 @@ def test_default_policy_for_conversation_uses_end_phrases(
 
     assert policy is not None
     assert policy.end_of_turn_phrases == ASSISTANT_CONVERSATION_END_PHRASES
-    assert policy.requires_phrase_for_stop is True
-    assert policy.silence_timeout_seconds is None
+    assert policy.completion_mode == 'silence'
+    assert (
+        policy.silence_timeout_seconds == ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS
+    )

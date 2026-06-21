@@ -28,6 +28,11 @@ ASSISTANT_STOP_TALKING_PHRASE = os.environ.get(
 ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS: float = float(
     os.environ.get('UBO_ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS', '2.0'),
 )
+# Conversation mode tolerates long mid-sentence pauses: the turn completes on an
+# end-of-turn phrase OR after this many seconds of continuous silence.
+ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS: float = float(
+    os.environ.get('UBO_ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS', '5.0'),
+)
 ASSISTANT_DEBUG_PATH = os.environ.get('UBO_ASSISTANT_DEBUG_PATH')
 DEFAULT_LLM_OLLAMA_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_OLLAMA_MODEL',

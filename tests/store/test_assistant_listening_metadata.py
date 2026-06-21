@@ -157,7 +157,6 @@ def test_resolve_policy_matches_wake_phrase_case_insensitive(
             matcher=ns.WakePhraseMatcher(phrase="LET'S have a Conversation"),
             policy=ns.AssistantTriggerPolicy(
                 end_of_turn_phrases=("i'm done",),
-                requires_phrase_for_stop=True,
             ),
         ),
         ns.AssistantTriggerPolicyEntry(
@@ -169,7 +168,6 @@ def test_resolve_policy_matches_wake_phrase_case_insensitive(
     policy = ns.resolve_policy(policies, source)
 
     assert policy is not None
-    assert policy.requires_phrase_for_stop is True
     assert policy.end_of_turn_phrases == ("i'm done",)
 
 
@@ -252,7 +250,7 @@ def test_start_writes_active_source_and_policy(
     assert next_state.is_listening is True
     assert next_state.active_source == source
     assert next_state.active_policy is not None
-    assert next_state.active_policy.requires_phrase_for_stop is True
+    assert next_state.active_policy == state.policies[0].policy
 
 
 def test_start_without_source_keeps_state_clean(
@@ -266,6 +264,22 @@ def test_start_without_source_keeps_state_clean(
     assert next_state.is_listening is True
     assert next_state.active_source is None
     assert next_state.active_policy is None
+
+
+def test_default_policies_keypad_and_infrared_are_manual(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keypad and infrared push-to-talk sources resolve to MANUAL completion."""
+    ns = _load_assistant(monkeypatch)
+    state = _init_state(ns)
+
+    for source in (
+        ns.KeypadTriggerSource(key=ns.Key.HOME),
+        ns.InfraredTriggerSource(protocol='necx', scancode='0x1'),
+    ):
+        policy = ns.resolve_policy(state.policies, source)
+        assert policy is not None
+        assert policy.completion_mode == 'manual'
 
 
 def test_start_when_muted_does_not_record_source(

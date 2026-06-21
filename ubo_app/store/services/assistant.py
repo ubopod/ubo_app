@@ -12,6 +12,7 @@ from redux import BaseAction, BaseEvent
 
 from ubo_app.constants.assistant import (
     ASSISTANT_CONVERSATION_END_PHRASES,
+    ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS,
     ASSISTANT_CONVERSATION_WAKE_WORD,
     ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
     ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
@@ -340,12 +341,22 @@ class StopTalkingPhraseStopReason(AssistantStopReason):
     """
 
 
+class BotStartedSpeakingStopReason(AssistantStopReason):
+    """Stop dispatched when the assistant begins speaking (TTS playback starts).
+
+    The device has no acoustic echo cancellation, so listening must end the
+    instant the bot starts talking — otherwise the open mic captures the bot's
+    own speech and confuses the pipeline.
+    """
+
+
 AssistantStopReasonUnion: TypeAlias = (
     UserStopReason
     | SilenceTimeoutStopReason
     | EndOfTurnPhraseStopReason
     | ExternalStopReason
     | StopTalkingPhraseStopReason
+    | BotStartedSpeakingStopReason
 )
 
 
@@ -381,12 +392,26 @@ AssistantTriggerPolicyMatcherUnion: TypeAlias = (
 )
 
 
+class AssistantTurnCompletionMode(StrEnum):
+    """How a listening session decides the user's turn is finished.
+
+    ``SILENCE`` completes the turn after ``silence_timeout_seconds`` of
+    continuous quiet (and/or an end-of-turn phrase). ``MANUAL`` is push-to-talk:
+    the turn never completes on silence while listening — it completes only when
+    the session ends (button release / listen toggle off), flushing whatever was
+    accumulated.
+    """
+
+    SILENCE = 'silence'
+    MANUAL = 'manual'
+
+
 class AssistantTriggerPolicy(Immutable):
     """Controls how the pipeline decides the user has stopped speaking."""
 
     silence_timeout_seconds: float | None = None
     end_of_turn_phrases: tuple[str, ...] = ()
-    requires_phrase_for_stop: bool = False
+    completion_mode: AssistantTurnCompletionMode = AssistantTurnCompletionMode.SILENCE
 
 
 class AssistantTriggerPolicyEntry(Immutable):
@@ -403,27 +428,37 @@ def _default_policies() -> tuple[AssistantTriggerPolicyEntry, ...]:
     Order is most-specific-first; ``AnySourceMatcher`` must remain last.
     """
     return (
+        # Conversation: tolerate long pauses — complete on an end-of-turn phrase
+        # OR after a long silence window.
         AssistantTriggerPolicyEntry(
             matcher=WakePhraseMatcher(phrase=ASSISTANT_CONVERSATION_WAKE_WORD),
             policy=AssistantTriggerPolicy(
+                silence_timeout_seconds=ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS,
                 end_of_turn_phrases=ASSISTANT_CONVERSATION_END_PHRASES,
-                requires_phrase_for_stop=True,
             ),
         ),
+        # Quick chat: single short turn, complete after a brief silence.
         AssistantTriggerPolicyEntry(
             matcher=WakePhraseMatcher(phrase=ASSISTANT_QUICK_CHAT_WAKE_PHRASE),
             policy=AssistantTriggerPolicy(
                 silence_timeout_seconds=ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
             ),
         ),
+        # Keypad and infrared are push-to-talk: accumulate while held / toggled
+        # on, and only flush when the session ends (release / toggle off).
         AssistantTriggerPolicyEntry(
             matcher=KeypadMatcher(),
-            policy=AssistantTriggerPolicy(),
+            policy=AssistantTriggerPolicy(
+                completion_mode=AssistantTurnCompletionMode.MANUAL,
+            ),
         ),
         AssistantTriggerPolicyEntry(
             matcher=InfraredMatcher(),
-            policy=AssistantTriggerPolicy(),
+            policy=AssistantTriggerPolicy(
+                completion_mode=AssistantTurnCompletionMode.MANUAL,
+            ),
         ),
+        # Unknown sources keep the conservative short-silence completion.
         AssistantTriggerPolicyEntry(
             matcher=AnySourceMatcher(),
             policy=AssistantTriggerPolicy(),

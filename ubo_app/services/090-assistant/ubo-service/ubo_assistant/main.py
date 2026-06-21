@@ -40,6 +40,7 @@ from ubo_assistant.request_handler import setup_request_handler
 from ubo_assistant.silence_user_turn_stop import (
     UboPolicyAwareUserTurnStopStrategy,
 )
+from ubo_assistant.stop_listening_on_bot_speech import StopListeningOnBotSpeech
 from ubo_assistant.stop_talking import StopTalkingOnSignal
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
@@ -190,6 +191,7 @@ class Assistant:
         )
         barge_in_on_listen = BargeInOnListenSignal(client=self.client)
         stop_talking_on_signal = StopTalkingOnSignal(client=self.client)
+        stop_listening_on_bot_speech = StopListeningOnBotSpeech(client=self.client)
 
         ubo_llm_service = UboLLMService(
             client=self.client,
@@ -299,6 +301,9 @@ class Assistant:
                         ubo_llm_service,
                         image_producer,
                         ubo_tts_service,
+                        # After TTS so it sees the downstream TTSStartedFrame —
+                        # stop listening the instant the bot starts talking.
+                        stop_listening_on_bot_speech,
                     ],
                     [
                         image_consumer,

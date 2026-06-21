@@ -26,12 +26,17 @@ class PolicyContext:
 
     silence_timeout_seconds: float | None = None
     end_of_turn_phrases: tuple[str, ...] = ()
-    requires_phrase_for_stop: bool = False
+    completion_mode: str = 'silence'
 
     @classmethod
     def empty(cls) -> PolicyContext:
         """Return an inert policy (no silence stop, no phrase stop)."""
         return cls()
+
+    @property
+    def is_manual(self) -> bool:
+        """True for push-to-talk policies that complete only on session end."""
+        return self.completion_mode == 'manual'
 
 
 class PolicyWatcher:
@@ -87,7 +92,7 @@ class PolicyWatcher:
             extra={
                 'silence_timeout_seconds': new_context.silence_timeout_seconds,
                 'end_of_turn_phrases': new_context.end_of_turn_phrases,
-                'requires_phrase_for_stop': new_context.requires_phrase_for_stop,
+                'completion_mode': new_context.completion_mode,
             },
         )
         self._context = new_context
@@ -104,7 +109,11 @@ def _policy_message_to_context(policy_msg: object) -> PolicyContext:
         return PolicyContext.empty()
 
     silence_timeout = getattr(policy_msg, 'silence_timeout_seconds', None)
-    requires_phrase = bool(getattr(policy_msg, 'requires_phrase_for_stop', False))
+    # betterproto delivers ``completion_mode`` as the generated enum; map its
+    # name to our lowercase string. Any unset / unspecified value is silence.
+    mode_msg = getattr(policy_msg, 'completion_mode', None)
+    mode_name = getattr(mode_msg, 'name', '') or ''
+    completion_mode = 'manual' if mode_name == 'MANUAL' else 'silence'
     phrases_msg = getattr(policy_msg, 'end_of_turn_phrases', None)
     phrases: tuple[str, ...] = ()
     if phrases_msg is not None:
@@ -115,5 +124,5 @@ def _policy_message_to_context(policy_msg: object) -> PolicyContext:
     return PolicyContext(
         silence_timeout_seconds=silence_timeout,
         end_of_turn_phrases=phrases,
-        requires_phrase_for_stop=requires_phrase,
+        completion_mode=completion_mode,
     )
