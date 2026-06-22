@@ -7,25 +7,20 @@ import json
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from abstraction.speech_recognition_mixin import SpeechRecognitionMixin
 from commands import (
     COMMANDS_PERSISTENT_KEY,
     register_default_bindable_actions,
     register_shortcut_actions,
 )
-from constants import OFFLINE_ENGINES
 from engines_manager import EnginesManager
 from pattern import PatternError, expand_pattern
-from redux import AutorunOptions
 from wake_phrase_validation import (
     phrase_collisions,
     validate_phrase,
 )
 
-from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
-from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.logger import logger
-from ubo_app.store.core.action_registry import register_action, unregister_action
+from ubo_app.store.core.action_registry import register_action
 from ubo_app.store.core.bindable_actions import (
     BindableActionContext,
     get_bindable_action,
@@ -36,6 +31,7 @@ from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
     StackPopAction,
+    StackPopToRootAction,
     StackPushMenuAction,
     StackPushPromptAction,
     UpdateDynamicMenuAction,
@@ -46,7 +42,10 @@ from ubo_app.store.input.types import (
     WebUIInputDescription,
 )
 from ubo_app.store.main import store
-from ubo_app.store.services.assistant import AssistantSetConversationEndPhrasesAction
+from ubo_app.store.services.assistant import (
+    DEFAULT_VOSK_MODEL_ID,
+    AssistantSetConversationEndPhrasesAction,
+)
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
@@ -61,11 +60,9 @@ from ubo_app.store.services.rgb_ring import (
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionAddCommandAction,
     SpeechRecognitionBoundActionTriggeredEvent,
-    SpeechRecognitionEngineName,
     SpeechRecognitionIntent,
     SpeechRecognitionRemoveCommandAction,
     SpeechRecognitionSetConversationEndPhrasesAction,
-    SpeechRecognitionSetSelectedEngineAction,
     SpeechRecognitionSetSlotEnabledAction,
     SpeechRecognitionSetWakePhrasesAction,
     SpeechRecognitionState,
@@ -79,7 +76,6 @@ from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
-    ItemParameters,
 )
 from ubo_app.utils.persistent_store import register_persistent_store
 
@@ -110,45 +106,6 @@ matches "create wifi via web", "set up wireless connection using web ui", and \
 many more."""
 
 
-def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
-    return {
-        **SELECTED_ITEM_PARAMETERS,
-        'background_color': SUCCESS_COLOR if is_offline else WARNING_COLOR,
-        'color': '#ffffff',
-    }
-
-
-def _get_unselected_item_parameters(*, is_offline: bool) -> ItemParameters:
-    return {
-        **UNSELECTED_ITEM_PARAMETERS,
-        'background_color': '#000000',
-        'color': SUCCESS_COLOR if is_offline else WARNING_COLOR,
-    }
-
-
-def _build_engine_menu_item(
-    engine_name: SpeechRecognitionEngineName,
-    engine: SpeechRecognitionMixin,
-    *,
-    selected_engine: SpeechRecognitionEngineName | None,
-    action_id: str,
-) -> MenuItemData:
-    """Build a MenuItemData for a selectable recognition engine."""
-    params = (
-        _get_selected_item_parameters(is_offline=engine_name in OFFLINE_ENGINES)
-        if selected_engine == engine_name
-        else _get_unselected_item_parameters(is_offline=engine_name in OFFLINE_ENGINES)
-    )
-    return MenuItemData(
-        key=engine_name,
-        label=engine.label,
-        icon=params.get('icon', ''),
-        color=params.get('color', '#ffffff'),
-        background_color=params.get('background_color'),
-        action_id=action_id,
-    )
-
-
 def _build_toggle_item(
     *,
     key: str,
@@ -170,40 +127,18 @@ def _build_toggle_item(
 
 def _register_static_menus() -> None:
     """Register static action handlers and dispatch static menus."""
+    # Deep-link from the Voice Shortcuts warning to the assistant's Vosk model
+    # downloader. The assistant path matcher only resolves the Vosk drill-down
+    # under the ('main', 'settings', 'Assistant', \u2026) prefix, so rebuild that
+    # stack from the root rather than pushing a single (wrong-prefix) frame.
     register_action(
-        'speech-recognition:open_engines',
+        'speech-recognition:open-vosk-models',
         lambda: store.dispatch(
-            StackPushMenuAction(menu_key='speech-recognition:engines'),
-        ),
-    )
-    register_action(
-        'speech-recognition:open_commands',
-        lambda: store.dispatch(
-            StackPushMenuAction(menu_key='speech-recognition:commands'),
-        ),
-    )
-
-    store.dispatch(
-        UpdateDynamicMenuAction(
-            menu_id='speech-recognition:main',
-            title='Speech Recognition',
-            heading='Speech Recognition Settings',
-            sub_heading='Vosk is used for wake word detection',
-            items=(
-                MenuItemData(
-                    key='commands',
-                    label='Commands',
-                    icon='\U000f036e',
-                    action_id='speech-recognition:open_commands',
-                ),
-                MenuItemData(
-                    key='engine',
-                    label='Engines',
-                    icon='\uf2a2',
-                    action_id='speech-recognition:open_engines',
-                ),
-            ),
-            placeholder='',
+            StackPopToRootAction(),
+            StackPushMenuAction(menu_key='main'),
+            StackPushMenuAction(menu_key='settings'),
+            StackPushMenuAction(menu_key=SettingsCategory.ASSISTANT.value),
+            StackPushMenuAction(menu_key='assistant:stt'),
         ),
     )
 
@@ -211,8 +146,8 @@ def _register_static_menus() -> None:
         RegisterSettingAppAction(
             category=SettingsCategory.ACCESSIBILITY,
             priority=30,
-            label='Speech Recognition',
-            icon='\uf2a2',
+            label='Voice Shortcuts',
+            icon='\U000f036e',
         ),
         # One combined "Wake Phrases" entry under Assistant (more discoverable):
         # per-category enable/disable + multi-phrase editing. Handled here.
@@ -231,7 +166,9 @@ def _register_static_menus() -> None:
 # Registered-setting keys (``service:key``) → the dynamic menu id they open.
 # Underscore keys map to hyphenated menu ids explicitly (no string munging).
 _SETTING_KEY_TO_MENU: dict[str, str] = {
-    'speech_recognition:': 'speech-recognition:main',
+    # The Accessibility "Voice Shortcuts" entry opens the commands menu directly
+    # (the old intermediate 'speech-recognition:main' menu is gone).
+    'speech_recognition:': 'speech-recognition:commands',
     'speech_recognition:voice': 'speech-recognition:voice',
 }
 
@@ -843,11 +780,7 @@ def _register_wake_phrase_handlers(engines_manager: EnginesManager) -> None:
 
 
 def _register_persistence() -> None:
-    """Register the persistent-store keys for engine, wake slots, end phrases."""
-    register_persistent_store(
-        'speech_recognition:selected_engine',
-        lambda state: state.speech_recognition.selected_engine or 'vosk',
-    )
+    """Register the persistent-store keys for wake slots, end phrases, commands."""
     register_persistent_store(
         'speech_recognition:wake_slots',
         lambda state: json.dumps(
@@ -889,75 +822,6 @@ def init_service() -> Subscriptions:
     register_shortcut_actions()
 
     engines_manager = EnginesManager()
-    _engine_action_ids: list[str] = []
-
-    @store.autorun(
-        lambda state: (
-            state.speech_recognition.selected_engine,
-            state.assistant.provider_setup_status,
-        ),
-        options=AutorunOptions(memoization=False),
-    )
-    def recognition_engine_items(
-        data: tuple[SpeechRecognitionEngineName | None, dict[str, bool]],
-    ) -> None:
-        """Update items for recognition engine selection."""
-        selected_engine, _ = data
-
-        for action_id in _engine_action_ids:
-            unregister_action(action_id)
-        _engine_action_ids.clear()
-
-        items: list[MenuItemData] = []
-        for engine_name in SpeechRecognitionEngineName:
-            engine = engines_manager.engines_by_name[engine_name]
-
-            if not isinstance(engine, SpeechRecognitionMixin):
-                continue
-
-            if isinstance(engine, NeedsSetupMixin) and not engine.is_setup:
-                action_id = f'speech-recognition:setup-engine:{engine_name}'
-                _engine_action_ids.append(action_id)
-                register_action(action_id, engine.setup)
-                items.append(
-                    MenuItemData(
-                        key=engine_name,
-                        label=f'Setup {engine.label}',
-                        icon='\ue615',
-                        action_id=action_id,
-                    ),
-                )
-                continue
-
-            action_id = f'speech-recognition:select-engine:{engine_name}'
-            _engine_action_ids.append(action_id)
-            register_action(
-                action_id,
-                lambda _en=engine_name: store.dispatch(
-                    SpeechRecognitionSetSelectedEngineAction(engine_name=_en),
-                ),
-            )
-            items.append(
-                _build_engine_menu_item(
-                    engine_name,
-                    engine,
-                    selected_engine=selected_engine,
-                    action_id=action_id,
-                ),
-            )
-
-        store.dispatch(
-            UpdateDynamicMenuAction(
-                menu_id='speech-recognition:engines',
-                title='Recognition Engines',
-                heading='Select Active Engine',
-                sub_heading=(
-                    f'[color={SUCCESS_COLOR}]󱓻[/color] Offline models\n'
-                    f'[color={WARNING_COLOR}]󱓻[/color] Online models'
-                ),
-                items=tuple(items),
-            ),
-        )
 
     @store.autorun(
         lambda state: (
@@ -972,12 +836,42 @@ def init_service() -> Subscriptions:
         wake_slots, end_phrases = data
         _dispatch_voice_menus(wake_slots, end_phrases)
 
-    @store.autorun(lambda state: state.speech_recognition.intents)
+    @store.autorun(
+        lambda state: (
+            state.speech_recognition.intents,
+            state.assistant.selected_vosk_model,
+            state.assistant.vosk_downloaded_models,
+        ),
+    )
     def speech_recognition_command_items(
-        intents: list[SpeechRecognitionIntent],
+        data: tuple[list[SpeechRecognitionIntent], str, tuple[str, ...]],
     ) -> None:
-        """Update the Commands menu listing each voice command."""
+        """Update the Voice Shortcuts menu listing each voice command.
+
+        The menu is headed so it can warn when the Vosk model — required for
+        wake-word and command recognition — hasn't been downloaded. The model
+        lifecycle lives under Assistant ▸ Speech Recognition; when it's missing,
+        a deep-link item jumps straight there.
+        """
+        intents, selected_vosk_model, downloaded_models = data
+        model_ready = (
+            selected_vosk_model or DEFAULT_VOSK_MODEL_ID
+        ) in downloaded_models
+
+        download_item: tuple[MenuItemData, ...] = (
+            ()
+            if model_ready
+            else (
+                MenuItemData(
+                    key='download-model',
+                    label='Download Vosk Model',
+                    icon='󰇚',
+                    action_id='speech-recognition:open-vosk-models',
+                ),
+            )
+        )
         items: tuple[MenuItemData, ...] = (
+            *download_item,
             MenuItemData(
                 key='add-command',
                 label='Add Command',
@@ -997,7 +891,14 @@ def init_service() -> Subscriptions:
         store.dispatch(
             UpdateDynamicMenuAction(
                 menu_id='speech-recognition:commands',
-                title='Commands',
+                title='Voice Shortcuts',
+                heading='Voice Shortcuts',
+                sub_heading=(
+                    'Speak a phrase after the wake word to run a shortcut.'
+                    if model_ready
+                    else 'Voice shortcuts need the Vosk model — download it under '
+                    'Assistant ▸ Speech Recognition.'
+                ),
                 items=items,
                 placeholder='No commands yet',
             ),
@@ -1009,13 +910,14 @@ def init_service() -> Subscriptions:
 
     from ubo_app.store.core.view_registry import register_path_menu_matcher
 
-    register_path_menu_matcher(
+    unregister_path_matcher = register_path_menu_matcher(
         'speech-recognition:settings',
         _speech_recognition_path_matcher,
     )
 
     return [
         *engines_manager.subscriptions,
+        unregister_path_matcher,
         store.subscribe_event(
             SpeechRecognitionBoundActionTriggeredEvent,
             _handle_bound_action_triggered,

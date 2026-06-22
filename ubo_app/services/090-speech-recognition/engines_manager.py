@@ -6,7 +6,6 @@ import asyncio
 from typing import TYPE_CHECKING, TypedDict, cast
 
 from constants import INTENTS_LISTENING_TIMEOUT_SECONDS
-from google_engine import GoogleSpeechRecognitionEngine
 from mic_buffer import MicBuffer
 from pattern import PatternError, expand_pattern
 from vosk_engine import VoskEngine
@@ -16,7 +15,6 @@ from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioReportSampleEvent
 from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionEngineName,
     SpeechRecognitionIntent,
     SpeechRecognitionReportIntentDetectionAction,
     SpeechRecognitionReportIntentTimeoutAction,
@@ -41,14 +39,11 @@ if TYPE_CHECKING:
 
 class _Engines(TypedDict):
     wake_word: WakeWordRecognitionMixin
-    speech: SpeechRecognitionMixin | None
+    speech: SpeechRecognitionMixin
 
 
 def _running_engines(engines: _Engines) -> set[BaseSpeechRecognitionEngine]:
-    return cast(
-        'set[BaseSpeechRecognitionEngine]',
-        {engine for engine in engines.values() if engine is not None},
-    )
+    return cast('set[BaseSpeechRecognitionEngine]', set(engines.values()))
 
 
 _MIC_BUFFER_DURATION_SECONDS = 5.0
@@ -98,23 +93,14 @@ class EnginesManager:
 
     def __init__(self) -> None:
         """Initialize `EnginesManager`."""
+        # Vosk runs in-core for both wake-word detection and command/intent
+        # speech recognition — the only engine after the Google Cloud removal.
         vosk_engine = VoskEngine()
-        google_engine = GoogleSpeechRecognitionEngine()
-        self.engines_by_name: dict[
-            SpeechRecognitionEngineName,
-            SpeechRecognitionMixin,
-        ] = {
-            SpeechRecognitionEngineName.VOSK: vosk_engine,
-            SpeechRecognitionEngineName.GOOGLE: google_engine,
-        }
         self.engines: _Engines = {'wake_word': vosk_engine, 'speech': vosk_engine}
         self._intents_timeout_handle: asyncio.Handle | None = None
         self.mic_buffer = MicBuffer(
             duration_seconds=_MIC_BUFFER_DURATION_SECONDS,
             output_dir=_MIC_BUFFER_OUTPUT_DIR,
-        )
-        store.autorun(lambda state: state.speech_recognition.selected_engine)(
-            self._sync_selected_engine,
         )
 
         store.autorun(
@@ -162,17 +148,6 @@ class EnginesManager:
         for engine in _running_engines(self.engines):
             await engine.queue_audio_chunk(event.sample_speech_recognition)
 
-    async def _sync_selected_engine(
-        self,
-        selected_engine: SpeechRecognitionEngineName | None,
-    ) -> None:
-        """Sync selected speech recognition engine."""
-        if self.engines['speech'] is not None:
-            await self.engines['speech'].deactivate_speech_recognition()
-        self.engines['speech'] = (
-            self.engines_by_name[selected_engine] if selected_engine else None
-        )
-
     async def _sync_wake_word_engine(
         self,
         wake_slots: tuple[WakeWordSlot, ...],
@@ -204,12 +179,6 @@ class EnginesManager:
                 'intents': [intent.phrases for intent in intents],
             },
         )
-        if self.engines['speech'] is None:
-            logger.warning(
-                'Speech recognition engine is not set, skipping status sync',
-                extra={'status': status},
-            )
-            return
         if status is SpeechRecognitionStatus.IDLE:
             self._cancel_intents_timeout()
             await self.engines['speech'].deactivate_speech_recognition()
@@ -320,9 +289,8 @@ class EnginesManager:
     async def _monitor_speech_recognitions(self) -> None:
         """Monitor speech recognitions and handle them."""
         while True:
-            if self.engines['speech'] is not None:
-                async for recognition in self.engines['speech'].speech_recognitions():
-                    self.handle_speech_recognition(recognition)
+            async for recognition in self.engines['speech'].speech_recognitions():
+                self.handle_speech_recognition(recognition)
             await asyncio.sleep(0.1)
 
     def _cleanup(self) -> None:

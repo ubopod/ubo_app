@@ -38,12 +38,6 @@ class SpeechRecognitionAction(BaseAction):
     """Base class for speech recognition actions."""
 
 
-class SpeechRecognitionSetSelectedEngineAction(SpeechRecognitionAction):
-    """Action to set the selected speech recognition engine."""
-
-    engine_name: SpeechRecognitionEngineName | None
-
-
 class SpeechRecognitionSetSlotEnabledAction(SpeechRecognitionAction):
     """Enable or disable one wake-word slot.
 
@@ -176,10 +170,14 @@ class SpeechRecognitionStatus(StrEnum):
 
 
 class SpeechRecognitionEngineName(StrEnum):
-    """Available speech recognition engines."""
+    """Available speech recognition engines.
+
+    Only Vosk remains (offline, in-core). The enum is retained because the
+    detection report actions carry an ``engine_name`` that is part of the
+    serialized RPC contract and the wake-phrase trigger metadata.
+    """
 
     VOSK = 'vosk'
-    GOOGLE = 'google_cloud'
 
 
 class WakeWordSlot(Immutable):
@@ -298,15 +296,6 @@ def _load_wake_slots() -> tuple[WakeWordSlot, ...]:
 class SpeechRecognitionState(Immutable):
     """State for speech recognition service."""
 
-    selected_engine: SpeechRecognitionEngineName | None = field(
-        default=read_from_persistent_store(
-            'speech_recognition:selected_engine',
-            mapper=lambda value: SpeechRecognitionEngineName(value)
-            if value in SpeechRecognitionEngineName.__members__.values()
-            else SpeechRecognitionEngineName.VOSK,
-            default=SpeechRecognitionEngineName.VOSK,
-        ),
-    )
     intents: list[SpeechRecognitionIntent] = field(default_factory=list)
     wake_slots: tuple[WakeWordSlot, ...] = field(default_factory=_load_wake_slots)
     conversation_end_phrases: tuple[str, ...] = field(

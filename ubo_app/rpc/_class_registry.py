@@ -477,7 +477,6 @@ CLASS_REGISTRY: dict[str, str] = {
     'SpeechRecognitionReportWakeWordDetectionAction': 'ubo_app.store.services.speech_recognition',
     'SpeechRecognitionSetAssistantSlotsEnabledAction': 'ubo_app.store.services.speech_recognition',
     'SpeechRecognitionSetConversationEndPhrasesAction': 'ubo_app.store.services.speech_recognition',
-    'SpeechRecognitionSetSelectedEngineAction': 'ubo_app.store.services.speech_recognition',
     'SpeechRecognitionSetSlotEnabledAction': 'ubo_app.store.services.speech_recognition',
     'SpeechRecognitionSetWakePhrasesAction': 'ubo_app.store.services.speech_recognition',
     'SpeechRecognitionState': 'ubo_app.store.services.speech_recognition',

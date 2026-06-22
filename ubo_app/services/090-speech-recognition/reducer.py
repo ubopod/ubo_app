@@ -32,7 +32,6 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionReportWakeWordDetectionAction,
     SpeechRecognitionSetAssistantSlotsEnabledAction,
     SpeechRecognitionSetConversationEndPhrasesAction,
-    SpeechRecognitionSetSelectedEngineAction,
     SpeechRecognitionSetSlotEnabledAction,
     SpeechRecognitionSetWakePhrasesAction,
     SpeechRecognitionState,
@@ -65,13 +64,6 @@ def reducer(
         raise InitializationActionError(action)
 
     match action:
-        case SpeechRecognitionSetSelectedEngineAction():
-            return replace(
-                state,
-                selected_engine=action.engine_name,
-                status=SpeechRecognitionStatus.IDLE,
-            )
-
         case SpeechRecognitionSetSlotEnabledAction(mode=mode, enabled=enabled):
             # Conversation and Stop are coupled: toggling either sets both.
             coupled = (
