@@ -12,12 +12,6 @@ from pattern import PatternError, expand_pattern
 from vosk_engine import VoskEngine
 
 from ubo_app.constants import DATA_PATH
-from ubo_app.constants.assistant import (
-    ASSISTANT_CONVERSATION_WAKE_WORD,
-    ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
-    ASSISTANT_STOP_TALKING_PHRASE,
-    INTENTS_WAKE_WORD,
-)
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioReportSampleEvent
@@ -29,6 +23,8 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionReportSpeechAction,
     SpeechRecognitionReportWakeWordDetectionAction,
     SpeechRecognitionStatus,
+    WakeMode,
+    WakeWordSlot,
 )
 from ubo_app.utils.async_ import create_task
 
@@ -38,6 +34,7 @@ if TYPE_CHECKING:
     from abstraction.base_class import BaseSpeechRecognitionEngine
     from abstraction.speech_recognition_mixin import Recognition, SpeechRecognitionMixin
     from abstraction.wake_word_recognition_mixin import WakeWordRecognitionMixin
+    from vosk import Model
 
     from ubo_app.utils.types import Subscriptions
 
@@ -56,13 +53,25 @@ def _running_engines(engines: _Engines) -> set[BaseSpeechRecognitionEngine]:
 
 _MIC_BUFFER_DURATION_SECONDS = 5.0
 _MIC_BUFFER_OUTPUT_DIR = DATA_PATH / 'wake_phrase_recordings'
-_PHRASES_THAT_TRIGGER_BUFFER_DUMP = frozenset(
-    {
-        ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
-        ASSISTANT_CONVERSATION_WAKE_WORD,
-        ASSISTANT_STOP_TALKING_PHRASE,
-    },
+
+
+@store.with_state(
+    lambda state: next(
+        (
+            slot.phrases
+            for slot in state.speech_recognition.wake_slots
+            if slot.mode is WakeMode.INTENTS
+        ),
+        (),
+    ),
 )
+def _should_dump_buffer(intents_phrases: tuple[str, ...], wake_word: str) -> bool:
+    """Dump the mic buffer for assistant wake/stop phrases, not intents words.
+
+    The phrases are user-editable, so the decision reads live state rather than a
+    module-level set; any intents-slot alternative counts as "don't dump".
+    """
+    return wake_word.casefold() not in {phrase.casefold() for phrase in intents_phrases}
 
 
 def _expand_phrases(phrases: Sequence[str]) -> list[str]:
@@ -109,10 +118,7 @@ class EnginesManager:
         )
 
         store.autorun(
-            lambda state: (
-                state.speech_recognition.is_intents_active,
-                state.speech_recognition.is_assistant_active,
-            ),
+            lambda state: state.speech_recognition.wake_slots,
         )(self._sync_wake_word_engine)
 
         store.autorun(
@@ -132,6 +138,16 @@ class EnginesManager:
             store.subscribe_event(AudioReportSampleEvent, self._queue_chunk),
             self._cleanup,
         ]
+
+    def wake_word_model(self) -> Model | None:
+        """Return the wake-word engine's loaded Vosk model, if any.
+
+        Used by the wake-phrase editor to validate words against the Kaldi
+        vocabulary. Returns None when the engine has no loadable model yet (e.g.
+        OpenWakeWord in a later phase, or the Vosk model not downloaded).
+        """
+        engine = self.engines['wake_word']
+        return engine.current_model() if isinstance(engine, VoskEngine) else None
 
     async def _queue_chunk(self, event: AudioReportSampleEvent) -> None:
         """Queue audio chunk to all running speech recognition engines.
@@ -157,34 +173,23 @@ class EnginesManager:
             self.engines_by_name[selected_engine] if selected_engine else None
         )
 
-    async def _sync_wake_word_engine(self, data: tuple[bool, bool]) -> None:
-        """Sync wake word recognition engine based on intents and assistant status."""
-        is_intents_active, is_assistant_active = data
-        logger.debug(
-            'Syncing recognition engine status',
-            extra={
-                'is_intents_active': is_intents_active,
-                'is_assistant_active': is_assistant_active,
-            },
-        )
+    async def _sync_wake_word_engine(
+        self,
+        wake_slots: tuple[WakeWordSlot, ...],
+    ) -> None:
+        """Push the phrases of every enabled wake-word slot to the engine.
 
-        if is_intents_active or is_assistant_active:
-            self.engines['wake_word'].set_wake_words(
-                [
-                    *((INTENTS_WAKE_WORD,) if is_intents_active else ()),
-                    *(
-                        (
-                            ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
-                            ASSISTANT_CONVERSATION_WAKE_WORD,
-                            ASSISTANT_STOP_TALKING_PHRASE,
-                        )
-                        if is_assistant_active
-                        else ()
-                    ),
-                ],
-            )
-        else:
-            self.engines['wake_word'].set_wake_words(None)
+        Slots are user-editable and arrive from state, so an edit (phrases or
+        enabled) re-pushes the active wake-word set to the engine live.
+        """
+        words = [
+            phrase
+            for slot in wake_slots
+            if slot.enabled
+            for phrase in slot.phrases
+        ]
+        logger.debug('Syncing wake-word engine', extra={'wake_word_count': len(words)})
+        self.engines['wake_word'].set_wake_words(words or None)
 
     async def _sync_status(
         self,
@@ -294,7 +299,7 @@ class EnginesManager:
         """Monitor wake word recognitions and dispatch events."""
         while True:
             async for wake_word in self.engines['wake_word'].wake_word_recogntions():
-                if wake_word in _PHRASES_THAT_TRIGGER_BUFFER_DUMP:
+                if _should_dump_buffer(wake_word):
                     # Persist the rolling mic buffer so the audio leading up
                     # to the trigger phrase is available for review. Run the
                     # synchronous WAV write off the event loop so the dispatch
@@ -305,7 +310,10 @@ class EnginesManager:
                         wake_word,
                     )
                 store.dispatch(
-                    SpeechRecognitionReportWakeWordDetectionAction(wake_word=wake_word),
+                    SpeechRecognitionReportWakeWordDetectionAction(
+                        wake_word=wake_word,
+                        engine_name=self.engines['wake_word'].name,
+                    ),
                 )
             await asyncio.sleep(0.1)
 

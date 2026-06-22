@@ -17,6 +17,10 @@ from constants import OFFLINE_ENGINES
 from engines_manager import EnginesManager
 from pattern import PatternError, expand_pattern
 from redux import AutorunOptions
+from wake_phrase_validation import (
+    phrase_collisions,
+    validate_phrase,
+)
 
 from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
@@ -42,6 +46,13 @@ from ubo_app.store.input.types import (
     WebUIInputDescription,
 )
 from ubo_app.store.main import store
+from ubo_app.store.services.assistant import AssistantSetConversationEndPhrasesAction
+from ubo_app.store.services.notifications import (
+    Importance,
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
+)
 from ubo_app.store.services.rgb_ring import (
     RgbRingBlankAction,
     RgbRingCommandAction,
@@ -53,10 +64,15 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionEngineName,
     SpeechRecognitionIntent,
     SpeechRecognitionRemoveCommandAction,
-    SpeechRecognitionSetIsAssistantActiveAction,
-    SpeechRecognitionSetIsIntentsActiveAction,
+    SpeechRecognitionSetConversationEndPhrasesAction,
     SpeechRecognitionSetSelectedEngineAction,
+    SpeechRecognitionSetSlotEnabledAction,
+    SpeechRecognitionSetWakePhrasesAction,
+    SpeechRecognitionState,
     SpeechRecognitionUpdateCommandAction,
+    WakeMode,
+    WakeWordSlot,
+    slot_for_mode,
 )
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
@@ -155,12 +171,6 @@ def _build_toggle_item(
 def _register_static_menus() -> None:
     """Register static action handlers and dispatch static menus."""
     register_action(
-        'speech-recognition:open_services',
-        lambda: store.dispatch(
-            StackPushMenuAction(menu_key='speech-recognition:services'),
-        ),
-    )
-    register_action(
         'speech-recognition:open_engines',
         lambda: store.dispatch(
             StackPushMenuAction(menu_key='speech-recognition:engines'),
@@ -180,12 +190,6 @@ def _register_static_menus() -> None:
             heading='Speech Recognition Settings',
             sub_heading='Vosk is used for wake word detection',
             items=(
-                MenuItemData(
-                    key='services',
-                    label='Services',
-                    icon='\uf4a7',
-                    action_id='speech-recognition:open_services',
-                ),
                 MenuItemData(
                     key='commands',
                     label='Commands',
@@ -210,13 +214,32 @@ def _register_static_menus() -> None:
             label='Speech Recognition',
             icon='\uf2a2',
         ),
+        # One combined "Wake Phrases" entry under Assistant (more discoverable):
+        # per-category enable/disable + multi-phrase editing. Handled here.
+        RegisterSettingAppAction(
+            category=SettingsCategory.ASSISTANT,
+            # Higher than every other Assistant entry (max is stt=50) so Wake
+            # Phrases sorts first (settings entries sort by priority descending).
+            priority=100,
+            key='voice',
+            label='Wake Phrases',
+            icon='\U000f036f',
+        ),
     )
 
 
+# Registered-setting keys (``service:key``) → the dynamic menu id they open.
+# Underscore keys map to hyphenated menu ids explicitly (no string munging).
+_SETTING_KEY_TO_MENU: dict[str, str] = {
+    'speech_recognition:': 'speech-recognition:main',
+    'speech_recognition:voice': 'speech-recognition:voice',
+}
+
+
 def _speech_recognition_path_matcher(path: tuple[str, ...]) -> str | None:
-    if len(path) >= 4 and path[3] == 'speech_recognition:':  # noqa: PLR2004
+    if len(path) >= 4 and path[3] in _SETTING_KEY_TO_MENU:  # noqa: PLR2004
         if len(path) == 4:  # noqa: PLR2004
-            return 'speech-recognition:main'
+            return _SETTING_KEY_TO_MENU[path[3]]
         if len(path) == 5:  # noqa: PLR2004
             return path[4]
     return None
@@ -500,19 +523,347 @@ def _register_command_actions() -> None:
     )
 
 
-def init_service() -> Subscriptions:
-    """Initialize speech recognition service."""
+# Per-mode short title + helper text (title used for menu rows + submenu heading).
+_WAKE_MODE_META: dict[WakeMode, tuple[str, str]] = {
+    WakeMode.INTENTS: ('Command', 'Spoken to start a voice command.'),
+    WakeMode.QUICK_CHAT: ('Quick Chat', 'Spoken to start a short chat.'),
+    WakeMode.CONVERSATION: ('Conversation', 'Spoken to start a long conversation.'),
+    WakeMode.STOP_TALKING: ('Stop', 'Spoken to stop the assistant talking.'),
+}
+_END_PHRASES_LABEL = 'Conversation End'
+
+
+@store.with_state(lambda state: state.speech_recognition)
+def _read_speech_recognition_state(
+    state: SpeechRecognitionState,
+) -> SpeechRecognitionState:
+    return state
+
+
+def _notify_blocked_no_model() -> None:
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='speech_recognition:wake-phrase-no-model',
+                title='Model required',
+                content='Download the Vosk speech model before editing wake phrases.',
+                importance=Importance.HIGH,
+                display_type=NotificationDisplayType.FLASH,
+                icon='',
+            ),
+        ),
+    )
+
+
+def _notify_rejected(problems: list[str]) -> None:
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='speech_recognition:wake-phrase-rejected',
+                title='Phrase not accepted',
+                content='\n'.join(problems),
+                importance=Importance.HIGH,
+                display_type=NotificationDisplayType.FLASH,
+                icon='',
+            ),
+        ),
+    )
+
+
+def _clean_phrase_lines(raw: str) -> list[str]:
+    """Lowercased, de-duplicated, non-empty phrase lines."""
+    lines: list[str] = []
+    for line in raw.splitlines():
+        phrase = line.strip().casefold()
+        if phrase and phrase not in lines:
+            lines.append(phrase)
+    return lines
+
+
+async def _wake_phrases_form(mode: WakeMode, engines_manager: EnginesManager) -> None:
+    """Edit a wake/stop category's phrases (multiple alternatives, one per line).
+
+    On rejection, dispatches a notification naming the offending words and
+    returns — the user reopens the editor to fix (so the message stays visible
+    instead of being hidden behind an immediately re-opened form).
+    """
+    model = engines_manager.wake_word_model()
+    if model is None:
+        _notify_blocked_no_model()
+        return
+
+    title, description = _WAKE_MODE_META[mode]
+    raw = '\n'.join(slot_for_mode(_read_speech_recognition_state(), mode).phrases)
+    try:
+        _, result = await ubo_input(
+            prompt=f'Edit {title}',
+            descriptions=[
+                WebUIInputDescription(
+                    fields=[
+                        InputFieldDescription(
+                            name='engine',
+                            label='Engine',
+                            type=InputFieldType.SELECT,
+                            description='OpenWakeWord and Picovoice coming soon.',
+                            options=['Vosk/Kaldi'],
+                            default_value='Vosk/Kaldi',
+                            required=True,
+                        ),
+                        InputFieldDescription(
+                            name='phrases',
+                            label=title,
+                            type=InputFieldType.LONG,
+                            description=f'{description} One phrase per line.',
+                            default_value=raw,
+                            required=True,
+                        ),
+                    ],
+                ),
+            ],
+        )
+    except asyncio.CancelledError:
+        logger.info('Wake phrases form cancelled', extra={'mode': mode})
+        return
+
+    raw = (result.data.get('phrases', '') if result else '') or ''
+    lines = _clean_phrase_lines(raw)
+    state = _read_speech_recognition_state()
+    problems: list[str] = []
+    if not lines:
+        problems.append('Enter at least one phrase.')
+    for phrase in lines:
+        problems += [f'"{phrase}": {p}' for p in validate_phrase(phrase, model)]
+        problems += [
+            f'"{phrase}": {p}' for p in phrase_collisions(phrase, mode, state)
+        ]
+    if problems:
+        _notify_rejected(problems)
+        return
+    store.dispatch(
+        SpeechRecognitionSetWakePhrasesAction(mode=mode, phrases=tuple(lines)),
+    )
+
+
+async def _end_phrases_form(engines_manager: EnginesManager) -> None:
+    """Edit the conversation end phrases (multiple alternatives, one per line)."""
+    model = engines_manager.wake_word_model()
+    if model is None:
+        _notify_blocked_no_model()
+        return
+
+    raw = '\n'.join(_read_speech_recognition_state().conversation_end_phrases)
+    try:
+        _, result = await ubo_input(
+            prompt=f'Edit {_END_PHRASES_LABEL}',
+            descriptions=[
+                WebUIInputDescription(
+                    fields=[
+                        InputFieldDescription(
+                            name='phrases',
+                            label=_END_PHRASES_LABEL,
+                            type=InputFieldType.LONG,
+                            description='One phrase per line, spoken to end a '
+                            'conversation.',
+                            default_value=raw,
+                            required=True,
+                        ),
+                    ],
+                ),
+            ],
+        )
+    except asyncio.CancelledError:
+        logger.info('End phrases form cancelled')
+        return
+
+    raw = (result.data.get('phrases', '') if result else '') or ''
+    lines = _clean_phrase_lines(raw)
+    state = _read_speech_recognition_state()
+    wake_values = {
+        phrase.casefold() for slot in state.wake_slots for phrase in slot.phrases
+    }
+    problems: list[str] = []
+    if not lines:
+        problems.append('Enter at least one phrase.')
+    for phrase in lines:
+        problems += [f'"{phrase}": {p}' for p in validate_phrase(phrase, model)]
+        if phrase in wake_values:
+            problems.append(f'"{phrase}": already used by a wake phrase.')
+    if problems:
+        _notify_rejected(problems)
+        return
+    store.dispatch(
+        SpeechRecognitionSetConversationEndPhrasesAction(phrases=tuple(lines)),
+    )
+
+
+def _slot_submenu_subheading(slot: WakeWordSlot) -> str:
+    """Heading text listing a slot's phrases + enabled state (for HeadedMenu)."""
+    state_line = 'Enabled' if slot.enabled else 'Disabled'
+    if slot.mode in (WakeMode.CONVERSATION, WakeMode.STOP_TALKING):
+        state_line += ' (Conversation and Stop turn on/off together)'
+    phrases = '\n'.join(f'• {phrase}' for phrase in slot.phrases) or '• (none)'
+    return f'{state_line}\n{phrases}'
+
+
+def _dispatch_voice_menus(
+    wake_slots: tuple[WakeWordSlot, ...],
+    end_phrases: tuple[str, ...],
+) -> None:
+    """(Re)build the combined Wake Phrases menu + every per-category submenu."""
+    rows = [
+        _build_toggle_item(
+            key=f'voice-{slot.mode.value}',
+            label=_WAKE_MODE_META[slot.mode][0],
+            is_active=slot.enabled,
+            action_id=f'speech-recognition:open-slot:{slot.mode.value}',
+        )
+        for slot in wake_slots
+    ]
+    rows.append(
+        MenuItemData(
+            key='voice-end',
+            label=_END_PHRASES_LABEL,
+            icon='\U000f036f',
+            action_id='speech-recognition:open-slot:end',
+        ),
+    )
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id='speech-recognition:voice',
+            title='Wake Phrases',
+            heading='Wake Phrases',
+            sub_heading='Enable, disable, or edit each voice trigger.',
+            items=tuple(rows),
+            placeholder='',
+        ),
+    )
+
+    for slot in wake_slots:
+        title = _WAKE_MODE_META[slot.mode][0]
+        toggle_label = 'Disable' if slot.enabled else 'Enable'
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id=f'speech-recognition:voice:{slot.mode.value}',
+                title=title,
+                heading=title,
+                sub_heading=_slot_submenu_subheading(slot),
+                items=(
+                    _build_toggle_item(
+                        key='toggle',
+                        label=toggle_label,
+                        is_active=slot.enabled,
+                        action_id=(
+                            f'speech-recognition:toggle-slot:{slot.mode.value}'
+                        ),
+                    ),
+                    MenuItemData(
+                        key='edit',
+                        label='Edit Phrases',
+                        icon='\U000f036f',
+                        action_id=f'speech-recognition:edit-slot:{slot.mode.value}',
+                    ),
+                ),
+                placeholder='',
+            ),
+        )
+
+    end_list = '\n'.join(f'• {phrase}' for phrase in end_phrases) or '• (none)'
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id='speech-recognition:voice:end',
+            title=_END_PHRASES_LABEL,
+            heading=_END_PHRASES_LABEL,
+            sub_heading=f'Spoken to end a conversation.\n{end_list}',
+            items=(
+                MenuItemData(
+                    key='edit',
+                    label='Edit Phrases',
+                    icon='\U000f036f',
+                    action_id='speech-recognition:edit-end-phrases',
+                ),
+            ),
+            placeholder='',
+        ),
+    )
+
+
+def _register_wake_phrase_handlers(engines_manager: EnginesManager) -> None:
+    """Register open/toggle/edit handlers + the end-phrase policy mirror."""
+
+    def _open_slot(action_id: str) -> None:
+        key = action_id.removeprefix('speech-recognition:open-slot:')
+        menu_key = (
+            'speech-recognition:voice:end'
+            if key == 'end'
+            else f'speech-recognition:voice:{key}'
+        )
+        store.dispatch(StackPushMenuAction(menu_key=menu_key))
+
+    def _toggle_slot(action_id: str) -> None:
+        mode = WakeMode(action_id.removeprefix('speech-recognition:toggle-slot:'))
+        slot = slot_for_mode(_read_speech_recognition_state(), mode)
+        store.dispatch(
+            SpeechRecognitionSetSlotEnabledAction(
+                mode=mode,
+                enabled=not slot.enabled,
+            ),
+        )
+
+    def _edit_slot(action_id: str) -> None:
+        mode = WakeMode(action_id.removeprefix('speech-recognition:edit-slot:'))
+        # Pop the submenu so the form isn't behind it; statement (not return) so
+        # no stray empty menu frame is pushed.
+        store.dispatch(StackPopAction())
+        create_task(_wake_phrases_form(mode, engines_manager))
+
+    def _edit_end_phrases() -> None:
+        store.dispatch(StackPopAction())
+        create_task(_end_phrases_form(engines_manager))
+
+    for action_id, handler in (
+        ('speech-recognition:open-slot:*', _open_slot),
+        ('speech-recognition:toggle-slot:*', _toggle_slot),
+        ('speech-recognition:edit-slot:*', _edit_slot),
+    ):
+        register_action(action_id, handler, allow_reregister=True)
+    register_action(
+        'speech-recognition:edit-end-phrases',
+        _edit_end_phrases,
+        allow_reregister=True,
+    )
+
+    @store.autorun(lambda state: state.speech_recognition.conversation_end_phrases)
+    def _mirror_conversation_end_phrases(phrases: tuple[str, ...]) -> None:
+        """Mirror editable end phrases into the assistant conversation policy.
+
+        Fires on startup too, so a persisted custom value re-points the policy
+        (whose default table is seeded from the module constant).
+        """
+        store.dispatch(AssistantSetConversationEndPhrasesAction(phrases=phrases))
+
+
+def _register_persistence() -> None:
+    """Register the persistent-store keys for engine, wake slots, end phrases."""
     register_persistent_store(
         'speech_recognition:selected_engine',
         lambda state: state.speech_recognition.selected_engine or 'vosk',
     )
     register_persistent_store(
-        'speech_recognition:is_intents_active',
-        lambda state: state.speech_recognition.is_intents_active,
+        'speech_recognition:wake_slots',
+        lambda state: json.dumps(
+            [
+                {
+                    'mode': slot.mode.value,
+                    'phrases': list(slot.phrases),
+                    'enabled': slot.enabled,
+                }
+                for slot in state.speech_recognition.wake_slots
+            ],
+        ),
     )
     register_persistent_store(
-        'speech_recognition:is_assistant_active',
-        lambda state: state.speech_recognition.is_assistant_active,
+        'speech_recognition:conversation_end_phrases',
+        lambda state: list(state.speech_recognition.conversation_end_phrases),
     )
     register_persistent_store(
         COMMANDS_PERSISTENT_KEY,
@@ -529,26 +880,29 @@ def init_service() -> Subscriptions:
         ),
     )
 
+
+def init_service() -> Subscriptions:
+    """Initialize speech recognition service."""
+    _register_persistence()
+
     register_default_bindable_actions()
     register_shortcut_actions()
 
     engines_manager = EnginesManager()
     _engine_action_ids: list[str] = []
-    _services_action_ids: list[str] = []
 
     @store.autorun(
         lambda state: (
-            state.speech_recognition.is_intents_active,
             state.speech_recognition.selected_engine,
             state.assistant.provider_setup_status,
         ),
         options=AutorunOptions(memoization=False),
     )
     def recognition_engine_items(
-        data: tuple[bool, SpeechRecognitionEngineName | None, dict[str, bool]],
+        data: tuple[SpeechRecognitionEngineName | None, dict[str, bool]],
     ) -> None:
         """Update items for recognition engine selection."""
-        _, selected_engine, _ = data
+        selected_engine, _ = data
 
         for action_id in _engine_action_ids:
             unregister_action(action_id)
@@ -607,60 +961,16 @@ def init_service() -> Subscriptions:
 
     @store.autorun(
         lambda state: (
-            state.speech_recognition.is_intents_active,
-            state.speech_recognition.is_assistant_active,
+            state.speech_recognition.wake_slots,
+            state.speech_recognition.conversation_end_phrases,
         ),
     )
-    def speech_recognition_items(data: tuple[bool, bool]) -> None:
-        """Update items for speech recognition services."""
-        is_intents_active, is_assistant_active = data
-
-        for action_id in _services_action_ids:
-            unregister_action(action_id)
-        _services_action_ids.clear()
-
-        intents_action_id = 'speech-recognition:toggle-intents'
-        _services_action_ids.append(intents_action_id)
-        register_action(
-            intents_action_id,
-            lambda: store.dispatch(
-                SpeechRecognitionSetIsIntentsActiveAction(
-                    is_active=not is_intents_active,
-                ),
-            ),
-        )
-
-        assistant_action_id = 'speech-recognition:toggle-assistant'
-        _services_action_ids.append(assistant_action_id)
-        register_action(
-            assistant_action_id,
-            lambda: store.dispatch(
-                SpeechRecognitionSetIsAssistantActiveAction(
-                    is_active=not is_assistant_active,
-                ),
-            ),
-        )
-
-        store.dispatch(
-            UpdateDynamicMenuAction(
-                menu_id='speech-recognition:services',
-                title='Services',
-                items=(
-                    _build_toggle_item(
-                        key='is_intents_active',
-                        label='Command Interface',
-                        is_active=is_intents_active,
-                        action_id=intents_action_id,
-                    ),
-                    _build_toggle_item(
-                        key='is_assistant_active',
-                        label='Voice Assistant',
-                        is_active=is_assistant_active,
-                        action_id=assistant_action_id,
-                    ),
-                ),
-            ),
-        )
+    def voice_menu_items(
+        data: tuple[tuple[WakeWordSlot, ...], tuple[str, ...]],
+    ) -> None:
+        """Rebuild the combined Wake Phrases menu + per-category submenus."""
+        wake_slots, end_phrases = data
+        _dispatch_voice_menus(wake_slots, end_phrases)
 
     @store.autorun(lambda state: state.speech_recognition.intents)
     def speech_recognition_command_items(
@@ -693,6 +1003,7 @@ def init_service() -> Subscriptions:
             ),
         )
 
+    _register_wake_phrase_handlers(engines_manager)
     _register_command_actions()
     _register_static_menus()
 

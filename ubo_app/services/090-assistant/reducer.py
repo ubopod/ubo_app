@@ -44,6 +44,7 @@ from ubo_app.store.services.assistant import (
     AssistantRunPipelineAction,
     AssistantRunPipelineEvent,
     AssistantSelectGenericLLMProviderAction,
+    AssistantSetConversationEndPhrasesAction,
     AssistantSetIsActiveAction,
     AssistantSetKokoroDownloadedAction,
     AssistantSetMcpServersAction,
@@ -79,6 +80,8 @@ from ubo_app.store.services.assistant import (
     GenericLLMProvider,
     StopTalkingPhraseStopReason,
     UserStopReason,
+    WakePhraseMatcher,
+    WakePhraseTriggerSource,
     resolve_policy,
 )
 from ubo_app.store.services.audio import (
@@ -99,6 +102,7 @@ from ubo_app.store.services.rgb_ring import (
     RgbRingBlinkAction,
     RgbRingRainbowAction,
 )
+from ubo_app.store.services.speech_recognition import WakeMode
 
 if TYPE_CHECKING:
     from redux import ReducerResult
@@ -166,6 +170,36 @@ def reducer(
     match action:
         case AssistantSetIsActiveAction():
             return replace(state, is_active=action.is_active)
+
+        case AssistantSetConversationEndPhrasesAction(phrases=phrases):
+            # Update the conversation entry in the policy table, and — if the
+            # conversation source is currently active — the live ``active_policy``
+            # the subprocess watches, so a mid-conversation edit takes effect now.
+            new_policies = tuple(
+                replace(
+                    entry,
+                    policy=replace(entry.policy, end_of_turn_phrases=phrases),
+                )
+                if isinstance(entry.matcher, WakePhraseMatcher)
+                and entry.matcher.mode is WakeMode.CONVERSATION
+                else entry
+                for entry in state.policies
+            )
+            new_active_policy = state.active_policy
+            if (
+                isinstance(state.active_source, WakePhraseTriggerSource)
+                and state.active_source.mode is WakeMode.CONVERSATION
+                and state.active_policy is not None
+            ):
+                new_active_policy = replace(
+                    state.active_policy,
+                    end_of_turn_phrases=phrases,
+                )
+            return replace(
+                state,
+                policies=new_policies,
+                active_policy=new_active_policy,
+            )
 
         case AssistantSetSelectedSTTAction():
             return replace(state, selected_stt=action.stt_name)
@@ -437,7 +471,7 @@ def reducer(
                 actions=[RgbRingBlankAction()],
             )
 
-        case AssistantStopTalkingAction():
+        case AssistantStopTalkingAction(phrase=phrase, detector=detector):
             return CompleteReducerResult(
                 state=state,
                 actions=[
@@ -455,8 +489,12 @@ def reducer(
                     # The user wants to fully exit the interaction — silence
                     # the bot AND end any active listening session, so any
                     # subsequent words don't get captured as a follow-up turn.
+                    # Forward the exact stop phrase + detecting engine.
                     AssistantStopListeningAction(
-                        reason=StopTalkingPhraseStopReason(),
+                        reason=StopTalkingPhraseStopReason(
+                            phrase=phrase,
+                            detector=detector,
+                        ),
                     ),
                 ],
                 events=[AssistantStopTalkingEvent()],

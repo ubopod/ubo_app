@@ -242,8 +242,11 @@ def test_start_writes_active_source_and_policy(
 
     matcher = state.policies[0].matcher
     assert isinstance(matcher, ns.WakePhraseMatcher)
+    # Default wake-phrase matchers are keyed on ``mode`` (not literal phrase),
+    # so build a source carrying the same mode.
     source = ns.WakePhraseTriggerSource(
-        phrase=cast('WakePhraseMatcher', matcher).phrase,
+        phrase='a conversation phrase',
+        mode=cast('WakePhraseMatcher', matcher).mode,
     )
     next_state = _step(ns, state, ns.AssistantStartListeningAction(source=source))
 

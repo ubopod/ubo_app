@@ -10,8 +10,9 @@ from ubo_app.engines.abstraction.background_running_mixin import BackgroundRunni
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionSetIsAssistantActiveAction,
-    SpeechRecognitionSetIsIntentsActiveAction,
+    SpeechRecognitionSetAssistantSlotsEnabledAction,
+    SpeechRecognitionSetSlotEnabledAction,
+    WakeMode,
 )
 from ubo_app.utils.async_evicting_queue import AsyncEvictingQueue
 
@@ -33,8 +34,11 @@ class BaseSpeechRecognitionEngine(BackgroundRunningMixin):
     def run(self) -> bool:
         if not super().run():
             store.dispatch(
-                SpeechRecognitionSetIsIntentsActiveAction(is_active=False),
-                SpeechRecognitionSetIsAssistantActiveAction(is_active=False),
+                SpeechRecognitionSetSlotEnabledAction(
+                    mode=WakeMode.INTENTS,
+                    enabled=False,
+                ),
+                SpeechRecognitionSetAssistantSlotsEnabledAction(enabled=False),
             )
             return False
         return True

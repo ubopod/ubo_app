@@ -34,7 +34,7 @@ from ubo_app.store.services.infrared import (
 from ubo_app.store.services.rgb_ring import RgbRingRainbowAction, RgbRingSetAllAction
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionIntent,
-    SpeechRecognitionSetIsAssistantActiveAction,
+    SpeechRecognitionSetAssistantSlotsEnabledAction,
 )
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
@@ -113,12 +113,12 @@ def register_default_bindable_actions() -> None:
         (
             SPEECH_ASSISTANT_ON,
             'Assistant: Turn On',
-            SpeechRecognitionSetIsAssistantActiveAction(is_active=True),
+            SpeechRecognitionSetAssistantSlotsEnabledAction(enabled=True),
         ),
         (
             SPEECH_ASSISTANT_OFF,
             'Assistant: Turn Off',
-            SpeechRecognitionSetIsAssistantActiveAction(is_active=False),
+            SpeechRecognitionSetAssistantSlotsEnabledAction(enabled=False),
         ),
         (SPEECH_WIFI_CAMERA, 'WiFi: Setup via Camera', _WIFI_CAMERA_ACTION),
         (SPEECH_WIFI_WEB, 'WiFi: Setup via Web', _WIFI_WEB_ACTION),

@@ -13,9 +13,7 @@ from redux import BaseAction, BaseEvent
 from ubo_app.constants.assistant import (
     ASSISTANT_CONVERSATION_END_PHRASES,
     ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS,
-    ASSISTANT_CONVERSATION_WAKE_WORD,
     ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
-    ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
     DEFAULT_LLM_ANTHROPIC_MODEL,
     DEFAULT_LLM_CEREBRAS_MODEL,
     DEFAULT_LLM_DEEPSEEK_MODEL,
@@ -30,6 +28,7 @@ from ubo_app.constants.assistant import (
     DEFAULT_LLM_QWEN_MODEL,
     DEFAULT_LLM_VENICE_MODEL,
 )
+from ubo_app.store.services.speech_recognition import WakeMode
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 if TYPE_CHECKING:
@@ -270,6 +269,8 @@ class WakePhraseTriggerSource(AssistantTriggerSource):
 
     phrase: str
     detector: str = 'vosk'
+    mode: WakeMode | None = None
+    """Which wake slot matched, so policies can key on mode not literal text."""
 
 
 class KeypadTriggerSource(AssistantTriggerSource):
@@ -338,7 +339,13 @@ class StopTalkingPhraseStopReason(AssistantStopReason):
     the Pipecat pipeline by the configured end-of-turn phrases) — this reason
     fires when the Vosk-side always-on stop phrase ("okay enough" by default)
     is heard and the user wants to fully exit the interaction.
+
+    Carries the exact phrase that matched and the engine that detected it, so
+    consumers can branch on source.
     """
+
+    phrase: str = ''
+    detector: str = ''
 
 
 class BotStartedSpeakingStopReason(AssistantStopReason):
@@ -365,9 +372,14 @@ class AssistantTriggerPolicyMatcher(Immutable):
 
 
 class WakePhraseMatcher(AssistantTriggerPolicyMatcher):
-    """Match a wake-phrase trigger by phrase string (case-insensitive equality)."""
+    """Match a wake-phrase trigger.
 
-    phrase: str
+    Prefers the ``mode`` discriminator when set (so editing the phrase text never
+    orphans the policy); falls back to case-insensitive ``phrase`` equality.
+    """
+
+    phrase: str | None = None
+    mode: WakeMode | None = None
 
 
 class KeypadMatcher(AssistantTriggerPolicyMatcher):
@@ -431,7 +443,7 @@ def _default_policies() -> tuple[AssistantTriggerPolicyEntry, ...]:
         # Conversation: tolerate long pauses — complete on an end-of-turn phrase
         # OR after a long silence window.
         AssistantTriggerPolicyEntry(
-            matcher=WakePhraseMatcher(phrase=ASSISTANT_CONVERSATION_WAKE_WORD),
+            matcher=WakePhraseMatcher(mode=WakeMode.CONVERSATION),
             policy=AssistantTriggerPolicy(
                 silence_timeout_seconds=ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS,
                 end_of_turn_phrases=ASSISTANT_CONVERSATION_END_PHRASES,
@@ -439,7 +451,7 @@ def _default_policies() -> tuple[AssistantTriggerPolicyEntry, ...]:
         ),
         # Quick chat: single short turn, complete after a brief silence.
         AssistantTriggerPolicyEntry(
-            matcher=WakePhraseMatcher(phrase=ASSISTANT_QUICK_CHAT_WAKE_PHRASE),
+            matcher=WakePhraseMatcher(mode=WakeMode.QUICK_CHAT),
             policy=AssistantTriggerPolicy(
                 silence_timeout_seconds=ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
             ),
@@ -474,8 +486,12 @@ def _matcher_matches(
     if isinstance(matcher, AnySourceMatcher):
         return True
     if isinstance(matcher, WakePhraseMatcher):
+        if not isinstance(source, WakePhraseTriggerSource):
+            return False
+        if matcher.mode is not None:
+            return matcher.mode == source.mode
         return (
-            isinstance(source, WakePhraseTriggerSource)
+            matcher.phrase is not None
             and matcher.phrase.casefold() == source.phrase.casefold()
         )
     if isinstance(matcher, KeypadMatcher):
@@ -516,6 +532,18 @@ class AssistantSetIsActiveAction(AssistantAction):
     """Action to set the assistant active state."""
 
     is_active: bool
+
+
+class AssistantSetConversationEndPhrasesAction(AssistantAction):
+    """Update the conversation end-of-turn phrases.
+
+    Mirrors ``state.speech_recognition.conversation_end_phrases`` into the
+    conversation policy: rewrites the matching entry in ``policies`` and, when
+    the conversation source is currently active, also replaces ``active_policy``
+    so an edit mid-conversation takes effect immediately.
+    """
+
+    phrases: tuple[str, ...]
 
 
 class AssistantSetSelectedSTTAction(AssistantAction):
@@ -829,7 +857,13 @@ class AssistantStopTalkingAction(AssistantAction):
     Differs from a wake-phrase barge-in (``AssistantStartListeningAction``):
     this action stops the in-flight TTS playback and LLM response but does
     NOT start a new listening session — the user explicitly asked for quiet.
+
+    ``phrase`` and ``detector`` carry the stop phrase that matched and the
+    engine that detected it (forwarded into ``StopTalkingPhraseStopReason``).
     """
+
+    phrase: str = ''
+    detector: str = ''
 
 
 class AssistantTranscribeAction(AssistantAction):

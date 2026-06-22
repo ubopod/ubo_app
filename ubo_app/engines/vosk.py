@@ -34,7 +34,8 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionSetIsIntentsActiveAction,
+    SpeechRecognitionSetSlotEnabledAction,
+    WakeMode,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils.async_ import create_task
@@ -203,7 +204,10 @@ the screen.""",
 
                 await self.refresh_downloaded_models()
                 store.dispatch(
-                    SpeechRecognitionSetIsIntentsActiveAction(is_active=True),
+                    SpeechRecognitionSetSlotEnabledAction(
+                        mode=WakeMode.INTENTS,
+                        enabled=True,
+                    ),
                     AssistantUpdateProvidersAction(),
                 )
                 decide = getattr(self, 'decide_running_state', None)

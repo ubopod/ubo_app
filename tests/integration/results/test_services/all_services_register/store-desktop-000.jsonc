@@ -29,28 +29,30 @@
         "_type": "AssistantTriggerPolicyEntry",
         "matcher": {
           "_type": "WakePhraseMatcher",
-          "phrase": "let's have a conversation"
+          "mode": "conversation",
+          "phrase": null
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
+          "completion_mode": "silence",
           "end_of_turn_phrases": [
             "i am done talking",
             "i'm done talking"
           ],
-          "requires_phrase_for_stop": true,
-          "silence_timeout_seconds": null
+          "silence_timeout_seconds": 5.0
         }
       },
       {
         "_type": "AssistantTriggerPolicyEntry",
         "matcher": {
           "_type": "WakePhraseMatcher",
-          "phrase": "hey quick question"
+          "mode": "quick_chat",
+          "phrase": null
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
+          "completion_mode": "silence",
           "end_of_turn_phrases": [],
-          "requires_phrase_for_stop": false,
           "silence_timeout_seconds": 2.0
         }
       },
@@ -62,8 +64,8 @@
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
+          "completion_mode": "manual",
           "end_of_turn_phrases": [],
-          "requires_phrase_for_stop": false,
           "silence_timeout_seconds": null
         }
       },
@@ -76,8 +78,8 @@
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
+          "completion_mode": "manual",
           "end_of_turn_phrases": [],
-          "requires_phrase_for_stop": false,
           "silence_timeout_seconds": null
         }
       },
@@ -88,8 +90,8 @@
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
+          "completion_mode": "silence",
           "end_of_turn_phrases": [],
-          "requires_phrase_for_stop": false,
           "silence_timeout_seconds": null
         }
       }
@@ -769,6 +771,17 @@
         "label": "Speech Recognition",
         "priority": 30
       },
+      "speech_recognition:voice": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Assistant",
+        "icon": "󰍯",
+        "key": "speech_recognition:voice",
+        "label": "Wake Phrases",
+        "priority": 100
+      },
       "speech_synthesis:engines": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
@@ -852,6 +865,7 @@
       "lightdm:": 0,
       "rpi_connect:": null,
       "speech_recognition:": 30,
+      "speech_recognition:voice": 100,
       "speech_synthesis:engines": 10,
       "speech_synthesis:settings": 0,
       "ssh:": 1,
@@ -1181,6 +1195,10 @@
   },
   "speech_recognition": {
     "_type": "SpeechRecognitionState",
+    "conversation_end_phrases": [
+      "i am done talking",
+      "i'm done talking"
+    ],
     "intents": [
       {
         "_type": "SpeechRecognitionIntent",
@@ -1455,10 +1473,42 @@
         ]
       }
     ],
-    "is_assistant_active": false,
-    "is_intents_active": false,
     "selected_engine": "vosk",
-    "status": "idle"
+    "status": "idle",
+    "wake_slots": [
+      {
+        "_type": "WakeWordSlot",
+        "enabled": false,
+        "mode": "intents",
+        "phrases": [
+          "short voice command"
+        ]
+      },
+      {
+        "_type": "WakeWordSlot",
+        "enabled": false,
+        "mode": "quick_chat",
+        "phrases": [
+          "hey quick question"
+        ]
+      },
+      {
+        "_type": "WakeWordSlot",
+        "enabled": false,
+        "mode": "conversation",
+        "phrases": [
+          "let's have a conversation"
+        ]
+      },
+      {
+        "_type": "WakeWordSlot",
+        "enabled": false,
+        "mode": "stop_talking",
+        "phrases": [
+          "okay enough"
+        ]
+      }
+    ]
   },
   "speech_synthesis": {
     "_type": "SpeechSynthesisState",
