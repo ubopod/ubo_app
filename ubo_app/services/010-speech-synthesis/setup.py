@@ -161,6 +161,13 @@ def _warn_no_tts_configured() -> None:
                         icon='󰒓',
                         store_action=[
                             StackPopToRootAction(),
+                            # The derived path excludes the root frame but
+                            # INCLUDES 'main'; the assistant matcher only
+                            # resolves the TTS drill-down (Piper/Kokoro voice
+                            # download) under ('main','settings','Assistant',…),
+                            # so rebuild the full chain — omitting 'main' lands
+                            # on the TTS menu but dead-ends every child.
+                            StackPushMenuAction(menu_key='main'),
                             StackPushMenuAction(menu_key='settings'),
                             StackPushMenuAction(
                                 menu_key=SettingsCategory.ASSISTANT.value,
