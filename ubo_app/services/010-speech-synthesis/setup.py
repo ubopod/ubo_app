@@ -1,453 +1,246 @@
-"""Implement `init_service` for speech synthesis service."""
+"""Implement `init_service` for speech synthesis service.
+
+The service no longer owns any TTS engine. It forwards read-text requests to the
+assistant's TTS pipeline (which synthesizes and plays the audio back through the
+core audio service) and exposes a single "Screen Reader" on/off toggle under
+Accessibility settings.
+"""
 
 from __future__ import annotations
 
-import struct
-from asyncio import CancelledError
-from pathlib import Path
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
-import fasteners
-import pvorca
-from piper.voice import AudioChunk, PiperVoice
-from redux import AutorunOptions
+from tts_selection import first_configured_local_tts, has_any_tts_configured
 
-from ubo_app.constants.assistant import PICOVOICE_ACCESS_KEY_SECRET_ID
-from ubo_app.engines.piper import PiperEngine
-from ubo_app.engines.piper_catalog import (
-    DEFAULT_PIPER_VOICE_ID,
-    model_path_for,
-    voice_for,
-    voice_label,
-)
+from ubo_app.colors import WARNING_COLOR
 from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPopToRootAction,
     StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
-from ubo_app.store.core.view_registry import register_path_menu_matcher
-from ubo_app.store.input.types import (
-    InputFieldDescription,
-    InputFieldType,
-    QRCodeInputDescription,
-    WebUIInputDescription,
+from ubo_app.store.core.view_registry import (
+    create_settings_path_matcher,
+    register_path_menu_matcher,
 )
 from ubo_app.store.main import store
-from ubo_app.store.services.audio import (
-    AudioPlayAudioSampleAction,
-    AudioPlayAudioSequenceAction,
-    AudioSample,
+from ubo_app.store.services.assistant import AssistantSynthesizeAction
+from ubo_app.store.services.notifications import (
+    Importance,
+    Notification,
+    NotificationDispatchItem,
+    NotificationDisplayType,
+    NotificationsAddAction,
+    NotificationsClearEvent,
+    NotificationsDisplayEvent,
 )
 from ubo_app.store.services.speech_synthesis import (
-    ReadableInformation,
-    SpeechSynthesisEngineName,
     SpeechSynthesisReadTextAction,
-    SpeechSynthesisSetSelectedEngineAction,
+    SpeechSynthesisSetIsEnabledAction,
+    SpeechSynthesisSetPreferLocalAction,
     SpeechSynthesisSynthesizeTextEvent,
-    SpeechSynthesisUpdateAccessKeyStatus,
 )
-from ubo_app.utils import secrets
-from ubo_app.utils.async_ import create_task, to_thread
-from ubo_app.utils.input import ubo_input
-from ubo_app.utils.menu_items import build_selection_menu
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
+    from ubo_app.store.services.assistant import AssistantTTSName
+    from ubo_app.store.services.speech_synthesis import ReadableInformation
     from ubo_app.utils.types import Subscriptions
 
 
-_piper_engine = PiperEngine()
+SCREEN_READER_MENU_ID = 'speech-synthesis:screen-reader'
+TOGGLE_SCREEN_READER_ACTION_ID = 'speech-synthesis:toggle-screen-reader'
+TOGGLE_PREFER_LOCAL_ACTION_ID = 'speech-synthesis:toggle-prefer-local'
+NO_TTS_NOTIFICATION_ID = 'speech_synthesis:no-tts'
+# The assistant registers its Text-to-Speech settings under the ASSISTANT
+# category with key 'tts' (see services/090-assistant/setup.py), reachable at
+# path ('main', 'settings', 'Assistant', 'assistant:tts').
+ASSISTANT_TTS_MENU_KEY = 'assistant:tts'
+
+# Last `extra_information` auto-read per notification id. Repeated displays of
+# the same notification (e.g. progress updates) carry the same extra info and
+# must not be re-read; the entry is dropped when the notification is cleared, so
+# a later re-fire of the same id reads again. Module-level container, not a
+# global.
+_auto_read_cache: dict[str, ReadableInformation] = {}
 
 
-@store.with_state(lambda state: state.assistant.selected_piper_voice)
-def _selected_voice_id(voice_id: str) -> str:
-    return voice_id or DEFAULT_PIPER_VOICE_ID
-
-
-class _Context:
-    picovoice_instance: pvorca.Orca | None = None
-    piper_voice: PiperVoice | None = None
-    piper_voice_id: str | None = None
-    picovoice_lock = fasteners.ReaderWriterLock()
-
-    def cleanup(self: _Context) -> None:
-        store.dispatch(SpeechSynthesisUpdateAccessKeyStatus(is_access_key_set=False))
-        with self.picovoice_lock.write_lock():
-            if self.picovoice_instance:
-                self.picovoice_instance.delete()
-                self.picovoice_instance = None
-
-    def set_access_key(self: _Context, access_key: str) -> None:
-        store.dispatch(SpeechSynthesisUpdateAccessKeyStatus(is_access_key_set=True))
-        with self.picovoice_lock.write_lock():
-            if access_key:
-                if self.picovoice_instance:
-                    self.picovoice_instance.delete()
-                self.picovoice_instance = pvorca.create(access_key)
-
-    def load_piper(self: _Context) -> None:
-        if not _piper_engine.is_setup:
-            return
-        voice_id = _selected_voice_id()
-        if self.piper_voice is not None and self.piper_voice_id == voice_id:
-            return
-        path = Path(str(model_path_for(voice_id)))
-        if not path.exists():
-            return
-        self.piper_voice = PiperVoice.load(path)
-        self.piper_voice_id = voice_id
-        piper_cache.clear()
-
-
-_context = _Context()
-
-
-def input_access_key() -> None:
-    """Input the Picovoice access key."""
-
-    async def act() -> None:
-        try:
-            input_result = (
-                await ubo_input(
-                    prompt='Enter Picovoice Access Key',
-                    title='Picovoice Access Key',
-                    descriptions=[
-                        QRCodeInputDescription(
-                            pattern=r'^(?P<access_key>.*)$',
-                            instructions=ReadableInformation(
-                                text='Convert the Picovoice access key to a QR code '
-                                'and hold it in front of the camera to scan it.',
-                                picovoice_text='Convert the Picovoice access key to a '
-                                '{QR|K Y UW AA R} and hold it in front of the camera '
-                                'to scan it.',
-                            ),
-                        ),
-                        WebUIInputDescription(
-                            fields=[
-                                InputFieldDescription(
-                                    name='access_key',
-                                    label='Access Key',
-                                    description='Enter Picovoice Access Key',
-                                    type=InputFieldType.TEXT,
-                                    required=True,
-                                    title='Picovoice Access Key',
-                                ),
-                            ],
-                        ),
-                    ],
-                )
-            )[1]
-            access_key = input_result.data.get('access_key')
-            if not access_key:
-                return
-            secrets.write_secret(key=PICOVOICE_ACCESS_KEY_SECRET_ID, value=access_key)
-            to_thread(_context.set_access_key, None, access_key)
-        except CancelledError:
-            pass
-
-    create_task(act())
-
-
-def clear_access_key() -> None:
-    """Clear the Picovoice access key."""
-    secrets.clear_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)
-    to_thread(_context.cleanup)
-
-
-@store.with_state(lambda state: state.speech_synthesis.selected_engine)
-def _engine(engine: SpeechSynthesisEngineName) -> SpeechSynthesisEngineName:
-    return engine
-
-
-piper_cache: dict[str, list[bytes]] = {}
-
-
-def _get_audio_bytes(audio_item: AudioChunk | bytes) -> bytes:
-    """Extract bytes from either AudioChunk or cached bytes."""
-    if isinstance(audio_item, AudioChunk):
-        return audio_item.audio_int16_bytes
-    return audio_item
-
-
-def synthesize_and_play(event: SpeechSynthesisSynthesizeTextEvent) -> None:
-    """Synthesize the text."""
-    engine = _engine()
-    if engine == SpeechSynthesisEngineName.PIPER:
-        text = event.information.piper_text
-        if not _context.piper_voice:
-            return
-        id = hex(hash(text))
-
-        if text in piper_cache:
-            source = piper_cache[text]
-            is_first_time = False
-        else:
-            source = _context.piper_voice.synthesize(text=text)
-            piper_cache[text] = []
-            is_first_time = True
-
-        index = 0
-        for audio_chunk in source:
-            if audio_chunk:
-                sample = _get_audio_bytes(audio_chunk)
-                if is_first_time:
-                    piper_cache[text].append(sample)
-                store.dispatch(
-                    AudioPlayAudioSequenceAction(
-                        sample=AudioSample(
-                            data=sample,
-                            channels=1,
-                            rate=_context.piper_voice.config.sample_rate,
-                            width=2,
-                        ),
-                        id=id,
-                        index=index,
-                    ),
-                )
-                index += 1
-        store.dispatch(
-            AudioPlayAudioSequenceAction(
-                sample=None,
-                id=id,
-                index=index,
-            ),
-        )
-
-    elif engine == SpeechSynthesisEngineName.PICOVOICE:
-        with _context.picovoice_lock.read_lock():
-            if not _context.picovoice_instance:
-                return
-            rate = _context.picovoice_instance.sample_rate
-
-            audio_sequence = _context.picovoice_instance.synthesize(
-                text=event.information.picovoice_text,
-                speech_rate=event.speech_rate,
-            )
-        sample = b''.join(struct.pack('h', sample) for sample in audio_sequence[0])
-        store.dispatch(
-            AudioPlayAudioSampleAction(
-                sample=AudioSample(
-                    data=sample,
-                    channels=1,
-                    rate=rate,
-                    width=2,
-                ),
-            ),
-        )
-
-
-ENGINE_LABELS = {
-    SpeechSynthesisEngineName.PIPER: 'Piper',
-    SpeechSynthesisEngineName.PICOVOICE: 'Picovoice',
-}
-
-
-def create_engine_selector(engine: SpeechSynthesisEngineName) -> Callable[[], None]:
-    """Select the speech synthesis engine."""
-
-    def _engine_selector() -> None:
-        store.dispatch(
-            SpeechSynthesisSetSelectedEngineAction(engine_name=engine),
-            SpeechSynthesisReadTextAction(
-                information=ReadableInformation(
-                    text={
-                        SpeechSynthesisEngineName.PIPER: 'Piper speech synthesis '
-                        'engine selected',
-                        SpeechSynthesisEngineName.PICOVOICE: 'Picovoice speech '
-                        'synthesis engine selected',
-                    }[engine],
-                ),
-                engine=engine,
-            ),
-        )
-
-    return _engine_selector
-
-
-SPEECH_SYNTHESIS_MENU_ID = 'speech-synthesis:main'
-PICOVOICE_SETTINGS_MENU_ID = 'speech-synthesis:picovoice'
-
-
-def _download_piper_wrapper() -> None:
-    """Download Piper model and reload context after completion."""
-    _piper_engine.setup()
-
-
-def _register_speech_synthesis_action_handlers() -> None:
-    """Register action handlers for speech synthesis menu items."""
-    from ubo_app.store.core.action_registry import register_action
-
-    register_action(
-        'speech-synthesis:download_piper',
-        _download_piper_wrapper,
-        allow_reregister=True,
-    )
-    register_action(
-        'speech-synthesis:set_access_key',
-        input_access_key,
-        allow_reregister=True,
-    )
-    register_action(
-        'speech-synthesis:clear_access_key',
-        clear_access_key,
-        allow_reregister=True,
-    )
-    register_action(
-        'speech-synthesis:select_engine',
-        lambda: store.dispatch(
-            StackPushMenuAction(menu_key='speech-synthesis:engines'),
-        ),
-        allow_reregister=True,
-    )
-
-    # Register engine-specific actions
-    for engine in SpeechSynthesisEngineName:
-        if _piper_engine.is_setup or engine != SpeechSynthesisEngineName.PIPER:
-            register_action(
-                f'speech-synthesis:engine:{engine.value}',
-                create_engine_selector(engine),
-                allow_reregister=True,
-            )
-
-
-@store.autorun(
+@store.with_state(
     lambda state: (
-        state.speech_synthesis.selected_engine,
+        state.speech_synthesis.is_prefer_local_enabled,
         state.assistant.provider_setup_status,
-        state.assistant.selected_piper_voice,
     ),
-    options=AutorunOptions(memoization=False),
 )
-def update_speech_synthesis_dynamic_menu(
-    data: tuple[SpeechSynthesisEngineName, object, str],
-) -> None:
-    """Update the dynamic menu for speech synthesis (dumb UI)."""
-    _register_speech_synthesis_action_handlers()
+def _preferred_tts_provider(
+    data: tuple[bool, dict[str, bool]],
+) -> AssistantTTSName | None:
+    """Resolve the TTS provider for a read, honoring the "Prefer Local" option.
 
-    selected_voice_id = data[2] or DEFAULT_PIPER_VOICE_ID
+    Returns ``None`` (use the assistant's default TTS) unless "Prefer Local" is
+    on and a local engine is configured, in which case the highest-priority
+    configured local engine (Piper, then Kokoro) is returned.
+    """
+    prefer_local, provider_setup_status = data
+    if not prefer_local:
+        return None
+    return first_configured_local_tts(provider_setup_status)
 
-    if _piper_engine.is_setup and (
-        _context.piper_voice is None
-        or _context.piper_voice_id != selected_voice_id
+
+def _synthesize(event: SpeechSynthesisSynthesizeTextEvent) -> None:
+    """Forward text to the assistant's TTS pipeline for synthesis and playback."""
+    store.dispatch(
+        AssistantSynthesizeAction(
+            text=event.information.text,
+            session_id=uuid4().hex,
+            tts_provider=_preferred_tts_provider(),
+        ),
+    )
+
+
+@store.with_state(lambda state: state.speech_synthesis.is_screen_reader_enabled)
+def _is_screen_reader_enabled(is_enabled: bool) -> bool:  # noqa: FBT001
+    return is_enabled
+
+
+def _auto_read_notification(event: NotificationsDisplayEvent) -> None:
+    """Read a freshly displayed notification's extra information aloud.
+
+    Gated by the Screen Reader toggle. This is the single, renderer-agnostic
+    auto-read hook — the manual "extra info" item and remote read requests are
+    unaffected (they dispatch ``SpeechSynthesisReadTextAction`` directly).
+    """
+    notification = event.notification
+    extra_information = notification.extra_information
+    if (
+        not extra_information
+        or notification.display_type is NotificationDisplayType.BACKGROUND
+        or not _is_screen_reader_enabled()
     ):
-        to_thread(_context.load_piper)
+        return
 
-    items: list[MenuItemData] = []
+    notification_id = notification.id
+    if notification_id is not None:
+        if _auto_read_cache.get(notification_id) == extra_information:
+            return
+        _auto_read_cache[notification_id] = extra_information
 
-    # Add download option if Piper not downloaded
-    if not _piper_engine.is_setup:
-        voice = voice_for(selected_voice_id)
-        download_label = (
-            f'Download Voice: {voice_label(voice)}'
-            if voice is not None
-            else 'Download Piper Voice'
-        )
-        items.append(
-            MenuItemData(
-                key='download',
-                label=download_label,
-                icon='󰇚',
-                action_id='speech-synthesis:download_piper',
-            ),
-        )
+    store.dispatch(SpeechSynthesisReadTextAction(information=extra_information))
 
-    # Add engine selection submenu item
-    items.append(
-        MenuItemData(
-            key='select_engine',
-            label='Select Engine',
-            icon='󰔊',
-            action_id='speech-synthesis:select_engine',
-        ),
-    )
 
+def _forget_notification(event: NotificationsClearEvent) -> None:
+    """Drop dedup state on clear so a re-fired notification reads again."""
+    notification_id = event.notification.id
+    if notification_id is not None:
+        _auto_read_cache.pop(notification_id, None)
+
+
+def _warn_no_tts_configured() -> None:
+    """Notify that the screen reader has no TTS engine to speak with.
+
+    The action deep-links to the assistant's Text-to-Speech settings by
+    rebuilding the navigation path from root (pushes are relative).
+    """
     store.dispatch(
-        UpdateDynamicMenuAction(
-            menu_id=SPEECH_SYNTHESIS_MENU_ID,
-            title='󰔊Speech Synthesis',
-            items=tuple(items),
-            placeholder='',
+        NotificationsAddAction(
+            notification=Notification(
+                id=NO_TTS_NOTIFICATION_ID,
+                title='Screen Reader',
+                content='No speech engine is set up. Set one up in Assistant '
+                'settings so the screen reader can speak.',
+                importance=Importance.MEDIUM,
+                icon='󰔊',
+                color=WARNING_COLOR,
+                display_type=NotificationDisplayType.STICKY,
+                actions=[
+                    NotificationDispatchItem(
+                        key='set-up-tts',
+                        label='Set up',
+                        icon='󰒓',
+                        store_action=[
+                            StackPopToRootAction(),
+                            StackPushMenuAction(menu_key='settings'),
+                            StackPushMenuAction(
+                                menu_key=SettingsCategory.ASSISTANT.value,
+                            ),
+                            StackPushMenuAction(menu_key=ASSISTANT_TTS_MENU_KEY),
+                        ],
+                        dismiss_notification=True,
+                    ),
+                ],
+            ),
         ),
     )
 
 
-SPEECH_SYNTHESIS_ENGINES_MENU_ID = 'speech-synthesis:engines'
+def _toggle_screen_reader() -> None:
+    """Flip the screen-reader enabled flag, warning if no TTS is set up."""
+
+    @store.with_state(
+        lambda state: (
+            state.speech_synthesis.is_screen_reader_enabled,
+            state.assistant.provider_setup_status,
+        ),
+    )
+    def _toggle(data: tuple[bool, dict[str, bool]]) -> None:
+        is_enabled, provider_setup_status = data
+        turning_on = not is_enabled
+        store.dispatch(SpeechSynthesisSetIsEnabledAction(is_enabled=turning_on))
+        if turning_on and not has_any_tts_configured(provider_setup_status):
+            _warn_no_tts_configured()
+
+    _toggle()
+
+
+def _toggle_prefer_local() -> None:
+    """Flip the prefer-local-TTS flag."""
+
+    @store.with_state(lambda state: state.speech_synthesis.is_prefer_local_enabled)
+    def _toggle(is_enabled: bool) -> None:  # noqa: FBT001
+        store.dispatch(SpeechSynthesisSetPreferLocalAction(is_enabled=not is_enabled))
+
+    _toggle()
 
 
 @store.autorun(
     lambda state: (
-        state.speech_synthesis.selected_engine,
+        state.speech_synthesis.is_screen_reader_enabled,
+        state.speech_synthesis.is_prefer_local_enabled,
         state.assistant.provider_setup_status,
     ),
-    options=AutorunOptions(memoization=False),
 )
-def update_engines_dynamic_menu(
-    data: tuple[SpeechSynthesisEngineName, object],
+def update_screen_reader_dynamic_menu(
+    data: tuple[bool, bool, dict[str, bool]],
 ) -> None:
-    """Update the dynamic menu for engine selection."""
-    selected_engine = SpeechSynthesisEngineName(data[0])
-    available_engines = [
-        engine
-        for engine in SpeechSynthesisEngineName
-        if _piper_engine.is_setup or engine != SpeechSynthesisEngineName.PIPER
-    ]
-
-    build_selection_menu(
-        options=tuple(
-            (
-                engine.name,
-                ENGINE_LABELS[engine],
-                f'speech-synthesis:engine:{engine.value}',
-            )
-            for engine in available_engines
-        ),
-        selected_key=selected_engine.name,
-        menu_id=SPEECH_SYNTHESIS_ENGINES_MENU_ID,
-        title=f'󰔊Select Engine: {selected_engine}',
-        heading='Select Active Engine',
-        sub_heading='Choose the speech synthesis engine to use',
+    """Render the Screen Reader toggles menu (dumb UI)."""
+    is_enabled, is_prefer_local, provider_setup_status = data
+    sub_heading = (
+        'Read notifications aloud automatically'
+        if has_any_tts_configured(provider_setup_status)
+        else '󰀦 No speech engine set up in Assistant'
     )
-
-
-@store.autorun(lambda state: state.speech_synthesis.is_access_key_set)
-def update_picovoice_dynamic_menu(
-    is_access_key_set: bool | None,  # noqa: FBT001
-) -> None:
-    """Update the dynamic menu for Picovoice settings (dumb UI)."""
-    if is_access_key_set:
-        items = (
-            MenuItemData(
-                key='clear_key',
-                label='Clear Access Key',
-                icon='󰌊',
-                action_id='speech-synthesis:clear_access_key',
-            ),
-        )
-    else:
-        items = (
-            MenuItemData(
-                key='set_key',
-                label='Set Access Key',
-                icon='󰐲',
-                action_id='speech-synthesis:set_access_key',
-            ),
-        )
-
-    # Get covered secret for sub_heading
-    covered_secret = secrets.read_covered_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)
-    sub_heading = f'Set the access key\nCurrent value: {covered_secret}'
-
     store.dispatch(
         UpdateDynamicMenuAction(
-            menu_id=PICOVOICE_SETTINGS_MENU_ID,
-            title='Picovoice Settings',
-            heading='Picovoice',
+            menu_id=SCREEN_READER_MENU_ID,
+            title='󰔊Screen Reader',
+            heading='Screen Reader',
             sub_heading=sub_heading,
-            items=items,
+            items=(
+                MenuItemData(
+                    key='screen-reader:toggle',
+                    label=f'Screen Reader: {"On" if is_enabled else "Off"}',
+                    icon='󰯄' if is_enabled else '󰯅',
+                    action_id=TOGGLE_SCREEN_READER_ACTION_ID,
+                ),
+                MenuItemData(
+                    key='screen-reader:prefer-local',
+                    label=f'Prefer Local: {"On" if is_prefer_local else "Off"}',
+                    icon='󰯄' if is_prefer_local else '󰯅',
+                    action_id=TOGGLE_PREFER_LOCAL_ACTION_ID,
+                ),
+            ),
             placeholder='',
         ),
     )
@@ -455,64 +248,45 @@ def update_picovoice_dynamic_menu(
 
 def init_service() -> Subscriptions:
     """Initialize speech synthesis service."""
+    from ubo_app.store.core.action_registry import register_action
 
-    # Register path matchers for speech synthesis settings navigation
-    def _speech_synthesis_path_matcher(path: tuple[str, ...]) -> str | None:
-        if len(path) >= 4:  # noqa: PLR2004
-            service_key = path[3]
-            if service_key == 'speech_synthesis:engines':
-                if len(path) == 4:  # noqa: PLR2004
-                    return SPEECH_SYNTHESIS_MENU_ID
-                # Engines submenu
-                if len(path) == 5 and path[4] == 'speech-synthesis:engines':  # noqa: PLR2004
-                    return SPEECH_SYNTHESIS_ENGINES_MENU_ID
-            if service_key == 'speech_synthesis:settings':
-                return PICOVOICE_SETTINGS_MENU_ID
-        return None
+    register_action(
+        TOGGLE_SCREEN_READER_ACTION_ID,
+        _toggle_screen_reader,
+        allow_reregister=True,
+    )
+    register_action(
+        TOGGLE_PREFER_LOCAL_ACTION_ID,
+        _toggle_prefer_local,
+        allow_reregister=True,
+    )
 
     unregister_path_matcher = register_path_menu_matcher(
         'speech-synthesis:settings',
-        _speech_synthesis_path_matcher,
+        create_settings_path_matcher('speech_synthesis:', SCREEN_READER_MENU_ID),
     )
-
-    access_key = secrets.read_secret(PICOVOICE_ACCESS_KEY_SECRET_ID)
-    if access_key:
-        to_thread(_context.set_access_key, None, access_key)
-    else:
-        to_thread(_context.cleanup)
 
     register_persistent_store(
-        'speech_synthesis:selected_engine',
-        lambda state: state.speech_synthesis.selected_engine,
+        'speech_synthesis:is_screen_reader_enabled',
+        lambda state: state.speech_synthesis.is_screen_reader_enabled,
     )
-
-    to_thread(_context.load_piper)
+    register_persistent_store(
+        'speech_synthesis:is_prefer_local_enabled',
+        lambda state: state.speech_synthesis.is_prefer_local_enabled,
+    )
 
     store.dispatch(
         RegisterSettingAppAction(
             category=SettingsCategory.ACCESSIBILITY,
             priority=10,
-            label='Speech Synthesis',
+            label='Screen Reader',
             icon='󰔊',
-            key='engines',
-        ),
-    )
-
-    store.dispatch(
-        RegisterSettingAppAction(
-            category=SettingsCategory.ACCESSIBILITY,
-            priority=0,
-            label='Picovoice Settings',
-            icon='PV',
-            key='settings',
         ),
     )
 
     return [
-        store.subscribe_event(
-            SpeechSynthesisSynthesizeTextEvent,
-            lambda event: to_thread(synthesize_and_play, None, event),
-        ),
-        _context.cleanup,
+        store.subscribe_event(SpeechSynthesisSynthesizeTextEvent, _synthesize),
+        store.subscribe_event(NotificationsDisplayEvent, _auto_read_notification),
+        store.subscribe_event(NotificationsClearEvent, _forget_notification),
         unregister_path_matcher,
     ]

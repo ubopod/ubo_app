@@ -29,7 +29,6 @@ from ubo_app.store.services.notifications import (
     NotificationsClearEvent,
     NotificationsDisplayEvent,
 )
-from ubo_app.store.services.speech_synthesis import SpeechSynthesisReadTextAction
 from ubo_app.utils.gui import UboPageWidget
 
 if TYPE_CHECKING:
@@ -44,7 +43,6 @@ class NotificationReference:
     def __init__(self, notification: Notification) -> None:
         self.value = notification
         self.dismiss_on_close = notification.dismiss_on_close
-        self.is_initialized = False
         self.flash_event: ClockEvent | None = None
 
 
@@ -156,21 +154,6 @@ class MenuNotificationHandler(UboApp):
                         close,
                         notification.value.flash_time,
                     )
-
-            if event.notification.extra_information and (
-                not notification.is_initialized
-                or event.notification.id is None
-                or event.notification.id != notification.value.id
-                or not notification.value.extra_information
-                or event.notification.extra_information
-                != notification.value.extra_information
-            ):
-                notification.is_initialized = True
-                store.dispatch(
-                    SpeechSynthesisReadTextAction(
-                        information=event.notification.extra_information,
-                    ),
-                )
 
         notification_application = UboNotificationWidget(
             notification_id=notification.value.id,

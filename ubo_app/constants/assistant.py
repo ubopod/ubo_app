@@ -178,8 +178,6 @@ PIPER_DOWNLOAD_PROGRESS_NOTIFICATION_ID = 'speech_synthesis:download-piper:progr
 KOKORO_DOWNLOAD_NOTIFICATION_ID = 'speech_synthesis:download-kokoro'
 KOKORO_DOWNLOAD_PROGRESS_NOTIFICATION_ID = 'speech_synthesis:download-kokoro:progress'
 
-PICOVOICE_ACCESS_KEY_SECRET_ID = 'picovoice_access_key'  # noqa: S105
-
 DEEPGRAM_API_KEY_SECRET_ID = 'deepgram_api_key'  # noqa: S105
 DEEPGRAM_API_KEY_PATTERN = '^[a-f0-9]{40}$'
 
