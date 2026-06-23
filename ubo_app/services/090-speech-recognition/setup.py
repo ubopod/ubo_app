@@ -31,7 +31,6 @@ from ubo_app.store.core.types import (
     RegisterSettingAppAction,
     SettingsCategory,
     StackPopAction,
-    StackPopToRootAction,
     StackPushMenuAction,
     StackPushPromptAction,
     UpdateDynamicMenuAction,
@@ -44,6 +43,7 @@ from ubo_app.store.input.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     DEFAULT_VOSK_MODEL_ID,
+    AssistantDownloadVoskModelAction,
     AssistantSetConversationEndPhrasesAction,
 )
 from ubo_app.store.services.notifications import (
@@ -125,21 +125,27 @@ def _build_toggle_item(
     )
 
 
+@store.with_state(lambda state: state.assistant.selected_vosk_model)
+def _download_vosk_model(selected_vosk_model: str) -> None:
+    """Start downloading the active (or default) Vosk model in place.
+
+    Voice shortcuts only ever need Vosk, so the warning's button kicks off the
+    download directly \u2014 surfacing the assistant's Vosk download progress
+    notification \u2014 instead of deep-linking into Assistant \u25b8 Speech Recognition
+    and making the user pick the model themselves.
+    """
+    store.dispatch(
+        AssistantDownloadVoskModelAction(
+            model_id=selected_vosk_model or DEFAULT_VOSK_MODEL_ID,
+        ),
+    )
+
+
 def _register_static_menus() -> None:
     """Register static action handlers and dispatch static menus."""
-    # Deep-link from the Voice Shortcuts warning to the assistant's Vosk model
-    # downloader. The assistant path matcher only resolves the Vosk drill-down
-    # under the ('main', 'settings', 'Assistant', \u2026) prefix, so rebuild that
-    # stack from the root rather than pushing a single (wrong-prefix) frame.
     register_action(
-        'speech-recognition:open-vosk-models',
-        lambda: store.dispatch(
-            StackPopToRootAction(),
-            StackPushMenuAction(menu_key='main'),
-            StackPushMenuAction(menu_key='settings'),
-            StackPushMenuAction(menu_key=SettingsCategory.ASSISTANT.value),
-            StackPushMenuAction(menu_key='assistant:stt'),
-        ),
+        'speech-recognition:download-vosk',
+        _download_vosk_model,
     )
 
     store.dispatch(
@@ -849,9 +855,9 @@ def init_service() -> Subscriptions:
         """Update the Voice Shortcuts menu listing each voice command.
 
         The menu is headed so it can warn when the Vosk model — required for
-        wake-word and command recognition — hasn't been downloaded. The model
-        lifecycle lives under Assistant ▸ Speech Recognition; when it's missing,
-        a deep-link item jumps straight there.
+        wake-word and command recognition — hasn't been downloaded. When it's
+        missing, a "Download Vosk" item starts the download in place (voice
+        shortcuts only ever need Vosk, so there's no model to pick).
         """
         intents, selected_vosk_model, downloaded_models = data
         model_ready = (
@@ -864,9 +870,9 @@ def init_service() -> Subscriptions:
             else (
                 MenuItemData(
                     key='download-model',
-                    label='Download Vosk Model',
+                    label='Download Vosk',
                     icon='󰇚',
-                    action_id='speech-recognition:open-vosk-models',
+                    action_id='speech-recognition:download-vosk',
                 ),
             )
         )
@@ -896,8 +902,8 @@ def init_service() -> Subscriptions:
                 sub_heading=(
                     'Speak a phrase after the wake word to run a shortcut.'
                     if model_ready
-                    else 'Voice shortcuts need the Vosk model — download it under '
-                    'Assistant ▸ Speech Recognition.'
+                    else 'Voice shortcuts need the Vosk model — press '
+                    'Download Vosk to get it.'
                 ),
                 items=items,
                 placeholder='No commands yet',
