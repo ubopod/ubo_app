@@ -46,6 +46,7 @@ from ubo_app.store.services.speech_synthesis import (
 from ubo_app.utils.persistent_store import register_persistent_store
 
 if TYPE_CHECKING:
+    from ubo_app.store.main import UboAction
     from ubo_app.store.services.assistant import AssistantTTSName
     from ubo_app.store.services.speech_synthesis import ReadableInformation
     from ubo_app.utils.types import Subscriptions
@@ -54,6 +55,7 @@ if TYPE_CHECKING:
 SCREEN_READER_MENU_ID = 'speech-synthesis:screen-reader'
 TOGGLE_SCREEN_READER_ACTION_ID = 'speech-synthesis:toggle-screen-reader'
 TOGGLE_PREFER_LOCAL_ACTION_ID = 'speech-synthesis:toggle-prefer-local'
+OPEN_TTS_SETTINGS_ACTION_ID = 'speech-synthesis:open-tts-settings'
 NO_TTS_NOTIFICATION_ID = 'speech_synthesis:no-tts'
 # The assistant registers its Text-to-Speech settings under the ASSISTANT
 # category with key 'tts' (see services/090-assistant/setup.py), reachable at
@@ -137,6 +139,23 @@ def _forget_notification(event: NotificationsClearEvent) -> None:
         _auto_read_cache.pop(notification_id, None)
 
 
+def _tts_settings_deeplink() -> list[UboAction]:
+    """Build the action chain that deep-links to the assistant's TTS settings.
+
+    The derived path excludes the root frame but INCLUDES 'main'; the assistant
+    matcher only resolves the TTS drill-down (Piper/Kokoro voice download) under
+    ('main','settings','Assistant',…), so rebuild the full chain from root —
+    omitting 'main' lands on the TTS menu but dead-ends every child.
+    """
+    return [
+        StackPopToRootAction(),
+        StackPushMenuAction(menu_key='main'),
+        StackPushMenuAction(menu_key='settings'),
+        StackPushMenuAction(menu_key=SettingsCategory.ASSISTANT.value),
+        StackPushMenuAction(menu_key=ASSISTANT_TTS_MENU_KEY),
+    ]
+
+
 def _warn_no_tts_configured() -> None:
     """Notify that the screen reader has no TTS engine to speak with.
 
@@ -148,8 +167,8 @@ def _warn_no_tts_configured() -> None:
             notification=Notification(
                 id=NO_TTS_NOTIFICATION_ID,
                 title='Screen Reader',
-                content='No speech engine is set up. Set one up in Assistant '
-                'settings so the screen reader can speak.',
+                content='No text to speech engine is set up. Set one up in '
+                'Assistant settings so the screen reader can speak.',
                 importance=Importance.MEDIUM,
                 icon='󰔊',
                 color=WARNING_COLOR,
@@ -159,21 +178,7 @@ def _warn_no_tts_configured() -> None:
                         key='set-up-tts',
                         label='Set up',
                         icon='󰒓',
-                        store_action=[
-                            StackPopToRootAction(),
-                            # The derived path excludes the root frame but
-                            # INCLUDES 'main'; the assistant matcher only
-                            # resolves the TTS drill-down (Piper/Kokoro voice
-                            # download) under ('main','settings','Assistant',…),
-                            # so rebuild the full chain — omitting 'main' lands
-                            # on the TTS menu but dead-ends every child.
-                            StackPushMenuAction(menu_key='main'),
-                            StackPushMenuAction(menu_key='settings'),
-                            StackPushMenuAction(
-                                menu_key=SettingsCategory.ASSISTANT.value,
-                            ),
-                            StackPushMenuAction(menu_key=ASSISTANT_TTS_MENU_KEY),
-                        ],
+                        store_action=_tts_settings_deeplink(),
                         dismiss_notification=True,
                     ),
                 ],
@@ -223,10 +228,40 @@ def update_screen_reader_dynamic_menu(
 ) -> None:
     """Render the Screen Reader toggles menu (dumb UI)."""
     is_enabled, is_prefer_local, provider_setup_status = data
+    is_configured = has_any_tts_configured(provider_setup_status)
     sub_heading = (
         'Read notifications aloud automatically'
-        if has_any_tts_configured(provider_setup_status)
-        else '󰀦 No speech engine set up in Assistant'
+        if is_configured
+        else '󰀦 No text to speech engine set up in Assistant'
+    )
+    items: list[MenuItemData] = []
+    if not is_configured:
+        # Deep-link shortcut to the assistant's Speech Synthesis settings so the
+        # user can set up a TTS engine without hunting for the menu. Kept first
+        # so the primary next step is the top option when nothing is set up.
+        items.append(
+            MenuItemData(
+                key='screen-reader:set-up-tts',
+                label='Set Up Engine',
+                icon='󰒓',
+                action_id=OPEN_TTS_SETTINGS_ACTION_ID,
+            ),
+        )
+    items.extend(
+        (
+            MenuItemData(
+                key='screen-reader:toggle',
+                label=f'Screen Reader: {"On" if is_enabled else "Off"}',
+                icon='󰄬' if is_enabled else '󰜺',
+                action_id=TOGGLE_SCREEN_READER_ACTION_ID,
+            ),
+            MenuItemData(
+                key='screen-reader:prefer-local',
+                label=f'Prefer Local: {"On" if is_prefer_local else "Off"}',
+                icon='󰄬' if is_prefer_local else '󰜺',
+                action_id=TOGGLE_PREFER_LOCAL_ACTION_ID,
+            ),
+        ),
     )
     store.dispatch(
         UpdateDynamicMenuAction(
@@ -234,20 +269,7 @@ def update_screen_reader_dynamic_menu(
             title='󰔊Screen Reader',
             heading='Screen Reader',
             sub_heading=sub_heading,
-            items=(
-                MenuItemData(
-                    key='screen-reader:toggle',
-                    label=f'Screen Reader: {"On" if is_enabled else "Off"}',
-                    icon='󰯄' if is_enabled else '󰯅',
-                    action_id=TOGGLE_SCREEN_READER_ACTION_ID,
-                ),
-                MenuItemData(
-                    key='screen-reader:prefer-local',
-                    label=f'Prefer Local: {"On" if is_prefer_local else "Off"}',
-                    icon='󰯄' if is_prefer_local else '󰯅',
-                    action_id=TOGGLE_PREFER_LOCAL_ACTION_ID,
-                ),
-            ),
+            items=tuple(items),
             placeholder='',
         ),
     )
@@ -265,6 +287,11 @@ def init_service() -> Subscriptions:
     register_action(
         TOGGLE_PREFER_LOCAL_ACTION_ID,
         _toggle_prefer_local,
+        allow_reregister=True,
+    )
+    register_action(
+        OPEN_TTS_SETTINGS_ACTION_ID,
+        lambda: store.dispatch(*_tts_settings_deeplink()),
         allow_reregister=True,
     )
 
