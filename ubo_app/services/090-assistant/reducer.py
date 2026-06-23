@@ -21,8 +21,16 @@ from ubo_app.store.services.assistant import (
     AssistantAddMcpServerAction,
     AssistantAddMcpServerEvent,
     AssistantCompleteAction,
+    AssistantDeleteKokoroAction,
+    AssistantDeleteKokoroEvent,
     AssistantDeleteMcpServerAction,
     AssistantDeleteMcpServerEvent,
+    AssistantDeleteOllamaModelAction,
+    AssistantDeleteOllamaModelEvent,
+    AssistantDeletePiperVoiceAction,
+    AssistantDeletePiperVoiceEvent,
+    AssistantDeleteVoskModelAction,
+    AssistantDeleteVoskModelEvent,
     AssistantDownloadKokoroAction,
     AssistantDownloadKokoroEvent,
     AssistantDownloadOllamaModelAction,
@@ -329,6 +337,34 @@ def reducer(
             return replace(
                 state,
                 vosk_downloaded_models=tuple(action.models),
+            )
+
+        case AssistantDeleteOllamaModelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[AssistantDeleteOllamaModelEvent(model=action.model)],
+            )
+
+        case AssistantDeletePiperVoiceAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDeletePiperVoiceEvent(voice_id=action.voice_id),
+                ],
+            )
+
+        case AssistantDeleteKokoroAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[AssistantDeleteKokoroEvent()],
+            )
+
+        case AssistantDeleteVoskModelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDeleteVoskModelEvent(model_id=action.model_id),
+                ],
             )
 
         case AssistantUpdateProvidersAction():

@@ -17,7 +17,7 @@ from engines_registry import (
     STT_ENGINES,
     TTS_ENGINES,
 )
-from redux import AutorunOptions
+from redux import AutorunOptions, BaseAction
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
 from ubo_app.constants import SECRETS_PATH
@@ -113,7 +113,15 @@ from ubo_app.store.services.assistant import (
     AssistanceAudioFrame,
     AssistanceImageFrame,
     AssistantAddMcpServerEvent,
+    AssistantDeleteKokoroAction,
+    AssistantDeleteKokoroEvent,
     AssistantDeleteMcpServerEvent,
+    AssistantDeleteOllamaModelAction,
+    AssistantDeleteOllamaModelEvent,
+    AssistantDeletePiperVoiceAction,
+    AssistantDeletePiperVoiceEvent,
+    AssistantDeleteVoskModelAction,
+    AssistantDeleteVoskModelEvent,
     AssistantDownloadKokoroAction,
     AssistantDownloadKokoroEvent,
     AssistantDownloadOllamaModelAction,
@@ -441,6 +449,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     _llm_action_ids: list[str] = []
     _llm_model_select_action_ids: list[str] = []
     _provider_detail_action_ids: list[str] = []
+    _piper_delete_action_ids: list[str] = []
+    _vosk_delete_action_ids: list[str] = []
+    _ollama_delete_action_ids: list[str] = []
     _tts_action_ids: list[str] = []
     _img_gen_action_ids: list[str] = []
     _mcp_action_ids: list[str] = []
@@ -454,6 +465,62 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         lambda: store.dispatch(MenuGoBackAction()),
         allow_reregister=True,
     )
+
+    def _register_delete_prompt(  # noqa: PLR0913
+        *,
+        delete_action_id: str,
+        confirm_action_id: str,
+        title: str,
+        prompt: str,
+        action: BaseAction,
+        tracker: list[str],
+        pop_count: int = 1,
+    ) -> None:
+        """Register a "delete downloaded model" item plus its confirm prompt.
+
+        The list item (``delete_action_id``) pushes a Yes/Cancel prompt; the
+        Yes button (``confirm_action_id``) dispatches *action* then pops
+        ``pop_count`` frames. Pass ``pop_count=1`` to pop just the prompt and
+        land back on the (rebuilt) delete list when models remain; pass
+        ``pop_count=2`` to also pop the now-empty delete list and land back on
+        the provider menu when this was the last deletable model.
+        """
+        tracker.append(delete_action_id)
+        tracker.append(confirm_action_id)
+        register_action(
+            confirm_action_id,
+            lambda a=action, n=pop_count: store.dispatch(
+                a,
+                *([MenuGoBackAction()] * n),
+            ),
+            allow_reregister=True,
+        )
+        register_action(
+            delete_action_id,
+            lambda t=title, p=prompt, c=confirm_action_id: store.dispatch(
+                StackPushPromptAction(
+                    title=t,
+                    prompt=p,
+                    icon='󰆴',
+                    items=(
+                        MenuItemData(
+                            key='yes',
+                            label='Delete',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id=c,
+                        ),
+                        MenuItemData(
+                            key='cancel',
+                            label='Cancel',
+                            icon='󰜺',
+                            action_id='assistant:provider-detail:cancel',
+                        ),
+                    ),
+                ),
+            ),
+            allow_reregister=True,
+        )
 
     # Secrets file monitor - tracks API key changes.
     #
@@ -665,9 +732,13 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.selected_kokoro_voice,
             state.assistant.selected_vosk_model,
             state.assistant.generic_llm_providers,
+            state.assistant.piper_downloaded_voices,
+            state.assistant.vosk_downloaded_models,
+            state.assistant.ollama_downloaded_models,
+            state.assistant.kokoro_is_downloaded,
         ),
     )
-    def provider_details(  # noqa: C901, PLR0915
+    def provider_details(  # noqa: C901, PLR0912, PLR0915
         data: tuple[
             dict[str, bool],
             dict[AssistantLLMName, str],
@@ -678,6 +749,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             str,
             str,
             tuple[GenericLLMProvider, ...],
+            tuple[str, ...],
+            tuple[str, ...],
+            tuple[str, ...],
+            bool,
         ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
@@ -687,6 +762,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         selected_piper_voice = data[5] or DEFAULT_PIPER_VOICE_ID
         selected_kokoro_voice = data[6] or DEFAULT_KOKORO_VOICE_ID
         selected_vosk_model = data[7] or DEFAULT_VOSK_MODEL_ID
+        piper_downloaded_voices = data[9]
+        vosk_downloaded_models = data[10]
+        ollama_downloaded_models = data[11]
+        kokoro_is_downloaded = data[12]
 
         for action_id in _provider_detail_action_ids:
             unregister_action(action_id)
@@ -759,6 +838,28 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         ),
                     )
 
+                if ollama_downloaded_models:
+                    delete_list_action = (
+                        'assistant:provider-detail:ollama-delete-list'
+                    )
+                    _provider_detail_action_ids.append(delete_list_action)
+                    register_action(
+                        delete_list_action,
+                        lambda: store.dispatch(
+                            StackPushMenuAction(menu_key='ollama:delete-models'),
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='delete-models',
+                            label='Delete Models',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id=delete_list_action,
+                        ),
+                    )
+
                 store.dispatch(
                     UpdateDynamicMenuAction(
                         menu_id=f'assistant:provider:{provider.name}',
@@ -798,6 +899,27 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         action_id=voice_action,
                     ),
                 )
+                if piper_downloaded_voices:
+                    delete_list_action = (
+                        'assistant:provider-detail:piper-delete-list'
+                    )
+                    _provider_detail_action_ids.append(delete_list_action)
+                    register_action(
+                        delete_list_action,
+                        lambda: store.dispatch(
+                            StackPushMenuAction(menu_key='piper:delete-voices'),
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='delete-voices',
+                            label='Delete Voices',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id=delete_list_action,
+                        ),
+                    )
                 store.dispatch(
                     UpdateDynamicMenuAction(
                         menu_id=f'assistant:provider:{provider.name}',
@@ -837,6 +959,27 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         action_id=kokoro_voice_action,
                     ),
                 )
+                if kokoro_is_downloaded:
+                    # Kokoro ships ALL voices in one bundle, so deletion is a
+                    # single all-or-nothing action — no per-voice list.
+                    _register_delete_prompt(
+                        delete_action_id='assistant:kokoro:delete',
+                        confirm_action_id='assistant:kokoro:confirm-delete',
+                        title='Delete Voices',
+                        prompt='Delete the downloaded Kokoro voices bundle? '
+                        'Kokoro will need to re-download before next use.',
+                        action=AssistantDeleteKokoroAction(),
+                        tracker=_provider_detail_action_ids,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='delete-voices',
+                            label='Delete Voices',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id='assistant:kokoro:delete',
+                        ),
+                    )
                 store.dispatch(
                     UpdateDynamicMenuAction(
                         menu_id=f'assistant:provider:{provider.name}',
@@ -876,6 +1019,27 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         action_id=model_action,
                     ),
                 )
+                if vosk_downloaded_models:
+                    delete_list_action = (
+                        'assistant:provider-detail:vosk-delete-list'
+                    )
+                    _provider_detail_action_ids.append(delete_list_action)
+                    register_action(
+                        delete_list_action,
+                        lambda: store.dispatch(
+                            StackPushMenuAction(menu_key='vosk:delete-models'),
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='delete-models',
+                            label='Delete Models',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id=delete_list_action,
+                        ),
+                    )
                 store.dispatch(
                     UpdateDynamicMenuAction(
                         menu_id=f'assistant:provider:{provider.name}',
@@ -1858,6 +2022,177 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         if engine is not None:
             engine.download_model(event.model_id)
 
+    @store.autorun(lambda state: state.assistant.piper_downloaded_voices)
+    def piper_delete_menu(downloaded_voices: tuple[str, ...]) -> None:
+        """List every downloaded Piper voice the user can delete to free space.
+
+        All downloaded voices are deletable — including the selected one;
+        deleting it flips Piper to "needs setup" (its ``is_setup`` checks the
+        selected voice's files), which is exactly the reset the user wants.
+        """
+        for action_id in _piper_delete_action_ids:
+            unregister_action(action_id)
+        _piper_delete_action_ids.clear()
+
+        # Deleting the only remaining voice also pops the (then-empty) delete
+        # list so the user lands back on the provider menu.
+        pop_count = 2 if len(downloaded_voices) == 1 else 1
+        items: list[MenuItemData] = []
+        for voice_id in downloaded_voices:
+            entry = voice_for(voice_id)
+            label = voice_label(entry) if entry is not None else voice_id
+            _register_delete_prompt(
+                delete_action_id=f'assistant:piper:delete:{voice_id}',
+                confirm_action_id=f'assistant:piper:confirm-delete:{voice_id}',
+                title='Delete Voice',
+                prompt=f'Delete downloaded voice "{label}"?',
+                action=AssistantDeletePiperVoiceAction(voice_id=voice_id),
+                tracker=_piper_delete_action_ids,
+                pop_count=pop_count,
+            )
+            items.append(
+                MenuItemData(
+                    key=voice_id,
+                    label=label,
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=f'assistant:piper:delete:{voice_id}',
+                ),
+            )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:piper:delete-voices',
+                title='Delete Voices',
+                heading='Delete Voices',
+                sub_heading='Free up disk space',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(lambda state: state.assistant.vosk_downloaded_models)
+    def vosk_delete_menu(downloaded_models: tuple[str, ...]) -> None:
+        """List every downloaded Vosk model the user can delete to free space.
+
+        Deleting the selected model flips Vosk to "needs setup".
+        """
+        for action_id in _vosk_delete_action_ids:
+            unregister_action(action_id)
+        _vosk_delete_action_ids.clear()
+
+        # Deleting the only remaining model also pops the (then-empty) delete
+        # list so the user lands back on the provider menu.
+        pop_count = 2 if len(downloaded_models) == 1 else 1
+        items: list[MenuItemData] = []
+        for model_id in downloaded_models:
+            entry = vosk_model_for(model_id)
+            label = vosk_model_label(entry) if entry is not None else model_id
+            _register_delete_prompt(
+                delete_action_id=f'assistant:vosk:delete:{model_id}',
+                confirm_action_id=f'assistant:vosk:confirm-delete:{model_id}',
+                title='Delete Model',
+                prompt=f'Delete downloaded model "{label}"?',
+                action=AssistantDeleteVoskModelAction(model_id=model_id),
+                tracker=_vosk_delete_action_ids,
+                pop_count=pop_count,
+            )
+            items.append(
+                MenuItemData(
+                    key=model_id,
+                    label=label,
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=f'assistant:vosk:delete:{model_id}',
+                ),
+            )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:vosk:delete-models',
+                title='Delete Models',
+                heading='Delete Models',
+                sub_heading='Free up disk space',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(lambda state: state.assistant.ollama_downloaded_models)
+    def ollama_delete_menu(downloaded_models: tuple[str, ...]) -> None:
+        """List every downloaded Ollama model the user can delete to free space.
+
+        Deleting the selected model flips Ollama to "needs setup".
+        """
+        for action_id in _ollama_delete_action_ids:
+            unregister_action(action_id)
+        _ollama_delete_action_ids.clear()
+
+        catalog_by_tag = {
+            normalize_model_tag(entry.id): entry
+            for category in OLLAMA_CATALOG
+            for entry in category.models
+        }
+
+        # Deleting the only remaining model also pops the (then-empty) delete
+        # list so the user lands back on the provider menu.
+        pop_count = 2 if len(downloaded_models) == 1 else 1
+        items: list[MenuItemData] = []
+        for tag in downloaded_models:
+            entry = catalog_by_tag.get(tag)
+            label = (
+                f'{entry.label}  {format_size(entry.size_bytes)}'
+                if entry is not None
+                else tag
+            )
+            _register_delete_prompt(
+                delete_action_id=f'assistant:ollama:delete:{tag}',
+                confirm_action_id=f'assistant:ollama:confirm-delete:{tag}',
+                title='Delete Model',
+                prompt=f'Delete downloaded model "{tag}"?',
+                action=AssistantDeleteOllamaModelAction(model=tag),
+                tracker=_ollama_delete_action_ids,
+                pop_count=pop_count,
+            )
+            items.append(
+                MenuItemData(
+                    key=tag,
+                    label=label,
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=f'assistant:ollama:delete:{tag}',
+                ),
+            )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:ollama:delete-models',
+                title='Delete Models',
+                heading='Delete Models',
+                sub_heading='Free up disk space',
+                items=tuple(items),
+            ),
+        )
+
+    def _handle_piper_delete(event: AssistantDeletePiperVoiceEvent) -> None:
+        """Delete a downloaded Piper voice's files."""
+        engine = _piper_engine()
+        if engine is not None:
+            create_task(engine.delete_voice(event.voice_id))
+
+    def _handle_vosk_delete(event: AssistantDeleteVoskModelEvent) -> None:
+        """Delete a downloaded Vosk model directory."""
+        engine = _vosk_engine()
+        if engine is not None:
+            create_task(engine.delete_model(event.model_id))
+
+    def _handle_kokoro_delete(_: AssistantDeleteKokoroEvent) -> None:
+        """Delete the Kokoro model + voices bundle."""
+        engine = _kokoro_engine()
+        if engine is not None:
+            create_task(engine.delete_bundle())
+
+    def _handle_ollama_delete(event: AssistantDeleteOllamaModelEvent) -> None:
+        """Delete a downloaded Ollama model from the local daemon."""
+        engine = LLM_ENGINES.get(AssistantLLMName.OLLAMA)
+        if isinstance(engine, OllamaEngine):
+            create_task(engine.delete_model(event.model))
+
     @store.autorun(
         lambda state: (
             state.assistant.selected_tts,
@@ -2150,6 +2485,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         kokoro_voices_menus,
         vosk_languages_menu,
         vosk_models_menus,
+        piper_delete_menu,
+        vosk_delete_menu,
+        ollama_delete_menu,
         tts_providers,
         image_generator_providers,
         mcp_servers_menu,
@@ -2161,6 +2499,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         _handle_piper_download,
         _handle_kokoro_download,
         _handle_vosk_download,
+        _handle_ollama_delete,
+        _handle_piper_delete,
+        _handle_kokoro_delete,
+        _handle_vosk_delete,
     )
 
 
@@ -2190,7 +2532,7 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
         'assistant:mcp_tools': 'assistant:mcp_tools',
     }
 
-    def _match_catalog_tail(tail: str) -> str | None:
+    def _match_catalog_tail(tail: str) -> str | None:  # noqa: C901
         """Leaf segments owned by Ollama / Piper / Kokoro / Vosk drill-downs."""
         if tail == 'ollama:categories':
             return 'assistant:ollama:categories'
@@ -2200,6 +2542,12 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
             return 'assistant:piper:languages'
         if tail.startswith('piper:voices:'):
             return f'assistant:piper:voices:{tail[len("piper:voices:") :]}'
+        if tail == 'piper:delete-voices':
+            return 'assistant:piper:delete-voices'
+        if tail == 'vosk:delete-models':
+            return 'assistant:vosk:delete-models'
+        if tail == 'ollama:delete-models':
+            return 'assistant:ollama:delete-models'
         if tail == 'kokoro:languages':
             return 'assistant:kokoro:languages'
         if tail.startswith('kokoro:voices:'):
@@ -2317,7 +2665,7 @@ def _register_bindable_actions() -> None:
     )
 
 
-async def init_service() -> None:
+async def init_service() -> None:  # noqa: PLR0915
     """Initialize the assistant service."""
     _register_persistent_stores()
     _register_bindable_actions()
@@ -2367,6 +2715,13 @@ async def init_service() -> None:
                 tuple(sorted(s.assistant.ollama_model_capabilities.items())),
                 s.assistant.selected_piper_voice,
                 s.assistant.selected_kokoro_voice,
+                s.assistant.selected_vosk_model,
+                # The "Delete Downloaded …" row appears/disappears as models
+                # are downloaded or removed.
+                tuple(s.assistant.piper_downloaded_voices),
+                tuple(s.assistant.vosk_downloaded_models),
+                tuple(s.assistant.ollama_downloaded_models),
+                s.assistant.kokoro_is_downloaded,
             ),
         )
     # Ollama categorised picker depends on the current selection so the
@@ -2387,6 +2742,20 @@ async def init_service() -> None:
                 '',
             ),
         )
+    # Delete-downloaded-model submenus list every downloaded model, so they
+    # depend only on the downloaded set (a row vanishes after deletion).
+    register_menu_content_dependency(
+        'assistant:ollama:delete-models',
+        lambda s: tuple(s.assistant.ollama_downloaded_models),
+    )
+    register_menu_content_dependency(
+        'assistant:piper:delete-voices',
+        lambda s: tuple(s.assistant.piper_downloaded_voices),
+    )
+    register_menu_content_dependency(
+        'assistant:vosk:delete-models',
+        lambda s: tuple(s.assistant.vosk_downloaded_models),
+    )
     register_menu_content_dependency(
         'assistant:tts',
         lambda s: s.assistant.selected_tts,
@@ -2461,6 +2830,9 @@ async def init_service() -> None:
         _kokoro_voices_menus,
         _vosk_languages_menu,
         _vosk_models_menus,
+        _piper_delete_menu,
+        _vosk_delete_menu,
+        _ollama_delete_menu,
         _tts_providers,
         _image_generator_providers,
         _mcp_servers_menu,
@@ -2472,6 +2844,10 @@ async def init_service() -> None:
         handle_piper_download,
         handle_kokoro_download,
         handle_vosk_download,
+        handle_ollama_delete,
+        handle_piper_delete,
+        handle_kokoro_delete,
+        handle_vosk_delete,
     ) = _setup_autorun_and_handlers()
 
     store.dispatch(
@@ -2546,6 +2922,22 @@ async def init_service() -> None:
     store.subscribe_event(
         AssistantDownloadVoskModelEvent,
         handle_vosk_download,
+    )
+    store.subscribe_event(
+        AssistantDeleteOllamaModelEvent,
+        handle_ollama_delete,
+    )
+    store.subscribe_event(
+        AssistantDeletePiperVoiceEvent,
+        handle_piper_delete,
+    )
+    store.subscribe_event(
+        AssistantDeleteKokoroEvent,
+        handle_kokoro_delete,
+    )
+    store.subscribe_event(
+        AssistantDeleteVoskModelEvent,
+        handle_vosk_delete,
     )
 
     _watch_ollama_container_status()

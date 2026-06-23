@@ -305,3 +305,16 @@ class KokoroEngine(NeedsSetupMixin, AIProviderMixin):
         store.dispatch(
             AssistantSetKokoroDownloadedAction(downloaded=_kokoro_is_setup()),
         )
+
+    async def delete_bundle(self) -> None:
+        """Delete the Kokoro model + voices bundle and refresh the cache."""
+        for path in (model_path(), voices_bin_path()):
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                logger.exception(
+                    'Failed to delete Kokoro file',
+                    extra={'path': str(path)},
+                )
+        await self.refresh_downloaded_state()
+        store.dispatch(AssistantUpdateProvidersAction())

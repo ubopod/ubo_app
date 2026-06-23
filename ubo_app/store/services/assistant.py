@@ -688,6 +688,28 @@ class AssistantSetVoskDownloadedModelsAction(AssistantAction):
     models: tuple[str, ...]
 
 
+class AssistantDeleteOllamaModelAction(AssistantAction):
+    """Action requesting deletion of a downloaded Ollama model."""
+
+    model: str
+
+
+class AssistantDeletePiperVoiceAction(AssistantAction):
+    """Action requesting deletion of a downloaded Piper voice's files."""
+
+    voice_id: str
+
+
+class AssistantDeleteKokoroAction(AssistantAction):
+    """Action requesting deletion of the Kokoro model + voices bundle."""
+
+
+class AssistantDeleteVoskModelAction(AssistantAction):
+    """Action requesting deletion of a downloaded Vosk model directory."""
+
+    model_id: str
+
+
 class AssistanceFrame(Immutable):
     """An assistance frame."""
 
@@ -1020,6 +1042,28 @@ class AssistantDownloadKokoroEvent(AssistantEvent):
 
 class AssistantDownloadVoskModelEvent(AssistantEvent):
     """Event requesting download of a Vosk model in the core process."""
+
+    model_id: str
+
+
+class AssistantDeleteOllamaModelEvent(AssistantEvent):
+    """Event requesting deletion of a downloaded Ollama model in core."""
+
+    model: str
+
+
+class AssistantDeletePiperVoiceEvent(AssistantEvent):
+    """Event requesting deletion of a downloaded Piper voice in core."""
+
+    voice_id: str
+
+
+class AssistantDeleteKokoroEvent(AssistantEvent):
+    """Event requesting deletion of the Kokoro bundle in core."""
+
+
+class AssistantDeleteVoskModelEvent(AssistantEvent):
+    """Event requesting deletion of a downloaded Vosk model in core."""
 
     model_id: str
 
