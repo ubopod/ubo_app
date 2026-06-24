@@ -45,8 +45,13 @@ async def _secret(client: UboRPCClient, env_var: str) -> str | None:
     """Resolve the secret whose id is held by ``env_var``."""
     key = os.environ.get(env_var)
     if not key:
+        logger.error(f'screen-reader: secret env var {env_var!r} not exported')  # noqa: G004
         return None
-    return await client.query_secret(key)
+    value = await client.query_secret(key)
+    # Log only the resolution context + success — no secret value or length.
+    message = f'screen-reader: resolved secret for {env_var!r} -> present={bool(value)}'
+    logger.info(message)
+    return value
 
 
 async def _build_stt(  # noqa: C901

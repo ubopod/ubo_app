@@ -1,6 +1,10 @@
 """Engines registry."""
 
-from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, TypeVar
+
+from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
 from ubo_app.engines.anthropic import AnthropicEngine
 from ubo_app.engines.assemblyai import AssemblyAIEngine
 from ubo_app.engines.cerebras import CerebrasEngine
@@ -28,6 +32,11 @@ from ubo_app.store.services.assistant import (
     AssistantSTTName,
     AssistantTTSName,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
 
 # Single shared Venice engine reused across STT/LLM/TTS dicts — one API key
 # setup flow handles all three modalities (mirrors OpenAIEngine reuse).
@@ -80,3 +89,50 @@ IMAGE_GENERATOR_ENGINES: dict[
     AssistantImageGeneratorName.GOOGLE: GoogleEngine(),
     AssistantImageGeneratorName.OPENAI: OpenAIEngine(),
 }
+
+
+_EngineName = TypeVar('_EngineName')
+
+
+def is_engine_configured(
+    registry: Mapping[_EngineName, AIProviderMixin],
+    selected: _EngineName,
+    provider_setup_status: Mapping[str, bool],
+) -> bool:
+    """Return True if *selected* is set up — or absent from *registry*.
+
+    ``provider_setup_status`` is keyed by ``engine.name`` (see the
+    ``AssistantUpdateProvidersAction`` reducer), which is NOT the enum value for
+    every engine (e.g. the Google STT variants both map to ``'google_cloud'``),
+    so the lookup must go through the engine instance. Unknown selections (e.g.
+    the dynamic generic-LLM selection) return True so callers leave them alone.
+    """
+    engine = registry.get(selected)
+    if engine is None:
+        return True
+    return provider_setup_status.get(engine.name, True)
+
+
+def first_configured_engine(
+    registry: Mapping[_EngineName, AIProviderMixin],
+    provider_setup_status: Mapping[str, bool],
+    *,
+    skip: tuple[_EngineName, ...] = (),
+) -> _EngineName | None:
+    """Return the first set-up engine in *registry*, local engines first.
+
+    Local (offline) engines — Vosk, Ollama, Piper, Kokoro — are preferred over
+    cloud (``RemoteMixin``) engines, mirroring the UI's local/cloud split. The
+    sort is stable, so registry order breaks ties within each group. Returns
+    ``None`` when nothing in *registry* is configured.
+    """
+    entries = [(name, e) for name, e in registry.items() if name not in skip]
+    entries.sort(key=lambda item: isinstance(item[1], RemoteMixin))
+    return next(
+        (
+            name
+            for name, e in entries
+            if provider_setup_status.get(e.name, False)
+        ),
+        None,
+    )

@@ -14,6 +14,7 @@ from uuid import uuid4
 from tts_selection import first_configured_local_tts, has_any_tts_configured
 
 from ubo_app.colors import WARNING_COLOR
+from ubo_app.logger import logger
 from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
@@ -93,11 +94,18 @@ def _preferred_tts_provider(
 
 def _synthesize(event: SpeechSynthesisSynthesizeTextEvent) -> None:
     """Forward text to the assistant's TTS pipeline for synthesis and playback."""
+    preferred = _preferred_tts_provider()
+    logger.info(
+        'screen-reader: forwarding read to assistant tts '
+        '(preferred_local=%s, text_len=%s)',
+        preferred.name if preferred else None,
+        len(event.information.text),
+    )
     store.dispatch(
         AssistantSynthesizeAction(
             text=event.information.text,
             session_id=uuid4().hex,
-            tts_provider=_preferred_tts_provider(),
+            tts_provider=preferred,
         ),
     )
 

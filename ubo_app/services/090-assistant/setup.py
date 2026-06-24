@@ -16,6 +16,8 @@ from engines_registry import (
     LLM_ENGINES,
     STT_ENGINES,
     TTS_ENGINES,
+    first_configured_engine,
+    is_engine_configured,
 )
 from redux import AutorunOptions, BaseAction
 
@@ -347,8 +349,18 @@ def input_mcp_server() -> None:
 def _communicate(event: AssistantHandleReportEvent) -> None:
     """Communicate the assistance."""
     match event.data:
-        case AssistanceAudioFrame(audio=sample, index=index, id=id):
-            if sample:
+        case AssistanceAudioFrame(
+            audio=sample,
+            index=index,
+            id=id,
+            is_last_frame=is_last_frame,
+        ):
+            # Dispatch on real audio OR the end-of-stream marker. The marker is an
+            # ``AssistanceAudioFrame(audio=None, is_last_frame=True)`` whose
+            # resulting ``sample=None`` action breaks the audio manager's play loop
+            # without the 1 s empty-buffer fallback — routed through this ordered
+            # report path (not a direct dispatch) so it can't overtake the chunks.
+            if sample or is_last_frame:
                 # Only the live pipeline drives chat-overlay reconciliation;
                 # one-shot programmatic requests share the audio bus but
                 # the chat reducer must ignore them — tagging the sequence
@@ -2195,6 +2207,71 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
 
     @store.autorun(
         lambda state: (
+            state.assistant.selected_stt,
+            state.assistant.selected_llm,
+            state.assistant.selected_tts,
+            state.assistant.provider_setup_status,
+        ),
+    )
+    def keep_pipeline_providers_configured(
+        data: tuple[
+            AssistantSTTName,
+            AssistantLLMName,
+            AssistantTTSName,
+            dict[str, bool],
+        ],
+    ) -> None:
+        """Auto-switch a pipeline selection that has gone unconfigured.
+
+        When a provider's credentials are deleted or its selected on-disk model
+        is removed, its ``is_setup`` flips False. Rather than letting the
+        screen reader / conversation silently fail on a dangling selection,
+        switch that category (STT/LLM/TTS) to another configured engine,
+        preferring local over cloud. Only fires when the current selection is
+        genuinely broken AND a configured alternative exists, so it converges
+        and never overrides a working choice. The generic-LLM selection is left
+        alone (its named providers live outside ``provider_setup_status``).
+
+        This is the ONLY autorun that auto-dispatches ``AssistantSetSelected*``:
+        the ``stt_providers`` / ``llm_providers`` / ``tts_providers`` menu
+        autoruns dispatch those actions only from user-click callbacks, so there
+        is no competing writer to fight (which is why this can't oscillate).
+        """
+        selected_stt, selected_llm, selected_tts, status = data
+
+        # Boot guard: ``provider_setup_status`` is populated asynchronously after
+        # the service starts. Until then it's empty and every engine looks
+        # unconfigured; ``is_engine_configured`` already treats absent keys as
+        # configured, but bail out explicitly so a half-populated status during
+        # startup can never switch a still-loading selection.
+        if not status:
+            return
+
+        if not is_engine_configured(STT_ENGINES, selected_stt, status):
+            alternative = first_configured_engine(STT_ENGINES, status)
+            if alternative is not None and alternative != selected_stt:
+                store.dispatch(AssistantSetSelectedSTTAction(stt_name=alternative))
+
+        if selected_llm != AssistantLLMName.GENERIC and not is_engine_configured(
+            LLM_ENGINES,
+            selected_llm,
+            status,
+        ):
+            alternative = first_configured_engine(
+                LLM_ENGINES,
+                status,
+                skip=(AssistantLLMName.GENERIC,),
+            )
+            if alternative is not None and alternative != selected_llm:
+                store.dispatch(AssistantSetSelectedLLMAction(llm_name=alternative))
+
+        if not is_engine_configured(TTS_ENGINES, selected_tts, status):
+            alternative = first_configured_engine(TTS_ENGINES, status)
+            if alternative is not None and alternative != selected_tts:
+                store.dispatch(AssistantSetSelectedTTSAction(tts_name=alternative))
+
+    @store.autorun(
+        lambda state: (
             state.assistant.selected_tts,
             secrets_monitor.value,
             state.assistant.provider_setup_status,
@@ -2488,6 +2565,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         piper_delete_menu,
         vosk_delete_menu,
         ollama_delete_menu,
+        keep_pipeline_providers_configured,
         tts_providers,
         image_generator_providers,
         mcp_servers_menu,
@@ -2833,6 +2911,7 @@ async def init_service() -> None:  # noqa: PLR0915
         _piper_delete_menu,
         _vosk_delete_menu,
         _ollama_delete_menu,
+        _keep_pipeline_providers_configured,
         _tts_providers,
         _image_generator_providers,
         _mcp_servers_menu,
