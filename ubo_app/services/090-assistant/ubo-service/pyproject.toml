@@ -20,7 +20,14 @@ dependencies = [
 ]
 
 [tool.uv]
-dev-dependencies = ["poethepoet>=0.36.0", "pyright>=1.1.408", "ruff>=0.12.1"]
+dev-dependencies = [
+  "poethepoet>=0.36.0",
+  "pyright>=1.1.408",
+  "ruff>=0.12.1",
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.24.0",
+  "python-dotenv>=1.0.1",
+]
 
 [tool.uv.sources]
 ubo-app-raw-bindings = { path = "../../../rpc", editable = true }
@@ -45,6 +52,24 @@ lint = "ruff check ."
 "lint:fix" = "ruff check . --fix --unsafe-fixes"
 typecheck = "pyright -p pyproject.toml ."
 sanity = ["typecheck", "lint"]
+# Fast unit tests (no network); the `providers` e2e tests are excluded.
+test = "pytest tests/ -m 'not providers'"
+# Real-credential provider e2e: TTS/STT/LLM round-trips against whatever is
+# configured in the ubo secrets file. Manual (network + cost); skips the rest.
+"test:providers" = "pytest tests/ -m providers -v"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# Session-scoped test loop: some websocket providers (ElevenLabs/Rime TTS) leave
+# a task that ignores cancellation during cleanup. The one-shot handler bounds
+# itself and leaves such a task to leak; a per-test loop would then wedge on
+# teardown. One shared loop lets leaked tasks accumulate harmlessly until the
+# session ends (like a long-lived production loop).
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+markers = [
+  "providers: real-credential provider e2e tests (manual; network/cost)",
+]
 
 [tool.poe.tasks.deploy-to-device]
 args = [
@@ -66,6 +91,14 @@ logger-objects = ['loguru.logger']
 
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["id"]
+
+[tool.ruff.lint.per-file-ignores]
+# Provider e2e harness/tests only (don't relax the existing unittest files):
+# Any in the param tables, the wide run_pipeline signature, bare asserts and
+# magic comparison values.
+"tests/provider_harness.py" = ["ANN401", "PLR0913"]
+"tests/test_provider_*.py" = ["S101", "PLR2004"]
+"tests/test_request_orchestration.py" = ["S101", "PLR2004"]
 
 [tool.ruff.lint.flake8-quotes]
 docstring-quotes = "double"

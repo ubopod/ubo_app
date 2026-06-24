@@ -293,6 +293,23 @@ jobs:
           enable-cache: true
           cache-suffix: ubuntu-latest
 
+      - name: Test Services
+        env:
+          PRETEND_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          for service in $(ls ubo_app/services); do
+            dir="ubo_app/services/$service/ubo-service"
+            # Only services that define a bare `test` poe task. These are the
+            # fast unit tests (`-m "not providers"`): no credentials, models, or
+            # network — the provider/round-trip suites stay opt-in. The regex
+            # tolerates indentation and `test=`/`test =` spacing; it won't match
+            # `"test:providers"` (quoted) or `pytest`.
+            if [ -d "$dir" ] && grep -qE '^[[:space:]]*test[[:space:]]*=' "$dir/pyproject.toml"; then
+              echo "Testing service: $service"
+              (cd "$dir" && uv run poe test)
+            fi
+          done
+
       - name: Build Services
         env:
           PRETEND_VERSION: ${{ needs.version.outputs.version }}
