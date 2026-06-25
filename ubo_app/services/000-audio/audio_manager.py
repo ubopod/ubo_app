@@ -182,13 +182,19 @@ class AudioManager:
 
     def _release_input(self) -> None:
         """Close the capture PCM and its read executor, freeing the ALSA device."""
+        # Drain the reader BEFORE closing the stream. The worker may be parked in
+        # a blocking ``read()``; closing the PCM out from under it makes that read
+        # hang forever on macOS CoreAudio (it never returns or errors), which then
+        # deadlocks interpreter shutdown as it joins the non-daemon worker. Waiting
+        # for the executor first lets the in-flight read return normally (~one 50ms
+        # period — the stream is still open) so the worker exits cleanly.
+        if self._read_executor is not None:
+            self._read_executor.shutdown(wait=True)
+            self._read_executor = None
         if self._input_pcm is not None:
             with contextlib.suppress(Exception):
                 self._input_pcm.close()
             self._input_pcm = None
-        if self._read_executor is not None:
-            self._read_executor.shutdown(wait=False)
-            self._read_executor = None
 
     async def find_card_index(self) -> None:
         """Find the card index of the audio device."""
