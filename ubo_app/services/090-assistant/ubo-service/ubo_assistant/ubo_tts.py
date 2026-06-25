@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 from pipecat.frames.frames import Frame, StartFrame, SystemFrame
@@ -14,7 +14,11 @@ from pipecat.services.openai.tts import OpenAITTSService
 from pipecat.services.rime.tts import RimeTTSService
 from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
-from pipecat.transcriptions.language import Language
+from ubo_bindings.ubo.v1 import (
+    AssistantTtsName,
+    AssistantVoiceChangedEvent,
+    Event,
+)
 
 from ubo_assistant.kokoro import (
     DEFAULT_KOKORO_VOICE_ID,
@@ -24,17 +28,36 @@ from ubo_assistant.kokoro import MODEL_PATH as KOKORO_MODEL_PATH
 from ubo_assistant.kokoro import VOICES_PATH as KOKORO_VOICES_PATH
 from ubo_assistant.piper import DEFAULT_PIPER_VOICE_ID, PiperTTSService
 from ubo_assistant.switch import UboSwitchService
+from ubo_assistant.tts_voice import google_voice_kwargs, rime_language
 from ubo_assistant.venice_tts import VeniceTTSService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
 
     from betterproto.lib.google.protobuf import StringValue
+    from pipecat.pipeline.service_switcher import ServiceSwitcher
     from pipecat.processors.frame_processor import (
         FrameDirection,
         FrameProcessorSetup,
     )
     from ubo_bindings.client import UboRPCClient
+
+# Cloud TTS provider id keyed by the proto ``AssistantTtsName`` enum. Only the
+# cloud providers that carry a selectable voice appear here.
+_SERVICE_ID_BY_TTS_NAME: dict[AssistantTtsName, str] = {
+    AssistantTtsName.GOOGLE: 'google',
+    AssistantTtsName.OPENAI: 'openai',
+    AssistantTtsName.ELEVENLABS: 'elevenlabs',
+    AssistantTtsName.RIME: 'rime',
+    AssistantTtsName.VENICE: 'venice',
+}
+
+# Per-provider default voice used when the user hasn't picked one. Mirrors
+# ``DEFAULT_VOICES`` on the core side (ElevenLabs falls back to its secret).
+_DEFAULT_CLOUD_VOICE: dict[str, str] = {
+    'openai': 'alloy',
+    'rime': 'antoine',
+}
 
 VENICE_BASE_URL = 'https://api.venice.ai/api/v1'
 DEFAULT_VENICE_TTS_MODEL = os.environ.get(
@@ -43,7 +66,8 @@ DEFAULT_VENICE_TTS_MODEL = os.environ.get(
 )
 DEFAULT_VENICE_TTS_VOICE = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_VENICE_TTS_VOICE',
-    'af_sky',
+    # Kept in sync with core's ``DEFAULT_VENICE_TTS_VOICE``.
+    'af_heart',
 )
 
 
@@ -62,6 +86,11 @@ class TTSServiceConfig:
     elevenlabs_voice_id: str | None = None
     rime_api_key: str | None = None
     venice_api_key: str | None = None
+    google_credentials: str | None = None
+    # Per-provider selected voice id, seeded from on-disk state via the
+    # cold-start replay of ``AssistantVoiceChangedEvent`` and updated on every
+    # change. A dict can't cross a gRPC autorun selector, hence the event.
+    selected_voices: dict[str, str] = field(default_factory=dict)
 
 
 class GenericTTSProxy(TTSService):
@@ -183,19 +212,16 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
     ) -> None:
         """Initialize TTS service with Google, OpenAI, ElevenLabs, Piper, and Rime."""
         self._config = config
-
-        # Initialize Google TTS
-        self.google_tts = self._initialize_service(
-            'Google',
-            lambda: GoogleTTSService(credentials=google_credentials) if \
-            google_credentials else None,
-        )
+        self._config.google_credentials = google_credentials
 
         # Cloud TTS providers go behind GenericTTSProxy so they always
         # live in Pipecat's switcher init list. The underlying real
         # Pipecat service is created/refreshed on demand in
         # ``_refresh_api_key_service`` whenever the user switches to
-        # that provider — see ``_API_KEY_PROVIDERS`` below.
+        # that provider — see ``_API_KEY_PROVIDERS`` below. Google is a
+        # proxy too so a runtime voice change can rebuild it (Pipecat
+        # freezes the switcher's service list at construction).
+        self.google_tts = GenericTTSProxy()
         self.openai_tts = GenericTTSProxy()
         self.elevenlabs_tts = GenericTTSProxy()
         self.rime_tts = GenericTTSProxy()
@@ -254,6 +280,12 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
     # shape as the LLM/STT counterpart: (env var holding the secret id,
     # config attr storing the value, factory method, proxy attribute).
     _API_KEY_PROVIDERS: dict[str, tuple[str, str, str, str]] = {  # noqa: RUF012
+        'google': (
+            'GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID',
+            'google_credentials',
+            '_create_google_service',
+            'google_tts',
+        ),
         'openai': (
             'OPENAI_API_KEY_SECRET_ID',
             'openai_api_key',
@@ -319,26 +351,53 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             await self._refresh_api_key_service(id)
         await super().set_selected_service(id)
 
+    def _voice_for(self, service_id: str) -> str:
+        """Return the user's selected voice for *service_id* (or its default)."""
+        return (
+            self._config.selected_voices.get(service_id)
+            or _DEFAULT_CLOUD_VOICE.get(service_id, '')
+        )
+
+    def _create_google_service(self) -> GoogleTTSService | None:
+        """Create Google TTS service if credentials are provided."""
+        if not self._config.google_credentials:
+            return None
+        try:
+            return GoogleTTSService(
+                credentials=self._config.google_credentials,
+                **google_voice_kwargs(self._voice_for('google')),
+            )
+        except Exception:
+            logger.exception('Error while initializing Google TTS')
+            return None
+
     def _create_openai_service(self) -> OpenAITTSService | None:
         """Create OpenAI TTS service if API key is provided."""
         if not self._config.openai_api_key:
             return None
+        voice = self._voice_for('openai')
+        openai_kwargs: dict[str, Any] = {'voice': voice} if voice else {}
         try:
-            return OpenAITTSService(api_key=self._config.openai_api_key)
+            return OpenAITTSService(
+                api_key=self._config.openai_api_key,
+                **openai_kwargs,
+            )
         except Exception:
             logger.exception('Error while initializing OpenAI TTS')
             return None
 
     def _create_elevenlabs_service(self) -> ElevenLabsTTSService | None:
         """Create ElevenLabs TTS service if both api key and voice id are set."""
-        if not (
-            self._config.elevenlabs_api_key and self._config.elevenlabs_voice_id
-        ):
+        voice_id = (
+            self._config.selected_voices.get('elevenlabs')
+            or self._config.elevenlabs_voice_id
+        )
+        if not (self._config.elevenlabs_api_key and voice_id):
             return None
         try:
             return ElevenLabsTTSService(
                 api_key=self._config.elevenlabs_api_key,
-                voice_id=self._config.elevenlabs_voice_id,
+                voice_id=voice_id,
                 sample_rate=24000,
                 model='eleven_turbo_v2_5',
                 enable_logging=True,
@@ -351,13 +410,14 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         """Create Rime TTS service if API key is provided."""
         if not self._config.rime_api_key:
             return None
+        rime_voice = self._voice_for('rime')
         try:
             return RimeTTSService(
                 api_key=self._config.rime_api_key,
-                voice_id='antoine',
+                voice_id=rime_voice,
                 model='mistv2',
                 params=RimeTTSService.InputParams(
-                    language=Language.EN,
+                    language=rime_language(rime_voice),
                     speed_alpha=1.0,
                     reduce_latency=False,
                     pause_between_brackets=True,
@@ -377,7 +437,8 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
                 api_key=self._config.venice_api_key,
                 base_url=VENICE_BASE_URL,
                 model=DEFAULT_VENICE_TTS_MODEL,
-                voice=DEFAULT_VENICE_TTS_VOICE,
+                voice=self._config.selected_voices.get('venice')
+                or DEFAULT_VENICE_TTS_VOICE,
             )
         except Exception:
             logger.exception('Error while initializing Venice TTS')
@@ -424,3 +485,41 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             target = self.kokoro_tts
             if isinstance(target, KokoroTTSService):
                 target.request_voice(voice_id)
+
+        # Cloud voices live in a dict that can't cross a gRPC autorun
+        # selector, so an event carries each change. The cold-start replay
+        # (one event per persisted ``selected_voices`` entry) seeds the cache;
+        # later events rebuild the active provider's service with the new
+        # voice. Mirrors the LLM model-change path in ``ubo_llm``.
+        self.client.subscribe_event(
+            event_type=Event(
+                assistant_voice_changed_event=AssistantVoiceChangedEvent(),
+            ),
+            callback=self._handle_voice_changed_event,
+        )
+
+    def _handle_voice_changed_event(self, event: Event) -> None:
+        """Cache the user's new cloud voice and refresh the active provider."""
+        payload = event.assistant_voice_changed_event
+        if payload is None:
+            return
+        service_id = _SERVICE_ID_BY_TTS_NAME.get(payload.tts_name)
+        if service_id is None:
+            return
+
+        previous = self._config.selected_voices.get(service_id)
+        self._config.selected_voices[service_id] = payload.voice_id
+        if previous == payload.voice_id:
+            return
+
+        if (
+            self._current_service_id == service_id
+            and service_id in self._API_KEY_PROVIDERS
+        ):
+            logger.info(
+                'Selected voice changed for active provider; refreshing',
+                extra={'service_id': service_id, 'voice_id': payload.voice_id},
+            )
+            cast('ServiceSwitcher', self).create_task(
+                self._refresh_api_key_service(service_id),
+            )

@@ -27,6 +27,7 @@ from ubo_app.constants.assistant import (
     DEFAULT_LLM_OPENROUTER_MODEL,
     DEFAULT_LLM_QWEN_MODEL,
     DEFAULT_LLM_VENICE_MODEL,
+    DEFAULT_VENICE_TTS_VOICE,
 )
 from ubo_app.store.services.speech_recognition import WakeMode
 from ubo_app.utils.persistent_store import read_from_persistent_store
@@ -189,6 +190,84 @@ class AssistantTTSName(StrEnum):
     ELEVENLABS = 'elevenlabs'
     RIME = 'rime'
     VENICE = 'venice'
+
+
+class ElevenLabsVoiceEntry(Immutable):
+    """A single ElevenLabs voice surfaced in the voice picker.
+
+    Fetched live from ``GET /v2/voices`` (default/premade voices plus the
+    user's own cloned voices) and cached in
+    ``AssistantState.elevenlabs_available_voices``. ``label`` is the voice's
+    display name (falling back to its id when unnamed).
+    """
+
+    id: str
+    label: str
+
+
+# Default voice id per cloud TTS provider. Local engines (Piper/Kokoro) keep
+# their own dedicated ``selected_*_voice`` fields and are intentionally absent
+# here. Values reproduce the previously hard-coded voices. ElevenLabs has no
+# fixed default — its voice comes from the ``ELEVENLABS_VOICE_ID`` secret — so
+# it maps to the empty string and the subprocess falls back to that secret.
+DEFAULT_VOICES: dict[AssistantTTSName, str] = {
+    AssistantTTSName.GOOGLE: 'en-US-Chirp3-HD-Aoede',
+    AssistantTTSName.OPENAI: 'alloy',
+    AssistantTTSName.ELEVENLABS: '',
+    AssistantTTSName.RIME: 'antoine',
+    # Venice keeps its env-overridable default (``UBO_DEFAULT_ASSISTANT_VENICE_
+    # TTS_VOICE``) so deployments can pin a voice; the out-of-box value is the
+    # Kokoro default Venice mirrors, which the curated catalog contains.
+    AssistantTTSName.VENICE: DEFAULT_VENICE_TTS_VOICE,
+}
+
+
+def _load_selected_voices(value: str) -> dict[AssistantTTSName, str]:
+    """Load selected cloud TTS voices from persistent storage."""
+    try:
+        voices = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return DEFAULT_VOICES.copy()
+    if not isinstance(voices, dict):
+        return DEFAULT_VOICES.copy()
+    selected_voices = DEFAULT_VOICES.copy()
+    for key, voice in voices.items():
+        try:
+            tts_name = AssistantTTSName(key)
+        except ValueError:
+            continue
+        selected_voices[tts_name] = str(voice)
+    return selected_voices
+
+
+def _load_elevenlabs_voices(value: str) -> tuple[ElevenLabsVoiceEntry, ...]:
+    """Load user-added ElevenLabs voices from persistent storage.
+
+    Each voice is ``{'id': ..., 'label': ...}`` where ``label`` is the
+    optional human-readable name. Bare strings from the earlier schema are
+    still accepted (label defaults to '').
+    """
+    try:
+        entries = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return ()
+    if not isinstance(entries, list):
+        return ()
+    voices: list[ElevenLabsVoiceEntry] = []
+    for entry in entries:
+        if isinstance(entry, str) and entry:
+            voices.append(ElevenLabsVoiceEntry(id=entry, label=''))
+        elif isinstance(entry, dict):
+            voice_id = entry.get('id')
+            if isinstance(voice_id, str) and voice_id:
+                label = entry.get('label')
+                voices.append(
+                    ElevenLabsVoiceEntry(
+                        id=voice_id,
+                        label=label if isinstance(label, str) else '',
+                    ),
+                )
+    return tuple(voices)
 
 
 class AssistantImageGeneratorName(StrEnum):
@@ -575,6 +654,41 @@ class AssistantSetSelectedModelAction(AssistantAction):
 
     model: str
     llm_name: AssistantLLMName | None = None
+
+
+class AssistantSetSelectedVoiceAction(AssistantAction):
+    """Action to set the selected voice for a cloud TTS provider.
+
+    The reducer emits ``AssistantVoiceChangedEvent`` so the assistant
+    subprocess can hot-swap the active provider's voice — gRPC autorun cannot
+    serialise the ``selected_voices`` dict (mirrors the LLM model-change path).
+    """
+
+    tts_name: AssistantTTSName
+    voice_id: str
+
+
+class AssistantAddElevenLabsVoiceAction(AssistantAction):
+    """Action to add a user-supplied ElevenLabs voice to the picker.
+
+    ``name`` is an optional human-readable label shown instead of the raw
+    voice id; re-adding an existing id updates its name.
+    """
+
+    voice_id: str
+    name: str = ''
+
+
+class AssistantDeleteElevenLabsVoiceAction(AssistantAction):
+    """Action to remove a user-added ElevenLabs voice id from the picker."""
+
+    voice_id: str
+
+
+class AssistantSetElevenLabsAvailableVoicesAction(AssistantAction):
+    """Replace the live-fetched ElevenLabs voice cache (``GET /v2/voices``)."""
+
+    voices: tuple[ElevenLabsVoiceEntry, ...]
 
 
 class AssistantDownloadOllamaModelAction(AssistantAction):
@@ -981,6 +1095,19 @@ class AssistantModelChangedEvent(AssistantEvent):
     model: str
 
 
+class AssistantVoiceChangedEvent(AssistantEvent):
+    """Event signalling that the user picked a new voice for a cloud TTS provider.
+
+    Emitted by the reducer in response to ``AssistantSetSelectedVoiceAction``
+    so the assistant subprocess can rebuild the active provider's Pipecat
+    service with the new voice. Goes through events because gRPC autorun cannot
+    serialise the raw ``selected_voices`` dict.
+    """
+
+    tts_name: AssistantTTSName
+    voice_id: str
+
+
 class AssistantGenericLLMProviderChangedEvent(AssistantEvent):
     """Event signalling that the active named generic LLM provider changed.
 
@@ -1131,6 +1258,7 @@ class AssistantRunPipelineEvent(AssistantEvent):
     vosk_model_id: str = ''
     piper_voice_id: str = ''
     kokoro_voice_id: str = ''
+    tts_voice_id: str = ''
 
 
 class AssistantState(Immutable):
@@ -1222,6 +1350,36 @@ class AssistantState(Immutable):
             if value in AssistantTTSName.__members__.values()
             else AssistantTTSName.PIPER,
         ),
+    )
+    # Per-cloud-provider selected voice id (google/openai/elevenlabs/rime/
+    # venice). Local Piper/Kokoro keep their own dedicated fields below. A dict
+    # can't cross a gRPC autorun selector, so the subprocess learns of changes
+    # via ``AssistantVoiceChangedEvent`` (mirrors the LLM model-change path).
+    selected_voices: dict[AssistantTTSName, str] = field(
+        default_factory=lambda: read_from_persistent_store(
+            'assistant:selected_tts_voice',
+            # ``.copy()`` so a missing key (which returns this default verbatim,
+            # bypassing the mapper) doesn't alias the shared module-level dict.
+            default=DEFAULT_VOICES.copy(),
+            mapper=_load_selected_voices,
+        ),
+    )
+    # User-added ElevenLabs voices (persisted), each with an optional
+    # human-readable name. Supplement the live-fetched
+    # ``elevenlabs_available_voices`` cache and the primary
+    # ``ELEVENLABS_VOICE_ID`` secret in the voice picker.
+    elevenlabs_voices: tuple[ElevenLabsVoiceEntry, ...] = field(
+        default_factory=lambda: read_from_persistent_store(
+            'assistant:elevenlabs_voices',
+            default=(),
+            mapper=_load_elevenlabs_voices,
+        ),
+    )
+    # Live-fetched ElevenLabs voices (default/premade + the user's cloned
+    # voices) from ``GET /v2/voices``. Process-local cache — NOT persisted;
+    # refreshed by ``ElevenLabsEngine.fetch_voices()``.
+    elevenlabs_available_voices: tuple[ElevenLabsVoiceEntry, ...] = field(
+        default_factory=tuple,
     )
     # Currently selected Piper voice id (HuggingFace path without
     # extension). Backs both the assistant subprocess TTS and the

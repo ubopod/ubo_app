@@ -87,6 +87,7 @@ def test_synthesize_resolves_selected_tts_and_voices(
         selected_piper_voice='en/en_US/kristin/medium/en_US-kristin-medium',
         selected_kokoro_voice='af_heart',
         selected_vosk_model='vosk-model-small-en-us-0.15',
+        selected_voices={a.AssistantTTSName.OPENAI: 'shimmer'},
     )
 
     event = _run_pipeline_event(
@@ -103,6 +104,30 @@ def test_synthesize_resolves_selected_tts_and_voices(
     assert event.piper_voice_id == 'en/en_US/kristin/medium/en_US-kristin-medium'
     assert event.kokoro_voice_id == 'af_heart'
     assert event.vosk_model_id == 'vosk-model-small-en-us-0.15'
+    assert event.tts_voice_id == 'shimmer'
+
+
+def test_synthesize_falls_back_to_default_cloud_voice(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With no explicit selection, ``tts_voice_id`` resolves the provider default."""
+    ns = _load(monkeypatch)
+    a = ns.assistant
+    state = replace(
+        _initial_state(ns),
+        selected_tts=a.AssistantTTSName.RIME,
+        selected_voices={},
+    )
+
+    event = _run_pipeline_event(
+        ns,
+        ns.reducer(
+            state,
+            a.AssistantSynthesizeAction(text='hi', session_id='s1b'),
+        ),
+    )
+
+    assert event.tts_voice_id == a.DEFAULT_VOICES[a.AssistantTTSName.RIME]
 
 
 def test_synthesize_explicit_provider_overrides_selection(

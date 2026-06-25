@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import uuid
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -32,6 +34,7 @@ from ubo_app.constants.assistant import (
     DEFAULT_LLM_OLLAMA_MODEL,
     ELEVENLABS_API_KEY_SECRET_ID,
     ELEVENLABS_VOICE_ID,
+    ELEVENLABS_VOICE_ID_PATTERN,
     GENERIC_LLM_API_KEY_SECRET_ID,
     GENERIC_LLM_BASE_URL_SECRET_ID,
     GENERIC_LLM_MODEL_SECRET_ID,
@@ -47,6 +50,17 @@ from ubo_app.constants.assistant import (
 )
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
+from ubo_app.engines.cloud_voice_catalog import (
+    FLAT_CATALOGS,
+    LANGUAGE_GROUPED_CATALOGS,
+    CloudVoiceEntry,
+)
+from ubo_app.engines.cloud_voice_catalog import language_for as cloud_language_for
+from ubo_app.engines.cloud_voice_catalog import (
+    visible_languages as cloud_visible_languages,
+)
+from ubo_app.engines.cloud_voice_catalog import voice_for as cloud_voice_for
+from ubo_app.engines.elevenlabs import ElevenLabsEngine
 from ubo_app.engines.generic_llm import (
     activate_provider,
     build_generic_llm_engines,
@@ -111,10 +125,13 @@ from ubo_app.store.input.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     DEFAULT_MODELS,
+    DEFAULT_VOICES,
     LIVE_PIPELINE_SOURCE_ID,
     AssistanceAudioFrame,
     AssistanceImageFrame,
+    AssistantAddElevenLabsVoiceAction,
     AssistantAddMcpServerEvent,
+    AssistantDeleteElevenLabsVoiceAction,
     AssistantDeleteKokoroAction,
     AssistantDeleteKokoroEvent,
     AssistantDeleteMcpServerEvent,
@@ -145,6 +162,7 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedPiperVoiceAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
+    AssistantSetSelectedVoiceAction,
     AssistantSetSelectedVoskModelAction,
     AssistantStartListeningAction,
     AssistantStopListeningAction,
@@ -152,10 +170,12 @@ from ubo_app.store.services.assistant import (
     AssistantSTTName,
     AssistantSyncMcpServersAction,
     AssistantSyncMcpServersEvent,
+    AssistantSynthesizeAction,
     AssistantToggleListeningAction,
     AssistantToggleMcpServerEvent,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
+    ElevenLabsVoiceEntry,
     GenericLLMProvider,
     InfraredTriggerSource,
     McpServerMetadata,
@@ -182,6 +202,9 @@ from ubo_app.utils.menu_items import (
     build_selection_menu,
 )
 from ubo_app.utils.persistent_store import register_persistent_store
+
+# Spoken when the user picks a TTS voice, so they immediately hear it.
+VOICE_PREVIEW_TEXT = 'This is a new voice.'
 
 
 def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
@@ -417,6 +440,19 @@ def _register_persistent_stores() -> None:
         lambda state: json.dumps(state.assistant.selected_models),
     )
     register_persistent_store(
+        'assistant:selected_tts_voice',
+        lambda state: json.dumps(state.assistant.selected_voices),
+    )
+    register_persistent_store(
+        'assistant:elevenlabs_voices',
+        lambda state: json.dumps(
+            [
+                {'id': voice.id, 'label': voice.label}
+                for voice in state.assistant.elevenlabs_voices
+            ],
+        ),
+    )
+    register_persistent_store(
         'assistant:generic_llm_providers',
         lambda state: json.dumps(
             [
@@ -604,9 +640,19 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             ),
         )
 
+    # Match by *type*, not identity: ``GoogleCloudEngine`` / ``OpenAIEngine``
+    # have separate per-modality instances (STT/LLM/TTS), but
+    # ``_deduped_providers`` collapses them to one arbitrary instance per type.
+    # Identity matching would then surface only whichever modality's instance
+    # happened to survive dedup, hiding the other (e.g. the LLM model picker
+    # disappearing once the engine also became a TTS voice provider).
     def _llm_name_for(provider: NeedsSetupMixin) -> AssistantLLMName | None:
         return next(
-            (name for name, eng in LLM_ENGINES.items() if eng is provider),
+            (
+                name
+                for name, eng in LLM_ENGINES.items()
+                if type(eng) is type(provider)
+            ),
             None,
         )
 
@@ -614,6 +660,110 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         return _llm_name_for(provider) is not None and bool(
             getattr(provider, 'CURATED_MODELS', ()),
         )
+
+    def _tts_name_for(provider: NeedsSetupMixin) -> AssistantTTSName | None:
+        return next(
+            (
+                name
+                for name, eng in TTS_ENGINES.items()
+                if type(eng) is type(provider)
+            ),
+            None,
+        )
+
+    def _has_voice_picker(tts_name: AssistantTTSName) -> bool:
+        return (
+            tts_name in LANGUAGE_GROUPED_CATALOGS
+            or tts_name in FLAT_CATALOGS
+            or tts_name == AssistantTTSName.ELEVENLABS
+        )
+
+    def _selected_cloud_voice(
+        selected_voices: dict[AssistantTTSName, str],
+        tts_name: AssistantTTSName,
+    ) -> str:
+        return selected_voices.get(tts_name) or DEFAULT_VOICES.get(tts_name, '')
+
+    def _cloud_voice_menu_key(tts_name: AssistantTTSName) -> str:
+        """Return the menu key the provider page pushes for the voice picker."""
+        if tts_name in LANGUAGE_GROUPED_CATALOGS:
+            return f'{tts_name.value}:languages'
+        return f'{tts_name.value}:voices'
+
+    def _cloud_voice_label(
+        tts_name: AssistantTTSName,
+        voice_id: str,
+        available: tuple[ElevenLabsVoiceEntry, ...] = (),
+    ) -> str:
+        """Human label for the currently selected cloud voice."""
+        if not voice_id:
+            return 'Default'
+        entry = cloud_voice_for(
+            voice_id,
+            languages=LANGUAGE_GROUPED_CATALOGS.get(tts_name, ()),
+            flat=FLAT_CATALOGS.get(tts_name, ()),
+        )
+        if entry is not None:
+            return entry.label
+        for el_voice in available:
+            if el_voice.id == voice_id:
+                return el_voice.label or el_voice.id
+        return voice_id
+
+    def _elevenlabs_engine() -> ElevenLabsEngine | None:
+        engine = TTS_ENGINES.get(AssistantTTSName.ELEVENLABS)
+        return engine if isinstance(engine, ElevenLabsEngine) else None
+
+    async def _add_elevenlabs_voice() -> None:
+        """Collect a voice ID (+ optional name) and add it to the picker."""
+        try:
+            _, result = await ubo_input(
+                title='ElevenLabs Voice',
+                prompt='Enter an ElevenLabs voice ID and an optional name.',
+                descriptions=[
+                    WebUIInputDescription(
+                        fields=[
+                            InputFieldDescription(
+                                name='voice_id',
+                                type=InputFieldType.TEXT,
+                                label='Voice ID',
+                                description='Enter an ElevenLabs voice ID',
+                                required=True,
+                                pattern=ELEVENLABS_VOICE_ID_PATTERN,
+                            ),
+                            InputFieldDescription(
+                                name='name',
+                                type=InputFieldType.TEXT,
+                                label='Name (optional)',
+                                description='A human-readable name, e.g. '
+                                '"Deep Voice Man"',
+                                required=False,
+                            ),
+                        ],
+                    ),
+                ],
+            )
+        except asyncio.CancelledError:
+            return
+        voice_id = (result.data.get('voice_id') or '').strip()
+        name = (result.data.get('name') or '').strip()
+        if voice_id:
+            store.dispatch(
+                AssistantAddElevenLabsVoiceAction(voice_id=voice_id, name=name),
+            )
+
+    def _add_elevenlabs_voice_handler() -> None:
+        create_task(_add_elevenlabs_voice())
+
+    def _refresh_elevenlabs_voices_handler() -> None:
+        engine = _elevenlabs_engine()
+        if engine is not None:
+            create_task(engine.fetch_voices())
+
+    def _open_elevenlabs_voices() -> None:
+        """Open the ElevenLabs voice picker, refreshing the fetched list."""
+        _refresh_elevenlabs_voices_handler()
+        store.dispatch(StackPushMenuAction(menu_key='elevenlabs:voices'))
 
     @store.autorun(
         lambda state: (
@@ -748,6 +898,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.vosk_downloaded_models,
             state.assistant.ollama_downloaded_models,
             state.assistant.kokoro_is_downloaded,
+            state.assistant.selected_voices,
+            state.assistant.elevenlabs_available_voices,
+            state.assistant.elevenlabs_voices,
         ),
     )
     def provider_details(  # noqa: C901, PLR0912, PLR0915
@@ -765,6 +918,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             tuple[str, ...],
             tuple[str, ...],
             bool,
+            dict[AssistantTTSName, str],
+            tuple[ElevenLabsVoiceEntry, ...],
+            tuple[ElevenLabsVoiceEntry, ...],
         ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
@@ -778,6 +934,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         vosk_downloaded_models = data[10]
         ollama_downloaded_models = data[11]
         kokoro_is_downloaded = data[12]
+        selected_voices = data[13]
+        # User-added voices first so their human-readable names win over the
+        # raw-id fetched entries when labelling the selected ElevenLabs voice.
+        elevenlabs_voices = (*data[15], *data[14])
 
         for action_id in _provider_detail_action_ids:
             unregister_action(action_id)
@@ -1089,6 +1249,44 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         label=f'Model: {current_model}',
                         icon='󰧑',
                         action_id=select_model_action,
+                    ),
+                )
+
+            # "Voice" — for cloud TTS providers with a curated/fetched voice
+            # list. Local Piper/Kokoro handled their own drill-down above.
+            tts_name = _tts_name_for(provider)
+            if tts_name is not None and _has_voice_picker(tts_name):
+                current_voice_id = _selected_cloud_voice(selected_voices, tts_name)
+                current_label = _cloud_voice_label(
+                    tts_name,
+                    current_voice_id,
+                    elevenlabs_voices,
+                )
+                voice_action = (
+                    f'assistant:provider-detail:select-voice:{provider.name}'
+                )
+                _provider_detail_action_ids.append(voice_action)
+                if tts_name == AssistantTTSName.ELEVENLABS:
+                    register_action(
+                        voice_action,
+                        _open_elevenlabs_voices,
+                        allow_reregister=True,
+                    )
+                else:
+                    voice_menu_key = _cloud_voice_menu_key(tts_name)
+                    register_action(
+                        voice_action,
+                        lambda key=voice_menu_key: store.dispatch(
+                            StackPushMenuAction(menu_key=key),
+                        ),
+                        allow_reregister=True,
+                    )
+                items.append(
+                    MenuItemData(
+                        key='select-voice',
+                        label=f'Voice: {current_label}',
+                        icon='󰔊',
+                        action_id=voice_action,
                     ),
                 )
 
@@ -1721,6 +1919,301 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         engine = _piper_engine()
         if engine is not None:
             engine.download_voice(event.voice_id)
+
+    # --- Cloud TTS voice pickers (Rime / Google / Venice / OpenAI) ---------
+    _cloud_voice_language_action_ids: list[str] = []
+    _cloud_voice_select_action_ids: list[str] = []
+
+    def _make_cloud_voice_handler(
+        tts_name: AssistantTTSName,
+        voice_id: str,
+        pop_count: int,
+    ) -> Callable[[], None]:
+        def _handler() -> None:
+            store.dispatch(
+                AssistantSetSelectedVoiceAction(
+                    tts_name=tts_name,
+                    voice_id=voice_id,
+                ),
+                # Audible preview in the just-selected voice. ``tts_provider``
+                # is explicit so it previews this provider even when it isn't
+                # the active ``selected_tts``.
+                AssistantSynthesizeAction(
+                    text=VOICE_PREVIEW_TEXT,
+                    session_id=uuid.uuid4().hex,
+                    tts_provider=tts_name,
+                ),
+                *([MenuGoBackAction()] * pop_count),
+            )
+
+        return _handler
+
+    def _build_cloud_voice_list(  # noqa: PLR0913
+        *,
+        menu_id: str,
+        tts_name: AssistantTTSName,
+        voices: tuple[CloudVoiceEntry, ...],
+        selected: str,
+        heading: str,
+        pop_count: int,
+    ) -> None:
+        items: list[MenuItemData] = []
+        for voice in voices:
+            is_selected = voice.id == selected
+            action_id = (
+                f'assistant:tts:select-voice:{tts_name.value}:{voice.id}'
+            )
+            _cloud_voice_select_action_ids.append(action_id)
+            register_action(
+                action_id,
+                _make_cloud_voice_handler(tts_name, voice.id, pop_count),
+                allow_reregister=True,
+            )
+            items.append(
+                MenuItemData(
+                    key=voice.id,
+                    label=voice.label,
+                    icon='󰄬' if is_selected else '󰔊',
+                    background_color=INFO_COLOR if is_selected else None,
+                    action_id=action_id,
+                ),
+            )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id=menu_id,
+                title='Voices',
+                heading=heading,
+                sub_heading='Pick a voice',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_voices,
+            state.localization.language,
+        ),
+    )
+    def cloud_voice_menus(
+        data: tuple[dict[AssistantTTSName, str], LanguageCode],
+    ) -> None:
+        """Build the cloud TTS voice pickers, adapting to the system language."""
+        selected_voices, system_language = data
+
+        for action_id in (
+            *_cloud_voice_language_action_ids,
+            *_cloud_voice_select_action_ids,
+        ):
+            unregister_action(action_id)
+        _cloud_voice_language_action_ids.clear()
+        _cloud_voice_select_action_ids.clear()
+
+        # Language-grouped providers — a Language → Voice drill-down whose
+        # language list follows the selected system language.
+        for tts_name, languages in LANGUAGE_GROUPED_CATALOGS.items():
+            selected = _selected_cloud_voice(selected_voices, tts_name)
+            current_language = cloud_language_for(languages, selected)
+            lang_items: list[MenuItemData] = []
+            for language in cloud_visible_languages(languages, system_language):
+                open_action = (
+                    f'assistant:tts:{tts_name.value}:'
+                    f'open-language:{language.code.value}'
+                )
+                _cloud_voice_language_action_ids.append(open_action)
+                register_action(
+                    open_action,
+                    lambda name=tts_name, code=language.code: store.dispatch(
+                        StackPushMenuAction(
+                            menu_key=f'{name.value}:voices:{code.value}',
+                        ),
+                    ),
+                    allow_reregister=True,
+                )
+                is_current = (
+                    current_language is not None
+                    and current_language.code == language.code
+                )
+                lang_items.append(
+                    MenuItemData(
+                        key=language.code.value,
+                        label=language.label,
+                        icon='󰄬' if is_current else '󰗊',
+                        background_color=INFO_COLOR if is_current else None,
+                        action_id=open_action,
+                    ),
+                )
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=f'assistant:tts:{tts_name.value}:languages',
+                    title='Voices',
+                    heading='Voices',
+                    sub_heading='Pick a language',
+                    items=tuple(lang_items),
+                ),
+            )
+            for language in languages:
+                _build_cloud_voice_list(
+                    menu_id=(
+                        f'assistant:tts:{tts_name.value}:'
+                        f'voices:{language.code.value}'
+                    ),
+                    tts_name=tts_name,
+                    voices=language.voices,
+                    selected=selected,
+                    heading=language.label,
+                    pop_count=2,
+                )
+
+        # Flat providers (OpenAI) — a single multilingual voice list.
+        for tts_name, voices in FLAT_CATALOGS.items():
+            _build_cloud_voice_list(
+                menu_id=f'assistant:tts:{tts_name.value}:voices',
+                tts_name=tts_name,
+                voices=voices,
+                selected=_selected_cloud_voice(selected_voices, tts_name),
+                heading='Voices',
+                pop_count=1,
+            )
+
+    # --- ElevenLabs voice picker (live-fetched + user-added IDs) -----------
+    _elevenlabs_voice_action_ids: list[str] = []
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_voices,
+            state.assistant.elevenlabs_voices,
+            state.assistant.elevenlabs_available_voices,
+            secrets_monitor.value,
+        ),
+    )
+    def elevenlabs_voice_menu(
+        data: tuple[
+            dict[AssistantTTSName, str],
+            tuple[ElevenLabsVoiceEntry, ...],
+            tuple[ElevenLabsVoiceEntry, ...],
+            object,
+        ],
+    ) -> None:
+        """Build the ElevenLabs voice picker (no language filter)."""
+        selected_voices, user_voices, available_voices, _secrets = data
+        # ``_secrets`` (secrets_monitor.value) is only a refire trigger — it can
+        # still be the autorun's initial sentinel on the first run, so read the
+        # primary voice from the secret directly (matches how other autoruns
+        # treat secrets_monitor.value: a change signal, not a data source).
+        secret_voice = secrets.read_secret(ELEVENLABS_VOICE_ID) or ''
+        selected = selected_voices.get(AssistantTTSName.ELEVENLABS) or secret_voice
+
+        for action_id in _elevenlabs_voice_action_ids:
+            unregister_action(action_id)
+        _elevenlabs_voice_action_ids.clear()
+
+        # Union de-duplicated by id, ordered user-added → secret → fetched.
+        # A user-supplied name takes precedence over the raw id / fetched name;
+        # entries with no name fall back to the id.
+        labels: dict[str, str] = {}
+        for voice in user_voices:
+            labels[voice.id] = voice.label or voice.id
+        if secret_voice:
+            labels.setdefault(secret_voice, secret_voice)
+        for entry in available_voices:
+            labels.setdefault(entry.id, entry.label or entry.id)
+
+        items: list[MenuItemData] = []
+        for voice_id, label in labels.items():
+            is_selected = voice_id == selected
+            select_action = f'assistant:tts:elevenlabs:select:{voice_id}'
+            _elevenlabs_voice_action_ids.append(select_action)
+            register_action(
+                select_action,
+                lambda vid=voice_id: store.dispatch(
+                    AssistantSetSelectedVoiceAction(
+                        tts_name=AssistantTTSName.ELEVENLABS,
+                        voice_id=vid,
+                    ),
+                    AssistantSynthesizeAction(
+                        text=VOICE_PREVIEW_TEXT,
+                        session_id=uuid.uuid4().hex,
+                        tts_provider=AssistantTTSName.ELEVENLABS,
+                    ),
+                    MenuGoBackAction(),
+                ),
+                allow_reregister=True,
+            )
+            items.append(
+                MenuItemData(
+                    key=voice_id,
+                    label=label,
+                    icon='󰄬' if is_selected else '󰔊',
+                    background_color=INFO_COLOR if is_selected else None,
+                    action_id=select_action,
+                ),
+            )
+
+        # "Add Voice ID" + "Refresh voices" actions.
+        add_action = 'assistant:tts:elevenlabs:add-voice'
+        _elevenlabs_voice_action_ids.append(add_action)
+        register_action(
+            add_action,
+            _add_elevenlabs_voice_handler,
+            allow_reregister=True,
+        )
+        items.append(
+            MenuItemData(
+                key='add-voice',
+                label='Add Voice ID',
+                icon='󰐕',
+                action_id=add_action,
+            ),
+        )
+        refresh_action = 'assistant:tts:elevenlabs:refresh'
+        _elevenlabs_voice_action_ids.append(refresh_action)
+        register_action(
+            refresh_action,
+            _refresh_elevenlabs_voices_handler,
+            allow_reregister=True,
+        )
+        items.append(
+            MenuItemData(
+                key='refresh',
+                label='Refresh Voices',
+                icon='󰑐',
+                action_id=refresh_action,
+            ),
+        )
+
+        # Delete prompts for user-added voices only (fetched/secret stay).
+        for voice in user_voices:
+            display = voice.label or voice.id
+            _register_delete_prompt(
+                delete_action_id=f'assistant:tts:elevenlabs:delete:{voice.id}',
+                confirm_action_id=(
+                    f'assistant:tts:elevenlabs:confirm-delete:{voice.id}'
+                ),
+                title='Delete Voice',
+                prompt=f'Remove voice "{display}"?',
+                action=AssistantDeleteElevenLabsVoiceAction(voice_id=voice.id),
+                tracker=_elevenlabs_voice_action_ids,
+                pop_count=1,
+            )
+            items.append(
+                MenuItemData(
+                    key=f'delete:{voice.id}',
+                    label=f'Delete {display}',
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=f'assistant:tts:elevenlabs:delete:{voice.id}',
+                ),
+            )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:tts:elevenlabs:voices',
+                title='Voices',
+                heading='ElevenLabs',
+                sub_heading='Pick a voice',
+                items=tuple(items),
+            ),
+        )
 
     _kokoro_language_action_ids: list[str] = []
     _kokoro_voice_action_ids: list[str] = []
@@ -2610,7 +3103,7 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
         'assistant:mcp_tools': 'assistant:mcp_tools',
     }
 
-    def _match_catalog_tail(tail: str) -> str | None:  # noqa: C901
+    def _match_catalog_tail(tail: str) -> str | None:  # noqa: C901, PLR0912
         """Leaf segments owned by Ollama / Piper / Kokoro / Vosk drill-downs."""
         if tail == 'ollama:categories':
             return 'assistant:ollama:categories'
@@ -2634,6 +3127,22 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
             return 'assistant:vosk:languages'
         if tail.startswith('vosk:models:'):
             return f'assistant:vosk:models:{tail[len("vosk:models:") :]}'
+        # Cloud TTS voice pickers (language-grouped Rime/Google/Venice).
+        for tts_name in LANGUAGE_GROUPED_CATALOGS:
+            prefix = tts_name.value
+            if tail == f'{prefix}:languages':
+                return f'assistant:tts:{prefix}:languages'
+            if tail.startswith(f'{prefix}:voices:'):
+                return (
+                    f'assistant:tts:{prefix}:voices:'
+                    f'{tail[len(f"{prefix}:voices:") :]}'
+                )
+        # Flat cloud voice pickers (OpenAI) + ElevenLabs.
+        for tts_name in FLAT_CATALOGS:
+            if tail == f'{tts_name.value}:voices':
+                return f'assistant:tts:{tts_name.value}:voices'
+        if tail == 'elevenlabs:voices':
+            return 'assistant:tts:elevenlabs:voices'
         return None
 
     def _assistant_path_matcher(path: tuple[str, ...]) -> str | None:

@@ -55,7 +55,7 @@ STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
 LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
     AssistantLLMName.OLLAMA: OllamaEngine(),
     AssistantLLMName.OLLAMA_ONPREM: OllamaOnPremEngine(),
-    AssistantLLMName.GOOGLE: GoogleCloudEngine(label='Google Vertex'),
+    AssistantLLMName.GOOGLE: GoogleCloudEngine(label='Google'),
     AssistantLLMName.GROK: GrokEngine(),
     AssistantLLMName.CEREBRAS: CerebrasEngine(),
     AssistantLLMName.OPENAI: OpenAIEngine(),

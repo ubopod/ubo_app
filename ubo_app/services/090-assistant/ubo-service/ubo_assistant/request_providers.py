@@ -37,7 +37,8 @@ _DEFAULT_VENICE_TTS_MODEL = os.environ.get(
 )
 _DEFAULT_VENICE_TTS_VOICE = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_VENICE_TTS_VOICE',
-    'af_sky',
+    # Kept in sync with core's ``DEFAULT_VENICE_TTS_VOICE``.
+    'af_heart',
 )
 
 
@@ -295,6 +296,7 @@ async def _build_tts(  # noqa: C901, PLR0912
     *,
     piper_voice_id: str = '',
     kokoro_voice_id: str = '',
+    tts_voice_id: str = '',
 ) -> TTSService | None:
     if provider_id == 'piper':
         from ubo_assistant.piper import DEFAULT_PIPER_VOICE_ID, PiperTTSService
@@ -323,7 +325,12 @@ async def _build_tts(  # noqa: C901, PLR0912
             return None
         from pipecat.services.google.tts import GoogleTTSService
 
-        return GoogleTTSService(credentials=credentials)
+        from ubo_assistant.tts_voice import google_voice_kwargs
+
+        return GoogleTTSService(
+            credentials=credentials,
+            **google_voice_kwargs(tts_voice_id),
+        )
 
     if provider_id == 'openai':
         api_key = await _secret(client, 'OPENAI_API_KEY_SECRET_ID')
@@ -331,7 +338,10 @@ async def _build_tts(  # noqa: C901, PLR0912
             return None
         from pipecat.services.openai.tts import OpenAITTSService
 
-        return OpenAITTSService(api_key=api_key)
+        openai_kwargs: dict[str, Any] = (
+            {'voice': tts_voice_id} if tts_voice_id else {}
+        )
+        return OpenAITTSService(api_key=api_key, **openai_kwargs)
 
     if provider_id == 'elevenlabs':
         api_key = await _secret(client, 'ELEVENLABS_API_KEY_SECRET_ID')
@@ -342,7 +352,7 @@ async def _build_tts(  # noqa: C901, PLR0912
 
         return ElevenLabsTTSService(
             api_key=api_key,
-            voice_id=voice_id,
+            voice_id=tts_voice_id or voice_id,
             sample_rate=24000,
             model='eleven_turbo_v2_5',
             enable_logging=True,
@@ -353,14 +363,16 @@ async def _build_tts(  # noqa: C901, PLR0912
         if not api_key:
             return None
         from pipecat.services.rime.tts import RimeTTSService
-        from pipecat.transcriptions.language import Language
 
+        from ubo_assistant.tts_voice import rime_language
+
+        rime_voice = tts_voice_id or 'antoine'
         return RimeTTSService(
             api_key=api_key,
-            voice_id='antoine',
+            voice_id=rime_voice,
             model='mistv2',
             params=RimeTTSService.InputParams(
-                language=Language.EN,
+                language=rime_language(rime_voice),
                 speed_alpha=1.0,
                 reduce_latency=False,
                 pause_between_brackets=True,
@@ -378,7 +390,7 @@ async def _build_tts(  # noqa: C901, PLR0912
             api_key=api_key,
             base_url=VENICE_BASE_URL,
             model=_DEFAULT_VENICE_TTS_MODEL,
-            voice=_DEFAULT_VENICE_TTS_VOICE,
+            voice=tts_voice_id or _DEFAULT_VENICE_TTS_VOICE,
         )
 
     return None
@@ -418,6 +430,7 @@ async def build_tts_service(
     client: UboRPCClient,
     piper_voice_id: str = '',
     kokoro_voice_id: str = '',
+    tts_voice_id: str = '',
 ) -> TTSService | None:
     """Construct the TTS service for ``provider_id``, or ``None`` if unavailable."""
     try:
@@ -426,6 +439,7 @@ async def build_tts_service(
             client,
             piper_voice_id=piper_voice_id,
             kokoro_voice_id=kokoro_voice_id,
+            tts_voice_id=tts_voice_id,
         )
     except Exception:
         logger.exception('Failed to build TTS service', extra={'provider': provider_id})

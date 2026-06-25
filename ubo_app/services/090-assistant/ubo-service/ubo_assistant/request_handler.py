@@ -245,6 +245,7 @@ async def _resolve_stage_services(
             client=client,
             piper_voice_id=event.piper_voice_id or '',
             kokoro_voice_id=event.kokoro_voice_id or '',
+            tts_voice_id=event.tts_voice_id or '',
         )
         if service is None:
             message = (

@@ -96,7 +96,9 @@ DEFAULT_VENICE_TTS_MODEL = os.environ.get(
 )
 DEFAULT_VENICE_TTS_VOICE = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_VENICE_TTS_VOICE',
-    'af_sky',
+    # Venice serves Kokoro voices; default to the Kokoro default so the voice
+    # picker (which mirrors the Kokoro catalog) can highlight it.
+    'af_heart',
 )
 
 GOOGLE_API_KEY_SECRET_ID = 'google_api_key'  # noqa: S105
@@ -125,7 +127,11 @@ GROK_API_KEY_SECRET_ID = 'grok_api_key'  # noqa: S105
 GROK_API_KEY_PATTERN = '^xai-[a-zA-Z0-9]{80}$'
 
 ELEVENLABS_API_KEY_SECRET_ID = 'elevenlabs_api_key'  # noqa: S105
-ELEVENLABS_API_KEY_PATTERN = '^[a-f0-9]{64}$'
+# Accept both the modern ``sk_<alphanumeric>`` keys and the legacy bare-hex
+# keys. Kept deliberately permissive — over-strict patterns reject valid keys
+# (the legacy ``^[a-f0-9]{64}$`` blocked every ``sk_`` key); the API is the
+# real validator.
+ELEVENLABS_API_KEY_PATTERN = '^(sk_)?[a-zA-Z0-9]{32,}$'
 ELEVENLABS_VOICE_ID = 'elevenlabs_voice_id'
 ELEVENLABS_VOICE_ID_PATTERN = '^[a-zA-Z0-9-_]{20,}$'
 

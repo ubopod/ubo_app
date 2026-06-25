@@ -16,11 +16,14 @@ from redux.basic_types import InitAction
 from ubo_app.logger import logger
 from ubo_app.store.services.assistant import (
     DEFAULT_MODELS,
+    DEFAULT_VOICES,
     AssistantAction,
+    AssistantAddElevenLabsVoiceAction,
     AssistantAddGenericLLMProviderAction,
     AssistantAddMcpServerAction,
     AssistantAddMcpServerEvent,
     AssistantCompleteAction,
+    AssistantDeleteElevenLabsVoiceAction,
     AssistantDeleteKokoroAction,
     AssistantDeleteKokoroEvent,
     AssistantDeleteMcpServerAction,
@@ -53,6 +56,7 @@ from ubo_app.store.services.assistant import (
     AssistantRunPipelineEvent,
     AssistantSelectGenericLLMProviderAction,
     AssistantSetConversationEndPhrasesAction,
+    AssistantSetElevenLabsAvailableVoicesAction,
     AssistantSetIsActiveAction,
     AssistantSetKokoroDownloadedAction,
     AssistantSetMcpServersAction,
@@ -67,6 +71,7 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedPiperVoiceAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
+    AssistantSetSelectedVoiceAction,
     AssistantSetSelectedVoskModelAction,
     AssistantSetVoskDownloadedModelsAction,
     AssistantStartListeningAction,
@@ -84,6 +89,8 @@ from ubo_app.store.services.assistant import (
     AssistantTranscribeAction,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
+    AssistantVoiceChangedEvent,
+    ElevenLabsVoiceEntry,
     EnabledMcpServersWithMetadata,
     GenericLLMProvider,
     StopTalkingPhraseStopReason,
@@ -137,6 +144,7 @@ def _make_run_pipeline_event(  # noqa: PLR0913
 ) -> AssistantRunPipelineEvent:
     """Build the canonical run-pipeline event, resolving providers/model from state."""
     resolved_llm = llm_provider if llm_provider is not None else state.selected_llm
+    resolved_tts = tts_provider if tts_provider is not None else state.selected_tts
     return AssistantRunPipelineEvent(
         session_id=session_id,
         stages=stages,
@@ -146,7 +154,7 @@ def _make_run_pipeline_event(  # noqa: PLR0913
         num_channels=num_channels,
         stt_provider=stt_provider if stt_provider is not None else state.selected_stt,
         llm_provider=resolved_llm,
-        tts_provider=tts_provider if tts_provider is not None else state.selected_tts,
+        tts_provider=resolved_tts,
         llm_model=llm_model
         if llm_model is not None
         else state.selected_models.get(resolved_llm, DEFAULT_MODELS[resolved_llm]),
@@ -154,10 +162,14 @@ def _make_run_pipeline_event(  # noqa: PLR0913
         enable_tools=enable_tools,
         # Resolve per-engine selections so the request handler doesn't fall
         # back to hardcoded module defaults (live and one-shot pipelines must
-        # agree on the same Vosk model / Piper voice / Kokoro voice).
+        # agree on the same Vosk model / Piper voice / Kokoro voice / cloud voice).
         vosk_model_id=state.selected_vosk_model,
         piper_voice_id=state.selected_piper_voice,
         kokoro_voice_id=state.selected_kokoro_voice,
+        tts_voice_id=state.selected_voices.get(
+            resolved_tts,
+            DEFAULT_VOICES.get(resolved_tts, ''),
+        ),
     )
 
 
@@ -240,6 +252,27 @@ def reducer(
                 ],
             )
 
+        case AssistantSetSelectedVoiceAction():
+            # Emit an event (not a plain update) because the subprocess can't
+            # track the ``selected_voices`` dict via a gRPC autorun — mirrors
+            # the LLM model-change path above.
+            new_state = replace(
+                state,
+                selected_voices={
+                    **state.selected_voices,
+                    action.tts_name: action.voice_id,
+                },
+            )
+            return CompleteReducerResult(
+                state=new_state,
+                events=[
+                    AssistantVoiceChangedEvent(
+                        tts_name=action.tts_name,
+                        voice_id=action.voice_id,
+                    ),
+                ],
+            )
+
         case AssistantDownloadOllamaModelAction():
             return CompleteReducerResult(
                 state=state,
@@ -317,6 +350,61 @@ def reducer(
 
         case AssistantSetKokoroDownloadedAction():
             return replace(state, kokoro_is_downloaded=action.downloaded)
+
+        case AssistantAddElevenLabsVoiceAction():
+            # Append, or update the name when an existing id is re-added.
+            entry = ElevenLabsVoiceEntry(id=action.voice_id, label=action.name)
+            others = tuple(
+                voice
+                for voice in state.elevenlabs_voices
+                if voice.id != action.voice_id
+            )
+            return replace(state, elevenlabs_voices=(*others, entry))
+
+        case AssistantDeleteElevenLabsVoiceAction():
+            remaining = tuple(
+                voice
+                for voice in state.elevenlabs_voices
+                if voice.id != action.voice_id
+            )
+            was_selected = (
+                state.selected_voices.get(AssistantTTSName.ELEVENLABS)
+                == action.voice_id
+            )
+            selected_voices = state.selected_voices
+            if was_selected:
+                # Fall back to '' so the subprocess resolves the primary voice
+                # from the ELEVENLABS_VOICE_ID secret — kept pure (no secret
+                # read inside the reducer).
+                selected_voices = {
+                    **state.selected_voices,
+                    AssistantTTSName.ELEVENLABS: '',
+                }
+            new_state = replace(
+                state,
+                elevenlabs_voices=remaining,
+                selected_voices=selected_voices,
+            )
+            if was_selected:
+                # Notify the subprocess so a live ElevenLabs service stops using
+                # the just-deleted voice (mirrors the select path) — without it
+                # the deleted voice lingers until restart or another selection.
+                return CompleteReducerResult(
+                    state=new_state,
+                    events=[
+                        AssistantVoiceChangedEvent(
+                            tts_name=AssistantTTSName.ELEVENLABS,
+                            voice_id='',
+                        ),
+                    ],
+                )
+            return new_state
+
+        case AssistantSetElevenLabsAvailableVoicesAction():
+            return replace(
+                state,
+                elevenlabs_available_voices=tuple(action.voices),
+            )
 
         case AssistantSetSelectedVoskModelAction():
             # Plain state update — the assistant subprocess tracks
