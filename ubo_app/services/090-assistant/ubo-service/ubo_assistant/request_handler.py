@@ -133,6 +133,7 @@ def _env_float(name: str, default: float) -> float:
 _STAGE_IDS = {'STT': STT, 'LLM': LLM, 'TTS': TTS}
 _STT_PROVIDER_IDS = {
     'VOSK': 'vosk',
+    'MOONSHINE': 'moonshine',
     'GOOGLE_SEGMENTED': 'google_segmented',
     'GOOGLE': 'google',
     'OPENAI': 'openai',
@@ -216,6 +217,7 @@ async def _resolve_stage_services(
             provider_id,
             client=client,
             vosk_model_id=event.vosk_model_id or '',
+            moonshine_model_id=event.moonshine_model_id or '',
         )
         if service is None:
             return services, f"STT provider '{provider_id}' is not available"

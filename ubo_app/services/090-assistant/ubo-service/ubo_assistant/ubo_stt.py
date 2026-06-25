@@ -26,9 +26,13 @@ from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
     AssistanceTextFrame,
+    AssistantDeleteMoonshineModelEvent,
+    AssistantDownloadMoonshineModelEvent,
     AssistantPipelineStage,
+    Event,
 )
 
+from ubo_assistant.moonshine import MoonshineSTTProxy
 from ubo_assistant.segmented_googlestt import SegmentedGoogleSTTService
 from ubo_assistant.switch import UboSwitchService
 from ubo_assistant.venice_stt import VeniceSTTService
@@ -222,11 +226,18 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             else None,
         )
 
+        # Moonshine downloads its model inside the subprocess, so the proxy
+        # builds the real service lazily on selection (see ``MoonshineSTTProxy``).
+        # The store autorun in ``_ensure_autoruns_started`` reconciles it to the
+        # user's persisted model id.
+        self.moonshine_stt = MoonshineSTTProxy(client=client)
+
         self._services = {
             'google_segmented': self.segmented_google_stt,
             'google': self.google_stt,
             'openai': self.openai_stt,
             'vosk': self.vosk_stt,
+            'moonshine': self.moonshine_stt,
             'deepgram': self.deepgram_stt,
             'assemblyai': self.assemblyai_stt,
             'venice': self.venice_stt,
@@ -403,6 +414,61 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             target = self.vosk_stt
             if isinstance(target, VoskSTTService):
                 target.request_model(model_id)
+
+        self._start_moonshine_tracking()
+
+    def _start_moonshine_tracking(self) -> None:
+        """Wire the Moonshine proxy's selection, download set, and events."""
+        # Selection is *load-only*: the proxy loads the model from cache when
+        # it's already downloaded, and never downloads off this signal (so a
+        # cold-start selection can't auto-download).
+        @self.client.autorun(['state.assistant.selected_moonshine_model'])
+        def _handle_moonshine_model_change(data: list[StringValue]) -> None:
+            target = self.moonshine_stt
+            if isinstance(target, MoonshineSTTProxy):
+                target.set_active_model(data[0].value)
+
+        # Seed/refresh the proxy's known-downloaded set from the persisted store
+        # so it knows which models it may load from cache (and skips the
+        # download spinner for an already-downloaded model).
+        @self.client.autorun(['state.assistant.moonshine_downloaded_models'])
+        def _handle_moonshine_downloaded_change(data: list) -> None:
+            wrapper = data[0]
+            models = list(wrapper.items) if wrapper is not None else []
+            target = self.moonshine_stt
+            if isinstance(target, MoonshineSTTProxy):
+                target.set_downloaded(models)
+
+        # Explicit, user-initiated download/delete arrive as events (the
+        # subprocess owns the model cache, unlike Vosk's core-side download).
+        def _on_moonshine_download(event: Event) -> None:
+            request = event.assistant_download_moonshine_model_event
+            target = self.moonshine_stt
+            if request and isinstance(target, MoonshineSTTProxy):
+                target.download_model(request.model_id)
+
+        def _on_moonshine_delete(event: Event) -> None:
+            request = event.assistant_delete_moonshine_model_event
+            target = self.moonshine_stt
+            if request and isinstance(target, MoonshineSTTProxy):
+                target.delete_model(request.model_id)
+
+        self.client.subscribe_event(
+            event_type=Event(
+                assistant_download_moonshine_model_event=(
+                    AssistantDownloadMoonshineModelEvent()
+                ),
+            ),
+            callback=_on_moonshine_download,
+        )
+        self.client.subscribe_event(
+            event_type=Event(
+                assistant_delete_moonshine_model_event=(
+                    AssistantDeleteMoonshineModelEvent()
+                ),
+            ),
+            callback=_on_moonshine_delete,
+        )
 
     def _log_transcription(self, text: str) -> None:
         """Log newly transcribed text for assistant debugging."""

@@ -42,6 +42,7 @@ class AssistantSTTName(StrEnum):
     """Available assistant speech-to-text engines."""
 
     VOSK = 'vosk'
+    MOONSHINE = 'moonshine'
     GOOGLE_SEGMENTED = 'google_segmented'
     GOOGLE = 'google'
     OPENAI = 'openai'
@@ -180,6 +181,28 @@ def _load_vosk_model(value: object) -> str:
     if isinstance(value, str) and value:
         return value
     return DEFAULT_VOSK_MODEL_ID
+
+
+# Hard-coded fallback. The full catalog lives in
+# ``ubo_app/engines/moonshine_catalog.py``.
+DEFAULT_MOONSHINE_MODEL_ID = 'tiny'
+
+
+def _load_moonshine_model(value: object) -> str:
+    if isinstance(value, str) and value:
+        return value
+    return DEFAULT_MOONSHINE_MODEL_ID
+
+
+def _load_moonshine_downloaded_models(value: object) -> tuple[str, ...]:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (TypeError, json.JSONDecodeError):
+            return ()
+    if isinstance(value, (list, tuple)):
+        return tuple(str(item) for item in value)
+    return ()
 
 
 class AssistantTTSName(StrEnum):
@@ -834,6 +857,72 @@ class AssistantSetVoskDownloadedModelsAction(AssistantAction):
     models: tuple[str, ...]
 
 
+class AssistantSetSelectedMoonshineModelAction(AssistantAction):
+    """Action to pick a Moonshine STT model (pipecat ``Model`` enum string).
+
+    Selection only — sets the model the live pipeline uses. The subprocess
+    tracks ``selected_moonshine_model`` via a gRPC autorun and, when that model
+    is already downloaded, loads it from cache before the next utterance. It
+    never downloads off this action (that would surprise-download on boot); the
+    download is a separate, explicit ``AssistantDownloadMoonshineModelAction``.
+    """
+
+    model_id: str
+
+
+class AssistantDownloadMoonshineModelAction(AssistantAction):
+    """Action explicitly requesting download of a Moonshine model.
+
+    Emitted as ``AssistantDownloadMoonshineModelEvent`` for the subprocess to
+    handle (the model is fetched into the subprocess's local cache). Dispatched
+    by the menu when the user picks a not-yet-downloaded model and by the engine
+    setup flow.
+    """
+
+    model_id: str
+
+
+class AssistantDeleteMoonshineModelAction(AssistantAction):
+    """Action requesting deletion of a downloaded Moonshine model.
+
+    Emitted as ``AssistantDeleteMoonshineModelEvent``; the subprocess removes
+    the cached model files and reports the removal.
+    """
+
+    model_id: str
+
+
+class AssistantAddMoonshineDownloadedModelAction(AssistantAction):
+    """Add a model id to the set of locally-downloaded Moonshine models.
+
+    Dispatched by the assistant subprocess (the sole writer) after it downloads
+    a model. Additive (union) so the persisted set survives subprocess restarts
+    without the subprocess having to know the full set.
+    """
+
+    model_id: str
+
+
+class AssistantRemoveMoonshineDownloadedModelAction(AssistantAction):
+    """Remove a model id from the set of locally-downloaded Moonshine models.
+
+    Dispatched by the assistant subprocess after it deletes a model's cached
+    files in response to ``AssistantDeleteMoonshineModelEvent``.
+    """
+
+    model_id: str
+
+
+class AssistantSetMoonshineDownloadingAction(AssistantAction):
+    """Set the Moonshine model id currently downloading (empty = idle).
+
+    Dispatched by the assistant subprocess around a model download to drive the
+    core's indeterminate "Downloading" spinner.
+    """
+
+    model_id: str
+
+
 class AssistantDeleteOllamaModelAction(AssistantAction):
     """Action requesting deletion of a downloaded Ollama model."""
 
@@ -1205,6 +1294,22 @@ class AssistantDownloadVoskModelEvent(AssistantEvent):
     model_id: str
 
 
+class AssistantDownloadMoonshineModelEvent(AssistantEvent):
+    """Event requesting download of a Moonshine model in the subprocess.
+
+    Unlike Vosk (downloaded core-side), Moonshine's model lives in the
+    subprocess's local cache, so the subprocess subscribes to this event.
+    """
+
+    model_id: str
+
+
+class AssistantDeleteMoonshineModelEvent(AssistantEvent):
+    """Event requesting deletion of a Moonshine model from the subprocess cache."""
+
+    model_id: str
+
+
 class AssistantDeleteOllamaModelEvent(AssistantEvent):
     """Event requesting deletion of a downloaded Ollama model in core."""
 
@@ -1269,10 +1374,11 @@ class AssistantRunPipelineEvent(AssistantEvent):
     discrete shortcut actions and ``AssistantRunPipelineAction`` all funnel
     into this one canonical event.
 
-    Per-engine model/voice fields (``vosk_model_id``, ``piper_voice_id``,
-    ``kokoro_voice_id``) carry the user's current selection so the request
-    handler in the subprocess doesn't have to fall back to module-level
-    defaults — keeping live and one-shot pipelines on the same model.
+    Per-engine model/voice fields (``vosk_model_id``, ``moonshine_model_id``,
+    ``piper_voice_id``, ``kokoro_voice_id``) carry the user's current selection
+    so the request handler in the subprocess doesn't have to fall back to
+    module-level defaults — keeping live and one-shot pipelines on the same
+    model.
     """
 
     session_id: str
@@ -1288,6 +1394,7 @@ class AssistantRunPipelineEvent(AssistantEvent):
     system_prompt: str | None
     enable_tools: bool
     vosk_model_id: str = ''
+    moonshine_model_id: str = ''
     piper_voice_id: str = ''
     kokoro_voice_id: str = ''
     tts_voice_id: str = ''
@@ -1463,6 +1570,32 @@ class AssistantState(Immutable):
     # Cached set of locally-downloaded Vosk model ids. Process-local;
     # refreshed by ``VoskEngine.refresh_downloaded_models()``.
     vosk_downloaded_models: tuple[str, ...] = field(default_factory=tuple)
+    # Currently selected Moonshine STT model id (pipecat ``Model`` enum string,
+    # e.g. ``tiny``). The assistant subprocess tracks this via a gRPC autorun
+    # and rebuilds its ``MoonshineSTTService`` — and downloads the model on
+    # first use — before the next utterance.
+    selected_moonshine_model: str = field(
+        default=read_from_persistent_store(
+            'assistant:selected_moonshine_model',
+            default=DEFAULT_MOONSHINE_MODEL_ID,
+            mapper=_load_moonshine_model,
+        ),
+    )
+    # Set of locally-downloaded (subprocess-cached) Moonshine model ids.
+    # Unlike Vosk, the download happens inside the assistant subprocess, so the
+    # subprocess is the sole writer: it reports the set via
+    # ``AssistantSetMoonshineDownloadedModelsAction``. Persisted so menu
+    # indicators are correct before the subprocess has reported in.
+    moonshine_downloaded_models: tuple[str, ...] = field(
+        default_factory=lambda: read_from_persistent_store(
+            'assistant:moonshine_downloaded_models',
+            default=(),
+            mapper=_load_moonshine_downloaded_models,
+        ),
+    )
+    # Model id currently being downloaded by the subprocess (empty = idle).
+    # Process-local; drives the indeterminate "Downloading" spinner.
+    moonshine_downloading_model: str = ''
     selected_image_generator: AssistantImageGeneratorName = field(
         default=read_from_persistent_store(
             'assistant:selected_image_generator',

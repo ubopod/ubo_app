@@ -60,6 +60,7 @@ async def _build_stt(  # noqa: C901, PLR0912
     client: UboRPCClient,
     *,
     vosk_model_id: str = '',
+    moonshine_model_id: str = '',
 ) -> STTService | None:
     if provider_id == 'vosk':
         from ubo_assistant.vosk import DEFAULT_VOSK_MODEL_ID, VoskSTTService
@@ -71,6 +72,22 @@ async def _build_stt(  # noqa: C901, PLR0912
         return await asyncio.to_thread(
             VoskSTTService,
             model_id=vosk_model_id or DEFAULT_VOSK_MODEL_ID,
+        )
+
+    if provider_id == 'moonshine':
+        from ubo_assistant.moonshine import (
+            DEFAULT_MOONSHINE_MODEL_ID,
+            MoonshineSTTService,
+        )
+
+        # The Moonshine build downloads the model on first use — keep it off the
+        # event loop. The reducer resolves the user's selection into
+        # ``moonshine_model_id``; ``DEFAULT_MOONSHINE_MODEL_ID`` is the fallback.
+        model_id = moonshine_model_id or DEFAULT_MOONSHINE_MODEL_ID
+        return await asyncio.to_thread(
+            lambda: MoonshineSTTService(
+                settings=MoonshineSTTService.Settings(model=model_id),
+            ),
         )
 
     if provider_id in ('google', 'google_segmented'):
@@ -435,10 +452,16 @@ async def build_stt_service(
     *,
     client: UboRPCClient,
     vosk_model_id: str = '',
+    moonshine_model_id: str = '',
 ) -> STTService | None:
     """Construct the STT service for ``provider_id``, or ``None`` if unavailable."""
     try:
-        return await _build_stt(provider_id, client, vosk_model_id=vosk_model_id)
+        return await _build_stt(
+            provider_id,
+            client,
+            vosk_model_id=vosk_model_id,
+            moonshine_model_id=moonshine_model_id,
+        )
     except Exception:
         logger.exception('Failed to build STT service', extra={'provider': provider_id})
         return None

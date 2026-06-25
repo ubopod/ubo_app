@@ -182,6 +182,7 @@ async def run_pipeline(
     llm_model: str = '',
     system_prompt: str | None = None,
     vosk_model_id: str | None = None,
+    moonshine_model_id: str | None = None,
     piper_voice_id: str | None = None,
     kokoro_voice_id: str | None = None,
 ) -> PipelineResult:
@@ -200,6 +201,7 @@ async def run_pipeline(
         llm_model=llm_model,
         system_prompt=system_prompt,
         vosk_model_id=vosk_model_id,
+        moonshine_model_id=moonshine_model_id,
         piper_voice_id=piper_voice_id,
         kokoro_voice_id=kokoro_voice_id,
     )
@@ -297,6 +299,11 @@ TTS_PROVIDERS: tuple[Provider[AssistantTtsName], ...] = (
 
 STT_PROVIDERS: tuple[Provider[AssistantSttName], ...] = (
     Provider('vosk', AssistantSttName.VOSK, local_paths=(_VOSK_PATH,)),
+    # Moonshine is local + free, but unlike Vosk it self-provisions: the model
+    # downloads into the HuggingFace cache on first use (no key, no pre-fetched
+    # local path to gate on), so it is always "available" and the round-trip
+    # run is what triggers the one-time ``tiny`` download.
+    Provider('moonshine', AssistantSttName.MOONSHINE),
     Provider(
         'google',
         AssistantSttName.GOOGLE,

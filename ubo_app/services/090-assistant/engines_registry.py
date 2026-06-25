@@ -17,6 +17,7 @@ from ubo_app.engines.google_cloud import GoogleCloudEngine
 from ubo_app.engines.grok import GrokEngine
 from ubo_app.engines.kokoro import KokoroEngine
 from ubo_app.engines.mistral import MistralEngine
+from ubo_app.engines.moonshine import MoonshineEngine
 from ubo_app.engines.ollama import OllamaEngine
 from ubo_app.engines.ollama_onprem import OllamaOnPremEngine
 from ubo_app.engines.openai import OpenAIEngine
@@ -52,6 +53,7 @@ _MISTRAL_ENGINE = MistralEngine()
 
 STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
     AssistantSTTName.VOSK: VoskEngine(),
+    AssistantSTTName.MOONSHINE: MoonshineEngine(),
     AssistantSTTName.GOOGLE: GoogleCloudEngine(label='Google (continuous)'),
     AssistantSTTName.GOOGLE_SEGMENTED: GoogleCloudEngine(label='Google (segmented)'),
     AssistantSTTName.OPENAI: OpenAIEngine(),

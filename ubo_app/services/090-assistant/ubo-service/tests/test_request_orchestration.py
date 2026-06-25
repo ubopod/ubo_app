@@ -26,6 +26,7 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.deepgram.stt import DeepgramSTTService
+from pipecat.services.moonshine.stt import MoonshineSTTService
 from provider_harness import FakeUboRPCClient
 from ubo_bindings.ubo.v1 import (
     AssistanceAudioFrame,
@@ -142,13 +143,18 @@ def test_realtime_feed_for_cloud_streaming_not_segmented_or_vosk() -> None:
     """Cloud streaming STT needs the paced lead-in; segmented/Vosk burst."""
     # ``__new__`` builds an instance without the heavy provider __init__ (no API
     # key / model load) — the detector only isinstance-checks. Real classes, not
-    # stubs, so this pins the actual taxonomy: Deepgram streams, Google-segmented
-    # and Vosk buffer.
+    # stubs, so this pins the actual taxonomy: Deepgram streams, Google-segmented,
+    # Vosk and Moonshine buffer.
     assert _stt_needs_realtime_feed(DeepgramSTTService.__new__(DeepgramSTTService))
     assert not _stt_needs_realtime_feed(
         SegmentedGoogleSTTService.__new__(SegmentedGoogleSTTService),
     )
     assert not _stt_needs_realtime_feed(VoskSTTService.__new__(VoskSTTService))
+    # Moonshine extends pipecat's SegmentedSTTService, so it bursts like the
+    # other segmented engines rather than taking the paced realtime feed.
+    assert not _stt_needs_realtime_feed(
+        MoonshineSTTService.__new__(MoonshineSTTService),
+    )
 
 
 # --------------------------------------------------------------------------- #

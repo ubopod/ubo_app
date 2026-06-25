@@ -22,12 +22,15 @@ from ubo_app.store.services.assistant import (
     AssistantAddGenericLLMProviderAction,
     AssistantAddMcpServerAction,
     AssistantAddMcpServerEvent,
+    AssistantAddMoonshineDownloadedModelAction,
     AssistantCompleteAction,
     AssistantDeleteElevenLabsVoiceAction,
     AssistantDeleteKokoroAction,
     AssistantDeleteKokoroEvent,
     AssistantDeleteMcpServerAction,
     AssistantDeleteMcpServerEvent,
+    AssistantDeleteMoonshineModelAction,
+    AssistantDeleteMoonshineModelEvent,
     AssistantDeleteOllamaModelAction,
     AssistantDeleteOllamaModelEvent,
     AssistantDeletePiperVoiceAction,
@@ -36,6 +39,8 @@ from ubo_app.store.services.assistant import (
     AssistantDeleteVoskModelEvent,
     AssistantDownloadKokoroAction,
     AssistantDownloadKokoroEvent,
+    AssistantDownloadMoonshineModelAction,
+    AssistantDownloadMoonshineModelEvent,
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
     AssistantDownloadPiperVoiceAction,
@@ -51,6 +56,7 @@ from ubo_app.store.services.assistant import (
     AssistantOllamaThinkingChangedEvent,
     AssistantPipelineStage,
     AssistantRemoveGenericLLMProviderAction,
+    AssistantRemoveMoonshineDownloadedModelAction,
     AssistantReportAction,
     AssistantRunPipelineAction,
     AssistantRunPipelineEvent,
@@ -61,6 +67,7 @@ from ubo_app.store.services.assistant import (
     AssistantSetKokoroDownloadedAction,
     AssistantSetMcpServersAction,
     AssistantSetMistralAvailableVoicesAction,
+    AssistantSetMoonshineDownloadingAction,
     AssistantSetOllamaDownloadedModelsAction,
     AssistantSetOllamaModelCapabilitiesAction,
     AssistantSetOllamaThinkingAction,
@@ -69,6 +76,7 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedKokoroVoiceAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
+    AssistantSetSelectedMoonshineModelAction,
     AssistantSetSelectedPiperVoiceAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
@@ -165,6 +173,7 @@ def _make_run_pipeline_event(  # noqa: PLR0913
         # back to hardcoded module defaults (live and one-shot pipelines must
         # agree on the same Vosk model / Piper voice / Kokoro voice / cloud voice).
         vosk_model_id=state.selected_vosk_model,
+        moonshine_model_id=state.selected_moonshine_model,
         piper_voice_id=state.selected_piper_voice,
         kokoro_voice_id=state.selected_kokoro_voice,
         tts_voice_id=state.selected_voices.get(
@@ -432,6 +441,55 @@ def reducer(
             return replace(
                 state,
                 vosk_downloaded_models=tuple(action.models),
+            )
+
+        case AssistantSetSelectedMoonshineModelAction():
+            # Selection only — the subprocess loads the model from cache if it's
+            # already downloaded. Downloads are a separate explicit action so a
+            # boot-time selection never triggers a surprise download.
+            return replace(state, selected_moonshine_model=action.model_id)
+
+        case AssistantDownloadMoonshineModelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDownloadMoonshineModelEvent(model_id=action.model_id),
+                ],
+            )
+
+        case AssistantDeleteMoonshineModelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDeleteMoonshineModelEvent(model_id=action.model_id),
+                ],
+            )
+
+        case AssistantAddMoonshineDownloadedModelAction():
+            if action.model_id in state.moonshine_downloaded_models:
+                return state
+            return replace(
+                state,
+                moonshine_downloaded_models=(
+                    *state.moonshine_downloaded_models,
+                    action.model_id,
+                ),
+            )
+
+        case AssistantRemoveMoonshineDownloadedModelAction():
+            return replace(
+                state,
+                moonshine_downloaded_models=tuple(
+                    model_id
+                    for model_id in state.moonshine_downloaded_models
+                    if model_id != action.model_id
+                ),
+            )
+
+        case AssistantSetMoonshineDownloadingAction():
+            return replace(
+                state,
+                moonshine_downloading_model=action.model_id,
             )
 
         case AssistantDeleteOllamaModelAction():

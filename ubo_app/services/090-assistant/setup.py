@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import uuid
 from typing import TYPE_CHECKING
 
@@ -41,6 +42,7 @@ from ubo_app.constants.assistant import (
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
     GROK_API_KEY_SECRET_ID,
     MISTRAL_API_KEY_SECRET_ID,
+    MOONSHINE_DOWNLOAD_NOTIFICATION_ID,
     OLLAMA_RAM_LIMIT_NOTIFICATION_ID,
     OPENAI_API_KEY_SECRET_ID,
     OPENROUTER_API_KEY_SECRET_ID,
@@ -78,6 +80,13 @@ from ubo_app.engines.kokoro_catalog import (
 from ubo_app.engines.kokoro_catalog import voice_for as kokoro_voice_for
 from ubo_app.engines.kokoro_catalog import voice_label as kokoro_voice_label
 from ubo_app.engines.mistral import MistralEngine
+from ubo_app.engines.moonshine import MoonshineEngine
+from ubo_app.engines.moonshine_catalog import (
+    DEFAULT_MOONSHINE_MODEL_ID,
+    MOONSHINE_MODELS,
+)
+from ubo_app.engines.moonshine_catalog import model_for as moonshine_model_for
+from ubo_app.engines.moonshine_catalog import model_label as moonshine_model_label
 from ubo_app.engines.ollama import OllamaEngine, _ollama_status
 from ubo_app.engines.ollama_catalog import (
     OLLAMA_CATALOG,
@@ -136,6 +145,7 @@ from ubo_app.store.services.assistant import (
     AssistantDeleteKokoroAction,
     AssistantDeleteKokoroEvent,
     AssistantDeleteMcpServerEvent,
+    AssistantDeleteMoonshineModelAction,
     AssistantDeleteOllamaModelAction,
     AssistantDeleteOllamaModelEvent,
     AssistantDeletePiperVoiceAction,
@@ -144,6 +154,7 @@ from ubo_app.store.services.assistant import (
     AssistantDeleteVoskModelEvent,
     AssistantDownloadKokoroAction,
     AssistantDownloadKokoroEvent,
+    AssistantDownloadMoonshineModelAction,
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
     AssistantDownloadPiperVoiceAction,
@@ -160,6 +171,7 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedKokoroVoiceAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
+    AssistantSetSelectedMoonshineModelAction,
     AssistantSetSelectedPiperVoiceAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
@@ -483,6 +495,14 @@ def _register_persistent_stores() -> None:
         'assistant:selected_kokoro_voice',
         lambda state: state.assistant.selected_kokoro_voice,
     )
+    register_persistent_store(
+        'assistant:selected_moonshine_model',
+        lambda state: state.assistant.selected_moonshine_model,
+    )
+    register_persistent_store(
+        'assistant:moonshine_downloaded_models',
+        lambda state: json.dumps(list(state.assistant.moonshine_downloaded_models)),
+    )
 
 
 def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
@@ -804,10 +824,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         for provider in _deduped_providers(data[2]):
             if isinstance(
                 provider,
-                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine),
+                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine, MoonshineEngine),
             ):
-                # Ollama, Piper, Kokoro, and Vosk share the pattern: the
-                # catalog picker is both the setup path *and* the
+                # Ollama, Piper, Kokoro, Vosk, and Moonshine share the pattern:
+                # the catalog picker is both the setup path *and* the
                 # day-to-day picker, so we always offer the drill-in
                 # regardless of whether the current selection has been
                 # downloaded yet.
@@ -918,6 +938,8 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.elevenlabs_available_voices,
             state.assistant.elevenlabs_voices,
             state.assistant.mistral_available_voices,
+            state.assistant.selected_moonshine_model,
+            state.assistant.moonshine_downloaded_models,
         ),
     )
     def provider_details(  # noqa: C901, PLR0912, PLR0915
@@ -939,6 +961,8 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             tuple[ElevenLabsVoiceEntry, ...],
             tuple[ElevenLabsVoiceEntry, ...],
             tuple[MistralVoiceEntry, ...],
+            str,
+            tuple[str, ...],
         ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
@@ -957,6 +981,8 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         # raw-id fetched entries when labelling the selected ElevenLabs voice.
         elevenlabs_voices = (*data[15], *data[14])
         mistral_available_voices = data[16]
+        selected_moonshine_model = data[17] or DEFAULT_MOONSHINE_MODEL_ID
+        moonshine_downloaded_models = data[18]
 
         for action_id in _provider_detail_action_ids:
             unregister_action(action_id)
@@ -967,7 +993,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 continue
             if not provider.is_setup and not isinstance(
                 provider,
-                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine),
+                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine, MoonshineEngine),
             ):
                 continue
 
@@ -1219,6 +1245,65 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         delete_list_action,
                         lambda: store.dispatch(
                             StackPushMenuAction(menu_key='vosk:delete-models'),
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='delete-models',
+                            label='Delete Models',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id=delete_list_action,
+                        ),
+                    )
+                store.dispatch(
+                    UpdateDynamicMenuAction(
+                        menu_id=f'assistant:provider:{provider.name}',
+                        title=provider.label,
+                        heading=provider.label,
+                        sub_heading='Manage this provider',
+                        items=tuple(items),
+                    ),
+                )
+                continue
+
+            # Moonshine exposes a flat model picker (English-only, no Language
+            # drill-down). Selecting a model is the download trigger, so the
+            # picker is always rendered even before anything is downloaded.
+            if isinstance(provider, MoonshineEngine):
+                current_model_entry = moonshine_model_for(selected_moonshine_model)
+                current_label = (
+                    moonshine_model_label(current_model_entry)
+                    if current_model_entry is not None
+                    else selected_moonshine_model
+                )
+                model_action = 'assistant:provider-detail:moonshine-models'
+                _provider_detail_action_ids.append(model_action)
+                register_action(
+                    model_action,
+                    lambda: store.dispatch(
+                        StackPushMenuAction(menu_key='moonshine:models'),
+                    ),
+                    allow_reregister=True,
+                )
+                items.append(
+                    MenuItemData(
+                        key='select-model',
+                        label=f'Model: {current_label}',
+                        icon='󰧑',
+                        action_id=model_action,
+                    ),
+                )
+                if moonshine_downloaded_models:
+                    delete_list_action = (
+                        'assistant:provider-detail:moonshine-delete-list'
+                    )
+                    _provider_detail_action_ids.append(delete_list_action)
+                    register_action(
+                        delete_list_action,
+                        lambda: store.dispatch(
+                            StackPushMenuAction(menu_key='moonshine:delete-models'),
                         ),
                         allow_reregister=True,
                     )
@@ -2632,6 +2717,207 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         if engine is not None:
             engine.download_model(event.model_id)
 
+    _moonshine_model_action_ids: list[str] = []
+    _moonshine_delete_action_ids: list[str] = []
+    # ``None`` until the first autorun fire so the initial cold-start value is
+    # treated as "no transition" (no redundant provider refresh on boot).
+    _moonshine_prev_downloaded: list[tuple[str, ...] | None] = [None]
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_moonshine_model,
+            state.assistant.moonshine_downloaded_models,
+        ),
+    )
+    def moonshine_models_menu(data: tuple[str, tuple[str, ...]]) -> None:
+        """Build the flat Moonshine model picker (English-only, no languages)."""
+        selected_model, downloaded_models = data
+        selected_model = selected_model or DEFAULT_MOONSHINE_MODEL_ID
+        downloaded_set = set(downloaded_models)
+
+        for action_id in _moonshine_model_action_ids:
+            unregister_action(action_id)
+        _moonshine_model_action_ids.clear()
+
+        def _make_model_handler(
+            model_id: str,
+            *,
+            downloaded: bool,
+        ) -> Callable[[], None]:
+            # Select always; additionally request an explicit download when the
+            # model isn't on disk yet (selection alone never downloads). Pop back
+            # to the provider menu either way.
+            def _handler() -> None:
+                if downloaded:
+                    store.dispatch(
+                        AssistantSetSelectedMoonshineModelAction(model_id=model_id),
+                        MenuGoBackAction(),
+                    )
+                else:
+                    store.dispatch(
+                        AssistantSetSelectedMoonshineModelAction(model_id=model_id),
+                        AssistantDownloadMoonshineModelAction(model_id=model_id),
+                        MenuGoBackAction(),
+                    )
+
+            return _handler
+
+        items: list[MenuItemData] = []
+        for model in MOONSHINE_MODELS:
+            is_selected = model.id == selected_model
+            is_downloaded = model.id in downloaded_set
+            label = moonshine_model_label(model)
+            if is_downloaded and not is_selected:
+                label = f'{label}  •'
+
+            action_id = f'assistant:moonshine:select-model:{model.id}'
+            _moonshine_model_action_ids.append(action_id)
+            register_action(
+                action_id,
+                _make_model_handler(model.id, downloaded=is_downloaded),
+                allow_reregister=True,
+            )
+
+            items.append(
+                MenuItemData(
+                    key=model.id,
+                    label=label,
+                    icon='󰄬'
+                    if is_selected
+                    else ('󰇚' if not is_downloaded else '󰧑'),
+                    background_color=INFO_COLOR if is_selected else None,
+                    action_id=action_id,
+                ),
+            )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:moonshine:models',
+                title='Moonshine',
+                heading='Moonshine',
+                sub_heading='Pick a model',
+                items=tuple(items),
+            ),
+        )
+
+    # Remembers the previous downloading flag so the notification autorun only
+    # flashes "ready" on a real download→idle transition, not on the initial
+    # autorun fire (which always sees the idle '' value).
+    _moonshine_prev_downloading: list[str] = ['']
+
+    @store.autorun(lambda state: state.assistant.moonshine_downloading_model)
+    def moonshine_download_notification(downloading_model: str) -> None:
+        """Render an indeterminate spinner while the subprocess downloads.
+
+        Moonshine's model is fetched inside the subprocess (local model cache),
+        which reports no byte progress, so this is a spinner (``progress=nan``)
+        rather than a radial bar like Vosk. The subprocess sets the downloading
+        flag around its model (re)build and clears it when done.
+        """
+        previous = _moonshine_prev_downloading[0]
+        _moonshine_prev_downloading[0] = downloading_model
+
+        if not downloading_model:
+            if previous:
+                # Real download just finished — flash so the spinner closes.
+                store.dispatch(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            id=MOONSHINE_DOWNLOAD_NOTIFICATION_ID,
+                            title='Moonshine',
+                            content='Model ready',
+                            display_type=NotificationDisplayType.FLASH,
+                            flash_time=1,
+                            color=INFO_COLOR,
+                            icon='󰄬',
+                            show_dismiss_action=True,
+                            dismiss_on_close=True,
+                        ),
+                    ),
+                )
+            return
+
+        entry = moonshine_model_for(downloading_model)
+        label = entry.label if entry is not None else downloading_model
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id=MOONSHINE_DOWNLOAD_NOTIFICATION_ID,
+                    title='Downloading',
+                    content=f'Moonshine model: {label}',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=INFO_COLOR,
+                    icon='󰇚',
+                    blink=False,
+                    progress=math.nan,
+                    show_dismiss_action=False,
+                    dismiss_on_close=False,
+                ),
+            ),
+        )
+
+    @store.autorun(lambda state: state.assistant.moonshine_downloaded_models)
+    def moonshine_refresh_providers_on_download(
+        downloaded_models: tuple[str, ...],
+    ) -> None:
+        """Recompute provider readiness when the downloaded set changes.
+
+        The download happens in the subprocess, so unlike Vosk nothing core-side
+        refreshes ``provider_setup_status`` after it completes. The STT engine
+        menu rebuilds off that status, so without this the Moonshine row stays
+        "needs setup" until some unrelated provider refresh. Skip the initial
+        fire (no transition) to avoid a redundant boot-time dispatch.
+        """
+        previous = _moonshine_prev_downloaded[0]
+        _moonshine_prev_downloaded[0] = downloaded_models
+        if previous is not None and previous != downloaded_models:
+            store.dispatch(AssistantUpdateProvidersAction())
+
+    @store.autorun(lambda state: state.assistant.moonshine_downloaded_models)
+    def moonshine_delete_menu(downloaded_models: tuple[str, ...]) -> None:
+        """List every downloaded Moonshine model the user can delete.
+
+        Deleting the selected model flips Moonshine to "needs setup".
+        """
+        for action_id in _moonshine_delete_action_ids:
+            unregister_action(action_id)
+        _moonshine_delete_action_ids.clear()
+
+        # Deleting the only remaining model also pops the (then-empty) delete
+        # list so the user lands back on the provider menu.
+        pop_count = 2 if len(downloaded_models) == 1 else 1
+        items: list[MenuItemData] = []
+        for model_id in downloaded_models:
+            entry = moonshine_model_for(model_id)
+            label = moonshine_model_label(entry) if entry is not None else model_id
+            _register_delete_prompt(
+                delete_action_id=f'assistant:moonshine:delete:{model_id}',
+                confirm_action_id=f'assistant:moonshine:confirm-delete:{model_id}',
+                title='Delete Model',
+                prompt=f'Delete downloaded model "{label}"?',
+                action=AssistantDeleteMoonshineModelAction(model_id=model_id),
+                tracker=_moonshine_delete_action_ids,
+                pop_count=pop_count,
+            )
+            items.append(
+                MenuItemData(
+                    key=model_id,
+                    label=label,
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=f'assistant:moonshine:delete:{model_id}',
+                ),
+            )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:moonshine:delete-models',
+                title='Delete Models',
+                heading='Delete Models',
+                sub_heading='Free up disk space',
+                items=tuple(items),
+            ),
+        )
+
     @store.autorun(lambda state: state.assistant.piper_downloaded_voices)
     def piper_delete_menu(downloaded_voices: tuple[str, ...]) -> None:
         """List every downloaded Piper voice the user can delete to free space.
@@ -3160,6 +3446,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         kokoro_voices_menus,
         vosk_languages_menu,
         vosk_models_menus,
+        moonshine_models_menu,
+        moonshine_download_notification,
+        moonshine_refresh_providers_on_download,
+        moonshine_delete_menu,
         piper_delete_menu,
         vosk_delete_menu,
         ollama_delete_menu,
@@ -3232,6 +3522,10 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
             return 'assistant:vosk:languages'
         if tail.startswith('vosk:models:'):
             return f'assistant:vosk:models:{tail[len("vosk:models:") :]}'
+        if tail == 'moonshine:models':
+            return 'assistant:moonshine:models'
+        if tail == 'moonshine:delete-models':
+            return 'assistant:moonshine:delete-models'
         # Cloud TTS voice pickers (language-grouped Rime/Google/Venice).
         for tts_name in LANGUAGE_GROUPED_CATALOGS:
             prefix = tts_name.value
@@ -3524,6 +3818,10 @@ async def init_service() -> None:  # noqa: PLR0915
         _kokoro_voices_menus,
         _vosk_languages_menu,
         _vosk_models_menus,
+        _moonshine_models_menu,
+        _moonshine_download_notification,
+        _moonshine_refresh_providers_on_download,
+        _moonshine_delete_menu,
         _piper_delete_menu,
         _vosk_delete_menu,
         _ollama_delete_menu,

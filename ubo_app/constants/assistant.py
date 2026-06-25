@@ -149,6 +149,7 @@ BRAVE_SEARCH_API_KEY_SECRET_ID = 'brave_search_api_key'  # noqa: S105
 BRAVE_SEARCH_API_KEY_PATTERN = '^BS[a-zA-Z0-9-_]{20,}$'
 
 VOSK_DOWNLOAD_NOTIFICATION_ID = 'assistant:download-vosk'
+MOONSHINE_DOWNLOAD_NOTIFICATION_ID = 'assistant:download-moonshine'
 
 OLLAMA_SETUP_NOTIFICATION_ID = 'assistant:ollama:setup'
 OLLAMA_RAM_LIMIT_NOTIFICATION_ID = 'assistant:ollama:ram-limit'

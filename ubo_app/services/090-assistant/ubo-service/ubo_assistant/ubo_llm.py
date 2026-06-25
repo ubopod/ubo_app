@@ -151,7 +151,7 @@ class GenericLLMProxy(LLMService):
         self._processor_setup: FrameProcessorSetup | None = None
         self._start_frame: StartFrame | None = None
         self._registered_functions: list[
-            tuple[str | None, FunctionCallHandler, bool, float | None]
+            tuple[str | None, FunctionCallHandler, bool | None, float | None]
         ] = []
 
     @property
@@ -177,7 +177,7 @@ class GenericLLMProxy(LLMService):
         function_name: str | None,
         handler: FunctionCallHandler,
         *,
-        cancel_on_interruption: bool = True,
+        cancel_on_interruption: bool | None = True,
         timeout_secs: float | None = None,
     ) -> None:
         """Register a function on the proxy and current underlying service."""
@@ -844,7 +844,7 @@ class UboLLMService(UboLLMSwitchService):
         function_name: str | None,
         handler: FunctionCallHandler,
         *,
-        cancel_on_interruption: bool = True,
+        cancel_on_interruption: bool | None = True,
         timeout_secs: float | None = None,
     ) -> None:
         """Register a function with all underlying LLM services.
