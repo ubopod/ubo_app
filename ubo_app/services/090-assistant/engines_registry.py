@@ -46,6 +46,10 @@ _VENICE_ENGINE = VeniceEngine()
 # setup flow covers both modalities (same rationale as ``_VENICE_ENGINE``).
 _DEEPGRAM_ENGINE = DeepgramEngine()
 
+# Single shared Mistral engine reused across STT/LLM/TTS — one ``mistral_api_key``
+# setup flow covers all three modalities (same rationale as ``_VENICE_ENGINE``).
+_MISTRAL_ENGINE = MistralEngine()
+
 STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
     AssistantSTTName.VOSK: VoskEngine(),
     AssistantSTTName.GOOGLE: GoogleCloudEngine(label='Google (continuous)'),
@@ -54,6 +58,7 @@ STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
     AssistantSTTName.DEEPGRAM: _DEEPGRAM_ENGINE,
     AssistantSTTName.ASSEMBLYAI: AssemblyAIEngine(),
     AssistantSTTName.VENICE: _VENICE_ENGINE,
+    AssistantSTTName.MISTRAL: _MISTRAL_ENGINE,
 }
 
 LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
@@ -67,7 +72,7 @@ LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
     AssistantLLMName.QWEN: QwenEngine(),
     AssistantLLMName.DEEPSEEK: DeepSeekEngine(),
     AssistantLLMName.OPENROUTER: OpenRouterEngine(),
-    AssistantLLMName.MISTRAL: MistralEngine(),
+    AssistantLLMName.MISTRAL: _MISTRAL_ENGINE,
     AssistantLLMName.VENICE: _VENICE_ENGINE,
     # The id-less GenericLLMEngine is the "Add Generic LLM" adder: it is
     # permanently not-setup and its setup flow registers a new named
@@ -85,6 +90,7 @@ TTS_ENGINES: dict[AssistantTTSName, AIProviderMixin] = {
     AssistantTTSName.RIME: RimeEngine(),
     AssistantTTSName.VENICE: _VENICE_ENGINE,
     AssistantTTSName.DEEPGRAM: _DEEPGRAM_ENGINE,
+    AssistantTTSName.MISTRAL: _MISTRAL_ENGINE,
 }
 
 IMAGE_GENERATOR_ENGINES: dict[

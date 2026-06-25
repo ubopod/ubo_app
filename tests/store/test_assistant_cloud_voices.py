@@ -114,6 +114,61 @@ def test_set_selected_voice_deepgram_aura(
     )
 
 
+def test_set_mistral_available_voices_caches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The live-fetched Mistral voice list replaces the cache wholesale."""
+    ns = _load(monkeypatch)
+    a = ns.assistant
+    state = _initial_state(ns)
+    voices = (
+        a.MistralVoiceEntry(id='casual_male', label='Casual Male'),
+        a.MistralVoiceEntry(id='fr_marie_neutral', label='Marie'),
+    )
+
+    new_state = cast(
+        'AssistantState',
+        ns.reducer(
+            state,
+            a.AssistantSetMistralAvailableVoicesAction(voices=voices),
+        ),
+    )
+
+    assert new_state.mistral_available_voices == voices
+
+
+def test_set_selected_voice_mistral(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Selecting a Mistral voice updates state and emits the event."""
+    from redux import CompleteReducerResult
+
+    ns = _load(monkeypatch)
+    a = ns.assistant
+    state = _initial_state(ns)
+
+    result = ns.reducer(
+        state,
+        a.AssistantSetSelectedVoiceAction(
+            tts_name=a.AssistantTTSName.MISTRAL,
+            voice_id='fr_marie_neutral',
+        ),
+    )
+
+    assert isinstance(result, CompleteReducerResult)
+    assert (
+        result.state.selected_voices[a.AssistantTTSName.MISTRAL]
+        == 'fr_marie_neutral'
+    )
+    assert result.events is not None
+    assert any(
+        isinstance(event, a.AssistantVoiceChangedEvent)
+        and event.tts_name == a.AssistantTTSName.MISTRAL
+        and event.voice_id == 'fr_marie_neutral'
+        for event in result.events
+    )
+
+
 def test_add_elevenlabs_voice_with_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

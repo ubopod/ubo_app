@@ -77,6 +77,7 @@ from ubo_app.engines.kokoro_catalog import (
 )
 from ubo_app.engines.kokoro_catalog import voice_for as kokoro_voice_for
 from ubo_app.engines.kokoro_catalog import voice_label as kokoro_voice_label
+from ubo_app.engines.mistral import MistralEngine
 from ubo_app.engines.ollama import OllamaEngine, _ollama_status
 from ubo_app.engines.ollama_catalog import (
     OLLAMA_CATALOG,
@@ -180,6 +181,7 @@ from ubo_app.store.services.assistant import (
     InfraredTriggerSource,
     McpServerMetadata,
     McpServerType,
+    MistralVoiceEntry,
     UserStopReason,
     generic_llm_instance_key,
 )
@@ -675,7 +677,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         return (
             tts_name in LANGUAGE_GROUPED_CATALOGS
             or tts_name in FLAT_CATALOGS
-            or tts_name == AssistantTTSName.ELEVENLABS
+            or tts_name in {AssistantTTSName.ELEVENLABS, AssistantTTSName.MISTRAL}
         )
 
     def _selected_cloud_voice(
@@ -693,7 +695,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     def _cloud_voice_label(
         tts_name: AssistantTTSName,
         voice_id: str,
-        available: tuple[ElevenLabsVoiceEntry, ...] = (),
+        available: tuple[ElevenLabsVoiceEntry | MistralVoiceEntry, ...] = (),
     ) -> str:
         """Human label for the currently selected cloud voice."""
         if not voice_id:
@@ -705,9 +707,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         )
         if entry is not None:
             return entry.label
-        for el_voice in available:
-            if el_voice.id == voice_id:
-                return el_voice.label or el_voice.id
+        for fetched_voice in available:
+            if fetched_voice.id == voice_id:
+                return fetched_voice.label or fetched_voice.id
         return voice_id
 
     def _elevenlabs_engine() -> ElevenLabsEngine | None:
@@ -764,6 +766,20 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         """Open the ElevenLabs voice picker, refreshing the fetched list."""
         _refresh_elevenlabs_voices_handler()
         store.dispatch(StackPushMenuAction(menu_key='elevenlabs:voices'))
+
+    def _mistral_engine() -> MistralEngine | None:
+        engine = TTS_ENGINES.get(AssistantTTSName.MISTRAL)
+        return engine if isinstance(engine, MistralEngine) else None
+
+    def _refresh_mistral_voices_handler() -> None:
+        engine = _mistral_engine()
+        if engine is not None:
+            create_task(engine.fetch_voices())
+
+    def _open_mistral_voices() -> None:
+        """Open the Mistral voice picker, refreshing the fetched list."""
+        _refresh_mistral_voices_handler()
+        store.dispatch(StackPushMenuAction(menu_key='mistral:voices'))
 
     @store.autorun(
         lambda state: (
@@ -901,6 +917,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.selected_voices,
             state.assistant.elevenlabs_available_voices,
             state.assistant.elevenlabs_voices,
+            state.assistant.mistral_available_voices,
         ),
     )
     def provider_details(  # noqa: C901, PLR0912, PLR0915
@@ -921,6 +938,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             dict[AssistantTTSName, str],
             tuple[ElevenLabsVoiceEntry, ...],
             tuple[ElevenLabsVoiceEntry, ...],
+            tuple[MistralVoiceEntry, ...],
         ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
@@ -938,6 +956,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         # User-added voices first so their human-readable names win over the
         # raw-id fetched entries when labelling the selected ElevenLabs voice.
         elevenlabs_voices = (*data[15], *data[14])
+        mistral_available_voices = data[16]
 
         for action_id in _provider_detail_action_ids:
             unregister_action(action_id)
@@ -1260,7 +1279,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 current_label = _cloud_voice_label(
                     tts_name,
                     current_voice_id,
-                    elevenlabs_voices,
+                    (*elevenlabs_voices, *mistral_available_voices),
                 )
                 voice_action = (
                     f'assistant:provider-detail:select-voice:{provider.name}'
@@ -1270,6 +1289,12 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                     register_action(
                         voice_action,
                         _open_elevenlabs_voices,
+                        allow_reregister=True,
+                    )
+                elif tts_name == AssistantTTSName.MISTRAL:
+                    register_action(
+                        voice_action,
+                        _open_mistral_voices,
                         allow_reregister=True,
                     )
                 else:
@@ -2215,6 +2240,86 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             ),
         )
 
+    # --- Mistral voice picker (live-fetched presets + account voices) ------
+    _mistral_voice_action_ids: list[str] = []
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_voices,
+            state.assistant.mistral_available_voices,
+        ),
+    )
+    def mistral_voice_menu(
+        data: tuple[
+            dict[AssistantTTSName, str],
+            tuple[MistralVoiceEntry, ...],
+        ],
+    ) -> None:
+        """Build the Mistral voice picker from the live-fetched voice list."""
+        selected_voices, available_voices = data
+        selected = selected_voices.get(AssistantTTSName.MISTRAL) or ''
+
+        for action_id in _mistral_voice_action_ids:
+            unregister_action(action_id)
+        _mistral_voice_action_ids.clear()
+
+        items: list[MenuItemData] = []
+        for entry in available_voices:
+            is_selected = entry.id == selected
+            select_action = f'assistant:tts:mistral:select:{entry.id}'
+            _mistral_voice_action_ids.append(select_action)
+            register_action(
+                select_action,
+                lambda vid=entry.id: store.dispatch(
+                    AssistantSetSelectedVoiceAction(
+                        tts_name=AssistantTTSName.MISTRAL,
+                        voice_id=vid,
+                    ),
+                    AssistantSynthesizeAction(
+                        text=VOICE_PREVIEW_TEXT,
+                        session_id=uuid.uuid4().hex,
+                        tts_provider=AssistantTTSName.MISTRAL,
+                    ),
+                    MenuGoBackAction(),
+                ),
+                allow_reregister=True,
+            )
+            items.append(
+                MenuItemData(
+                    key=entry.id,
+                    label=entry.label or entry.id,
+                    icon='󰄬' if is_selected else '󰔊',
+                    background_color=INFO_COLOR if is_selected else None,
+                    action_id=select_action,
+                ),
+            )
+
+        refresh_action = 'assistant:tts:mistral:refresh'
+        _mistral_voice_action_ids.append(refresh_action)
+        register_action(
+            refresh_action,
+            _refresh_mistral_voices_handler,
+            allow_reregister=True,
+        )
+        items.append(
+            MenuItemData(
+                key='refresh',
+                label='Refresh Voices',
+                icon='󰑐',
+                action_id=refresh_action,
+            ),
+        )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:tts:mistral:voices',
+                title='Voices',
+                heading='Mistral',
+                sub_heading='Pick a voice',
+                items=tuple(items),
+            ),
+        )
+
     _kokoro_language_action_ids: list[str] = []
     _kokoro_voice_action_ids: list[str] = []
 
@@ -3143,6 +3248,8 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
                 return f'assistant:tts:{tts_name.value}:voices'
         if tail == 'elevenlabs:voices':
             return 'assistant:tts:elevenlabs:voices'
+        if tail == 'mistral:voices':
+            return 'assistant:tts:mistral:voices'
         return None
 
     def _assistant_path_matcher(path: tuple[str, ...]) -> str | None:

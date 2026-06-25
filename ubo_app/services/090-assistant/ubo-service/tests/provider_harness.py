@@ -288,6 +288,11 @@ TTS_PROVIDERS: tuple[Provider[AssistantTtsName], ...] = (
         AssistantTtsName.DEEPGRAM,
         secret_ids=('deepgram_api_key',),
     ),
+    Provider(
+        'mistral',
+        AssistantTtsName.MISTRAL,
+        secret_ids=('mistral_api_key',),
+    ),
 )
 
 STT_PROVIDERS: tuple[Provider[AssistantSttName], ...] = (
@@ -310,6 +315,7 @@ STT_PROVIDERS: tuple[Provider[AssistantSttName], ...] = (
         secret_ids=('assemblyai_api_key',),
     ),
     Provider('venice', AssistantSttName.VENICE, secret_ids=('venice_api_key',)),
+    Provider('mistral', AssistantSttName.MISTRAL, secret_ids=('mistral_api_key',)),
 )
 
 # Cheap/fast models per provider (mirroring the app's DEFAULT_MODELS where they

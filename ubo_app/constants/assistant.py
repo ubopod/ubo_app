@@ -101,6 +101,16 @@ DEFAULT_VENICE_TTS_VOICE = os.environ.get(
     'af_heart',
 )
 
+DEFAULT_MISTRAL_TTS_VOICE = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_MISTRAL_TTS_VOICE',
+    # Mistral TTS requires a voice and its voices are live-fetched (no static
+    # catalog). The hosted API expects ``{lang}_{name}_{style}`` preset slugs
+    # (e.g. ``en_paul_neutral``) — NOT the self-hosted-only ``casual_male``,
+    # which the hosted API rejects with 404. Used until the user picks one from
+    # the picker; override per-deployment if a different preset is preferred.
+    'en_paul_neutral',
+)
+
 GOOGLE_API_KEY_SECRET_ID = 'google_api_key'  # noqa: S105
 GOOGLE_API_KEY_PATTERN = '^AIza[0-9A-Za-z\\-_]{35}$'
 

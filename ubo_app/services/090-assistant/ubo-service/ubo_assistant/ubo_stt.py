@@ -18,6 +18,7 @@ from pipecat.services.assemblyai.stt import AssemblyAISTTService
 from pipecat.services.assemblyai.models import AssemblyAIConnectionParams
 from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.google.stt import GoogleSTTService
+from pipecat.services.mistral.stt import MistralSTTService
 from pipecat.services.openai.stt import OpenAISTTService
 from pipecat.services.settings import STTSettings
 from pipecat.services.stt_service import STTService
@@ -56,6 +57,7 @@ class STTServiceConfig:
     deepgram_api_key: str | None = None
     assemblyai_api_key: str | None = None
     venice_api_key: str | None = None
+    mistral_api_key: str | None = None
 
 
 class GenericSTTProxy(STTService):
@@ -207,6 +209,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         self.deepgram_stt = GenericSTTProxy()
         self.assemblyai_stt = GenericSTTProxy()
         self.venice_stt = GenericSTTProxy()
+        self.mistral_stt = GenericSTTProxy()
 
         # Initialize Vosk STT with the default model — the store autorun
         # registered in `_ensure_autoruns_started` reconciles it to the
@@ -227,6 +230,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             'deepgram': self.deepgram_stt,
             'assemblyai': self.assemblyai_stt,
             'venice': self.venice_stt,
+            'mistral': self.mistral_stt,
         }
 
         UboSwitchService.__init__(
@@ -266,6 +270,12 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             'venice_api_key',
             '_create_venice_service',
             'venice_stt',
+        ),
+        'mistral': (
+            'MISTRAL_API_KEY_SECRET_ID',
+            'mistral_api_key',
+            '_create_mistral_service',
+            'mistral_stt',
         ),
     }
 
@@ -323,6 +333,18 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             )
         except Exception:
             logger.exception('Error while initializing Deepgram STT')
+            return None
+
+    def _create_mistral_service(self) -> MistralSTTService | None:
+        """Create Mistral (Voxtral) STT service if API key is provided."""
+        if not self._config.mistral_api_key:
+            return None
+        try:
+            # Uses pipecat's default realtime model
+            # (``voxtral-mini-transcribe-realtime-2602``) with auto language.
+            return MistralSTTService(api_key=self._config.mistral_api_key)
+        except Exception:
+            logger.exception('Error while initializing Mistral STT')
             return None
 
     def _create_assemblyai_service(self) -> AssemblyAISTTService | None:

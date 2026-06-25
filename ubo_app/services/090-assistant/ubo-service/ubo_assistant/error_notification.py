@@ -54,6 +54,27 @@ _CODE_MESSAGES = {
     429: 'Rate limit exceeded — try again shortly.',
 }
 
+# Recoverable streaming-teardown errors that are NOT worth a user notification.
+# Realtime STT providers (e.g. Mistral Voxtral) hold a websocket open; once the
+# user stops speaking and the session goes idle, the connection times out
+# waiting for a response, or the upstream closes it with a ``1011`` internal
+# error. The transcription has already completed, so these are non-actionable
+# teardown artifacts — still logged, but suppressed from the notification path
+# so they don't spam the device after every interaction. Genuine errors (auth,
+# balance, bad config) don't match these signatures and still notify.
+_TRANSIENT_ERROR_PATTERN = re.compile(
+    r'timeout waiting for response'
+    r'|received 1011'
+    r'|1011 \(internal error\)'
+    r'|upstream connection error',
+    re.IGNORECASE,
+)
+
+
+def is_transient_error(frame: ErrorFrame) -> bool:
+    """Return True for recoverable streaming-teardown errors not worth notifying."""
+    return bool(_TRANSIENT_ERROR_PATTERN.search(frame.error or ''))
+
 # Substrings of the originating processor's class name → user-facing stage
 # label. Provider services are named e.g. ``DeepSeekLLMService``,
 # ``DeepgramSTTService``, ``ElevenLabsTTSService`` (and our wrappers
@@ -125,6 +146,15 @@ def attach_error_notifier(worker: PipelineWorker, client: UboRPCClient) -> None:
 
     @worker.event_handler('on_pipeline_error')
     async def _on_pipeline_error(_worker: PipelineWorker, frame: ErrorFrame) -> None:
+        if is_transient_error(frame):
+            # Recoverable streaming-teardown noise (e.g. Mistral realtime STT
+            # idle timeout / 1011 upstream close) — log, but don't notify.
+            logger.debug(
+                'Suppressing transient provider-error notification {extra}',
+                extra={'error': frame.error},
+            )
+            return
+
         notification = classify_error(frame)
 
         now = client.event_loop.time()

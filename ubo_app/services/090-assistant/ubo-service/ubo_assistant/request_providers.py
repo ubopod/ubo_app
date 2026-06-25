@@ -55,7 +55,7 @@ async def _secret(client: UboRPCClient, env_var: str) -> str | None:
     return value
 
 
-async def _build_stt(  # noqa: C901
+async def _build_stt(  # noqa: C901, PLR0912
     provider_id: str,
     client: UboRPCClient,
     *,
@@ -144,6 +144,14 @@ async def _build_stt(  # noqa: C901
             base_url=VENICE_BASE_URL,
             settings=VeniceSTTService.Settings(model=_DEFAULT_VENICE_STT_MODEL),
         )
+
+    if provider_id == 'mistral':
+        api_key = await _secret(client, 'MISTRAL_API_KEY_SECRET_ID')
+        if not api_key:
+            return None
+        from pipecat.services.mistral.stt import MistralSTTService
+
+        return MistralSTTService(api_key=api_key)
 
     return None
 
@@ -403,6 +411,19 @@ async def _build_tts(  # noqa: C901, PLR0912
             api_key=api_key,
             settings=DeepgramTTSService.Settings(
                 voice=tts_voice_id or 'aura-2-helena-en',
+            ),
+        )
+
+    if provider_id == 'mistral':
+        api_key = await _secret(client, 'MISTRAL_API_KEY_SECRET_ID')
+        if not api_key:
+            return None
+        from pipecat.services.mistral.tts import MistralTTSService
+
+        return MistralTTSService(
+            api_key=api_key,
+            settings=MistralTTSService.Settings(
+                voice=tts_voice_id or 'en_paul_neutral',
             ),
         )
 

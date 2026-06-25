@@ -64,12 +64,16 @@ def test_deepgram_voices_are_aura_ids() -> None:
 
 
 def test_default_cloud_voices_exist_in_catalog() -> None:
-    """Every cloud provider's default voice is selectable in its catalog."""
+    """Every static-catalog provider's default voice is in its catalog.
+
+    Live-fetch providers (ElevenLabs, Mistral) have no static catalog, so their
+    defaults are validated at runtime against the fetched list, not here.
+    """
     for tts_name, default in DEFAULT_VOICES.items():
-        if not default:
-            continue  # ElevenLabs has no static default (secret-backed).
         grouped = catalog.LANGUAGE_GROUPED_CATALOGS.get(tts_name, ())
         flat = catalog.FLAT_CATALOGS.get(tts_name, ())
+        if not default or not (grouped or flat):
+            continue
         assert (
             catalog.voice_for(default, languages=grouped, flat=flat) is not None
         ), f'{tts_name} default {default!r} missing from catalog'

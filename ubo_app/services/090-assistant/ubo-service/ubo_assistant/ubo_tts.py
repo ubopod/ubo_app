@@ -11,6 +11,7 @@ from pipecat.frames.frames import Frame, StartFrame, SystemFrame
 from pipecat.services.deepgram.tts import DeepgramTTSService
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 from pipecat.services.google.tts import GoogleTTSService
+from pipecat.services.mistral.tts import MistralTTSService
 from pipecat.services.openai.tts import OpenAITTSService
 from pipecat.services.rime.tts import RimeTTSService
 from pipecat.services.settings import TTSSettings
@@ -52,6 +53,7 @@ _SERVICE_ID_BY_TTS_NAME: dict[AssistantTtsName, str] = {
     AssistantTtsName.RIME: 'rime',
     AssistantTtsName.VENICE: 'venice',
     AssistantTtsName.DEEPGRAM: 'deepgram',
+    AssistantTtsName.MISTRAL: 'mistral',
 }
 
 # Per-provider default voice used when the user hasn't picked one. Mirrors
@@ -60,6 +62,10 @@ _DEFAULT_CLOUD_VOICE: dict[str, str] = {
     'openai': 'alloy',
     'rime': 'antoine',
     'deepgram': 'aura-2-helena-en',
+    # Hosted-API preset slug (``{lang}_{name}_{style}``); the self-hosted-only
+    # ``casual_male`` is rejected by the hosted API. Mirrors core's
+    # ``DEFAULT_MISTRAL_TTS_VOICE`` fallback.
+    'mistral': 'en_paul_neutral',
 }
 
 VENICE_BASE_URL = 'https://api.venice.ai/api/v1'
@@ -90,6 +96,7 @@ class TTSServiceConfig:
     rime_api_key: str | None = None
     venice_api_key: str | None = None
     deepgram_api_key: str | None = None
+    mistral_api_key: str | None = None
     google_credentials: str | None = None
     # Per-provider selected voice id, seeded from on-disk state via the
     # cold-start replay of ``AssistantVoiceChangedEvent`` and updated on every
@@ -231,6 +238,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         self.rime_tts = GenericTTSProxy()
         self.venice_tts = GenericTTSProxy()
         self.deepgram_tts = GenericTTSProxy()
+        self.mistral_tts = GenericTTSProxy()
 
         # Initialize Piper TTS. The model loads lazily: PiperTTSService
         # constructs even when no voice is on disk yet (first-time setup), so
@@ -270,6 +278,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             'rime': self.rime_tts,
             'venice': self.venice_tts,
             'deepgram': self.deepgram_tts,
+            'mistral': self.mistral_tts,
         }
 
         UboSwitchService.__init__(
@@ -321,6 +330,12 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             'deepgram_api_key',
             '_create_deepgram_service',
             'deepgram_tts',
+        ),
+        'mistral': (
+            'MISTRAL_API_KEY_SECRET_ID',
+            'mistral_api_key',
+            '_create_mistral_service',
+            'mistral_tts',
         ),
     }
 
@@ -471,6 +486,23 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             )
         except Exception:
             logger.exception('Error while initializing Deepgram TTS')
+            return None
+
+    def _create_mistral_service(self) -> MistralTTSService | None:
+        """Create Mistral (Voxtral) TTS service if API key is provided."""
+        if not self._config.mistral_api_key:
+            return None
+        # Mistral requires a voice; the id is a slug (e.g. ``casual_male``) or
+        # UUID, both accepted by pipecat. ``_voice_for`` falls back to the
+        # ``mistral`` default in ``_DEFAULT_CLOUD_VOICE``.
+        voice = self._voice_for('mistral')
+        try:
+            return MistralTTSService(
+                api_key=self._config.mistral_api_key,
+                settings=MistralTTSService.Settings(voice=voice),
+            )
+        except Exception:
+            logger.exception('Error while initializing Mistral TTS')
             return None
 
     async def run_tts(  # pyright: ignore[reportIncompatibleMethodOverride]

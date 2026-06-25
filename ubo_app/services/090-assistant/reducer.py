@@ -60,6 +60,7 @@ from ubo_app.store.services.assistant import (
     AssistantSetIsActiveAction,
     AssistantSetKokoroDownloadedAction,
     AssistantSetMcpServersAction,
+    AssistantSetMistralAvailableVoicesAction,
     AssistantSetOllamaDownloadedModelsAction,
     AssistantSetOllamaModelCapabilitiesAction,
     AssistantSetOllamaThinkingAction,
@@ -404,6 +405,12 @@ def reducer(
             return replace(
                 state,
                 elevenlabs_available_voices=tuple(action.voices),
+            )
+
+        case AssistantSetMistralAvailableVoicesAction():
+            return replace(
+                state,
+                mistral_available_voices=tuple(action.voices),
             )
 
         case AssistantSetSelectedVoskModelAction():

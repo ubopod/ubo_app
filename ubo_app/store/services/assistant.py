@@ -27,6 +27,7 @@ from ubo_app.constants.assistant import (
     DEFAULT_LLM_OPENROUTER_MODEL,
     DEFAULT_LLM_QWEN_MODEL,
     DEFAULT_LLM_VENICE_MODEL,
+    DEFAULT_MISTRAL_TTS_VOICE,
     DEFAULT_VENICE_TTS_VOICE,
 )
 from ubo_app.store.services.speech_recognition import WakeMode
@@ -47,6 +48,7 @@ class AssistantSTTName(StrEnum):
     DEEPGRAM = 'deepgram'
     ASSEMBLYAI = 'assemblyai'
     VENICE = 'venice'
+    MISTRAL = 'mistral'
 
 
 class AssistantLLMName(StrEnum):
@@ -191,6 +193,7 @@ class AssistantTTSName(StrEnum):
     RIME = 'rime'
     VENICE = 'venice'
     DEEPGRAM = 'deepgram'
+    MISTRAL = 'mistral'
 
 
 class ElevenLabsVoiceEntry(Immutable):
@@ -200,6 +203,19 @@ class ElevenLabsVoiceEntry(Immutable):
     user's own cloned voices) and cached in
     ``AssistantState.elevenlabs_available_voices``. ``label`` is the voice's
     display name (falling back to its id when unnamed).
+    """
+
+    id: str
+    label: str
+
+
+class MistralVoiceEntry(Immutable):
+    """A single Mistral (Voxtral) TTS voice surfaced in the voice picker.
+
+    Fetched live from ``GET /v1/audio/voices`` (presets plus the account's own
+    cloned voices) and cached in ``AssistantState.mistral_available_voices``.
+    ``id`` is the voice slug (e.g. ``casual_male``) or its UUID; ``label`` is
+    the voice's display name (falling back to its id when unnamed).
     """
 
     id: str
@@ -223,6 +239,12 @@ DEFAULT_VOICES: dict[AssistantTTSName, str] = {
     # Deepgram's Aura string encodes voice + model + language in one id; the
     # default mirrors pipecat's own ``DeepgramTTSService`` default.
     AssistantTTSName.DEEPGRAM: 'aura-2-helena-en',
+    # Mistral voices are live-fetched (no static catalog), but unlike
+    # ElevenLabs it has a sensible fixed slug default, so core resolves the
+    # env-overridable default into the pipeline event (the subprocess never
+    # receives ``UBO_DEFAULT_*`` env vars). The catalog test skips it since it
+    # has no static catalog to validate against.
+    AssistantTTSName.MISTRAL: DEFAULT_MISTRAL_TTS_VOICE,
 }
 
 
@@ -693,6 +715,12 @@ class AssistantSetElevenLabsAvailableVoicesAction(AssistantAction):
     """Replace the live-fetched ElevenLabs voice cache (``GET /v2/voices``)."""
 
     voices: tuple[ElevenLabsVoiceEntry, ...]
+
+
+class AssistantSetMistralAvailableVoicesAction(AssistantAction):
+    """Replace the live-fetched Mistral voice cache (``GET /v1/audio/voices``)."""
+
+    voices: tuple[MistralVoiceEntry, ...]
 
 
 class AssistantDownloadOllamaModelAction(AssistantAction):
@@ -1383,6 +1411,12 @@ class AssistantState(Immutable):
     # voices) from ``GET /v2/voices``. Process-local cache — NOT persisted;
     # refreshed by ``ElevenLabsEngine.fetch_voices()``.
     elevenlabs_available_voices: tuple[ElevenLabsVoiceEntry, ...] = field(
+        default_factory=tuple,
+    )
+    # Live-fetched Mistral (Voxtral) voices (presets + the account's cloned
+    # voices) from ``GET /v1/audio/voices``. Process-local cache — NOT
+    # persisted; refreshed by ``MistralEngine.fetch_voices()``.
+    mistral_available_voices: tuple[MistralVoiceEntry, ...] = field(
         default_factory=tuple,
     )
     # Currently selected Piper voice id (HuggingFace path without

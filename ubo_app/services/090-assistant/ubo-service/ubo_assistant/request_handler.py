@@ -139,6 +139,7 @@ _STT_PROVIDER_IDS = {
     'DEEPGRAM': 'deepgram',
     'ASSEMBLYAI': 'assemblyai',
     'VENICE': 'venice',
+    'MISTRAL': 'mistral',
 }
 _LLM_PROVIDER_IDS = {
     'OLLAMA': 'ollama',
@@ -164,6 +165,7 @@ _TTS_PROVIDER_IDS = {
     'RIME': 'rime',
     'VENICE': 'venice',
     'DEEPGRAM': 'deepgram',
+    'MISTRAL': 'mistral',
 }
 _IDLE_TIMEOUT_FRAMES: dict[str, tuple[type[Frame], ...]] = {
     STT: (TranscriptionFrame,),
