@@ -45,6 +45,24 @@ def test_google_voices_are_chirp3_hd() -> None:
             assert '-Chirp3-HD-' in voice.id, voice.id
 
 
+def test_deepgram_default_voice_in_english_group() -> None:
+    """The Deepgram default (``aura-2-helena-en``) lives in the English group."""
+    english = catalog.language_by_code(
+        catalog.DEEPGRAM_LANGUAGES,
+        LanguageCode.EN,
+    )
+    assert english is not None
+    assert any(voice.id == 'aura-2-helena-en' for voice in english.voices)
+
+
+def test_deepgram_voices_are_aura_ids() -> None:
+    """Every Deepgram voice id is a full Aura model string."""
+    for language in catalog.DEEPGRAM_LANGUAGES:
+        for voice in language.voices:
+            assert voice.id.startswith('aura-'), voice.id
+            assert voice.id.endswith(f'-{language.code.value}'), voice.id
+
+
 def test_default_cloud_voices_exist_in_catalog() -> None:
     """Every cloud provider's default voice is selectable in its catalog."""
     for tts_name, default in DEFAULT_VOICES.items():

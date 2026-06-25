@@ -42,12 +42,16 @@ if TYPE_CHECKING:
 # setup flow handles all three modalities (mirrors OpenAIEngine reuse).
 _VENICE_ENGINE = VeniceEngine()
 
+# Single shared Deepgram engine reused across STT + TTS — one ``deepgram_api_key``
+# setup flow covers both modalities (same rationale as ``_VENICE_ENGINE``).
+_DEEPGRAM_ENGINE = DeepgramEngine()
+
 STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
     AssistantSTTName.VOSK: VoskEngine(),
     AssistantSTTName.GOOGLE: GoogleCloudEngine(label='Google (continuous)'),
     AssistantSTTName.GOOGLE_SEGMENTED: GoogleCloudEngine(label='Google (segmented)'),
     AssistantSTTName.OPENAI: OpenAIEngine(),
-    AssistantSTTName.DEEPGRAM: DeepgramEngine(),
+    AssistantSTTName.DEEPGRAM: _DEEPGRAM_ENGINE,
     AssistantSTTName.ASSEMBLYAI: AssemblyAIEngine(),
     AssistantSTTName.VENICE: _VENICE_ENGINE,
 }
@@ -80,6 +84,7 @@ TTS_ENGINES: dict[AssistantTTSName, AIProviderMixin] = {
     AssistantTTSName.ELEVENLABS: ElevenLabsEngine(),
     AssistantTTSName.RIME: RimeEngine(),
     AssistantTTSName.VENICE: _VENICE_ENGINE,
+    AssistantTTSName.DEEPGRAM: _DEEPGRAM_ENGINE,
 }
 
 IMAGE_GENERATOR_ENGINES: dict[

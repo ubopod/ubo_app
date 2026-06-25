@@ -190,6 +190,7 @@ class AssistantTTSName(StrEnum):
     ELEVENLABS = 'elevenlabs'
     RIME = 'rime'
     VENICE = 'venice'
+    DEEPGRAM = 'deepgram'
 
 
 class ElevenLabsVoiceEntry(Immutable):
@@ -219,6 +220,9 @@ DEFAULT_VOICES: dict[AssistantTTSName, str] = {
     # TTS_VOICE``) so deployments can pin a voice; the out-of-box value is the
     # Kokoro default Venice mirrors, which the curated catalog contains.
     AssistantTTSName.VENICE: DEFAULT_VENICE_TTS_VOICE,
+    # Deepgram's Aura string encodes voice + model + language in one id; the
+    # default mirrors pipecat's own ``DeepgramTTSService`` default.
+    AssistantTTSName.DEEPGRAM: 'aura-2-helena-en',
 }
 
 

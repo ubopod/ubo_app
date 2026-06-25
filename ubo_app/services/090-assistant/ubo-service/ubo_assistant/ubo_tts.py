@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 from pipecat.frames.frames import Frame, StartFrame, SystemFrame
+from pipecat.services.deepgram.tts import DeepgramTTSService
 from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 from pipecat.services.google.tts import GoogleTTSService
 from pipecat.services.openai.tts import OpenAITTSService
@@ -50,6 +51,7 @@ _SERVICE_ID_BY_TTS_NAME: dict[AssistantTtsName, str] = {
     AssistantTtsName.ELEVENLABS: 'elevenlabs',
     AssistantTtsName.RIME: 'rime',
     AssistantTtsName.VENICE: 'venice',
+    AssistantTtsName.DEEPGRAM: 'deepgram',
 }
 
 # Per-provider default voice used when the user hasn't picked one. Mirrors
@@ -57,6 +59,7 @@ _SERVICE_ID_BY_TTS_NAME: dict[AssistantTtsName, str] = {
 _DEFAULT_CLOUD_VOICE: dict[str, str] = {
     'openai': 'alloy',
     'rime': 'antoine',
+    'deepgram': 'aura-2-helena-en',
 }
 
 VENICE_BASE_URL = 'https://api.venice.ai/api/v1'
@@ -86,6 +89,7 @@ class TTSServiceConfig:
     elevenlabs_voice_id: str | None = None
     rime_api_key: str | None = None
     venice_api_key: str | None = None
+    deepgram_api_key: str | None = None
     google_credentials: str | None = None
     # Per-provider selected voice id, seeded from on-disk state via the
     # cold-start replay of ``AssistantVoiceChangedEvent`` and updated on every
@@ -226,6 +230,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         self.elevenlabs_tts = GenericTTSProxy()
         self.rime_tts = GenericTTSProxy()
         self.venice_tts = GenericTTSProxy()
+        self.deepgram_tts = GenericTTSProxy()
 
         # Initialize Piper TTS. The model loads lazily: PiperTTSService
         # constructs even when no voice is on disk yet (first-time setup), so
@@ -264,6 +269,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             'kokoro': self.kokoro_tts,
             'rime': self.rime_tts,
             'venice': self.venice_tts,
+            'deepgram': self.deepgram_tts,
         }
 
         UboSwitchService.__init__(
@@ -309,6 +315,12 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             'venice_api_key',
             '_create_venice_service',
             'venice_tts',
+        ),
+        'deepgram': (
+            'DEEPGRAM_API_KEY_SECRET_ID',
+            'deepgram_api_key',
+            '_create_deepgram_service',
+            'deepgram_tts',
         ),
     }
 
@@ -442,6 +454,23 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             )
         except Exception:
             logger.exception('Error while initializing Venice TTS')
+            return None
+
+    def _create_deepgram_service(self) -> DeepgramTTSService | None:
+        """Create Deepgram TTS service if API key is provided."""
+        if not self._config.deepgram_api_key:
+            return None
+        # The Aura voice id encodes model + voice + language; pipecat sends it
+        # through as the Deepgram ``model``. ``voice=`` is deprecated in favor
+        # of ``settings=Settings(voice=...)``.
+        voice = self._voice_for('deepgram')
+        try:
+            return DeepgramTTSService(
+                api_key=self._config.deepgram_api_key,
+                settings=DeepgramTTSService.Settings(voice=voice),
+            )
+        except Exception:
+            logger.exception('Error while initializing Deepgram TTS')
             return None
 
     async def run_tts(  # pyright: ignore[reportIncompatibleMethodOverride]

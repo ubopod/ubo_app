@@ -283,6 +283,11 @@ TTS_PROVIDERS: tuple[Provider[AssistantTtsName], ...] = (
     ),
     Provider('rime', AssistantTtsName.RIME, secret_ids=('rime_api_key',)),
     Provider('venice', AssistantTtsName.VENICE, secret_ids=('venice_api_key',)),
+    Provider(
+        'deepgram',
+        AssistantTtsName.DEEPGRAM,
+        secret_ids=('deepgram_api_key',),
+    ),
 )
 
 STT_PROVIDERS: tuple[Provider[AssistantSttName], ...] = (

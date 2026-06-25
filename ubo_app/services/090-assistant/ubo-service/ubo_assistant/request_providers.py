@@ -393,6 +393,19 @@ async def _build_tts(  # noqa: C901, PLR0912
             voice=tts_voice_id or _DEFAULT_VENICE_TTS_VOICE,
         )
 
+    if provider_id == 'deepgram':
+        api_key = await _secret(client, 'DEEPGRAM_API_KEY_SECRET_ID')
+        if not api_key:
+            return None
+        from pipecat.services.deepgram.tts import DeepgramTTSService
+
+        return DeepgramTTSService(
+            api_key=api_key,
+            settings=DeepgramTTSService.Settings(
+                voice=tts_voice_id or 'aura-2-helena-en',
+            ),
+        )
+
     return None
 
 

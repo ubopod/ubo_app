@@ -82,6 +82,38 @@ def test_set_selected_voice_updates_state_and_emits_event(
     )
 
 
+def test_set_selected_voice_deepgram_aura(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Selecting a Deepgram Aura voice updates state and emits the event."""
+    from redux import CompleteReducerResult
+
+    ns = _load(monkeypatch)
+    a = ns.assistant
+    state = _initial_state(ns)
+
+    result = ns.reducer(
+        state,
+        a.AssistantSetSelectedVoiceAction(
+            tts_name=a.AssistantTTSName.DEEPGRAM,
+            voice_id='aura-2-thalia-en',
+        ),
+    )
+
+    assert isinstance(result, CompleteReducerResult)
+    assert (
+        result.state.selected_voices[a.AssistantTTSName.DEEPGRAM]
+        == 'aura-2-thalia-en'
+    )
+    assert result.events is not None
+    assert any(
+        isinstance(event, a.AssistantVoiceChangedEvent)
+        and event.tts_name == a.AssistantTTSName.DEEPGRAM
+        and event.voice_id == 'aura-2-thalia-en'
+        for event in result.events
+    )
+
+
 def test_add_elevenlabs_voice_with_name(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

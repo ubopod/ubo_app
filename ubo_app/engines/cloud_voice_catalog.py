@@ -172,6 +172,69 @@ GOOGLE_LANGUAGES: tuple[CloudVoiceLanguage, ...] = (
 )
 
 
+# --- Deepgram: language-grouped --------------------------------------------
+# Deepgram Aura voice ids encode model + voice + language in one string
+# (``aura-2-helena-en``); the subprocess passes the id through verbatim as the
+# Deepgram ``model``. The curated set uses current-generation **Aura-2** voices,
+# a handful per language, mirroring the Google grouping. ``aura-2-helena-en`` is
+# the default (matching pipecat's ``DeepgramTTSService`` default) and must stay
+# in the English group.
+def _deepgram_language(
+    code: LanguageCode,
+    label: str,
+    suffix: str,
+    names: tuple[str, ...],
+) -> CloudVoiceLanguage:
+    return CloudVoiceLanguage(
+        code=code,
+        label=label,
+        voices=tuple(
+            CloudVoiceEntry(id=f'aura-2-{name}-{suffix}', label=name.title())
+            for name in names
+        ),
+    )
+
+
+DEEPGRAM_LANGUAGES: tuple[CloudVoiceLanguage, ...] = (
+    _deepgram_language(
+        LanguageCode.EN,
+        'English',
+        'en',
+        ('helena', 'thalia', 'asteria', 'orion', 'luna', 'zeus'),
+    ),
+    _deepgram_language(
+        LanguageCode.ES,
+        'Spanish',
+        'es',
+        ('celeste', 'nestor', 'carina', 'diana', 'javier'),
+    ),
+    _deepgram_language(
+        LanguageCode.DE,
+        'German',
+        'de',
+        ('elara', 'julius', 'lara', 'fabian'),
+    ),
+    _deepgram_language(
+        LanguageCode.FR,
+        'French',
+        'fr',
+        ('agathe', 'hector'),
+    ),
+    _deepgram_language(
+        LanguageCode.IT,
+        'Italian',
+        'it',
+        ('melia', 'elio', 'flavio', 'maia'),
+    ),
+    _deepgram_language(
+        LanguageCode.NL,
+        'Dutch',
+        'nl',
+        ('beatrix', 'sander', 'daphne', 'lars'),
+    ),
+)
+
+
 def _venice_languages() -> tuple[CloudVoiceLanguage, ...]:
     """Venice serves Kokoro voices, so mirror the Kokoro language grouping."""
     return tuple(
@@ -199,6 +262,7 @@ LANGUAGE_GROUPED_CATALOGS: dict[
     AssistantTTSName.RIME: RIME_LANGUAGES,
     AssistantTTSName.GOOGLE: GOOGLE_LANGUAGES,
     AssistantTTSName.VENICE: VENICE_LANGUAGES,
+    AssistantTTSName.DEEPGRAM: DEEPGRAM_LANGUAGES,
 }
 
 # Provider → its flat (multilingual) voice list.

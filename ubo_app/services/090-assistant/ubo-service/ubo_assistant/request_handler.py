@@ -163,6 +163,7 @@ _TTS_PROVIDER_IDS = {
     'ELEVENLABS': 'elevenlabs',
     'RIME': 'rime',
     'VENICE': 'venice',
+    'DEEPGRAM': 'deepgram',
 }
 _IDLE_TIMEOUT_FRAMES: dict[str, tuple[type[Frame], ...]] = {
     STT: (TranscriptionFrame,),
