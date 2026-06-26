@@ -101,6 +101,7 @@ IMAGE_GENERATOR_ENGINES: dict[
 ] = {
     AssistantImageGeneratorName.GOOGLE: GoogleEngine(),
     AssistantImageGeneratorName.OPENAI: OpenAIEngine(),
+    AssistantImageGeneratorName.VENICE: _VENICE_ENGINE,
 }
 
 

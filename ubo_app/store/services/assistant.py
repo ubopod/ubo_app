@@ -324,6 +324,7 @@ class AssistantImageGeneratorName(StrEnum):
 
     GOOGLE = 'google'
     OPENAI = 'openai'
+    VENICE = 'venice'
 
 
 class AssistantPipelineStage(StrEnum):

@@ -2,6 +2,7 @@
 
 import base64
 import io
+import os
 from collections.abc import AsyncGenerator
 from typing import cast
 
@@ -16,6 +17,12 @@ from pipecat.services.settings import ImageGenSettings, assert_given
 from ubo_bindings.client import UboRPCClient
 
 from ubo_assistant.switch import UboSwitchService
+
+VENICE_BASE_URL = 'https://api.venice.ai/api/v1'
+_DEFAULT_VENICE_IMAGE_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_VENICE_IMAGE_MODEL',
+    'venice-sd35',
+)
 
 
 class UboOpenAIImageGenService(OpenAIImageGenService):
@@ -76,6 +83,7 @@ class UboImageGeneratorService(UboSwitchService[ImageGenService], ImageGenServic
         *,
         google_api_key: str | None,
         openai_api_key: str | None,
+        venice_api_key: str | None,
         selector: str,
     ) -> None:
         """Initialize the STT service with Google, OpenAI, and Vosk STT services."""
@@ -106,9 +114,28 @@ class UboImageGeneratorService(UboSwitchService[ImageGenService], ImageGenServic
             logger.exception('Error while initializing OpenAI image generator')
             self.openai_image_generator = None
 
+        try:
+            if venice_api_key:
+                # Venice exposes an OpenAI-compatible images endpoint, so reuse
+                # the OpenAI generator (which decodes both base64 and URL
+                # responses) pointed at Venice's base URL.
+                self.venice_image_generator = UboOpenAIImageGenService(
+                    api_key=venice_api_key,
+                    base_url=VENICE_BASE_URL,
+                    model=_DEFAULT_VENICE_IMAGE_MODEL,
+                    image_size='1024x1024',
+                    aiohttp_session=self.aiohttp_session,
+                )
+            else:
+                self.venice_image_generator = None
+        except Exception:
+            logger.exception('Error while initializing Venice image generator')
+            self.venice_image_generator = None
+
         self._services = {
             'google': self.google_image_generator,
             'openai': self.openai_image_generator,
+            'venice': self.venice_image_generator,
         }
 
         UboSwitchService.__init__(

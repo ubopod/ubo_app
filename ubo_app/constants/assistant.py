@@ -100,6 +100,10 @@ DEFAULT_VENICE_TTS_VOICE = os.environ.get(
     # picker (which mirrors the Kokoro catalog) can highlight it.
     'af_heart',
 )
+DEFAULT_VENICE_IMAGE_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_VENICE_IMAGE_MODEL',
+    'venice-sd35',
+)
 
 DEFAULT_MISTRAL_TTS_VOICE = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_MISTRAL_TTS_VOICE',

@@ -99,6 +99,7 @@ builtins-ignorelist = ["id"]
 "tests/provider_harness.py" = ["ANN401", "PLR0913"]
 "tests/test_provider_*.py" = ["S101", "PLR2004"]
 "tests/test_request_orchestration.py" = ["S101", "PLR2004"]
+"tests/test_image_generator.py" = ["S101"]
 
 [tool.ruff.lint.flake8-quotes]
 docstring-quotes = "double"

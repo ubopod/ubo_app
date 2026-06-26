@@ -274,6 +274,7 @@ class Assistant:
             client=self.client,
             google_api_key=google_api_key,
             openai_api_key=openai_api_key,
+            venice_api_key=venice_api_key,
             selector='state.assistant.selected_image_generator',
         )
 
