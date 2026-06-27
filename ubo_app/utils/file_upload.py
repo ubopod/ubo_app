@@ -3,8 +3,24 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import threading
 from pathlib import Path
+
+_DEFAULT_UPLOAD_TIMEOUT = 120.0
+
+
+def _upload_timeout() -> float:
+    """Backstop so a coroutine never blocks forever when the client dies mid-upload.
+
+    (Dispatch fails client-side, so no completion/failure is ever registered.)
+    Read at call time and tolerant of a malformed env value so it can't crash
+    module import.
+    """
+    try:
+        return float(os.environ.get('UBO_UPLOAD_TIMEOUT', str(_DEFAULT_UPLOAD_TIMEOUT)))
+    except (TypeError, ValueError):
+        return _DEFAULT_UPLOAD_TIMEOUT
 
 # Completed uploads: upload_id -> temp file path (for caller retrieval)
 _completed_uploads: dict[str, str] = {}
@@ -54,25 +70,38 @@ def get_completed_upload(upload_id: str) -> str | None:
         return _completed_uploads.pop(upload_id, None)
 
 
-async def await_completed_upload(upload_id: str) -> bytes:
+async def await_completed_upload(
+    upload_id: str,
+    *,
+    timeout: float | None = None,  # noqa: ASYNC109 — deliberate env-overridable backstop
+) -> bytes:
     """Wait for a chunked upload to complete, then read and return bytes."""
     loop = asyncio.get_event_loop()
     done: asyncio.Future[bool] = loop.create_future()
 
     with _lock:
-        # Check if already completed before registering waiter
+        # Check if already completed before registering waiter. Only the dict
+        # ops run under the lock; file I/O happens outside it (below).
         temp_path = _completed_uploads.pop(upload_id, None)
-        if temp_path:
-            data = Path(temp_path).read_bytes()
-            Path(temp_path).unlink(missing_ok=True)
-            return data
-        failure_reason = _failed_uploads.pop(upload_id, None)
-        if failure_reason:
-            raise RuntimeError(failure_reason)
-        _upload_waiters[upload_id] = (loop, done)
+        failure_reason = None if temp_path else _failed_uploads.pop(upload_id, None)
+        if temp_path is None and failure_reason is None:
+            _upload_waiters[upload_id] = (loop, done)
+
+    if temp_path is not None:
+        data = Path(temp_path).read_bytes()
+        Path(temp_path).unlink(missing_ok=True)
+        return data
+    if failure_reason is not None:
+        raise RuntimeError(failure_reason)
 
     try:
-        await done
+        await asyncio.wait_for(
+            done,
+            timeout if timeout is not None else _upload_timeout(),
+        )
+    except TimeoutError as exception:
+        msg = f'Upload {upload_id} did not complete in time'
+        raise RuntimeError(msg) from exception
     finally:
         with _lock:
             _upload_waiters.pop(upload_id, None)
