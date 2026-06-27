@@ -513,6 +513,34 @@ jobs:
           IMAGE_SIZE=$(awk -v IMAGE_SIZE_GB=$IMAGE_SIZE_GB 'BEGIN {printf "%.0f", IMAGE_SIZE_GB * 1024 ^ 3}')
           echo "image_size=$IMAGE_SIZE" >>"$GITHUB_OUTPUT"
 
+      - name: Download Bundled Docker Images
+        run: |
+          # Daemon-less pull of the images listed in the manifest into tarballs
+          # that Packer bakes into the image and a first-boot service loads.
+          MANIFEST=scripts/packer/bundled-docker-images.txt
+          DEST=/build/docker-images
+          mkdir -p "$DEST"
+
+          apt-get update
+          apt-get install -y curl
+
+          CRANE_VERSION=v0.20.2
+          curl -fsSL \
+            "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_arm64.tar.gz" \
+            | tar -xz -C /usr/local/bin crane
+          crane version
+
+          while IFS= read -r ref || [ -n "$ref" ]; do
+            ref="${ref%%#*}"
+            ref="$(echo "$ref" | xargs)"
+            [ -z "$ref" ] && continue
+            sanitized="$(echo "$ref" | tr '/:' '__')"
+            echo "Pulling $ref -> $DEST/$sanitized.tar"
+            crane pull --platform linux/arm64 "$ref" "$DEST/$sanitized.tar"
+          done <"$MANIFEST"
+
+          ls -lh "$DEST"
+
       - name: Build Artifact
         env:
           PACKER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}

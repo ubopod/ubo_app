@@ -73,6 +73,25 @@ build {
     destination = "/wheels"
   }
 
+  # Docker image tarballs downloaded by the CI workflow (empty dir if none),
+  # plus the first-boot loader that imports them once dockerd is running.
+  # Copied to a top-level dir (like /wheels) and moved into place in the shell
+  # provisioner, which creates the nested parent.
+  provisioner "file" {
+    source      = "/build/docker-images"
+    destination = "/bundled-docker-images"
+  }
+
+  provisioner "file" {
+    source      = "scripts/packer/load-bundled-docker-images.sh"
+    destination = "/tmp/load-bundled-docker-images.sh"
+  }
+
+  provisioner "file" {
+    source      = "scripts/packer/load-bundled-docker-images.service"
+    destination = "/tmp/load-bundled-docker-images.service"
+  }
+
   provisioner "shell" {
     inline = [
       "chmod +x /install.sh",
@@ -81,6 +100,13 @@ build {
       "rm -f /etc/xdg/autostart/piwiz.desktop",
       "/install.sh --in-packer --wheels-directory=/wheels --target-version=${var.ubo_app_version}",
       "rm -rf /install.sh /wheels/",
+      "mkdir -p /var/lib/ubo",
+      "rm -rf /var/lib/ubo/bundled-docker-images",
+      "mv /bundled-docker-images /var/lib/ubo/bundled-docker-images",
+      "install -D -m 0755 /tmp/load-bundled-docker-images.sh /usr/local/lib/ubo/load-bundled-docker-images.sh",
+      "install -D -m 0644 /tmp/load-bundled-docker-images.service /etc/systemd/system/load-bundled-docker-images.service",
+      "rm -f /tmp/load-bundled-docker-images.sh /tmp/load-bundled-docker-images.service",
+      "systemctl enable load-bundled-docker-images.service || true",
       "/usr/bin/env systemctl disable userconfig || true",
       "apt-get clean -y",
       "echo DF; df -h"
