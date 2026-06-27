@@ -34,8 +34,8 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionSetSlotEnabledAction,
-    WakeMode,
+    WakeEngineSetEnabledAction,
+    WakeWordEngineName,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils.async_ import create_task
@@ -204,8 +204,10 @@ the screen.""",
 
                 await self.refresh_downloaded_models()
                 store.dispatch(
-                    SpeechRecognitionSetSlotEnabledAction(
-                        mode=WakeMode.INTENTS,
+                    # Re-enable Vosk wake/command detection now that its model is
+                    # available (it may have been disabled while missing).
+                    WakeEngineSetEnabledAction(
+                        engine=WakeWordEngineName.VOSK,
                         enabled=True,
                     ),
                     AssistantUpdateProvidersAction(),

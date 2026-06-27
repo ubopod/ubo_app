@@ -34,7 +34,9 @@ from ubo_app.store.services.infrared import (
 from ubo_app.store.services.rgb_ring import RgbRingRainbowAction, RgbRingSetAllAction
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionIntent,
-    SpeechRecognitionSetAssistantSlotsEnabledAction,
+    SpeechRecognitionSetAssistantEnabledAction,
+    SpeechRecognitionTriggerModeAction,
+    WakeMode,
 )
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
@@ -55,6 +57,26 @@ INFRARED_RECEIVE_OFF = 'infrared:receive-off'
 # Registered here by register_default_bindable_actions():
 SPEECH_ASSISTANT_ON = 'speech:assistant-on'
 SPEECH_ASSISTANT_OFF = 'speech:assistant-off'
+# Per-mode wake actions — let an Infrared remote key (bound to one of these via
+# the wake-phrase editor) trigger an assistant mode. Keyed by WakeMode below.
+SPEECH_WAKE_INTENTS = 'speech:wake-intents'
+SPEECH_WAKE_QUICK_CHAT = 'speech:wake-quick-chat'
+SPEECH_WAKE_CONVERSATION = 'speech:wake-conversation'
+SPEECH_WAKE_SILENCE = 'speech:wake-silence'
+MODE_BINDABLE_KEY: dict[WakeMode, str] = {
+    WakeMode.INTENTS: SPEECH_WAKE_INTENTS,
+    WakeMode.QUICK_CHAT: SPEECH_WAKE_QUICK_CHAT,
+    WakeMode.CONVERSATION: SPEECH_WAKE_CONVERSATION,
+    WakeMode.STOP_TALKING: SPEECH_WAKE_SILENCE,
+}
+# Labels for the per-mode wake actions (shown in the Infrared "Add Keys" Action
+# dropdown and the voice-command Action dropdown).
+_MODE_BINDABLE_LABEL: dict[WakeMode, str] = {
+    WakeMode.INTENTS: 'Wake: Shortcut',
+    WakeMode.QUICK_CHAT: 'Wake: Short Chat',
+    WakeMode.CONVERSATION: 'Wake: Conversation',
+    WakeMode.STOP_TALKING: 'Wake: Silence',
+}
 SPEECH_WIFI_CAMERA = 'speech:wifi-camera'
 SPEECH_WIFI_WEB = 'speech:wifi-web'
 SPEECH_LIGHT_STRIP = 'speech:light-strip'
@@ -102,6 +124,24 @@ def _const(action: UboAction) -> Callable[[BindableActionContext], UboAction]:
     return lambda _ctx: action
 
 
+def _trigger_mode(mode: WakeMode) -> Callable[[BindableActionContext], UboAction]:
+    """Bindable factory: fire an assistant wake *mode* from a bound trigger.
+
+    Used by Infrared remote keys bound to a mode via the wake-phrase editor; the
+    device name flows through as the trigger phrase for the assistant source.
+
+    Note: this path deliberately ignores the global ``assistant_enabled`` switch.
+    Unlike audio wake words (which the engines manager stops feeding when the
+    switch is off), an explicit IR binding is treated as an intentional override —
+    it always fires the mode. Keep this in sync with ``reducer._apply_wake_mode``.
+    """
+    return lambda ctx: SpeechRecognitionTriggerModeAction(
+        mode=mode,
+        phrase=ctx.device_name,
+        detector='infrared',
+    )
+
+
 def register_default_bindable_actions() -> None:
     """Register the bindable actions backing the default voice commands.
 
@@ -113,12 +153,12 @@ def register_default_bindable_actions() -> None:
         (
             SPEECH_ASSISTANT_ON,
             'Assistant: Turn On',
-            SpeechRecognitionSetAssistantSlotsEnabledAction(enabled=True),
+            SpeechRecognitionSetAssistantEnabledAction(enabled=True),
         ),
         (
             SPEECH_ASSISTANT_OFF,
             'Assistant: Turn Off',
-            SpeechRecognitionSetAssistantSlotsEnabledAction(enabled=False),
+            SpeechRecognitionSetAssistantEnabledAction(enabled=False),
         ),
         (SPEECH_WIFI_CAMERA, 'WiFi: Setup via Camera', _WIFI_CAMERA_ACTION),
         (SPEECH_WIFI_WEB, 'WiFi: Setup via Web', _WIFI_WEB_ACTION),
@@ -165,6 +205,16 @@ def register_default_bindable_actions() -> None:
     ]
     for key, label, action in catalog:
         register_bindable_action(key, label, _const(action), allow_reregister=True)
+
+    # Per-mode wake actions (context-aware — carry the bound device's name as the
+    # trigger phrase), so an Infrared remote key can start a mode.
+    for mode, key in MODE_BINDABLE_KEY.items():
+        register_bindable_action(
+            key,
+            _MODE_BINDABLE_LABEL[mode],
+            _trigger_mode(mode),
+            allow_reregister=True,
+        )
 
 
 def register_shortcut_actions() -> None:

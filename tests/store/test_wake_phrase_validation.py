@@ -82,18 +82,25 @@ def test_phrase_collision_across_modes(monkeypatch: pytest.MonkeyPatch) -> None:
     """A phrase duplicating another mode's phrase collides; its own does not."""
     module = _load_validation(monkeypatch)
     sr = importlib.import_module('ubo_app.store.services.speech_recognition')
+
+    def _trigger(trigger_id: str, mode: Any, value: str) -> Any:  # noqa: ANN401
+        return SimpleNamespace(id=trigger_id, mode=mode, value=value)
+
     state = SimpleNamespace(
-        wake_slots=(
-            SimpleNamespace(mode=sr.WakeMode.INTENTS, phrases=('short voice command',)),
+        wake_engines=(
             SimpleNamespace(
-                mode=sr.WakeMode.QUICK_CHAT,
-                phrases=('hey quick question',),
+                engine=sr.WakeWordEngineName.VOSK,
+                triggers=(
+                    _trigger('t-intents', sr.WakeMode.INTENTS, 'short voice command'),
+                    _trigger('t-quick', sr.WakeMode.QUICK_CHAT, 'hey quick question'),
+                    _trigger(
+                        't-conv',
+                        sr.WakeMode.CONVERSATION,
+                        "let's have a conversation",
+                    ),
+                    _trigger('t-stop', sr.WakeMode.STOP_TALKING, 'okay enough'),
+                ),
             ),
-            SimpleNamespace(
-                mode=sr.WakeMode.CONVERSATION,
-                phrases=("let's have a conversation",),
-            ),
-            SimpleNamespace(mode=sr.WakeMode.STOP_TALKING, phrases=('okay enough',)),
         ),
         conversation_end_phrases=('i am done talking',),
     )
@@ -101,17 +108,70 @@ def test_phrase_collision_across_modes(monkeypatch: pytest.MonkeyPatch) -> None:
     # Candidate duplicates the conversation phrase while editing quick-chat.
     problems = module.phrase_collisions(
         "let's have a conversation",
-        sr.WakeMode.QUICK_CHAT,
+        sr.WakeWordEngineName.VOSK,
         state,
+        exclude_trigger_id='t-quick',
     )
     assert problems
 
-    # Editing a mode to its own current value is not a collision.
+    # Editing a trigger to its own current value is not a collision.
     assert (
         module.phrase_collisions(
             'hey quick question',
-            sr.WakeMode.QUICK_CHAT,
+            sr.WakeWordEngineName.VOSK,
             state,
+            exclude_trigger_id='t-quick',
+        )
+        == []
+    )
+
+
+def test_openwakeword_model_collision_is_engine_wide(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An OWW model stem must be unique across the whole engine.
+
+    The engine maps each stem to a single trigger id, so the same stem in *any*
+    two triggers (including the same mode) would silently collapse to one binding.
+    """
+    module = _load_validation(monkeypatch)
+    sr = importlib.import_module('ubo_app.store.services.speech_recognition')
+
+    state = SimpleNamespace(
+        wake_engines=(
+            SimpleNamespace(
+                engine=sr.WakeWordEngineName.OPENWAKEWORD,
+                triggers=(
+                    SimpleNamespace(
+                        id='oww-conv',
+                        mode=sr.WakeMode.CONVERSATION,
+                        value='hey_jarvis_v0.1',
+                    ),
+                ),
+            ),
+        ),
+        conversation_end_phrases=(),
+    )
+
+    # Same stem in a different mode collides.
+    assert module.phrase_collisions(
+        'hey_jarvis_v0.1',
+        sr.WakeWordEngineName.OPENWAKEWORD,
+        state,
+    )
+    # Same stem in the SAME mode now collides too (it would otherwise collapse).
+    assert module.phrase_collisions(
+        'hey_jarvis_v0.1',
+        sr.WakeWordEngineName.OPENWAKEWORD,
+        state,
+    )
+    # Re-selecting the same model while editing that trigger does not collide.
+    assert (
+        module.phrase_collisions(
+            'hey_jarvis_v0.1',
+            sr.WakeWordEngineName.OPENWAKEWORD,
+            state,
+            exclude_trigger_id='oww-conv',
         )
         == []
     )

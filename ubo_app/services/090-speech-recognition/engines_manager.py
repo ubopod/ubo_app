@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, TypedDict, cast
+from typing import TYPE_CHECKING
 
+from abstraction.wake_word_recognition_mixin import WakeTrigger
 from constants import INTENTS_LISTENING_TIMEOUT_SECONDS
 from mic_buffer import MicBuffer
+from openwakeword_engine import OpenWakeWordEngine
 from pattern import PatternError, expand_pattern
 from vosk_engine import VoskEngine
 
@@ -22,14 +24,14 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionReportWakeWordDetectionAction,
     SpeechRecognitionStatus,
     WakeMode,
-    WakeWordSlot,
+    WakeWordEngineConfig,
+    WakeWordEngineName,
 )
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from abstraction.base_class import BaseSpeechRecognitionEngine
     from abstraction.speech_recognition_mixin import Recognition, SpeechRecognitionMixin
     from abstraction.wake_word_recognition_mixin import WakeWordRecognitionMixin
     from vosk import Model
@@ -37,36 +39,18 @@ if TYPE_CHECKING:
     from ubo_app.utils.types import Subscriptions
 
 
-class _Engines(TypedDict):
-    wake_word: WakeWordRecognitionMixin
-    speech: SpeechRecognitionMixin
-
-
-def _running_engines(engines: _Engines) -> set[BaseSpeechRecognitionEngine]:
-    return cast('set[BaseSpeechRecognitionEngine]', set(engines.values()))
-
-
 _MIC_BUFFER_DURATION_SECONDS = 5.0
 _MIC_BUFFER_OUTPUT_DIR = DATA_PATH / 'wake_phrase_recordings'
 
+# Suppress *same-mode* detections briefly after one fires so a phrase that matches
+# more than one concurrent engine (or repeats) only starts the assistant once.
+# STOP_TALKING is exempt (see ``_handle_wake_detection``); the reducer's
+# ``status IDLE`` guard is the secondary backstop.
+_DETECTION_DEBOUNCE_SECONDS = 1.0
 
-@store.with_state(
-    lambda state: next(
-        (
-            slot.phrases
-            for slot in state.speech_recognition.wake_slots
-            if slot.mode is WakeMode.INTENTS
-        ),
-        (),
-    ),
-)
-def _should_dump_buffer(intents_phrases: tuple[str, ...], wake_word: str) -> bool:
-    """Dump the mic buffer for assistant wake/stop phrases, not intents words.
-
-    The phrases are user-editable, so the decision reads live state rather than a
-    module-level set; any intents-slot alternative counts as "don't dump".
-    """
-    return wake_word.casefold() not in {phrase.casefold() for phrase in intents_phrases}
+# Wake modes gated by the global ``assistant_enabled`` switch. INTENTS (voice
+# shortcuts) and STOP_TALKING stay active regardless.
+_ASSISTANT_MODES = (WakeMode.QUICK_CHAT, WakeMode.CONVERSATION)
 
 
 def _expand_phrases(phrases: Sequence[str]) -> list[str]:
@@ -93,50 +77,88 @@ class EnginesManager:
 
     def __init__(self) -> None:
         """Initialize `EnginesManager`."""
-        # Vosk runs in-core for both wake-word detection and command/intent
-        # speech recognition — the only engine after the Google Cloud removal.
-        vosk_engine = VoskEngine()
-        self.engines: _Engines = {'wake_word': vosk_engine, 'speech': vosk_engine}
+        # Vosk serves command/intent speech recognition and is also a wake
+        # engine. OpenWakeWord is a second wake engine. All enabled wake engines
+        # run concurrently over the same mic audio. (Register Picovoice here.)
+        self._vosk_engine = VoskEngine()
+        self._openwakeword_engine = OpenWakeWordEngine()
+        self._wake_engines: dict[WakeWordEngineName, WakeWordRecognitionMixin] = {
+            WakeWordEngineName.VOSK: self._vosk_engine,
+            WakeWordEngineName.OPENWAKEWORD: self._openwakeword_engine,
+        }
+        self._speech_engine: SpeechRecognitionMixin = self._vosk_engine
+
+        # Per-engine ``trigger id -> (value, mode)`` for the last synced config,
+        # so a detection (which carries only the trigger id) resolves to its
+        # phrase + mode without a store read in the hot path.
+        self._trigger_index: dict[
+            WakeWordEngineName,
+            dict[str, tuple[str, WakeMode]],
+        ] = {}
+        self._enabled_engines: set[WakeWordEngineName] = set()
+        # Last detection time *per mode* — debounce de-dupes the same wake (e.g.
+        # a phrase matching both Vosk and OpenWakeWord) without letting one mode's
+        # detection suppress another's (notably a STOP_TALKING right after a wake).
+        self._last_detection_time: dict[WakeMode, float] = {}
+
         self._intents_timeout_handle: asyncio.Handle | None = None
         self.mic_buffer = MicBuffer(
             duration_seconds=_MIC_BUFFER_DURATION_SECONDS,
             output_dir=_MIC_BUFFER_OUTPUT_DIR,
         )
 
-        store.autorun(
-            lambda state: state.speech_recognition.wake_slots,
-        )(self._sync_wake_word_engine)
+        sync_wake_engines = store.autorun(
+            lambda state: (
+                state.speech_recognition.wake_engines,
+                state.speech_recognition.assistant_enabled,
+                # Re-sync when the on-disk model pool changes so an engine whose
+                # model arrived after startup retries its (previously failed) load.
+                state.speech_recognition.openwakeword_models,
+            ),
+        )(self._sync_wake_engines)
 
-        store.autorun(
+        sync_status = store.autorun(
             lambda state: (
                 state.speech_recognition.status,
                 state.speech_recognition.intents,
             ),
         )(self._sync_status)
 
-        create_task(self._monitor_wake_word_recognitions(), name='WakeWordMonitor')
+        # ``create_task`` returns the ``call_soon_threadsafe`` scheduling handle,
+        # not the long-lived ``asyncio.Task`` — so capture the real task via the
+        # callback (mirroring ``BackgroundRunningMixin``) so ``_cleanup`` can
+        # cancel the ``while True`` monitor loops on teardown.
+        self._monitor_tasks: list[asyncio.Task] = []
+        for engine_name in self._wake_engines:
+            create_task(
+                self._monitor_wake_engine(engine_name),
+                callback=self._track_monitor_task,
+                name=f'WakeWordMonitor:{engine_name.value}',
+            )
         create_task(
             self._monitor_speech_recognitions(),
+            callback=self._track_monitor_task,
             name='SpeechRecognitionMonitor',
         )
 
         self.subscriptions: Subscriptions = [
             store.subscribe_event(AudioReportSampleEvent, self._queue_chunk),
+            sync_wake_engines.unsubscribe,
+            sync_status.unsubscribe,
             self._cleanup,
         ]
 
     def wake_word_model(self) -> Model | None:
-        """Return the wake-word engine's loaded Vosk model, if any.
+        """Return Vosk's loaded Kaldi model, if any.
 
-        Used by the wake-phrase editor to validate words against the Kaldi
-        vocabulary. Returns None when the engine has no loadable model yet (e.g.
-        OpenWakeWord in a later phase, or the Vosk model not downloaded).
+        Used by the wake-phrase editor to validate words against the Vosk
+        vocabulary; Vosk is always present, so this no longer depends on which
+        engine is the active wake engine. Returns None until the model is loaded.
         """
-        engine = self.engines['wake_word']
-        return engine.current_model() if isinstance(engine, VoskEngine) else None
+        return self._vosk_engine.current_model()
 
     async def _queue_chunk(self, event: AudioReportSampleEvent) -> None:
-        """Queue audio chunk to all running speech recognition engines.
+        """Queue audio chunk to the speech engine and all enabled wake engines.
 
         On-device wake-word/speech recognition only consumes the system mic;
         audio streamed from remote clients (browser, mobile) carries a non-empty
@@ -145,26 +167,61 @@ class EnginesManager:
         if event.audio_source:
             return
         self.mic_buffer.add(event.timestamp, event.sample)
-        for engine in _running_engines(self.engines):
+        targets = {
+            self._speech_engine,
+            *(self._wake_engines[name] for name in self._enabled_engines),
+        }
+        for engine in targets:
             await engine.queue_audio_chunk(event.sample_speech_recognition)
 
-    async def _sync_wake_word_engine(
+    async def _sync_wake_engines(
         self,
-        wake_slots: tuple[WakeWordSlot, ...],
+        data: tuple[tuple[WakeWordEngineConfig, ...], bool, tuple[str, ...]],
     ) -> None:
-        """Push the phrases of every enabled wake-word slot to the engine.
+        """Push each enabled engine its active triggers; stop the rest.
 
-        Slots are user-editable and arrive from state, so an edit (phrases or
-        enabled) re-pushes the active wake-word set to the engine live.
+        Engines and triggers are user-editable and arrive from state, so any edit
+        re-pushes the active trigger set live and (dis)engages the engine. When the
+        global ``assistant_enabled`` switch is off, QUICK_CHAT/CONVERSATION triggers
+        are dropped (voice shortcuts and Silence stay active).
         """
-        words = [
-            phrase
-            for slot in wake_slots
-            if slot.enabled
-            for phrase in slot.phrases
-        ]
-        logger.debug('Syncing wake-word engine', extra={'wake_word_count': len(words)})
-        self.engines['wake_word'].set_wake_words(words or None)
+        configs, assistant_enabled, _openwakeword_models = data
+        enabled: set[WakeWordEngineName] = set()
+        index: dict[WakeWordEngineName, dict[str, tuple[str, WakeMode]]] = {}
+        for config in configs:
+            engine = self._wake_engines.get(config.engine)
+            if engine is None:
+                # Unknown / not-yet-registered engine (e.g. future Picovoice).
+                continue
+            active = [
+                trigger
+                for trigger in config.triggers
+                if assistant_enabled or trigger.mode not in _ASSISTANT_MODES
+            ]
+            if config.enabled and active:
+                enabled.add(config.engine)
+                engine.set_triggers(
+                    [
+                        WakeTrigger(
+                            id=trigger.id,
+                            value=trigger.value,
+                            sensitivity=trigger.sensitivity,
+                        )
+                        for trigger in active
+                    ],
+                )
+                index[config.engine] = {
+                    trigger.id: (trigger.value, trigger.mode) for trigger in active
+                }
+            else:
+                engine.set_triggers(None)
+                index[config.engine] = {}
+        self._enabled_engines = enabled
+        self._trigger_index = index
+        logger.debug(
+            'Synced wake engines',
+            extra={'enabled': [name.value for name in enabled]},
+        )
 
     async def _sync_status(
         self,
@@ -181,9 +238,9 @@ class EnginesManager:
         )
         if status is SpeechRecognitionStatus.IDLE:
             self._cancel_intents_timeout()
-            await self.engines['speech'].deactivate_speech_recognition()
+            await self._speech_engine.deactivate_speech_recognition()
         elif status is SpeechRecognitionStatus.INTENTS_WAITING:
-            await self.engines['speech'].activate_speech_recognition(
+            await self._speech_engine.activate_speech_recognition(
                 phrases=[
                     phrase
                     for intent in intents
@@ -193,7 +250,7 @@ class EnginesManager:
             self._start_intents_timeout()
         elif status is SpeechRecognitionStatus.ASSISTANT_WAITING:
             self._cancel_intents_timeout()
-            await self.engines['speech'].deactivate_speech_recognition()
+            await self._speech_engine.deactivate_speech_recognition()
 
     def _start_intents_timeout(self) -> None:
         """(Re)arm the timer that ends intent-listening if no command arrives."""
@@ -264,36 +321,81 @@ class EnginesManager:
                 ),
             )
 
-    async def _monitor_wake_word_recognitions(self) -> None:
-        """Monitor wake word recognitions and dispatch events."""
+    async def _monitor_wake_engine(self, engine_name: WakeWordEngineName) -> None:
+        """Monitor one wake engine's detections and dispatch reports."""
+        engine = self._wake_engines[engine_name]
         while True:
-            async for wake_word in self.engines['wake_word'].wake_word_recogntions():
-                if _should_dump_buffer(wake_word):
-                    # Persist the rolling mic buffer so the audio leading up
-                    # to the trigger phrase is available for review. Run the
-                    # synchronous WAV write off the event loop so the dispatch
-                    # below isn't delayed.
-                    await asyncio.get_event_loop().run_in_executor(
-                        None,
-                        self.mic_buffer.dump,
-                        wake_word,
-                    )
-                store.dispatch(
-                    SpeechRecognitionReportWakeWordDetectionAction(
-                        wake_word=wake_word,
-                        engine_name=self.engines['wake_word'].name,
-                    ),
-                )
+            async for trigger_id in engine.wake_word_recogntions():
+                await self._handle_wake_detection(engine_name, trigger_id)
             await asyncio.sleep(0.1)
+
+    async def _handle_wake_detection(
+        self,
+        engine_name: WakeWordEngineName,
+        trigger_id: str,
+    ) -> None:
+        """Resolve a fired trigger, debounce, dump the buffer and report it."""
+        entry = self._trigger_index.get(engine_name, {}).get(trigger_id)
+        if entry is None:
+            return
+        value, mode = entry
+
+        # STOP_TALKING must always get through (e.g. a "stop" right after a wake);
+        # other modes debounce per-mode so a phrase matching two concurrent engines
+        # only fires once without cross-mode suppression.
+        if mode is not WakeMode.STOP_TALKING:
+            now = asyncio.get_event_loop().time()
+            last = self._last_detection_time.get(mode, 0.0)
+            if now - last < _DETECTION_DEBOUNCE_SECONDS:
+                logger.debug(
+                    'Debounced wake detection',
+                    extra={
+                        'engine_name': engine_name.value,
+                        'trigger_id': trigger_id,
+                    },
+                )
+                return
+            self._last_detection_time[mode] = now
+
+        if mode is not WakeMode.INTENTS:
+            # Persist the rolling mic buffer for the assistant wake/stop phrases.
+            # Run the synchronous WAV write off the loop so the dispatch isn't
+            # delayed.
+            await asyncio.get_event_loop().run_in_executor(
+                None,
+                self.mic_buffer.dump,
+                value,
+            )
+        store.dispatch(
+            SpeechRecognitionReportWakeWordDetectionAction(
+                engine_name=engine_name.value,
+                trigger_id=trigger_id,
+                phrase=value,
+            ),
+        )
 
     async def _monitor_speech_recognitions(self) -> None:
         """Monitor speech recognitions and handle them."""
         while True:
-            async for recognition in self.engines['speech'].speech_recognitions():
+            async for recognition in self._speech_engine.speech_recognitions():
                 self.handle_speech_recognition(recognition)
             await asyncio.sleep(0.1)
 
+    def _track_monitor_task(self, task: asyncio.Task) -> None:
+        """Store the real monitor ``Task`` so ``_cleanup`` can cancel it.
+
+        ``create_task`` only exposes the long-lived task via this callback (its
+        return value is the scheduling handle), so capture it here.
+        """
+        self._monitor_tasks.append(task)
+
     def _cleanup(self) -> None:
-        """Cleanup function to stop all engines."""
-        for engine in _running_engines(self.engines):
+        """Cleanup function to stop all engines (each instance once).
+
+        Vosk is both the speech engine and a wake engine, so de-dupe by instance
+        to avoid a double ``stop()`` whose ordering could matter.
+        """
+        for task in self._monitor_tasks:
+            task.cancel()
+        for engine in {self._speech_engine, *self._wake_engines.values()}:
             engine.stop()

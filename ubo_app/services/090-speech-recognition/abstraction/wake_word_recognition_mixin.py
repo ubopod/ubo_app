@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, NamedTuple, final
 
 from typing_extensions import override
 
@@ -15,46 +15,64 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Sequence
 
 
+class WakeTrigger(NamedTuple):
+    """A single thing an engine listens for.
+
+    ``id`` is the stable trigger id (the detection queue carries it so the reducer
+    can resolve the trigger's mode); ``value`` is the engine-specific match string
+    (a phrase for Vosk, a model stem for OpenWakeWord). ``sensitivity`` (0.0-1.0)
+    is how readily a confidence-scored engine fires; phrase-match engines ignore it.
+    """
+
+    id: str
+    value: str
+    sensitivity: float = 0.5
+
+
 class WakeWordRecognitionMixin(BaseSpeechRecognitionEngine, abc.ABC):
     """Mixin for wake word detection functionality."""
 
-    wake_words: Sequence[str] | None = None
+    triggers: Sequence[WakeTrigger] = ()
 
     @override
     def __init__(self, *, label: str | None = None) -> None:
         """Initialize wake word recognition mixin."""
+        self.triggers = ()
+        # The queue carries *trigger ids*, not phrases.
         self.woke_word_recognitions_queue: AsyncEvictingQueue[str | None] = (
             AsyncEvictingQueue(maxsize=5)
         )
         super().__init__(label=label)
 
-    def set_wake_words(self, wake_words: Sequence[str] | None) -> None:
-        """Set the wake words for detection."""
+    @property
+    def wake_words(self) -> list[str]:
+        """The match values of the configured triggers (e.g. the Vosk grammar)."""
+        return [trigger.value for trigger in self.triggers]
+
+    def set_triggers(self, triggers: Sequence[WakeTrigger] | None) -> None:
+        """Set the wake-word triggers this engine should listen for."""
         from ubo_app.logger import logger
 
+        self.triggers = tuple(triggers) if triggers else ()
         logger.debug(
-            'Setting wake words',
-            extra={
-                'engine_name': self.name,
-                'wake_words': list(wake_words) if wake_words else None,
-            },
+            'Setting wake-word triggers',
+            extra={'engine_name': self.name, 'trigger_count': len(self.triggers)},
         )
-        self.wake_words = wake_words
-
         self.decide_running_state()
 
     @final
     async def wake_word_recogntions(self) -> AsyncGenerator[str, None]:
-        """Yield recognized wake words."""
-        while wake_word := await self.woke_word_recognitions_queue.get():
-            yield wake_word
+        """Yield the ids of recognized wake-word triggers."""
+        while trigger_id := await self.woke_word_recognitions_queue.get():
+            yield trigger_id
 
     @override
     async def report(self, result: str) -> None:
-        """Report the recognized speech and check for wake words."""
-        for wake_word in self.wake_words or []:
-            if wake_word.lower() in result.lower():
-                await self.woke_word_recognitions_queue.put(wake_word)
+        """Report recognized speech and queue any matching trigger's id."""
+        lowered = result.lower()
+        for trigger in self.triggers:
+            if trigger.value.lower() in lowered:
+                await self.woke_word_recognitions_queue.put(trigger.id)
                 break
         else:
             await super().report(result)
@@ -62,4 +80,4 @@ class WakeWordRecognitionMixin(BaseSpeechRecognitionEngine, abc.ABC):
     @override
     def should_be_running(self) -> bool:
         """Check if the wake word engine should be running."""
-        return bool(self.wake_words) or super().should_be_running()
+        return bool(self.triggers) or super().should_be_running()

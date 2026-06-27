@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import field
 from enum import StrEnum
 
@@ -20,10 +21,10 @@ from ubo_app.utils.persistent_store import read_from_persistent_store
 
 
 class WakeMode(StrEnum):
-    """The four user-editable wake/stop phrase slots.
+    """The assistant behaviour a detected wake word triggers.
 
-    Each maps to one :class:`WakeWordSlot` on :class:`SpeechRecognitionState`, and
-    discriminates assistant trigger policies without coupling them to the literal
+    Each wake-word :class:`WakeWordTrigger` is tagged with one of these. They
+    discriminate assistant trigger policies without coupling them to the literal
     phrase text. The conversation-end phrases are deliberately *not* a ``WakeMode``
     — they are consumed assistant-side, not detected as a wake word.
     """
@@ -34,30 +35,126 @@ class WakeMode(StrEnum):
     STOP_TALKING = 'stop_talking'
 
 
+class WakeWordEngineName(StrEnum):
+    """Available wake word detection engines."""
+
+    VOSK = 'vosk'
+    OPENWAKEWORD = 'openwakeword'
+    # PICOVOICE = 'picovoice'  # noqa: ERA001  (future — see EnginesManager registry)
+
+
+class WakeWordModelStatus(StrEnum):
+    """Status of wake word models."""
+
+    NOT_AVAILABLE = 'not_available'
+    DOWNLOADING = 'downloading'
+    AVAILABLE = 'available'
+    ERROR = 'error'
+
+
+class WakeWordModelStatusEntry(Immutable):
+    """One engine's model availability/download status.
+
+    A tuple of these (rather than an enum-keyed dict) backs the state so it
+    round-trips through the gRPC object<->message helpers, which don't preserve
+    enum map keys.
+    """
+
+    engine: WakeWordEngineName
+    status: WakeWordModelStatus
+
+
 class SpeechRecognitionAction(BaseAction):
     """Base class for speech recognition actions."""
 
 
-class SpeechRecognitionSetSlotEnabledAction(SpeechRecognitionAction):
-    """Enable or disable one wake-word slot.
+# --- Wake engine / trigger configuration -----------------------------------
 
-    Conversation and Stop are coupled: setting either updates both (enforced in
-    the reducer, so every client honours the invariant).
+
+class WakeEngineSetEnabledAction(SpeechRecognitionAction):
+    """Enable or disable a whole wake-word engine.
+
+    Engines run concurrently; enabling more than one streams the same mic audio
+    to each, and whichever matches one of *its* enabled triggers fires.
     """
 
+    engine: WakeWordEngineName
+    enabled: bool
+
+
+class WakeTriggerAddAction(SpeechRecognitionAction):
+    """Add a wake-word trigger to an engine."""
+
+    engine: WakeWordEngineName
+    id: str
+    label: str
     mode: WakeMode
-    enabled: bool
+    value: str
+    sensitivity: float = 0.5
 
 
-class SpeechRecognitionSetAssistantSlotsEnabledAction(SpeechRecognitionAction):
-    """Enable or disable all assistant wake slots at once.
+class WakeTriggerRemoveAction(SpeechRecognitionAction):
+    """Remove the trigger with the matching ``id`` from an engine."""
 
-    Backs the "Assistant: Turn On/Off" voice command — sets quick-chat,
-    conversation, and stop together (the command interface / intents slot is
-    independent and unaffected).
+    engine: WakeWordEngineName
+    id: str
+
+
+class SpeechRecognitionSetAssistantEnabledAction(SpeechRecognitionAction):
+    """Turn the assistant (QUICK_CHAT/CONVERSATION) wake modes on or off.
+
+    Backs the "Assistant: Turn On/Off" voice command — sets the single
+    ``assistant_enabled`` flag. When off, the manager stops streaming
+    QUICK_CHAT/CONVERSATION triggers; the command interface (INTENTS) and
+    STOP_TALKING are unaffected.
     """
 
     enabled: bool
+
+
+# --- Wake-word model lifecycle (download / upload / delete) ------------------
+
+
+class WakeWordDownloadModelsAction(SpeechRecognitionAction):
+    """Action to download the default models for a wake word engine (batch)."""
+
+    engine_name: WakeWordEngineName
+
+
+class WakeWordDeleteModelAction(SpeechRecognitionAction):
+    """Delete a downloaded/uploaded wake-word model from disk.
+
+    The reducer drops any trigger referencing the stem and emits
+    :class:`WakeWordDeleteModelEvent`; the service deletes the file off-reducer.
+    """
+
+    engine: WakeWordEngineName
+    model_id: str
+
+
+class WakeWordSetAvailableModelsAction(SpeechRecognitionAction):
+    """Report the on-disk model pool for an engine.
+
+    Dispatched by the service after a (filesystem) scan/download/upload/delete so
+    the reducer stays pure and only records the result.
+    """
+
+    engine: WakeWordEngineName
+    models: tuple[str, ...]
+
+
+class WakeWordSetModelsStatusAction(SpeechRecognitionAction):
+    """Report a wake-word engine's default-model download status.
+
+    Dispatched by the service after a (filesystem) availability check, so the
+    reducer stays pure and only records the result.
+    """
+
+    engine_name: WakeWordEngineName
+    status: WakeWordModelStatus
+
+
+# --- Voice commands (intents) -----------------------------------------------
 
 
 class SpeechRecognitionAddCommandAction(SpeechRecognitionAction):
@@ -84,13 +181,6 @@ class SpeechRecognitionRemoveCommandAction(SpeechRecognitionAction):
     id: str
 
 
-class SpeechRecognitionSetWakePhrasesAction(SpeechRecognitionAction):
-    """Replace the phrases of one wake-word slot (a set of alternatives)."""
-
-    mode: WakeMode
-    phrases: tuple[str, ...]
-
-
 class SpeechRecognitionSetConversationEndPhrasesAction(SpeechRecognitionAction):
     """Replace the conversation end-of-turn phrases (a set of alternatives)."""
 
@@ -112,11 +202,30 @@ class SpeechRecognitionIntent(Immutable):
 
 
 class SpeechRecognitionReportWakeWordDetectionAction(SpeechRecognitionAction):
-    """Action to report wake word detection."""
+    """Action to report wake word detection.
 
-    wake_word: str
-    engine_name: str = ''
-    """Name of the engine that detected the phrase (forwarded to consumers)."""
+    ``trigger_id`` identifies which configured trigger fired (the reducer resolves
+    its mode); ``phrase`` is the human-readable value (forwarded to
+    ``WakePhraseTriggerSource`` and the mic-buffer dump).
+    """
+
+    engine_name: str
+    trigger_id: str
+    phrase: str = ''
+
+
+class SpeechRecognitionTriggerModeAction(SpeechRecognitionAction):
+    """Trigger an assistant wake *mode* directly (engine-agnostic).
+
+    The single entry point for the mode→effect map: the audio detection handler
+    delegates here after resolving its trigger, and the per-mode bindable actions
+    (used by Infrared remote codes) return this. ``phrase``/``detector`` are
+    forwarded to the assistant trigger source / stop metadata.
+    """
+
+    mode: WakeMode
+    phrase: str = ''
+    detector: str = ''
 
 
 class SpeechRecognitionReportIntentDetectionAction(SpeechRecognitionAction):
@@ -140,6 +249,19 @@ class SpeechRecognitionReportSpeechAction(SpeechRecognitionAction):
 
 class SpeechRecognitionEvent(BaseEvent):
     """Base class for speech recognition events."""
+
+
+class WakeWordDownloadModelsEvent(SpeechRecognitionEvent):
+    """Event asking the service to download a wake-word engine's models."""
+
+    engine_name: WakeWordEngineName
+
+
+class WakeWordDeleteModelEvent(SpeechRecognitionEvent):
+    """Event asking the service to delete a wake-word model file off-reducer."""
+
+    engine: WakeWordEngineName
+    model_id: str
 
 
 class SpeechRecognitionReportTextEvent(SpeechRecognitionEvent):
@@ -180,60 +302,87 @@ class SpeechRecognitionEngineName(StrEnum):
     VOSK = 'vosk'
 
 
-class WakeWordSlot(Immutable):
-    """One wake-word category: its alternative phrases and whether it's active."""
+class WakeWordTrigger(Immutable):
+    """One thing an engine listens for, mapped to an assistant mode.
 
+    ``value`` is an opaque per-engine string:
+    - Vosk:         the spoken phrase text.
+    - OpenWakeWord: the model id (file stem, e.g. ``hey_jarvis_v0.1``).
+    - Picovoice:    the keyword / ``.ppn`` id (future).
+
+    Triggers are add/remove only — there is no per-trigger enable flag; a trigger's
+    presence means it is active (subject to the engine's enable + the global
+    ``assistant_enabled`` for QUICK_CHAT/CONVERSATION).
+
+    ``sensitivity`` (0.0-1.0, default 0.5) is how readily the trigger fires — higher
+    is more sensitive. It only applies to confidence-scored engines (OpenWakeWord),
+    where the engine activates when ``confidence >= 1 - sensitivity``; phrase-match
+    engines (Vosk) ignore it.
+    """
+
+    id: str
+    label: str
     mode: WakeMode
-    phrases: tuple[str, ...]
+    value: str
+    sensitivity: float = 0.5
+
+
+def clamp_sensitivity(value: object) -> float:
+    """Clamp a trigger sensitivity into ``[0.0, 1.0]``.
+
+    Sensitivity reaches the confidence-scored engines as ``confidence >= 1 -
+    sensitivity`` (see ``openwakeword_engine``), so an out-of-range or non-finite
+    value silently degrades into "never fires" / "fires on anything". The Web UI
+    clamps its slider, but a remote-dispatched ``WakeTriggerAddAction`` or a
+    hand-edited persisted blob can supply a negative, ``>1``, ``NaN`` or
+    non-numeric value — sanitize it here, at the (trusted) state boundary.
+    Non-numeric / non-finite input falls back to the ``0.5`` default.
+    """
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0.5
+    return max(0.0, min(1.0, number)) if math.isfinite(number) else 0.5
+
+
+class WakeWordEngineConfig(Immutable):
+    """One wake-word engine and the triggers it listens for."""
+
+    engine: WakeWordEngineName
     enabled: bool
+    triggers: tuple[WakeWordTrigger, ...]
 
 
-# Canonical slot order — indexing and rendering rely on it being stable.
-_SLOT_ORDER: tuple[WakeMode, ...] = (
+# Canonical mode order — seed/rendering rely on it being stable.
+_MODE_ORDER: tuple[WakeMode, ...] = (
     WakeMode.INTENTS,
     WakeMode.QUICK_CHAT,
     WakeMode.CONVERSATION,
     WakeMode.STOP_TALKING,
 )
-_DEFAULT_SLOT_PHRASES: dict[WakeMode, tuple[str, ...]] = {
+_DEFAULT_MODE_PHRASES: dict[WakeMode, tuple[str, ...]] = {
     WakeMode.INTENTS: (INTENTS_WAKE_WORD,),
     WakeMode.QUICK_CHAT: (ASSISTANT_QUICK_CHAT_WAKE_PHRASE,),
     WakeMode.CONVERSATION: (ASSISTANT_CONVERSATION_WAKE_WORD,),
     WakeMode.STOP_TALKING: (ASSISTANT_STOP_TALKING_PHRASE,),
 }
-# Default activation preserves the Phase-1 behaviour: command interface on,
-# the assistant slots off.
-_DEFAULT_SLOT_ENABLED: dict[WakeMode, bool] = {
-    WakeMode.INTENTS: True,
-    WakeMode.QUICK_CHAT: False,
-    WakeMode.CONVERSATION: False,
-    WakeMode.STOP_TALKING: False,
-}
+
+# (mode, phrases) entries — the source for seeding/migrating Vosk triggers.
+_SlotEntry = tuple[WakeMode, tuple[str, ...]]
 
 
-def _default_slot(mode: WakeMode) -> WakeWordSlot:
-    return WakeWordSlot(
-        mode=mode,
-        phrases=_DEFAULT_SLOT_PHRASES[mode],
-        enabled=_DEFAULT_SLOT_ENABLED[mode],
-    )
+def _default_slot_entries() -> list[_SlotEntry]:
+    return [(mode, _DEFAULT_MODE_PHRASES[mode]) for mode in _MODE_ORDER]
 
 
-def _synthesize_legacy_slots() -> tuple[WakeWordSlot, ...]:
-    """Build slots from the Phase-1 persistent keys (one-shot migration).
+def _legacy_slot_entries() -> list[_SlotEntry]:
+    """Build slot entries from the Phase-1 persistent keys (one-shot migration).
 
-    Phase 1 stored two activation booleans + four single-phrase keys. When the
-    new ``wake_slots`` key is absent we read those so a branch user doesn't lose
-    their toggles/phrases on upgrade. The legacy keys then go stale.
+    Phase 1 stored four single-phrase keys. When neither ``wake_engines`` nor
+    ``wake_slots`` is present we read those so a branch user doesn't lose their
+    phrases on upgrade (their assistant on/off is migrated separately into
+    ``assistant_enabled``). The legacy keys then go stale.
     """
-    is_intents = read_from_persistent_store(
-        'speech_recognition:is_intents_active',
-        default=_DEFAULT_SLOT_ENABLED[WakeMode.INTENTS],
-    )
-    is_assistant = read_from_persistent_store(
-        'speech_recognition:is_assistant_active',
-        default=False,
-    )
     legacy_phrase = {
         WakeMode.INTENTS: read_from_persistent_store(
             'speech_recognition:intents_wake_word',
@@ -252,52 +401,184 @@ def _synthesize_legacy_slots() -> tuple[WakeWordSlot, ...]:
             default=ASSISTANT_STOP_TALKING_PHRASE,
         ),
     }
-    enabled = {
-        WakeMode.INTENTS: bool(is_intents),
-        WakeMode.QUICK_CHAT: bool(is_assistant),
-        WakeMode.CONVERSATION: bool(is_assistant),
-        WakeMode.STOP_TALKING: bool(is_assistant),
-    }
-    return tuple(
-        WakeWordSlot(mode=mode, phrases=(legacy_phrase[mode],), enabled=enabled[mode])
-        for mode in _SLOT_ORDER
+    return [(mode, (legacy_phrase[mode],)) for mode in _MODE_ORDER]
+
+
+def _vosk_triggers_from_entries(
+    entries: list[_SlotEntry],
+) -> tuple[WakeWordTrigger, ...]:
+    """Expand (mode, phrases) entries into one trigger per phrase.
+
+    Seed/migrated triggers get *deterministic* ids (``<mode>-<index>``) so default
+    state serializes identically across runs (snapshot-stable); user-added
+    triggers get uuids at runtime.
+    """
+    triggers: list[WakeWordTrigger] = []
+    for mode, phrases in entries:
+        for index, phrase in enumerate(phrases):
+            triggers.append(
+                WakeWordTrigger(
+                    id=f'{mode.value}-{index}',
+                    label=phrase,
+                    mode=mode,
+                    value=phrase,
+                ),
+            )
+    return tuple(triggers)
+
+
+def _default_engine_configs(
+    vosk_entries: list[_SlotEntry] | None = None,
+) -> tuple[WakeWordEngineConfig, ...]:
+    return (
+        WakeWordEngineConfig(
+            engine=WakeWordEngineName.VOSK,
+            enabled=True,
+            triggers=_vosk_triggers_from_entries(
+                vosk_entries if vosk_entries is not None else _default_slot_entries(),
+            ),
+        ),
+        WakeWordEngineConfig(
+            engine=WakeWordEngineName.OPENWAKEWORD,
+            enabled=False,
+            triggers=(),
+        ),
     )
 
 
-def _load_wake_slots() -> tuple[WakeWordSlot, ...]:
-    """Load wake slots from persistent storage, falling back to defaults.
+def _parse_wake_slots() -> list[tuple[WakeMode, tuple[str, ...], bool]] | None:
+    """Parse the legacy ``wake_slots`` blob as (mode, phrases, enabled), or None.
 
-    Stored as a JSON blob (list of ``{mode, phrases, enabled}``). Missing modes
-    fall back to their default; a malformed blob falls back entirely.
+    Returns None when the key is absent or malformed. Carries each slot's old
+    ``enabled`` flag so migration can honour a disabled assistant / disabled modes
+    (the new model dropped per-trigger enable).
     """
     raw = read_from_persistent_store('speech_recognition:wake_slots', default=None)
     if not raw:
-        return _synthesize_legacy_slots()
+        return None
     try:
-        entries = {entry['mode']: entry for entry in json.loads(raw)}
-    except (json.JSONDecodeError, TypeError, KeyError):
-        return tuple(_default_slot(mode) for mode in _SLOT_ORDER)
-    slots: list[WakeWordSlot] = []
-    for mode in _SLOT_ORDER:
-        entry = entries.get(mode.value)
-        if not entry:
-            slots.append(_default_slot(mode))
-            continue
-        slots.append(
-            WakeWordSlot(
-                mode=mode,
-                phrases=tuple(entry.get('phrases') or _DEFAULT_SLOT_PHRASES[mode]),
-                enabled=bool(entry.get('enabled', _DEFAULT_SLOT_ENABLED[mode])),
-            ),
+        slots = json.loads(raw)
+        parsed: list[tuple[WakeMode, tuple[str, ...], bool]] = []
+        for slot in slots:
+            mode = WakeMode(slot['mode'])
+            phrases = tuple(slot.get('phrases') or _DEFAULT_MODE_PHRASES[mode])
+            parsed.append((mode, phrases, bool(slot.get('enabled', True))))
+    except (json.JSONDecodeError, TypeError, KeyError, ValueError):
+        return None
+    return parsed
+
+
+def _migrate_from_wake_slots() -> tuple[WakeWordEngineConfig, ...]:
+    """Build engine configs from the old ``wake_slots`` blob (or legacy keys)."""
+    raw = read_from_persistent_store('speech_recognition:wake_slots', default=None)
+    if not raw:
+        return _default_engine_configs(_legacy_slot_entries())
+    parsed = _parse_wake_slots()
+    if parsed is None:  # present but malformed
+        return _default_engine_configs()
+    # The new model has no per-trigger/per-mode enable (only the global
+    # ``assistant_enabled`` gate, derived below), so a disabled slot can't be
+    # represented other than by absence. Migrate only the slots the user had
+    # enabled — "disabled" maps to "removed" under the add/remove model. This
+    # avoids re-activating a mode (e.g. Quick Chat off, Conversation on) that the
+    # single gate would otherwise turn back on.
+    entries: list[_SlotEntry] = [
+        (mode, phrases) for mode, phrases, enabled in parsed if enabled
+    ]
+    return _default_engine_configs(entries)
+
+
+def _config_from_json(entry: dict) -> WakeWordEngineConfig:
+    """Rebuild one engine config from its persisted JSON dict."""
+    return WakeWordEngineConfig(
+        engine=WakeWordEngineName(entry['engine']),
+        enabled=bool(entry.get('enabled', False)),
+        triggers=tuple(
+            WakeWordTrigger(
+                id=trigger['id'],
+                label=trigger['label'],
+                mode=WakeMode(trigger['mode']),
+                value=trigger['value'],
+                # Older persisted triggers predate per-trigger sensitivity; a
+                # hand-edited blob may also carry an out-of-range/non-finite value.
+                sensitivity=clamp_sensitivity(trigger.get('sensitivity', 0.5)),
+            )
+            for trigger in entry.get('triggers', [])
+        ),
+    )
+
+
+def _load_assistant_enabled() -> bool:
+    """Whether QUICK_CHAT/CONVERSATION wake modes are active.
+
+    Resolution order so an upgrading user keeps their prior choice and a fresh
+    install defaults on:
+    1. the new ``assistant_enabled`` key;
+    2. the legacy ``is_assistant_active`` key (set by the "Assistant On/Off" voice
+       command);
+    3. derived from the old ``wake_slots`` — on iff the Quick Chat or Conversation
+       slot was enabled (so a user who turned the assistant off stays off);
+    4. ``True`` for a truly fresh install.
+    """
+    stored = read_from_persistent_store(
+        'speech_recognition:assistant_enabled',
+        default=None,
+    )
+    if stored is not None:
+        return bool(stored)
+    legacy = read_from_persistent_store(
+        'speech_recognition:is_assistant_active',
+        default=None,
+    )
+    if legacy is not None:
+        return bool(legacy)
+    parsed = _parse_wake_slots()
+    if parsed is not None:
+        return any(
+            enabled
+            for mode, _phrases, enabled in parsed
+            if mode in (WakeMode.QUICK_CHAT, WakeMode.CONVERSATION)
         )
-    return tuple(slots)
+    return True
+
+
+def _load_wake_engines() -> tuple[WakeWordEngineConfig, ...]:
+    """Load wake engines from persistent storage, migrating/falling back.
+
+    Stored as a JSON list of ``{engine, enabled, triggers:[{id,label,mode,value,
+    enabled}]}``. Absent → migrate the old ``wake_slots`` key. Malformed → defaults.
+    Always ensures every :class:`WakeWordEngineName` is represented.
+    """
+    raw = read_from_persistent_store('speech_recognition:wake_engines', default=None)
+    if not raw:
+        return _migrate_from_wake_slots()
+    try:
+        data = json.loads(raw)
+        configs = [_config_from_json(entry) for entry in data]
+    except (json.JSONDecodeError, TypeError, KeyError, ValueError):
+        return _default_engine_configs()
+    present = {config.engine for config in configs}
+    configs.extend(
+        config
+        for config in _default_engine_configs()
+        if config.engine not in present
+    )
+    return tuple(configs)
 
 
 class SpeechRecognitionState(Immutable):
     """State for speech recognition service."""
 
     intents: list[SpeechRecognitionIntent] = field(default_factory=list)
-    wake_slots: tuple[WakeWordSlot, ...] = field(default_factory=_load_wake_slots)
+    wake_engines: tuple[WakeWordEngineConfig, ...] = field(
+        default_factory=_load_wake_engines,
+    )
+    # Master switch for the assistant (QUICK_CHAT/CONVERSATION) wake modes, set by
+    # the "Assistant On/Off" voice command. INTENTS/STOP_TALKING are unaffected.
+    assistant_enabled: bool = field(default_factory=_load_assistant_enabled)
+    # OpenWakeWord model stems available on disk (downloaded defaults + uploaded
+    # customs). Derived from disk by the service at startup; not persisted.
+    openwakeword_models: tuple[str, ...] = field(default_factory=tuple)
     conversation_end_phrases: tuple[str, ...] = field(
         default=read_from_persistent_store(
             'speech_recognition:conversation_end_phrases',
@@ -306,13 +587,59 @@ class SpeechRecognitionState(Immutable):
         ),
     )
     status: SpeechRecognitionStatus = SpeechRecognitionStatus.IDLE
+    wake_word_models_status: tuple[WakeWordModelStatusEntry, ...] = field(
+        default_factory=tuple,
+    )
 
 
-def slot_for_mode(state: SpeechRecognitionState, mode: WakeMode) -> WakeWordSlot:
-    """Return the wake-word slot for *mode*."""
-    return next(slot for slot in state.wake_slots if slot.mode is mode)
+def engine_config(
+    state: SpeechRecognitionState,
+    engine: WakeWordEngineName,
+) -> WakeWordEngineConfig | None:
+    """Return the config for *engine*, or None if not present."""
+    return next(
+        (config for config in state.wake_engines if config.engine is engine),
+        None,
+    )
 
 
-def phrases_for_mode(state: SpeechRecognitionState, mode: WakeMode) -> tuple[str, ...]:
-    """Return the phrases configured for *mode*."""
-    return slot_for_mode(state, mode).phrases
+def model_status(
+    state: SpeechRecognitionState,
+    engine: WakeWordEngineName,
+) -> WakeWordModelStatus | None:
+    """Return *engine*'s recorded model status, or None if unset."""
+    return next(
+        (
+            entry.status
+            for entry in state.wake_word_models_status
+            if entry.engine is engine
+        ),
+        None,
+    )
+
+
+def set_model_status(
+    statuses: tuple[WakeWordModelStatusEntry, ...],
+    engine: WakeWordEngineName,
+    status: WakeWordModelStatus,
+) -> tuple[WakeWordModelStatusEntry, ...]:
+    """Return *statuses* with *engine*'s status upserted to *status*."""
+    return (
+        *(entry for entry in statuses if entry.engine is not engine),
+        WakeWordModelStatusEntry(engine=engine, status=status),
+    )
+
+
+def trigger_by_id(
+    state: SpeechRecognitionState,
+    engine: WakeWordEngineName,
+    trigger_id: str,
+) -> WakeWordTrigger | None:
+    """Return the trigger with *trigger_id* on *engine*, or None."""
+    config = engine_config(state, engine)
+    if config is None:
+        return None
+    return next(
+        (trigger for trigger in config.triggers if trigger.id == trigger_id),
+        None,
+    )
