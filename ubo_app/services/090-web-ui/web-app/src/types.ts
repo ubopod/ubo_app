@@ -19,6 +19,7 @@ export const inputFieldTypes: Record<InputFieldType, string> = {
   [InputFieldType.INPUT_FIELD_TYPE_FILE]: "file",
   [InputFieldType.INPUT_FIELD_TYPE_DATE]: "date",
   [InputFieldType.INPUT_FIELD_TYPE_TIME]: "time",
+  [InputFieldType.INPUT_FIELD_TYPE_RANGE]: "range",
   [InputFieldType.INPUT_FIELD_TYPE_UBO_APP_DOT_STORE_DOT_INPUT_DOT_TYPES_UNSPECIFIED]:
     "unspecified",
 };

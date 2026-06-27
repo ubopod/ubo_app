@@ -46,6 +46,7 @@ class InputFieldType(StrEnum):
     FILE = 'file'
     DATE = 'date'
     TIME = 'time'
+    RANGE = 'range'  # slider; rendered 0-100 in the Web UI
 
 
 class InputFieldDescription(Immutable):
