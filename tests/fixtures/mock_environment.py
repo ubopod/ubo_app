@@ -287,11 +287,15 @@ async def _fake_create_subprocess_exec(  # noqa: C901
             },
         )
 
+    if command == 'tailscale':
+        return Fake()
+
     if command == 'dpkg-query' and args[-1] in (
         'docker',
         'raspberrypi-ui-mods',
         'rpi-connect',
         'route',
+        'tailscale',
     ):
         expected = True
 

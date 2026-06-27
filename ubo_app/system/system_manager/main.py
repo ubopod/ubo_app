@@ -31,6 +31,7 @@ from ubo_app.system.system_manager.led import LEDManager
 from ubo_app.system.system_manager.package import package_handler
 from ubo_app.system.system_manager.reset_button import setup_reset_button
 from ubo_app.system.system_manager.service_manager import service_handler
+from ubo_app.system.system_manager.tailscale import tailscale_handler
 from ubo_app.system.system_manager.update_manager import update_handler
 from ubo_app.system.system_manager.users import users_handler
 from ubo_app.utils.error_handlers import setup_error_handling
@@ -71,6 +72,7 @@ def handle_command(command: str, connection: socket.socket) -> None:
                 'camera': camera_handler,
                 'hotspot': hotspot_handler,
                 'infrared': infrared_handler,
+                'tailscale': tailscale_handler,
                 'update': update_handler,
             }
             if header in handlers:

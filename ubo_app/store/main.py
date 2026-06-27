@@ -132,6 +132,7 @@ if TYPE_CHECKING:
     )
     from ubo_app.store.services.ssh import SSHAction, SSHState
     from ubo_app.store.services.system import SystemAction, SystemState
+    from ubo_app.store.services.tailscale import TailscaleAction, TailscaleState
     from ubo_app.store.services.users import UsersAction, UsersEvent, UsersState
     from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
     from ubo_app.store.services.web_ui import WebUIState
@@ -175,6 +176,7 @@ UboAction: TypeAlias = Union[
     'SpeechRecognitionAction',
     'SpeechSynthesisAction',
     'SSHAction',
+    'TailscaleAction',
     'UsersAction',
     'VSCodeAction',
     'WiFiAction',
@@ -230,6 +232,7 @@ class RootState(BaseCombineReducerState):
     system: SystemState
     speech_synthesis: SpeechSynthesisState
     ssh: SSHState
+    tailscale: TailscaleState
     users: UsersState
     vscode: VSCodeState
     web_ui: WebUIState
