@@ -123,3 +123,42 @@ def test_envoy_entry_uses_networking_category_and_proxy_label() -> None:
 
     assert envoy.ENTRY.label == 'Envoy proxy'
     assert envoy.ENTRY.category == 'Networking'
+
+
+async def test_prepare_envoy_includes_native_listener_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """When gRPC Access is on, Envoy renders the native-gRPC TCP listener."""
+    envoy = _import_envoy()
+    config_path = tmp_path / 'envoy.yaml'
+    monkeypatch.setattr(envoy, 'ENVOY_CONFIG_PATH', config_path)
+    monkeypatch.setattr(envoy, '_grpc_remote_access', lambda: True)
+
+    assert await envoy.prepare_envoy()
+
+    config = config_path.read_text()
+    assert 'name: grpc_native_listener' in config
+    assert 'port_value: 50053' in config
+    assert 'tcp_proxy' in config
+    # Forwards to the existing core-gRPC cluster, untouched grpc-web listener.
+    assert 'cluster: grpc_service_cluster' in config
+
+
+async def test_prepare_envoy_omits_native_listener_when_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """When gRPC Access is off, the native listener is absent."""
+    envoy = _import_envoy()
+    config_path = tmp_path / 'envoy.yaml'
+    monkeypatch.setattr(envoy, 'ENVOY_CONFIG_PATH', config_path)
+    monkeypatch.setattr(envoy, '_grpc_remote_access', lambda: False)
+
+    assert await envoy.prepare_envoy()
+
+    config = config_path.read_text()
+    assert 'grpc_native_listener' not in config
+    assert 'port_value: 50053' not in config
+    # The grpc-web listener is still present regardless.
+    assert 'port_value: 50052' in config

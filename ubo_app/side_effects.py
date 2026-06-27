@@ -205,6 +205,10 @@ def setup_side_effects() -> Subscriptions:
         'settings:beta_versions',
         lambda state: state.settings.beta_versions,
     )
+    register_persistent_store(
+        'settings:grpc_remote_access',
+        lambda state: state.settings.grpc_remote_access,
+    )
     subscriptions = [
         store.subscribe_event(PowerOffEvent, _power_off),
         store.subscribe_event(RebootEvent, _reboot),

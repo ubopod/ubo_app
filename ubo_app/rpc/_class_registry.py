@@ -494,6 +494,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'SettingsStopServiceAction': 'ubo_app.store.settings.types',
     'SettingsStopServiceEvent': 'ubo_app.store.settings.types',
     'SettingsToggleBetaVersionsAction': 'ubo_app.store.settings.types',
+    'SettingsToggleGrpcRemoteAccessAction': 'ubo_app.store.settings.types',
     'SettingsTogglePdbSignalAction': 'ubo_app.store.settings.types',
     'SettingsToggleVisualDebugAction': 'ubo_app.store.settings.types',
     'SilenceTimeoutStopReason': 'ubo_app.store.services.assistant',

@@ -989,6 +989,7 @@
   "settings": {
     "_type": "SettingsState",
     "beta_versions": false,
+    "grpc_remote_access": false,
     "pdb_signal": false,
     "services": {
       "assistant": {

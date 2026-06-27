@@ -1,0 +1,12 @@
+    - name: grpc_native_listener
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: $GRPC_NATIVE_PROXY_LISTEN_PORT
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.tcp_proxy
+              typed_config:
+                '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+                stat_prefix: grpc_native
+                cluster: grpc_service_cluster

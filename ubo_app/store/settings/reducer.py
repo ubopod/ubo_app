@@ -11,7 +11,7 @@ from redux import (
     ReducerResult,
 )
 
-from ubo_app.colors import SUCCESS_COLOR
+from ubo_app.colors import SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
@@ -36,6 +36,7 @@ from ubo_app.store.settings.types import (
     SettingsStopServiceAction,
     SettingsStopServiceEvent,
     SettingsToggleBetaVersionsAction,
+    SettingsToggleGrpcRemoteAccessAction,
     SettingsTogglePdbSignalAction,
     SettingsToggleVisualDebugAction,
 )
@@ -114,6 +115,43 @@ def reducer(
                     UpdateManagerRequestCheckAction(),
                 ]
                 if not state.beta_versions
+                else [],
+            )
+
+        case SettingsToggleGrpcRemoteAccessAction():
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    grpc_remote_access=not state.grpc_remote_access,
+                ),
+                actions=[
+                    NotificationsAddAction(
+                        notification=Notification(
+                            id='grpc-access-warning',
+                            title='gRPC Access',
+                            content='LAN gRPC access requested. The control API is '
+                            'unsafe while exposed.',
+                            extra_information=ReadableInformation(
+                                text="You asked to expose this Ubo's gRPC control "
+                                'API to your local network (through the Envoy '
+                                'proxy, on port 50053). That API is not yet '
+                                'authenticated, so while it is exposed any device '
+                                'on the network could read state or send commands. '
+                                'Only enable this on a trusted network. You will be '
+                                'told the exact address once it is reachable; '
+                                'disable it to restrict access back to this device '
+                                'only (localhost).',
+                                picovoice_text='',
+                                piper_text='',
+                            ),
+                            icon='󰀪',
+                            importance=Importance.HIGH,
+                            color=WARNING_COLOR,
+                            display_type=NotificationDisplayType.STICKY,
+                        ),
+                    ),
+                ]
+                if not state.grpc_remote_access
                 else [],
             )
 

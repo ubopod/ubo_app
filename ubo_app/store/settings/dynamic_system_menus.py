@@ -39,6 +39,7 @@ def _setup_general_settings() -> None:
     from ubo_app.store.core.action_registry import register_action
     from ubo_app.store.settings.types import (
         SettingsToggleBetaVersionsAction,
+        SettingsToggleGrpcRemoteAccessAction,
         SettingsTogglePdbSignalAction,
         SettingsToggleVisualDebugAction,
     )
@@ -52,24 +53,32 @@ def _setup_general_settings() -> None:
     def _toggle_beta() -> None:
         store.dispatch(SettingsToggleBetaVersionsAction())
 
+    def _toggle_grpc_remote_access() -> None:
+        store.dispatch(SettingsToggleGrpcRemoteAccessAction())
+
     register_action('settings:general:toggle_pdb', _toggle_pdb)
     register_action('settings:general:toggle_visual_debug', _toggle_visual_debug)
     register_action('settings:general:toggle_beta', _toggle_beta)
+    register_action(
+        'settings:general:toggle_grpc_remote_access',
+        _toggle_grpc_remote_access,
+    )
 
     @store.autorun(
         lambda state: (
             state.settings.pdb_signal,
             state.settings.visual_debug,
             state.settings.beta_versions,
+            state.settings.grpc_remote_access,
         ),
         options=AutorunOptions(default_value=None),
     )
     def _sync_general_menu(
-        data: tuple[bool, bool, bool] | None,
+        data: tuple[bool, bool, bool, bool] | None,
     ) -> None:
         if data is None:
             return
-        pdb_signal, visual_debug, beta_versions = data
+        pdb_signal, visual_debug, beta_versions, grpc_remote_access = data
 
         store.dispatch(
             UpdateDynamicMenuAction(
@@ -93,6 +102,12 @@ def _setup_general_settings() -> None:
                         label='Beta Versions',
                         icon='󰱒' if beta_versions else '󰄱',
                         action_id='settings:general:toggle_beta',
+                    ),
+                    MenuItemData(
+                        key='grpc_remote_access',
+                        label='gRPC Access',
+                        icon='󰱒' if grpc_remote_access else '󰄱',
+                        action_id='settings:general:toggle_grpc_remote_access',
                     ),
                 ),
                 placeholder='',

@@ -39,6 +39,10 @@ class SettingsToggleBetaVersionsAction(SettingsAction):
     """Toggle beta versions action."""
 
 
+class SettingsToggleGrpcRemoteAccessAction(SettingsAction):
+    """Toggle gRPC remote (LAN) access action."""
+
+
 class SettingsSetServicesAction(SettingsAction):
     """Start service action."""
 
@@ -152,6 +156,12 @@ class SettingsState(Immutable):
         default_factory=lambda: read_from_persistent_store(
             'settings:beta_versions',
             default=DEBUG_BETA_VERSIONS,
+        ),
+    )
+    grpc_remote_access: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            'settings:grpc_remote_access',
+            default=False,
         ),
     )
     services: dict[str, ServiceState] = field(default_factory=dict)

@@ -21,6 +21,7 @@ from apps.home_assistant import (
 )
 from docker.models.containers import Container
 from docker.models.images import Image
+from docker_app import prepare_app
 from docker_composition import (
     COMPOSITIONS_PATH,
     check_composition,
@@ -31,6 +32,7 @@ from docker_composition import (
     stop_composition,
 )
 from docker_container import (
+    find_container,
     remove_container,
     run_container,
     start_event_monitor,
@@ -41,8 +43,11 @@ from menus import docker_item_menu, setup_docker_image_dynamic_menu
 from reducer import image_reducer, reducer_id
 from redux import CombineReducerRegisterAction
 
-from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
-from ubo_app.constants import DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID
+from ubo_app.colors import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR, WARNING_COLOR
+from ubo_app.constants import (
+    DOCKER_CREDENTIALS_TEMPLATE_SECRET_ID,
+    GRPC_NATIVE_PROXY_LISTEN_PORT,
+)
 from ubo_app.logger import logger
 from ubo_app.store.core.constants import APPS_ROOT_CATEGORY
 from ubo_app.store.core.types import (
@@ -64,6 +69,7 @@ from ubo_app.store.input.types import (
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
+    DockerImageFetchAction,
     DockerImageFetchCompositionEvent,
     DockerImageFetchEvent,
     DockerImageRebindEvent,
@@ -97,6 +103,7 @@ from ubo_app.store.services.notifications import (
     Chime,
     Importance,
     Notification,
+    NotificationDispatchItem,
     NotificationDisplayType,
     NotificationsAddAction,
 )
@@ -202,6 +209,9 @@ def _docker_path_matcher(path: tuple[str, ...]) -> str | None:
     return None
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from ubo_app.store.services.ip import IpNetworkInterface
     from ubo_app.utils.types import Subscriptions
 
 
@@ -1007,6 +1017,196 @@ def heal_home_assistant_zigbee(image_state: ImageState | None) -> None:
         and zigbee_adapter_went_missing()
     ):
         store.dispatch(DockerImageRunAction(image=HOME_ASSISTANT_COMPOSITION_ID))
+
+
+# =============================================================================
+# gRPC LAN access (Envoy native-gRPC TCP listener) reconciler
+# =============================================================================
+# Source of truth is `settings.grpc_remote_access`. When on, the Envoy proxy must
+# run with the native-gRPC TCP listener rendered into its config (see
+# apps/envoy.py); when off, that listener must be gone. This reconciler converges
+# the actual Envoy state onto the desired flag — including on boot, where the flag
+# may be persisted True and Docker's restart policy may have already brought Envoy
+# up with a stale config.
+ENVOY_IMAGE_ID = 'envoy_grpc'
+# Listener state believed rendered into the *running* Envoy (None = unknown, e.g.
+# fresh boot) and a restart-in-flight guard. Module-level containers, not globals.
+_grpc_lan_applied: list[bool | None] = [None]
+_grpc_lan_busy: list[bool] = [False]
+
+
+# Virtual / non-LAN interfaces whose addresses are useless to advertise.
+_LAN_EXCLUDE_PREFIXES = ('lo', 'docker', 'br-', 'veth', 'tun', 'tap', 'utun')
+
+
+@store.with_state(
+    lambda state: state.ip.interfaces if hasattr(state, 'ip') else None,
+)
+def _lan_ip(interfaces: Sequence[IpNetworkInterface] | None) -> str | None:
+    """Return a likely LAN IPv4 address, preferring ethernet/wireless NICs.
+
+    Skips loopback, Docker/bridge/veth and VPN/tunnel interfaces, and prefers
+    physical ethernet (``eth*``/``en*``) and wireless (``wlan*``/``wl*``) NICs
+    over anything else so the advertised address is actually reachable.
+    """
+    fallback: str | None = None
+    for interface in interfaces or []:
+        if interface.name.startswith(_LAN_EXCLUDE_PREFIXES):
+            continue
+        for ip in interface.ip_addresses:
+            if ':' in ip or ip.startswith('127.'):
+                continue
+            if interface.name.startswith(('e', 'w')):
+                return ip
+            if fallback is None:
+                fallback = ip
+    return fallback
+
+
+def _announce_grpc_reachable() -> None:
+    ip = _lan_ip()
+    address = (
+        f'{ip}:{GRPC_NATIVE_PROXY_LISTEN_PORT}'
+        if ip
+        else f':{GRPC_NATIVE_PROXY_LISTEN_PORT}'
+    )
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='grpc-access-reachable',
+                title='gRPC Access',
+                content=f'gRPC API reachable on your network at {address}',
+                icon='󰒋',
+                color=INFO_COLOR,
+                display_type=NotificationDisplayType.FLASH,
+            ),
+        ),
+    )
+
+
+def _restart_envoy_container() -> None:
+    """Restart the Envoy container in place (blocking Docker I/O)."""
+    client = docker.from_env()
+    try:
+        container = find_container(client, image_path=IMAGES[ENVOY_IMAGE_ID].path)
+        if container is not None:
+            # ``restart`` starts a stopped/created container too, so this both
+            # applies a new config to a running Envoy and boots a stopped one.
+            container.restart()
+    finally:
+        client.close()
+
+
+async def _apply_envoy(*, desired: bool, restart: bool) -> None:
+    """Re-render the Envoy config for `desired`, optionally restarting it.
+
+    The config is bind-mounted and the published-port set is unchanged, so a
+    process restart (which re-reads the file) suffices — no remove/recreate.
+    `run_container` skips re-render for an existing container, so render first.
+    When `restart` is False (a stopped container while disabled) the fresh,
+    listener-free config is written and the container is left stopped, so a later
+    manual/policy start cannot bring it up with a stale listener.
+    """
+    try:
+        if not await prepare_app(IMAGES[ENVOY_IMAGE_ID]):
+            logger.error('Failed to render Envoy config for gRPC LAN access')
+            return
+        if restart:
+            await asyncio.to_thread(_restart_envoy_container)
+        _grpc_lan_applied[0] = desired
+        if desired:
+            _announce_grpc_reachable()
+    finally:
+        _grpc_lan_busy[0] = False
+
+
+_ENVOY_BUSY_STATUSES = (
+    DockerItemStatus.FETCHING,
+    DockerItemStatus.STARTING,
+    DockerItemStatus.PROCESSING,
+)
+
+
+def _prompt_envoy_needed() -> None:
+    """Offer to download and start Envoy, which the LAN listener rides on."""
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='grpc-access-envoy-needed',
+                title='gRPC Access',
+                content='The Envoy proxy is needed to expose gRPC to the LAN. '
+                'Download and start it?',
+                icon='󱂇',
+                importance=Importance.MEDIUM,
+                color=WARNING_COLOR,
+                display_type=NotificationDisplayType.STICKY,
+                actions=[
+                    NotificationDispatchItem(
+                        key='download',
+                        label='Download & Start',
+                        icon='󰇚',
+                        store_action=DockerImageFetchAction(image=ENVOY_IMAGE_ID),
+                    ),
+                ],
+            ),
+        ),
+    )
+
+
+def _reconcile_grpc_lan_enabled(status: DockerItemStatus) -> None:
+    """Ensure Envoy is running with the native listener."""
+    if status == DockerItemStatus.NOT_AVAILABLE:
+        _prompt_envoy_needed()
+    elif status == DockerItemStatus.AVAILABLE:
+        # No container exists yet; run_container's create branch re-renders with
+        # the listener, so a plain run is enough.
+        _grpc_lan_applied[0] = True
+        store.dispatch(DockerImageRunAction(image=ENVOY_IMAGE_ID))
+    elif status == DockerItemStatus.CREATED:
+        # Stopped container exists; render the listener and (re)start it.
+        _grpc_lan_busy[0] = True
+        create_task(_apply_envoy(desired=True, restart=True))
+    elif status == DockerItemStatus.RUNNING:
+        if _grpc_lan_applied[0] is True:
+            _announce_grpc_reachable()
+        else:
+            _grpc_lan_busy[0] = True
+            create_task(_apply_envoy(desired=True, restart=True))
+
+
+def _reconcile_grpc_lan_disabled(status: DockerItemStatus) -> None:
+    """Ensure the listener-free config is rendered; restart only if running.
+
+    A CREATED (stopped) container is just re-rendered so a later manual/policy
+    start cannot resurrect the listener.
+    """
+    if (
+        status in (DockerItemStatus.RUNNING, DockerItemStatus.CREATED)
+        and _grpc_lan_applied[0] is not False
+    ):
+        _grpc_lan_busy[0] = True
+        create_task(
+            _apply_envoy(desired=False, restart=status == DockerItemStatus.RUNNING),
+        )
+    else:
+        _grpc_lan_applied[0] = False
+
+
+@store.autorun(
+    lambda state: (
+        state.settings.grpc_remote_access,
+        getattr(getattr(state.docker, ENVOY_IMAGE_ID, None), 'status', None),
+    ),
+)
+def _reconcile_grpc_lan(data: tuple[bool, DockerItemStatus | None]) -> None:
+    """Converge Envoy's native-gRPC listener onto `settings.grpc_remote_access`."""
+    enabled, status = data
+    if _grpc_lan_busy[0] or status is None or status in _ENVOY_BUSY_STATUSES:
+        return
+    if enabled:
+        _reconcile_grpc_lan_enabled(status)
+    else:
+        _reconcile_grpc_lan_disabled(status)
 
 
 async def init_service() -> Subscriptions:
