@@ -7,14 +7,17 @@ import json
 import re
 import shutil
 from dataclasses import replace
+from typing import TYPE_CHECKING
 
 from apps import IMAGES, PREDEFINED_IMAGE_IDS
 from apps._port_binding import apply_compose_port_binding
+from apps.home_assistant import HOME_ASSISTANT_COMPOSITION_ID
 from calculate_progress import (
     LayerProgressTracker,
     ServiceTrackers,
     calculate_composition_progress,
 )
+from docker_app import prepare_app
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.constants import CONFIG_PATH
@@ -40,6 +43,11 @@ from ubo_app.utils import IS_RPI, secrets
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.log_process import log_async_process
 from ubo_app.utils.server import send_command
+
+if TYPE_CHECKING:
+    from apps._registry import ContainerEntry
+
+    from ubo_app.store.services.docker import DockerState
 
 COMPOSITIONS_PATH = CONFIG_PATH / 'docker_compositions'
 DOCKER_COMPOSITION_FETCH_PROGRESS_NOTIFICATION_ID = (
@@ -126,6 +134,18 @@ async def run_composition(
 ) -> None:
     """Run the composition."""
     id = event.image
+
+    # Re-render the compose file from current intent *before* `up`. The compose
+    # file is a derived artifact (Zigbee device mapping, macvlan, etc. are read
+    # from store/persistent state at render time), and `up -d` only re-reads the
+    # file on (re)create — so the render must happen here, not just at pull time.
+    # No-op for entries without a `prepare` hook. Port binding runs afterwards
+    # because it mutates the freshly rendered file.
+    if not await prepare_app(IMAGES[id]):
+        store.dispatch(
+            DockerImageSetStatusAction(image=id, status=DockerItemStatus.ERROR),
+        )
+        return
 
     _apply_composition_port_binding(
         id,
@@ -523,12 +543,46 @@ async def _handle_pull_error(
         store.dispatch(notification_action)
 
 
+@store.with_state(lambda state: state.docker)
+def _is_home_assistant_bus_up(docker_state: DockerState) -> bool:
+    """Whether the bundled MQTT broker's host (Home Assistant) is running."""
+    home_assistant = getattr(docker_state, HOME_ASSISTANT_COMPOSITION_ID, None)
+    return home_assistant is not None and home_assistant.status in (
+        DockerItemStatus.STARTING,
+        DockerItemStatus.RUNNING,
+    )
+
+
+def _warn_if_mqtt_bus_down(container: ContainerEntry) -> None:
+    """Warn (but don't block) when an MQTT add-on installs while HA is down.
+
+    Bundling Mosquitto in the Home Assistant stack makes HA a hard dependency
+    of every MQTT add-on. The policy is warn + accept: notify the user, then
+    proceed with the install regardless.
+    """
+    if not container.requires_mqtt or _is_home_assistant_bus_up():
+        return
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                title=container.label,
+                content=(
+                    'This add-on uses the MQTT broker bundled with Home '
+                    'Assistant. Start Home Assistant for messaging to work.'
+                ),
+                display_type=NotificationDisplayType.FLASH,
+                icon='󰍡',
+            ),
+        ),
+    )
+
+
 async def pull_composition(event: DockerImageFetchCompositionEvent) -> None:
     """Pull the composition images with progress tracking."""
-    from docker_app import prepare_app
-
     id = event.image
     container = IMAGES[id]
+
+    _warn_if_mqtt_bus_down(container)
 
     logger.info('About to call prepare_app', extra={'image': id})
     # Prepare the composition (download files, generate credentials, update metadata)

@@ -14,11 +14,16 @@ from typing import TYPE_CHECKING, TypedDict
 
 import docker
 import docker.errors
-from apps import IMAGES, ContainerEntry
+from apps import IMAGES, UBO_NET, ContainerEntry
+from apps.home_assistant import (
+    HOME_ASSISTANT_COMPOSITION_ID,
+    zigbee_adapter_went_missing,
+)
 from docker.models.containers import Container
 from docker.models.images import Image
 from docker_composition import (
     COMPOSITIONS_PATH,
+    check_composition,
     pull_composition,
     release_composition,
     remove_composition,
@@ -86,6 +91,7 @@ from ubo_app.store.services.docker import (
     DockerStopAction,
     DockerStopEvent,
     DockerStoreUsernameAction,
+    ImageState,
 )
 from ubo_app.store.services.notifications import (
     Chime,
@@ -261,6 +267,19 @@ async def stop_docker() -> None:
     await send_command('docker', 'stop')
 
 
+def ensure_ubo_net(docker_client: docker.DockerClient) -> None:
+    """Idempotently create the shared `ubo_net` bridge.
+
+    `ubo_net` is the cross-stack integration bus that Ubo-managed compositions
+    attach to (declared `external: true` in their compose files), so it must
+    pre-exist before any `docker compose up`. It is shared infrastructure owned
+    by the docker service: created once, never auto-deleted on single-stack
+    removal.
+    """
+    if not docker_client.networks.list(names=[UBO_NET]):
+        docker_client.networks.create(UBO_NET, driver='bridge')
+
+
 async def sync_docker_containers() -> None:
     """Sync container states from Docker daemon."""
     from docker_container import check_container, update_container
@@ -270,6 +289,8 @@ async def sync_docker_containers() -> None:
         if not docker_client.ping():
             docker_client.close()
             return
+
+        ensure_ubo_net(docker_client)
 
         for container in docker_client.containers.list(all=True):
             if not isinstance(container, Container):
@@ -298,6 +319,18 @@ async def sync_docker_containers() -> None:
     # reports AVAILABLE for a present image and reconciles container state too.
     for image_id, image_description in IMAGES.items():
         if image_description.is_composition:
+            # Reconcile composition *status* at boot so consumers reading the
+            # store (without opening the docker menu) don't see a stale
+            # NOT_AVAILABLE. Deliberately status-only: we do not re-render
+            # (`prepare_app`) or recreate (`run_composition`) here, since some
+            # prepare hooks fetch over the network and a blanket recreate would
+            # restart unrelated running compositions on every docker-check. The
+            # render-at-run hook (run_composition) keeps each compose file fresh
+            # whenever it is actually (re)started.
+            await check_composition(id=image_id)
+            if image_id == HOME_ASSISTANT_COMPOSITION_ID:
+                # HA-specific: heal a Zigbee-bricked start (see function doc).
+                heal_home_assistant_zigbee()
             continue
         start_event_monitor(image_id)
         check_container(image_id=image_id)
@@ -954,6 +987,28 @@ def handle_rebind(docker_state: DockerState, event: DockerImageRebindEvent) -> N
         )
 
 
+@store.with_state(
+    lambda state: getattr(state.docker, HOME_ASSISTANT_COMPOSITION_ID, None),
+)
+def heal_home_assistant_zigbee(image_state: ImageState | None) -> None:
+    """Recover HA if an unsatisfiable Zigbee `devices:` line bricked its start.
+
+    When HA exists but isn't running (``CREATED``) and the Zigbee intent can't
+    be satisfied (adapter unplugged), its create-time ``devices:`` mapping would
+    hard-fail ``up`` on the Docker daemon's own ``restart: unless-stopped``
+    relaunch. Re-render (dropping the absent mapping) + recreate via
+    ``DockerImageRunAction`` so HA boots degraded instead of restart-looping
+    unattended. Scoped to HA (the only device-bearing composition) so a normal
+    user-stopped composition is left alone.
+    """
+    if (
+        image_state is not None
+        and image_state.status == DockerItemStatus.CREATED
+        and zigbee_adapter_went_missing()
+    ):
+        store.dispatch(DockerImageRunAction(image=HOME_ASSISTANT_COMPOSITION_ID))
+
+
 async def init_service() -> Subscriptions:
     """Initialize the service."""
     # Register apps menu title
@@ -973,6 +1028,41 @@ async def init_service() -> Subscriptions:
     register_persistent_store(
         'docker_expose_to_lan',
         lambda state: state.docker.service.expose_to_lan,
+    )
+
+    register_persistent_store(
+        'docker_zigbee_enabled',
+        lambda state: state.docker.service.zigbee_enabled,
+    )
+
+    register_persistent_store(
+        'docker_zigbee_adapter_by_id',
+        lambda state: state.docker.service.zigbee_adapter_by_id,
+    )
+
+    register_persistent_store(
+        'docker_macvlan_enabled',
+        lambda state: state.docker.service.macvlan_enabled,
+    )
+
+    register_persistent_store(
+        'docker_macvlan_parent',
+        lambda state: state.docker.service.macvlan_parent,
+    )
+
+    register_persistent_store(
+        'docker_macvlan_subnet',
+        lambda state: state.docker.service.macvlan_subnet,
+    )
+
+    register_persistent_store(
+        'docker_macvlan_gateway',
+        lambda state: state.docker.service.macvlan_gateway,
+    )
+
+    register_persistent_store(
+        'docker_macvlan_ip',
+        lambda state: state.docker.service.macvlan_ip,
     )
 
     from ubo_app.store.core.action_registry import register_action
