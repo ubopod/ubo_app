@@ -21,6 +21,10 @@ from ubo_app.constants import (
 from ubo_app.logger import logger
 from ubo_app.rpc.object_to_message import build_message
 from ubo_app.store.core.callback_registry import register_auto_callback
+from ubo_app.store.core.types import (
+    OpenRenderAction,
+    StackPopAction,
+)
 from ubo_app.store.input.types import (
     InputCancelAction,
     InputMethod,
@@ -43,18 +47,19 @@ from ubo_app.store.services.notifications import (
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
+    NotificationsClearEvent,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.services.web_ui import (
     WebUIInitializeEvent,
     WebUIState,
-    WebUIStopEvent,
 )
+from ubo_app.store.services.wifi import WiFiStartHotspotAction
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
+from ubo_app.utils.hotspot_qr import hotspot_qr_action, pop_hotspot_qr_render
 from ubo_app.utils.network import has_gateway
 from ubo_app.utils.pod_id import get_pod_id
-from ubo_app.utils.server import send_command
 from ubo_app.utils.types import Subscriptions
 
 if TYPE_CHECKING:
@@ -165,9 +170,53 @@ async def _get_envoy_status_uncached() -> str:
         return 'failed'
 
 
+def _hotspot_error_notification(content: str) -> NotificationsAddAction:
+    return NotificationsAddAction(
+        notification=Notification(
+            id='web_ui:hotspot_error',
+            icon='󱋆',
+            title='Web UI Error',
+            content=content,
+            display_type=NotificationDisplayType.STICKY,
+            importance=Importance.HIGH,
+        ),
+    )
+
+
+@store.with_state(
+    lambda state: state.wifi.is_hotspot_running if hasattr(state, 'wifi') else False,
+)
+def _is_hotspot_running(is_running: bool) -> bool:  # noqa: FBT001
+    return is_running
+
+
+async def _wait_for_hotspot_running() -> bool:
+    """Poll until the wifi service reports the captive hotspot up (~15s cap)."""
+    for _ in range(30):
+        if _is_hotspot_running():
+            return True
+        await asyncio.sleep(0.5)
+    return False
+
+
+def _close_hotspot_qr_on_notification_cleared(
+    event: NotificationsClearEvent,
+) -> None:
+    """Drop the QR page once a pending-input notification is cleared or dismissed."""
+    if event.notification.id.startswith('web_ui:pending:'):
+        pop_hotspot_qr_render()
+
+
+@store.with_state(lambda state: state.ip.is_connected)
+def _store_reports_connected(is_connected: bool | None) -> bool:  # noqa: FBT001
+    return bool(is_connected)
+
+
 async def initialize(event: WebUIInitializeEvent) -> None:
     """Start the hotspot if there is no network connection."""
-    is_connected = await has_gateway()
+    # Same robust signal as the wifi Add-flow: ping-based connectivity OR a
+    # default route, so the chooser and the hotspot decision stay consistent.
+    is_connected = _store_reports_connected() or await has_gateway()
     logger.info(
         'web-ui - initialize hotspot',
         extra={
@@ -176,31 +225,45 @@ async def initialize(event: WebUIInitializeEvent) -> None:
         },
     )
     if not is_connected:
-        result = await send_command('hotspot', 'start', has_output=True)
-        if result != 'done':
+        # Fill the dead wait while the radio switches to AP mode (~seconds).
+        store.dispatch(
+            OpenRenderAction(
+                kind='status',
+                title='Hotspot',
+                props={
+                    'icon': '󰖩',
+                    'text': 'Switching to hotspot…',
+                    'icon_size': 32,
+                    'text_font_size': 16,
+                },
+            ),
+        )
+        # The wifi service owns the hotspot; ask it to bring up the captive AP
+        # and wait until it reports running.
+        store.dispatch(WiFiStartHotspotAction(mode='captive'))
+        started = await _wait_for_hotspot_running()
+        store.dispatch(StackPopAction())
+        if not started:
             store.dispatch(
                 InputCancelAction(id=event.description.id),
-                NotificationsAddAction(
-                    notification=Notification(
-                        id='web_ui:hotspot_error',
-                        icon='󱋆',
-                        title='Web UI Error',
-                        content='Failed to start the hotspot, please check the logs.',
-                        display_type=NotificationDisplayType.STICKY,
-                        importance=Importance.HIGH,
-                    ),
+                _hotspot_error_notification(
+                    'Failed to start the hotspot, please check the logs.',
                 ),
             )
             return
+    # Offline (hotspot) only: a button that shows a WiFi-join QR so the user can
+    # connect their phone to the hotspot without typing the password.
+    actions = [hotspot_qr_action()] if not is_connected else []
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
                 id=f'web_ui:pending:{event.description.id}',
-                icon='󱋆',
+                icon='󱋆' if is_connected else '󰖩',
                 title='Web UI',
                 content=f'[size=18dp]{event.description.prompt}[/size]',
                 display_type=NotificationDisplayType.STICKY,
                 is_read=True,
+                actions=actions,
                 extra_information=ReadableInformation(
                     text=(
                         'Please make sure you are on the same network as this '
@@ -224,26 +287,6 @@ async def initialize(event: WebUIInitializeEvent) -> None:
             ),
         ),
     )
-
-
-async def stop_hotspot(*, silence: bool = False) -> None:
-    """Start the hotspot if there is no network connection."""
-    logger.info('web-ui - stop hotspot')
-    result = await send_command('hotspot', 'stop', has_output=True)
-    if result != 'done' and not silence:
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    id='web_ui:hotspot_error',
-                    icon='󱋆',
-                    title='Web UI Error',
-                    content='Failed to stop the hotspot properly, '
-                    'please check the logs.',
-                    display_type=NotificationDisplayType.STICKY,
-                    importance=Importance.HIGH,
-                ),
-            ),
-        )
 
 
 async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
@@ -448,7 +491,10 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
         _.append(handle_error)
 
     store.subscribe_event(WebUIInitializeEvent, initialize)
-    store.subscribe_event(WebUIStopEvent, stop_hotspot)
+    store.subscribe_event(
+        NotificationsClearEvent,
+        _close_hotspot_qr_on_notification_cleared,
+    )
 
     start_event = asyncio.Event()
 
@@ -470,6 +516,5 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
 
     async def cleanup() -> None:
         shutdown_event.set()
-        await stop_hotspot(silence=True)
 
     return [cleanup]

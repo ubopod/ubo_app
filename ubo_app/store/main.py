@@ -134,7 +134,7 @@ if TYPE_CHECKING:
     from ubo_app.store.services.system import SystemAction, SystemState
     from ubo_app.store.services.users import UsersAction, UsersEvent, UsersState
     from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
-    from ubo_app.store.services.web_ui import WebUIState
+    from ubo_app.store.services.web_ui import WebUIAction, WebUIState
     from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
     from ubo_app.store.settings.types import SettingsState
     from ubo_app.store.status_icons.types import StatusIconsAction, StatusIconsState
@@ -177,6 +177,7 @@ UboAction: TypeAlias = Union[
     'SSHAction',
     'UsersAction',
     'VSCodeAction',
+    'WebUIAction',
     'WiFiAction',
 ]
 UboEvent: TypeAlias = Union[

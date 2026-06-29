@@ -46,3 +46,8 @@ class MainState(Immutable):
     # New: Computed view data for dumb UI architecture
     current_view: ViewData | None = None
     status_bar: StatusBarData | None = None
+    # True while the GUI client has a transient local-only overlay open (e.g.
+    # the notification extra-information page), which lives only on the GUI's
+    # Kivy stack and not on this stack. BACK must close that overlay instead of
+    # popping the core stack — see the MenuGoBackAction reducer branch.
+    is_local_overlay_open: bool = False

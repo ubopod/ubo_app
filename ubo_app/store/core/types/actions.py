@@ -85,6 +85,18 @@ class RebootAction(PowerAction):
     """Action to reboot the device."""
 
 
+class SetLocalOverlayOpenAction(MainAction):
+    """Tell the core whether the GUI has a local-only overlay open.
+
+    Dispatched by the GUI client when it opens/closes a transient page that
+    lives only on its own Kivy stack (e.g. the notification extra-information
+    page). The core uses this flag to route BACK to the GUI instead of popping
+    the navigation stack.
+    """
+
+    is_open: bool = False
+
+
 class SetAreEnclosuresVisibleAction(MainAction):
     """Action to set header/footer visibility."""
 

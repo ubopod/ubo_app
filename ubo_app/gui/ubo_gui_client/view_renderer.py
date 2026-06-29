@@ -186,6 +186,9 @@ class ViewRenderer:
         self.client.subscribe_application_scroll(
             self._on_application_scroll,
         )
+        self.client.subscribe_local_overlay_go_back(
+            self._on_local_overlay_go_back,
+        )
 
     @mainthread
     def _on_menu_choose_by_index(self, index: int) -> None:
@@ -222,6 +225,24 @@ class ViewRenderer:
             app.go_up()
         elif direction == 'down':
             app.go_down()
+
+    @mainthread
+    def _on_local_overlay_go_back(self) -> None:
+        """Close a local-only overlay when BACK is delegated by the core.
+
+        The core delegates BACK here (instead of popping its stack) while a
+        transient GUI-only page is open — e.g. the notification
+        extra-information page — so closing it reveals the parent notification
+        again. If the overlay is already gone (stale flag), fall back to a
+        normal BACK so the press isn't swallowed.
+        """
+        from ubo_gui_client.widgets.notification_info import NotificationInfo
+
+        app = self.menu_widget.current_application
+        if isinstance(app, NotificationInfo):
+            self.menu_widget.go_back()
+        else:
+            self.client.dispatch_menu_go_back()
 
     def _on_disconnect(self, delay: float, attempt: int, max_retries: int) -> None:
         """Show the disconnect overlay when the connection drops."""
@@ -958,6 +979,12 @@ class ViewRenderer:
                     def open_info() -> None:
                         info_widget = NotificationInfo(text=text)
                         renderer.menu_widget.open_application(info_widget)
+                        # Tell the core a local-only overlay is up so a BACK
+                        # press closes this page instead of dismissing the
+                        # parent notification.
+                        renderer.client.dispatch_set_local_overlay_open(
+                            is_open=True,
+                        )
 
                     return ActionItem(
                         key='info',

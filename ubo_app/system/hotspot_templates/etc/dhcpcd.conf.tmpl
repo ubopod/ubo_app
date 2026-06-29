@@ -1,3 +1,8 @@
+# Restrict dhcpcd to wlan0 only. Without this, dhcpcd also manages eth0 while
+# the hotspot is up and FLUSHES eth0's address/route when it is stopped on
+# restore - wiping the Ethernet uplink NetworkManager had configured.
+allowinterfaces wlan0
+
 interface wlan0
 static ip_address=192.168.4.1/24
 nohook wpa_supplicant

@@ -1,32 +1,49 @@
 # ruff: noqa: D100
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from constants import WIFI_CONNECTIONS_MENU_ID, WIFI_SETTINGS_MENU_ID, get_signal_icon
+from constants import (
+    WIFI_CONNECTIONS_MENU_ID,
+    WIFI_SETTINGS_MENU_ID,
+    WIFI_STATE_ICON_ID,
+    WIFI_STATE_ICON_PRIORITY,
+    get_signal_icon,
+)
 
+from ubo_app.colors import SUCCESS_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action
 from ubo_app.store.core.types import (
     MenuItemData,
+    OpenRenderAction,
     PromptStackItem,
     StackPopAction,
+    StackPopItemAction,
     StackPushPromptAction,
     UpdateDynamicMenuAction,
     UpdatePromptAction,
 )
+from ubo_app.store.core.types.stack_items import RenderStackItem, StackItemType
 from ubo_app.store.main import store
+from ubo_app.store.services.ethernet import NetState
 from ubo_app.store.services.wifi import (
     ConnectionState,
     WiFiConnection,
+    WiFiStartHotspotAction,
+    WiFiStopHotspotAction,
     WiFiUpdateRequestAction,
 )
+from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+
+    from ubo_app.store.services.ip import IpNetworkInterface
 
 
 # Icon mapping for connection states
@@ -265,28 +282,38 @@ def update_wifi_dynamic_menu(
     )
 
 
-# --- Intermediate "WiFi Settings" menu (Add / Select) ---
+# --- Intermediate "WiFi Settings" menu (Add / Select / Hotspot) ---
 
-store.dispatch(
-    UpdateDynamicMenuAction(
-        menu_id=WIFI_SETTINGS_MENU_ID,
-        title='WiFi Settings',
-        items=(
-            MenuItemData(
-                key='add',
-                label='Add',
-                icon='󱛃',
-                action_id='wifi:add-connection',
-            ),
-            MenuItemData(
-                key='wifi:connections',
-                label='Select',
-                icon='󱖫',
-                action_id='wifi:select-connections',
+
+@store.autorun(lambda state: state.wifi.is_hotspot_running)
+def _update_wifi_settings_menu(is_hotspot_running: bool) -> None:  # noqa: FBT001
+    """Render the WiFi settings menu, reflecting the live hotspot state."""
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=WIFI_SETTINGS_MENU_ID,
+            title='WiFi Settings',
+            items=(
+                MenuItemData(
+                    key='add',
+                    label='Add',
+                    icon='󱛃',
+                    action_id='wifi:add-connection',
+                ),
+                MenuItemData(
+                    key='wifi:connections',
+                    label='Select',
+                    icon='󱖫',
+                    action_id='wifi:select-connections',
+                ),
+                MenuItemData(
+                    key='hotspot',
+                    label='Hotspot',
+                    icon='󰱒' if is_hotspot_running else '󰄱',
+                    action_id='wifi:toggle-hotspot',
+                ),
             ),
         ),
-    ),
-)
+    )
 
 
 def _add_connection() -> None:
@@ -296,6 +323,266 @@ def _add_connection() -> None:
 
 
 register_action('wifi:add-connection', _add_connection)
+
+
+@store.with_state(lambda state: state.wifi.is_hotspot_running)
+def _is_hotspot_running(is_hotspot_running: bool) -> bool:  # noqa: FBT001
+    return is_hotspot_running
+
+
+async def _wait_for_hotspot(*, target: bool) -> None:
+    """Poll until the hotspot reaches the desired running state (~15s cap)."""
+    for _ in range(30):
+        if _is_hotspot_running() == target:
+            return
+        await asyncio.sleep(0.5)
+
+
+_SWITCHING_STREAM_ID = 'wifi:hotspot-switching'
+
+
+def _switching_status(text: str) -> OpenRenderAction:
+    return OpenRenderAction(
+        kind='status',
+        title='Hotspot',
+        props={
+            'icon': '󰖩',
+            'text': text,
+            'icon_size': 32,
+            'text_font_size': 16,
+        },
+        stream_id=_SWITCHING_STREAM_ID,
+    )
+
+
+def _pop_switching_render() -> None:
+    """Pop the "Switching…" status render by id (never the notification on top)."""
+
+    @store.with_state(lambda state: state.main.stack)
+    def _pop(stack: tuple[StackItemType, ...]) -> None:
+        item = next(
+            (
+                item
+                for item in stack
+                if isinstance(item, RenderStackItem)
+                and item.stream_id == _SWITCHING_STREAM_ID
+            ),
+            None,
+        )
+        if item is not None:
+            store.dispatch(StackPopItemAction(item_id=item.id))
+
+    _pop()
+
+
+async def _switch_to_ap(mode: str) -> None:
+    """Switch to AP mode in ``mode`` (share|captive), showing progress until up."""
+    store.dispatch(
+        _switching_status('Switching to hotspot…'),
+        WiFiStartHotspotAction(mode=mode),
+    )
+    await _wait_for_hotspot(target=True)
+    _pop_switching_render()
+
+
+async def _switch_to_managed() -> None:
+    """Switch to managed WiFi: stop the hotspot, let NM autoconnect, then refresh."""
+    store.dispatch(
+        _switching_status('Switching to WiFi…'),
+        WiFiStopHotspotAction(),
+    )
+    await _wait_for_hotspot(target=False)
+    store.dispatch(WiFiUpdateRequestAction(reset=True))
+    _pop_switching_render()
+
+
+# Holds the hotspot mode chosen before the disconnect warning is confirmed, so
+# it can be threaded through the warning prompt's single confirm action.
+_pending_hotspot_mode: list[str] = []
+
+
+@store.with_state(
+    # Guarded: the ip service may not be loaded (e.g. in focused flow tests),
+    # in which case no Ethernet uplink can be confirmed.
+    lambda state: (state.ip.is_connected, state.ip.interfaces)
+    if hasattr(state, 'ip')
+    else (None, ()),
+)
+def _ethernet_can_share_internet(
+    data: tuple[bool | None, Sequence[IpNetworkInterface]],
+) -> bool:
+    """Report whether an Ethernet uplink with a live internet route exists.
+
+    Sharing only makes sense over a non-WiFi uplink (the hotspot takes over
+    wlan0), so the Share/Data-entry choice is offered only when Ethernet is up
+    *and* the device actually reaches the internet. ``is_connected`` is a real
+    reachability ping; the interface check matches eth*/en* (excluding wlan0,
+    lo, docker0, tailscale0, …).
+    """
+    is_connected, interfaces = data
+    if not is_connected:
+        return False
+    return any(
+        interface.ip_addresses and interface.name.startswith(('eth', 'en'))
+        for interface in interfaces
+    )
+
+
+def _prompt_mode_chooser() -> None:
+    """Ask whether the hotspot is for sharing internet or for data entry."""
+    store.dispatch(
+        StackPushPromptAction(
+            prompt='Start WiFi hotspot?',
+            icon='󰖩',
+            items=(
+                MenuItemData(
+                    key='share',
+                    label='Share Internet',
+                    icon='󰖩',
+                    action_id='wifi:hotspot-share',
+                ),
+                MenuItemData(
+                    key='data-entry',
+                    label='Data Entry',
+                    icon='󰌌',
+                    action_id='wifi:hotspot-captive',
+                ),
+            ),
+        ),
+    )
+
+
+def _prompt_switch_warning() -> None:
+    """Warn that switching to the hotspot drops the current WiFi connection."""
+    store.dispatch(
+        StackPushPromptAction(
+            prompt='Switch to hotspot?\nThis disconnects WiFi.',
+            icon='󰖩',
+            items=(
+                MenuItemData(
+                    key='confirm',
+                    label='Continue',
+                    icon='󰄬',
+                    action_id='wifi:hotspot-confirm',
+                ),
+                MenuItemData(
+                    key='cancel',
+                    label='Cancel',
+                    icon='󰜺',
+                    action_id='wifi:hotspot-cancel',
+                ),
+            ),
+        ),
+    )
+
+
+async def _begin_hotspot_toggle() -> None:
+    """Drive the toggle-on journey from the live connectivity.
+
+    - Ethernet-with-internet → ask the purpose (share vs data entry) first.
+    - Active WiFi → always warn that switching disconnects WiFi.
+    - Neither → just bring the hotspot up (data-entry/captive).
+    """
+    from wifi_manager import get_active_connection_ssid
+
+    if _ethernet_can_share_internet():
+        _prompt_mode_chooser()
+        return
+
+    ssid = await get_active_connection_ssid()
+    if ssid is not None:
+        _pending_hotspot_mode[:] = ['captive']
+        _prompt_switch_warning()
+        return
+
+    await _switch_to_ap('captive')
+
+
+async def _continue_after_mode(mode: str) -> None:
+    """After the purpose is chosen, warn if WiFi is connected, else start."""
+    from wifi_manager import get_active_connection_ssid
+
+    ssid = await get_active_connection_ssid()
+    store.dispatch(StackPopAction())  # pop the mode chooser
+    if ssid is not None:
+        _pending_hotspot_mode[:] = [mode]
+        _prompt_switch_warning()
+    else:
+        await _switch_to_ap(mode)
+
+
+def _confirm_switch() -> None:
+    """Confirm the disconnect warning and bring the hotspot up."""
+    mode = _pending_hotspot_mode[0] if _pending_hotspot_mode else 'captive'
+    store.dispatch(StackPopAction())  # pop the warning
+    create_task(_switch_to_ap(mode))
+
+
+def _cancel_switch() -> None:
+    """Dismiss the disconnect warning without switching (same as BACK)."""
+    store.dispatch(StackPopAction())  # pop the warning, stay on WiFi
+
+
+# Action handlers must return None (a non-None result pushes an empty submenu
+# frame), so these wrap create_task instead of returning the Task.
+def _choose_share() -> None:
+    create_task(_continue_after_mode('share'))
+
+
+def _choose_captive() -> None:
+    create_task(_continue_after_mode('captive'))
+
+
+def _toggle_hotspot() -> None:
+    if _is_hotspot_running():
+        create_task(_switch_to_managed())
+    else:
+        create_task(_begin_hotspot_toggle())
+
+
+register_action('wifi:toggle-hotspot', _toggle_hotspot)
+register_action('wifi:hotspot-share', _choose_share)
+register_action('wifi:hotspot-captive', _choose_captive)
+register_action('wifi:hotspot-confirm', _confirm_switch)
+register_action('wifi:hotspot-cancel', _cancel_switch)
+
+
+@store.autorun(
+    lambda state: (
+        state.wifi.is_hotspot_running,
+        state.wifi.state,
+        state.wifi.current_connection,
+    ),
+)
+def _update_wifi_status_icon(
+    data: tuple[bool, NetState, WiFiConnection | None],
+) -> None:
+    """Register the status-bar WiFi icon; full + green while in hotspot (AP) mode.
+
+    Lives here (not the reducer) so it can read the hotspot flag from the
+    cross-slice web_ui state.
+    """
+    is_hotspot_running, net_state, current_connection = data
+    if is_hotspot_running:
+        icon = f'[color={SUCCESS_COLOR}]󰤨[/color]'
+    elif net_state == NetState.CONNECTED:
+        icon = get_signal_icon(
+            current_connection.signal_strength if current_connection else 0,
+        )
+    else:
+        icon = {
+            NetState.DISCONNECTED: '󰖪',
+            NetState.PENDING: '󱛇',
+            NetState.NEEDS_ATTENTION: '󱚵',
+            NetState.UNKNOWN: '󰈅',
+        }.get(net_state, '󰈅')
+    store.dispatch(
+        StatusIconsRegisterAction(
+            icon=icon,
+            priority=WIFI_STATE_ICON_PRIORITY,
+            id=WIFI_STATE_ICON_ID,
+        ),
+    )
 
 
 def _select_connections() -> bool:

@@ -23,6 +23,7 @@ from ubo_app.store.core.types import (
     ApplicationViewData,
     ChatStackItem,
     CloseApplicationAction,
+    LocalOverlayGoBackEvent,
     MainAction,
     MainState,
     MenuChooseByIconAction,
@@ -49,6 +50,7 @@ from ubo_app.store.core.types import (
     ReplayRecordedSequenceEvent,
     ReportReplayingDoneAction,
     SetAreEnclosuresVisibleAction,
+    SetLocalOverlayOpenAction,
     StackChangedEvent,
     StackPageIndexChangedEvent,
     StackPopAction,
@@ -875,6 +877,72 @@ class TestEnclosureVisibility:
         )
         assert new_state.is_header_visible is True
         assert new_state.is_footer_visible is True
+
+
+class TestLocalOverlayBack:
+    """BACK over a GUI-local overlay is delegated, not popped.
+
+    The notification extra-information page lives only on the GUI client's Kivy
+    stack. While it's open the core sets ``is_local_overlay_open`` (via
+    ``SetLocalOverlayOpenAction``); a BACK press must then close that overlay —
+    emit ``LocalOverlayGoBackEvent`` and clear the flag — instead of popping the
+    parent ``NotificationStackItem`` (which would dismiss the notification).
+    """
+
+    def _state_with_notification_and_overlay(self) -> MainState:
+        state = _init_state()
+        state = _get_state(
+            reducer(state, StackPushNotificationAction(notification_id='n1')),
+        )
+        return _get_state(reducer(state, SetLocalOverlayOpenAction(is_open=True)))
+
+    def test_set_overlay_open_sets_flag(self) -> None:
+        """SetLocalOverlayOpenAction toggles the flag."""
+        state = _init_state()
+        new_state = _get_state(
+            reducer(state, SetLocalOverlayOpenAction(is_open=True)),
+        )
+        assert new_state.is_local_overlay_open is True
+
+    def test_set_overlay_open_same_value_is_noop(self) -> None:
+        """Setting the flag to its current value returns the same state."""
+        state = _init_state()
+        result = reducer(state, SetLocalOverlayOpenAction(is_open=False))
+        assert _get_state(result) is state
+
+    def test_back_with_overlay_delegates_and_keeps_notification(self) -> None:
+        """BACK with the overlay open delegates to the GUI; stack unchanged."""
+        state = self._state_with_notification_and_overlay()
+        assert len(state.stack) == 2
+
+        result = reducer(state, MenuGoBackAction())
+        new_state = _get_state(result)
+
+        # Notification stays on the stack — not dismissed.
+        assert new_state.stack == state.stack
+        assert isinstance(new_state.stack[-1], NotificationStackItem)
+        # Flag cleared so the next BACK behaves normally (self-healing).
+        assert new_state.is_local_overlay_open is False
+
+        events = _get_events(result)
+        assert any(isinstance(e, LocalOverlayGoBackEvent) for e in events)
+        # No stack change → no StackChangedEvent and no notification clear.
+        assert not any(isinstance(e, StackChangedEvent) for e in events)
+        assert _get_actions(result) == []
+
+    def test_back_without_overlay_pops_normally(self) -> None:
+        """BACK with the flag clear pops the stack as before (no delegation)."""
+        state = _init_state()
+        state = _get_state(
+            reducer(state, StackPushNotificationAction(notification_id='n1')),
+        )
+        result = reducer(state, MenuGoBackAction())
+        new_state = _get_state(result)
+
+        assert len(new_state.stack) == 1
+        events = _get_events(result)
+        assert any(isinstance(e, StackChangedEvent) for e in events)
+        assert not any(isinstance(e, LocalOverlayGoBackEvent) for e in events)
 
 
 class TestUnknownAction:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import uuid
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar, cast
 
 from debouncer import DebounceOptions, debounce
 from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
@@ -127,6 +127,67 @@ async def get_access_points() -> list[AccessPoint]:
         AccessPoint(access_point_path, get_system_bus())
         for access_point_path in access_points
     ]
+
+
+class WiFiNetwork(NamedTuple):
+    """A scanned, visible WiFi network."""
+
+    ssid: str
+    type: WiFiType
+    strength: int
+
+
+# NM80211ApFlags / NM80211ApSecurityFlags bit we care about.
+_NM_802_11_AP_FLAGS_PRIVACY = 0x1
+
+
+def _derive_wifi_type(flags: int, wpa_flags: int, rsn_flags: int) -> WiFiType:
+    """Derive the security type of an access point from its NetworkManager flags."""
+    if rsn_flags:
+        return WiFiType.WPA2
+    if wpa_flags:
+        return WiFiType.WPA
+    if flags & _NM_802_11_AP_FLAGS_PRIVACY:
+        return WiFiType.WEP
+    return WiFiType.NOPASS
+
+
+async def get_available_networks() -> list[WiFiNetwork]:
+    """Scan and return the visible WiFi networks, strongest first.
+
+    Must be called while the radio is in station mode (before the hotspot AP is
+    up), since a single radio cannot scan and host an access point at once.
+    """
+    await request_scan()
+    # The scan populates `access_points` asynchronously; give it a moment and
+    # poll a few times until results appear.
+    access_points: list[AccessPoint] = []
+    for _ in range(5):
+        await asyncio.sleep(0.6)
+        access_points = await get_access_points()
+        if access_points:
+            break
+
+    networks: dict[str, WiFiNetwork] = {}
+    for access_point in access_points:
+        try:
+            ssid = (await wait_for(access_point.ssid)).decode('utf-8', 'replace')
+            if not ssid:
+                continue
+            strength = int(await wait_for(access_point.strength))
+            type = _derive_wifi_type(
+                int(await wait_for(access_point.flags)),
+                int(await wait_for(access_point.wpa_flags)),
+                int(await wait_for(access_point.rsn_flags)),
+            )
+        except Exception:
+            logger.exception('Failed to read an access point during scan')
+            continue
+        existing = networks.get(ssid)
+        if existing is None or strength > existing.strength:
+            networks[ssid] = WiFiNetwork(ssid=ssid, type=type, strength=strength)
+
+    return sorted(networks.values(), key=lambda network: network.strength, reverse=True)
 
 
 async def get_active_access_point() -> AccessPoint | None:

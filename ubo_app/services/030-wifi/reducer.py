@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from constants import WIFI_STATE_ICON_ID, WIFI_STATE_ICON_PRIORITY, get_signal_icon
 from redux import (
     BaseAction,
     CompleteReducerResult,
@@ -19,12 +18,16 @@ from ubo_app.store.services.wifi import (
     WiFiInputConnectionAction,
     WiFiInputConnectionEvent,
     WiFiSetHasVisitedOnboardingAction,
+    WiFiSetHotspotRunningAction,
+    WiFiStartHotspotAction,
+    WiFiStartHotspotEvent,
     WiFiState,
+    WiFiStopHotspotAction,
+    WiFiStopHotspotEvent,
     WiFiUpdateAction,
     WiFiUpdateRequestAction,
     WiFiUpdateRequestEvent,
 )
-from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 
 
 def reducer(
@@ -66,30 +69,36 @@ def reducer(
             )
 
         case WiFiUpdateAction():
+            # The status-bar icon is registered by an autorun in pages/main.py so
+            # it can also reflect hotspot (AP) mode, which this slice owns via
+            # ``is_hotspot_running`` below.
+            return replace(
+                state,
+                connections=action.connections,
+                state=action.state,
+                current_connection=action.current_connection,
+            )
+
+        case WiFiStartHotspotAction(mode=mode):
             return CompleteReducerResult(
-                state=replace(
-                    state,
-                    connections=action.connections,
-                    state=action.state,
-                    current_connection=action.current_connection,
-                ),
-                actions=[
-                    StatusIconsRegisterAction(
-                        icon={
-                            NetState.CONNECTED: get_signal_icon(
-                                action.current_connection.signal_strength
-                                if action.current_connection
-                                else 0,
-                            ),
-                            NetState.DISCONNECTED: '󰖪',
-                            NetState.PENDING: '󱛇',
-                            NetState.NEEDS_ATTENTION: '󱚵',
-                            NetState.UNKNOWN: '󰈅',
-                        }[action.state],
-                        priority=WIFI_STATE_ICON_PRIORITY,
-                        id=WIFI_STATE_ICON_ID,
-                    ),
-                ],
+                state=state,
+                events=[WiFiStartHotspotEvent(mode=mode)],
+            )
+
+        case WiFiStopHotspotAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[WiFiStopHotspotEvent()],
+            )
+
+        case WiFiSetHotspotRunningAction(
+            is_running=is_running,
+            user_enabled=user_enabled,
+        ):
+            return replace(
+                state,
+                is_hotspot_running=is_running,
+                hotspot_user_enabled=user_enabled,
             )
 
         case _:

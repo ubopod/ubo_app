@@ -14,5 +14,7 @@
   ],
   "current_connection": null,
   "has_visited_onboarding": null,
+  "hotspot_user_enabled": false,
+  "is_hotspot_running": false,
   "state": "Disconnected"
 }

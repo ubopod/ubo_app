@@ -135,6 +135,16 @@ class ApplicationScrollEvent(MainEvent):
     direction: str  # 'up' or 'down'
 
 
+class LocalOverlayGoBackEvent(MainEvent):
+    """Delegate a BACK press to the GUI client's local-only overlay.
+
+    Emitted by the reducer when BACK is pressed while ``is_local_overlay_open``
+    is set, instead of popping the navigation stack. The GUI client closes its
+    transient local page (e.g. the notification extra-information page). If no
+    such overlay exists (stale flag), the client re-issues a normal BACK.
+    """
+
+
 class FrameStreamDataEvent(MainEvent):
     """Generic RGB frame event for reusable stream render views."""
 
