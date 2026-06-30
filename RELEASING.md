@@ -11,8 +11,9 @@ This is the canonical runbook for cutting a release. The actual publishing
   for backward-compatible features, **patch** for fixes.
 - The version is **derived from the git tag** by `hatch-vcs` (`version.py` →
   `get_version()`). **Never hand-edit a version field** — there isn't one to edit.
-  Sub-packages (`ubo_app/rpc/`, `ubo_app/services/090-assistant/ubo-service/`)
-  inherit the same version via `parent_version.py`.
+  Sub-packages (`ubo_app/rpc/`, `ubo_app/services/090-assistant/ubo-service/`,
+  `ubo_app/services/090-mcp/ubo-service/`) inherit the same version via
+  `parent_version.py`.
 
 ## Per-release artifacts
 
@@ -72,10 +73,12 @@ Run these in order. Stop and fix on any failure — don't press on.
    50-line cap). Do **not** touch `CHANGELOG.md` — it is frozen as of 2.0.0.
 6. **Pin dependencies** (see the v1.7.0 recipe in the appendix). Pin in the
    **root `pyproject.toml`** and each **sub-project** pyproject (`ubo_app/rpc/`,
-   `ubo_app/gui/`, `ubo_app/services/090-assistant/ubo-service/`):
+   `ubo_app/gui/`, `ubo_app/services/090-assistant/ubo-service/`,
+   `ubo_app/services/090-mcp/ubo-service/`):
    - **ubo-owned wheels → the release version** (`==X.Y.Z`): `ubo-app`,
-     `ubo-app-raw-bindings`, `ubo-app-assistant`, `ubo-gui-client`. These are
-     workspace / `path` editable deps during dev — convert each to `==X.Y.Z`.
+     `ubo-app-raw-bindings`, `ubo-app-assistant`, `ubo-app-mcp-gateway`,
+     `ubo-gui-client`. These are workspace / `path` editable deps during dev —
+     convert each to `==X.Y.Z`.
    - **Third-party pins to verify/refresh each release:** `pipecat-ai==1.3.0`
      (+ `pipecat-ai-whisker==2.0.0`), `piper-tts==1.4.2` (root **and** the
      assistant sub-project), `onnxruntime` (1.7.0 shipped `==1.22.1`),
@@ -144,6 +147,9 @@ into `development`, the same as any other change.
    - **`ubo_app/services/090-assistant/ubo-service/pyproject.toml`** —
      `platformdirs==…` → `>=`, `python-fake==…` → `>=`,
      `ubo-app-raw-bindings==X.Y.Z` → bare.
+   - **`ubo_app/services/090-mcp/ubo-service/pyproject.toml`** —
+     `fastmcp==…` → `>=`, `uvicorn==…` → `>=`, `starlette==…` → `>=`,
+     `loguru==…` → `>=`, `ubo-app-raw-bindings==X.Y.Z` → bare.
    - **`ubo_app/rpc/pyproject.toml`** — nothing to do (it is never pinned per
      release; its version is tag-derived).
    > **Keep non-pin changes.** Anything bundled into the release commit that is
@@ -158,6 +164,7 @@ into `development`, the same as any other change.
    uv lock
    (cd ubo_app/gui && uv lock)
    (cd ubo_app/services/090-assistant/ubo-service && uv lock)
+   (cd ubo_app/services/090-mcp/ubo-service && uv lock)
    ```
    The `Missing version constraint` warnings for now-bare deps are expected.
 5. **Commit, push the branch, and open a PR into `development`** (no tag, no
@@ -168,9 +175,10 @@ into `development`, the same as any other change.
 
 ## Appendix — 2.0.0 dependency-pin reference
 
-The original template was the v1.7.0 release commit (`7a3cb7b3`). As of 2.0.0 the
-tree has four pyprojects, each pinned for release (replace `X.Y.Z` with the
-release version, e.g. `2.0.0`):
+The original template was the v1.7.0 release commit (`7a3cb7b3`). The tree has
+five pyprojects, each pinned for release (replace `X.Y.Z` with the release
+version, e.g. `2.0.0`). (The `090-mcp/ubo-service` wheel below was added after
+2.0.0.)
 
 - **Root `pyproject.toml`** (`ubo-app`) — convert `platformdirs`, `pillow`
   (`>=11.3.0` → `==`), `onnxruntime` (`>=1.22.0` → `==1.22.1`), `piper-tts`
@@ -189,11 +197,14 @@ release version, e.g. `2.0.0`):
   (`ubo-app-assistant`) — `pipecat-ai[…]==1.3.0`, `pipecat-ai-whisker==2.0.0`,
   `piper-tts==1.4.2`, `vosk==0.3.44`; convert `platformdirs`/`python-fake`
   (`>=`) to `==`, and pin `ubo-app-raw-bindings` (`path` → `==X.Y.Z`).
+- **`ubo_app/services/090-mcp/ubo-service/pyproject.toml`**
+  (`ubo-app-mcp-gateway`) — convert `fastmcp`, `uvicorn`, `starlette`, `loguru`
+  (`>=`) to `==`, and pin `ubo-app-raw-bindings` (`path` → `==X.Y.Z`).
 - **`uv.lock`** — refreshed (`uv lock`) to match.
 
-The four ubo-owned wheels (`ubo-app`, `ubo-app-raw-bindings`, `ubo-app-assistant`,
-`ubo-gui-client`) are workspace / `path` editable deps during dev — every
-cross-reference to them must become `==X.Y.Z` for release.
+The five ubo-owned wheels (`ubo-app`, `ubo-app-raw-bindings`, `ubo-app-assistant`,
+`ubo-app-mcp-gateway`, `ubo-gui-client`) are workspace / `path` editable deps
+during dev — every cross-reference to them must become `==X.Y.Z` for release.
 
 To reproduce the transitive-pin block for a new release, resolve the locked
 versions from `uv.lock` (e.g. via `uv export` / `uv pip compile`) and pin the
