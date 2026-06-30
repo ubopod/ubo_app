@@ -28,9 +28,15 @@ def binary_env_provider() -> dict[str, str]:
     from ubo_app.constants import (
         MCP_GATEWAY_LISTEN_ADDRESS,
         MCP_GATEWAY_LISTEN_PORT,
+        USERNAME,
     )
 
     return {
+        # Prepend the ubo user's local bin dir so stdio MCP servers launched by
+        # the gateway can find `uvx`/`npx` (installed there by install_uv.sh /
+        # install_node.sh). The systemd --user unit sets no PATH, so this is
+        # required for reliable discovery.
+        'PATH': f'/home/{USERNAME}/.local/bin:' + os.environ.get('PATH', ''),
         'MCP_GATEWAY_TOKEN_SECRET_ID': MCP_GATEWAY_TOKEN_SECRET_ID,
         'MCP_GATEWAY_LISTEN_ADDRESS': MCP_GATEWAY_LISTEN_ADDRESS,
         'MCP_GATEWAY_LISTEN_PORT': str(MCP_GATEWAY_LISTEN_PORT),

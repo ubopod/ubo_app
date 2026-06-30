@@ -148,6 +148,12 @@ If you don't want to install docker service you can set the `WITH_DOCKER` enviro
 curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/scripts/install.sh | sudo WITHOUT_DOCKER=true bash
 ```
 
+The installer also provisions the `uv`/`uvx` and Node.js/`npx` runtimes (under the `ubo` user) so the MCP gateway can launch stdio-based MCP servers. To skip either, set the `WITHOUT_UV` or `WITHOUT_NODE` environment variable to `true`:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/scripts/install.sh | sudo WITHOUT_UV=true WITHOUT_NODE=true bash
+```
+
 To install a specific version of ubo, you can set the `TARGET_VERSION` environment variable to the desired version:
 
 ```bash

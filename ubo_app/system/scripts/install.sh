@@ -42,6 +42,14 @@ for arg in "$@"; do
     WITHOUT_DOCKER=true
     shift
     ;;
+  --without-uv)
+    WITHOUT_UV=true
+    shift
+    ;;
+  --without-node)
+    WITHOUT_NODE=true
+    shift
+    ;;
   --wheels-directory=*)
     WHEELS_DIRECTORY="${arg#*=}"
     shift
@@ -67,6 +75,8 @@ TARGET_VERSION=${TARGET_VERSION:-}
 INSTALLATION_PATH=${INSTALLATION_PATH:-"/opt/ubo"}
 WITHOUT_WM8960=$([ "${WITHOUT_WM8960:-''}" = true ] && echo true || true)
 WITHOUT_DOCKER=$([ "${WITHOUT_DOCKER:-''}" = true ] && echo true || true)
+WITHOUT_UV=$([ "${WITHOUT_UV:-''}" = true ] && echo true || true)
+WITHOUT_NODE=$([ "${WITHOUT_NODE:-''}" = true ] && echo true || true)
 export WHEELS_DIRECTORY=${WHEELS_DIRECTORY:-""}
 IN_PACKER=$([ "${IN_PACKER:-''}" = true ] && echo true || true)
 
@@ -104,6 +114,8 @@ echo "TARGET_VERSION: \"$TARGET_VERSION\""
 echo "INSTALLATION_PATH: \"$INSTALLATION_PATH\""
 echo "WITHOUT_DOCKER: \"$WITHOUT_DOCKER\""
 echo "WITHOUT_WM8960: \"$WITHOUT_WM8960\""
+echo "WITHOUT_UV: \"$WITHOUT_UV\""
+echo "WITHOUT_NODE: \"$WITHOUT_NODE\""
 echo "WHEELS_DIRECTORY: \"$WHEELS_DIRECTORY\""
 if [ -n "$WHEELS_DIRECTORY" ]; then
   echo "PROVIDED_WHEELS:"
@@ -222,6 +234,18 @@ if [ -z "$WITHOUT_DOCKER" ]; then
   echo "Installing Docker..."
   USERNAME=$USERNAME $UBO_APP_DIR/system/scripts/install_docker.sh
   echo "Docker installed successfully."
+fi
+
+if [ -z "$WITHOUT_UV" ]; then
+  echo "Installing uv..."
+  USERNAME=$USERNAME $UBO_APP_DIR/system/scripts/install_uv.sh ||
+    echo "WARNING: uv install failed; stdio MCP servers using uvx will not work."
+fi
+
+if [ -z "$WITHOUT_NODE" ]; then
+  echo "Installing node..."
+  USERNAME=$USERNAME $UBO_APP_DIR/system/scripts/install_node.sh ||
+    echo "WARNING: node install failed; stdio MCP servers using npx will not work."
 fi
 
 rm -rf "$INSTALLATION_PATH/env"
