@@ -17,7 +17,6 @@ from engines_registry import (
     STT_ENGINES,
     TTS_ENGINES,
 )
-from redux import AutorunOptions
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
 from ubo_app.constants import SECRETS_PATH
@@ -101,19 +100,12 @@ from ubo_app.store.core.types import (
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.core.view_registry import register_menu_content_dependency
-from ubo_app.store.input.types import (
-    InputFieldDescription,
-    InputFieldType,
-    WebUIInputDescription,
-)
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     DEFAULT_MODELS,
     LIVE_PIPELINE_SOURCE_ID,
     AssistanceAudioFrame,
     AssistanceImageFrame,
-    AssistantAddMcpServerEvent,
-    AssistantDeleteMcpServerEvent,
     AssistantDownloadKokoroAction,
     AssistantDownloadKokoroEvent,
     AssistantDownloadOllamaModelAction,
@@ -126,7 +118,6 @@ from ubo_app.store.services.assistant import (
     AssistantHandleReportEvent,
     AssistantImageGeneratorName,
     AssistantLLMName,
-    AssistantSetMcpServersAction,
     AssistantSetOllamaThinkingAction,
     AssistantSetSelectedImageGeneratorAction,
     AssistantSetSelectedKokoroVoiceAction,
@@ -140,16 +131,11 @@ from ubo_app.store.services.assistant import (
     AssistantStopListeningAction,
     AssistantStopTalkingAction,
     AssistantSTTName,
-    AssistantSyncMcpServersAction,
-    AssistantSyncMcpServersEvent,
     AssistantToggleListeningAction,
-    AssistantToggleMcpServerEvent,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
     GenericLLMProvider,
     InfraredTriggerSource,
-    McpServerMetadata,
-    McpServerType,
     UserStopReason,
     generic_llm_instance_key,
 )
@@ -164,7 +150,6 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
-from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
@@ -229,111 +214,6 @@ def _total_ram_bytes() -> int:
 def _format_ram_gb(bytes_: int) -> str:
     """Render a byte count as a short GB label."""
     return f'{bytes_ / (1024**3):.1f} GB'
-
-
-def input_mcp_server() -> None:
-    """Input MCP server configuration via WebUI."""
-
-    async def act() -> None:
-        import asyncio
-        import contextlib
-
-        from mcp_servers import save_mcp_server, validate_sse_url, validate_stdio_config
-
-        from ubo_app.store.services.assistant import (
-            AssistantAddMcpServerAction,
-            SseMcpConfig,
-            StdioMcpConfig,
-        )
-
-        with contextlib.suppress(asyncio.CancelledError):
-            _, result = await ubo_input(
-                prompt='Add MCP Server',
-                descriptions=[
-                    WebUIInputDescription(
-                        fields=[
-                            InputFieldDescription(
-                                name='name',
-                                label='Server Name',
-                                type=InputFieldType.TEXT,
-                                description='Friendly name for this MCP server',
-                                required=True,
-                            ),
-                            InputFieldDescription(
-                                name='type',
-                                label='Server Type',
-                                type=InputFieldType.SELECT,
-                                description='Type of MCP server',
-                                options=['stdio', 'sse'],
-                                required=True,
-                            ),
-                            InputFieldDescription(
-                                name='config',
-                                label='Configuration',
-                                type=InputFieldType.LONG,
-                                description='For stdio: paste full JSON with '
-                                'mcpServers. For sse: paste URL',
-                                required=True,
-                            ),
-                        ],
-                    ),
-                ],
-            )
-
-            if not result or not result.data:
-                return
-
-            name = result.data.get('name', '').strip()
-            server_type_str = result.data.get('type', '').strip()
-            config_str = result.data.get('config', '').strip()
-
-            if not name or not server_type_str or not config_str:
-                return
-
-            server_type = McpServerType(server_type_str)
-
-            # Validate and create typed configuration
-            if server_type == McpServerType.STDIO:
-                is_valid, error_msg, parsed_config = validate_stdio_config(config_str)
-                if not is_valid or not parsed_config:
-                    logger.error(
-                        'Invalid stdio configuration',
-                        extra={'error': error_msg},
-                    )
-                    return
-                # Extract server config and create typed object
-                mcp_servers_dict = parsed_config.get('mcpServers', {})
-                server_config = next(iter(mcp_servers_dict.values()))
-                typed_config: StdioMcpConfig | SseMcpConfig = StdioMcpConfig(
-                    command=server_config['command'],
-                    args=server_config.get('args', []),
-                    env=server_config.get('env', {}),
-                )
-            else:  # SSE
-                is_valid, error_msg = validate_sse_url(config_str)
-                if not is_valid:
-                    logger.error('Invalid SSE URL', extra={'error': error_msg})
-                    return
-                typed_config = SseMcpConfig(url=config_str)
-
-            # Save to filesystem
-            server_id = save_mcp_server(name, server_type, typed_config)
-
-            # Dispatch action to update state
-            store.dispatch(
-                AssistantAddMcpServerAction(
-                    name=name,
-                    type=server_type,
-                    config=typed_config,
-                ),
-            )
-
-            logger.info(
-                'MCP server added',
-                extra={'server_id': server_id, 'server_name': name},
-            )
-
-    create_task(act())
 
 
 def _communicate(event: AssistantHandleReportEvent) -> None:
@@ -414,10 +294,6 @@ def _register_persistent_stores() -> None:
         lambda state: json.dumps(state.assistant.ollama_thinking_enabled),
     )
     register_persistent_store(
-        'assistant:enabled_mcp_servers',
-        lambda state: json.dumps(list(state.assistant.enabled_mcp_servers)),
-    )
-    register_persistent_store(
         'assistant:selected_piper_voice',
         lambda state: state.assistant.selected_piper_voice,
     )
@@ -428,12 +304,11 @@ def _register_persistent_stores() -> None:
 
 
 def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
-    """Set up all autorun functions and MCP event handlers.
+    """Set up all autorun functions and event handlers.
 
     Returns:
         Tuple of (providers, stt_providers, llm_providers, tts_providers,
-                  image_generator_providers, mcp_servers_menu,
-                  handle_add_mcp_server, handle_delete_mcp_server)
+                  image_generator_providers, ...)
 
     """
     _provider_action_ids: list[str] = []
@@ -443,8 +318,6 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     _provider_detail_action_ids: list[str] = []
     _tts_action_ids: list[str] = []
     _img_gen_action_ids: list[str] = []
-    _mcp_action_ids: list[str] = []
-    _mcp_server_unsubscribers: dict[str, Callable] = {}
 
     # Generic "cancel/dismiss prompt" — dispatched by the Cancel button in
     # the delete-credentials confirmation prompt. Registered once for the
@@ -1920,221 +1793,6 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             action_ids_list=_img_gen_action_ids,
         )
 
-    # MCP Tools menu - main list
-    @store.autorun(
-        lambda state: (
-            state.assistant.mcp_servers,
-            state.assistant.enabled_mcp_servers,
-        ),
-    )
-    def mcp_servers_menu(
-        state_data: tuple[dict[str, McpServerMetadata], list[str]],
-    ) -> None:
-        """Update dynamic menu for MCP servers."""
-        loaded_servers, enabled_servers = state_data
-
-        for action_id in _mcp_action_ids:
-            unregister_action(action_id)
-        _mcp_action_ids.clear()
-
-        logger.debug(
-            'MCP servers menu autorun triggered',
-            extra={
-                'server_count': len(loaded_servers),
-                'server_ids': list(loaded_servers.keys()),
-                'enabled_count': len(enabled_servers),
-            },
-        )
-
-        add_action_id = 'assistant:add-mcp-server'
-        _mcp_action_ids.append(add_action_id)
-        register_action(add_action_id, input_mcp_server)
-
-        items: list[MenuItemData] = [
-            MenuItemData(
-                key='add_server',
-                label='Add Server',
-                icon='󰌉',
-                action_id=add_action_id,
-            ),
-        ]
-
-        # Clean up autoruns for servers no longer in the list
-        removed_ids = set(_mcp_server_unsubscribers.keys()) - set(
-            loaded_servers.keys(),
-        )
-        for removed_id in removed_ids:
-            _mcp_server_unsubscribers.pop(removed_id)()
-
-        for server_id, server in loaded_servers.items():
-            is_enabled = server_id in enabled_servers
-            open_action_id = f'assistant:open-mcp:{server_id}'
-            _mcp_action_ids.append(open_action_id)
-            register_action(
-                open_action_id,
-                lambda _sid=server_id: store.dispatch(
-                    StackPushMenuAction(menu_key=_sid),
-                ),
-            )
-            items.append(
-                MenuItemData(
-                    key=server_id,
-                    label=server.name,
-                    icon='󰄬' if is_enabled else '󰖭',
-                    background_color=INFO_COLOR if is_enabled else WARNING_COLOR,
-                    action_id=open_action_id,
-                ),
-            )
-
-            # Set up the detail menu for this server (only if not already tracked)
-            if server_id not in _mcp_server_unsubscribers:
-                _mcp_server_unsubscribers[server_id] = mcp_server_menu(server_id)
-
-        store.dispatch(
-            UpdateDynamicMenuAction(
-                menu_id='assistant:mcp_tools',
-                title='MCP Tools',
-                heading='Model Context Protocol Tools',
-                sub_heading='Add and manage MCP servers',
-                items=tuple(items),
-            ),
-        )
-
-    def mcp_server_menu(server_id: str) -> Callable:
-        """Set up dynamic menu updates for a specific MCP server."""
-        from ubo_app.store.services.assistant import (
-            AssistantDeleteMcpServerAction,
-            AssistantToggleMcpServerAction,
-        )
-
-        _server_action_ids: list[str] = []
-
-        @store.autorun(
-            lambda state: (
-                state.assistant.mcp_servers.get(server_id),
-                server_id in state.assistant.enabled_mcp_servers,
-            ),
-            options=AutorunOptions(default_value=None),
-        )
-        def menu(
-            state_data: tuple[McpServerMetadata | None, bool],
-        ) -> None:
-            server, is_enabled = state_data
-
-            for action_id in _server_action_ids:
-                unregister_action(action_id)
-            _server_action_ids.clear()
-
-            if not server:
-                store.dispatch(
-                    UpdateDynamicMenuAction(
-                        menu_id=f'assistant:mcp:{server_id}',
-                        title='MCP Server',
-                        items=(),
-                        heading='Server Not Found',
-                    ),
-                )
-                return
-
-            toggle_action_id = f'assistant:toggle-mcp:{server_id}'
-            _server_action_ids.append(toggle_action_id)
-            register_action(
-                toggle_action_id,
-                lambda: store.dispatch(
-                    AssistantToggleMcpServerAction(server_id=server_id),
-                ),
-            )
-
-            delete_action_id = f'assistant:delete-mcp:{server_id}'
-            _server_action_ids.append(delete_action_id)
-            register_action(
-                delete_action_id,
-                lambda: store.dispatch(
-                    AssistantDeleteMcpServerAction(server_id=server_id),
-                ),
-            )
-
-            status_text = 'Enabled' if is_enabled else 'Disabled'
-            items = (
-                MenuItemData(
-                    key='toggle',
-                    label='Disable' if is_enabled else 'Enable',
-                    icon='󰖭' if is_enabled else '󰄬',
-                    background_color=WARNING_COLOR if is_enabled else INFO_COLOR,
-                    action_id=toggle_action_id,
-                ),
-                MenuItemData(
-                    key='delete',
-                    label='Delete',
-                    icon='󰆴',
-                    background_color=DANGER_COLOR,
-                    action_id=delete_action_id,
-                ),
-            )
-
-            store.dispatch(
-                UpdateDynamicMenuAction(
-                    menu_id=f'assistant:mcp:{server_id}',
-                    title=f'MCP: {server.name}',
-                    items=items,
-                    heading=server.name,
-                    sub_heading=f'Type: {server.type} • {status_text}',
-                ),
-            )
-
-        return menu.unsubscribe
-
-    # Event handlers for MCP servers
-    def handle_add_mcp_server(_event: AssistantAddMcpServerEvent) -> None:
-        """Handle MCP server add event."""
-        # Trigger sync to reload from filesystem
-        logger.info('handle_add_mcp_server invoked, dispatching sync')
-        store.dispatch(
-            AssistantSyncMcpServersAction(),
-        )
-
-    def handle_delete_mcp_server(event: AssistantDeleteMcpServerEvent) -> None:
-        """Handle MCP server delete event."""
-        from mcp_servers import delete_mcp_server
-
-        logger.info(
-            'handle_delete_mcp_server invoked',
-            extra={'server_id': event.server_id},
-        )
-        delete_mcp_server(event.server_id)
-        # Navigate back to server list
-        store.dispatch(MenuGoBackAction())
-        # Trigger sync to update state
-        logger.info('Dispatching AssistantSyncMcpServersAction after delete')
-        store.dispatch(AssistantSyncMcpServersAction())
-
-    def handle_toggle_mcp_server(event: AssistantToggleMcpServerEvent) -> None:
-        """Persist the toggled MCP server enabled state to the filesystem."""
-        from mcp_servers import toggle_mcp_server
-
-        logger.info(
-            'handle_toggle_mcp_server invoked',
-            extra={'server_id': event.server_id},
-        )
-        toggle_mcp_server(event.server_id)
-
-    def handle_sync_mcp_servers(_event: AssistantSyncMcpServersEvent) -> None:
-        """Load MCP servers from the filesystem and push them into the store."""
-        from mcp_servers import load_enabled_mcp_server_ids, load_mcp_servers
-
-        servers = load_mcp_servers()
-        enabled = load_enabled_mcp_server_ids()
-        logger.info(
-            'handle_sync_mcp_servers loaded servers',
-            extra={'count': len(servers), 'enabled': len(enabled)},
-        )
-        store.dispatch(
-            AssistantSetMcpServersAction(
-                servers=list(servers.values()),
-                enabled_servers=enabled,
-            ),
-        )
-
     return (
         secrets_monitor,
         providers,
@@ -2152,11 +1810,6 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         vosk_models_menus,
         tts_providers,
         image_generator_providers,
-        mcp_servers_menu,
-        handle_add_mcp_server,
-        handle_delete_mcp_server,
-        handle_toggle_mcp_server,
-        handle_sync_mcp_servers,
         _handle_ollama_download,
         _handle_piper_download,
         _handle_kokoro_download,
@@ -2187,7 +1840,6 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
         'assistant:llm': 'assistant:llm',
         'assistant:tts': 'assistant:tts',
         'assistant:image_generator': 'assistant:image_generator',
-        'assistant:mcp_tools': 'assistant:mcp_tools',
     }
 
     def _match_catalog_tail(tail: str) -> str | None:
@@ -2225,14 +1877,6 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
             if len(path) >= 5 and path[-1].startswith('models:'):  # noqa: PLR2004
                 provider = path[-1][len('models:') :]
                 return f'assistant:llm:models:{provider}'
-            # MCP server detail pages must be checked BEFORE the general
-            # assistant_menus lookup, otherwise 'assistant:mcp_tools' matches
-            # the list menu and the detail path is never reached.
-            # Path: ('main', 'settings', 'Assistant',
-            #   'assistant:mcp_tools', '{server_id}')
-            if len(path) >= 5 and menu_key == 'assistant:mcp_tools':  # noqa: PLR2004
-                server_id = path[4]
-                return f'assistant:mcp:{server_id}'
             # Provider detail page reached from Manage Providers.
             # Path: ('main', 'settings', 'Assistant', 'assistant:providers',
             #   'provider:{name}')
@@ -2434,14 +2078,6 @@ async def init_service() -> None:
         lambda s: s.assistant.selected_image_generator,
     )
     register_menu_content_dependency(
-        'assistant:mcp_enabled',
-        lambda s: tuple(s.assistant.enabled_mcp_servers),
-    )
-    register_menu_content_dependency(
-        'assistant:mcp_servers',
-        lambda s: tuple(s.assistant.mcp_servers.keys()),
-    )
-    register_menu_content_dependency(
         'assistant:provider_status',
         lambda s: tuple(s.assistant.provider_setup_status.items()),
     )
@@ -2463,11 +2099,6 @@ async def init_service() -> None:
         _vosk_models_menus,
         _tts_providers,
         _image_generator_providers,
-        _mcp_servers_menu,
-        handle_add_mcp_server,
-        handle_delete_mcp_server,
-        handle_toggle_mcp_server,
-        handle_sync_mcp_servers,
         handle_ollama_download,
         handle_piper_download,
         handle_kokoro_download,
@@ -2510,23 +2141,12 @@ async def init_service() -> None:
             label='Image Generator',
             icon='󰹉',
         ),
-        RegisterSettingAppAction(
-            category=SettingsCategory.ASSISTANT,
-            priority=15,
-            key='mcp_tools',
-            label='MCP Tools',
-            icon='󰒋',
-        ),
     )
 
     # Register path matchers for assistant sub-pages
     _register_assistant_path_matchers()
 
     store.subscribe_event(AssistantHandleReportEvent, _communicate)
-    store.subscribe_event(AssistantAddMcpServerEvent, handle_add_mcp_server)
-    store.subscribe_event(AssistantDeleteMcpServerEvent, handle_delete_mcp_server)
-    store.subscribe_event(AssistantToggleMcpServerEvent, handle_toggle_mcp_server)
-    store.subscribe_event(AssistantSyncMcpServersEvent, handle_sync_mcp_servers)
     store.subscribe_event(
         AssistantGenericLLMProviderRemovedEvent,
         _handle_generic_llm_provider_removed,
@@ -2551,7 +2171,6 @@ async def init_service() -> None:
     _watch_ollama_container_status()
 
     store.dispatch(AssistantUpdateProvidersAction())
-    store.dispatch(AssistantSyncMcpServersAction())
 
     # Warm the cached Ollama downloaded-models set so `is_setup` and the
     # catalog dot indicator reflect reality without blocking the reducer

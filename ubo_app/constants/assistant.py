@@ -2,7 +2,7 @@
 
 import os
 
-from ubo_app.constants import CONFIG_PATH, DATA_PATH
+from ubo_app.constants import DATA_PATH
 
 INTENTS_WAKE_WORD = os.environ.get('UBO_INTENTS_WAKE_WORD', 'short voice command')
 ASSISTANT_QUICK_CHAT_WAKE_PHRASE = os.environ.get(
@@ -205,6 +205,3 @@ ASSEMBLYAI_API_KEY_PATTERN = '^[a-f0-9]{32}$'
 
 RIME_API_KEY_SECRET_ID = 'rime_api_key'  # noqa: S105
 RIME_API_KEY_PATTERN = '^[a-zA-Z0-9-_]{32,}$'
-
-
-ASSISTANT_MCP_SERVERS_PATH = CONFIG_PATH / 'assistant_mcp_servers'

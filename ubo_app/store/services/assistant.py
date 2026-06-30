@@ -220,46 +220,6 @@ LIVE_PIPELINE_SOURCE_ID = 'pipecat'
 REQUEST_PIPELINE_SOURCE_ID = 'assistant_request'
 
 
-class McpServerType(StrEnum):
-    """MCP server types."""
-
-    STDIO = 'stdio'
-    SSE = 'sse'
-
-
-class StdioMcpConfig(Immutable):
-    """Configuration for stdio MCP servers."""
-
-    command: str
-    args: list[str] = field(default_factory=list)
-    env: dict[str, str] = field(default_factory=dict)
-
-
-class SseMcpConfig(Immutable):
-    """Configuration for SSE MCP servers."""
-
-    url: str
-
-
-class McpServerMetadata(Immutable):
-    """Metadata for an MCP server."""
-
-    server_id: str  # Format: {name}_{uuid}
-    name: str  # User-friendly name
-    type: McpServerType  # Server type enum
-    config: StdioMcpConfig | SseMcpConfig  # Typed config - protobuf oneof
-
-
-class EnabledMcpServersWithMetadata(Immutable):
-    """Wrapper for list of enabled MCP servers with metadata.
-
-    This wrapper is needed because gRPC selectors don't support
-    container types (lists) directly.
-    """
-
-    items: list[McpServerMetadata] = field(default_factory=list)
-
-
 class AssistantTriggerSource(Immutable):
     """Base class identifying how the assistant was asked to start listening."""
 
@@ -752,42 +712,6 @@ class AssistantSelectGenericLLMProviderAction(AssistantAction):
     provider_id: str
 
 
-class AssistantAddMcpServerAction(AssistantAction):
-    """Action to add a new MCP server."""
-
-    name: str
-    type: McpServerType
-    config: StdioMcpConfig | SseMcpConfig  # Typed config - protobuf oneof
-
-
-class AssistantToggleMcpServerAction(AssistantAction):
-    """Action to enable/disable an MCP server."""
-
-    server_id: str
-
-
-class AssistantDeleteMcpServerAction(AssistantAction):
-    """Action to delete an MCP server."""
-
-    server_id: str
-
-
-class AssistantSyncMcpServersAction(AssistantAction):
-    """Action to sync MCP servers from filesystem."""
-
-
-class AssistantSetMcpServersAction(AssistantAction):
-    """Action carrying MCP servers loaded from the filesystem.
-
-    Dispatched by the assistant service's ``AssistantSyncMcpServersEvent``
-    handler after it has read the on-disk configs, so the reducer can update
-    the slice purely (no filesystem access inside the reduce cycle).
-    """
-
-    servers: list[McpServerMetadata]
-    enabled_servers: list[str]
-
-
 class AssistantStopTalkingAction(AssistantAction):
     """Action to silence the assistant immediately.
 
@@ -953,40 +877,6 @@ class AssistantDownloadVoskModelEvent(AssistantEvent):
     """Event requesting download of a Vosk model in the core process."""
 
     model_id: str
-
-
-class AssistantAddMcpServerEvent(AssistantEvent):
-    """Event to add a new MCP server."""
-
-    name: str
-    type: McpServerType
-    config: StdioMcpConfig | SseMcpConfig  # Typed config - protobuf oneof
-
-
-class AssistantDeleteMcpServerEvent(AssistantEvent):
-    """Event to delete an MCP server."""
-
-    server_id: str
-
-
-class AssistantToggleMcpServerEvent(AssistantEvent):
-    """Event fired when an MCP server's enabled state is toggled.
-
-    The reducer flips the in-memory ``enabled_mcp_servers`` purely; this event
-    lets the assistant service persist the new state to the filesystem outside
-    the reduce cycle.
-    """
-
-    server_id: str
-
-
-class AssistantSyncMcpServersEvent(AssistantEvent):
-    """Event requesting a reload of MCP servers from the filesystem.
-
-    Emitted by the reducer in response to ``AssistantSyncMcpServersAction``;
-    the assistant service reads the on-disk configs and dispatches
-    ``AssistantSetMcpServersAction`` with the result.
-    """
 
 
 class AssistantRunPipelineEvent(AssistantEvent):
@@ -1162,20 +1052,6 @@ class AssistantState(Immutable):
             if value in AssistantImageGeneratorName.__members__.values()
             else AssistantImageGeneratorName.GOOGLE,
         ),
-    )
-    mcp_servers: dict[str, McpServerMetadata] = field(default_factory=dict)
-    enabled_mcp_servers: list[str] = field(
-        default_factory=lambda: read_from_persistent_store(
-            'assistant:enabled_mcp_servers',
-            default=[],
-            mapper=lambda value: json.loads(value)
-            if isinstance(value, str)
-            else list(value),
-        ),
-    )
-    # Enabled servers with full metadata for gRPC autorun (wrapped for gRPC)
-    enabled_mcp_servers_with_metadata: EnabledMcpServersWithMetadata = field(
-        default_factory=EnabledMcpServersWithMetadata,
     )
     # Setup status for all provider engines - source of truth for UI
     provider_setup_status: dict[str, bool] = field(default_factory=dict)

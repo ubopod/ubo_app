@@ -1,4 +1,10 @@
-"""Tools management for the UBO Assistant service."""
+"""Tools management for the UBO Assistant service.
+
+MCP servers are no longer connected to individually here. They live behind the
+ubo MCP gateway (a separate service); the assistant connects to that single
+gateway endpoint over Streamable HTTP and inherits whatever aggregated tools it
+exposes.
+"""
 
 from __future__ import annotations
 
@@ -6,33 +12,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from loguru import logger
-from mcp.client.session_group import SseServerParameters
-from mcp.client.stdio import StdioServerParameters
+from mcp.client.session_group import StreamableHttpParameters
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.mcp_service import MCPClient
-from ubo_bindings.ubo.v1 import SseMcpConfig, StdioMcpConfig
 
 if TYPE_CHECKING:
-    from pipecat.adapters.schemas.direct_function import DirectFunction
     from pipecat.services.llm_service import LLMService
-
-
-@dataclass
-class MCPServerMetadata:
-    """Metadata for an MCP server.
-
-    This is a local definition that mirrors the structure
-    from ubo_app.store.services.assistant.
-    Since ubo-service runs in a separate virtual environment
-    and communicates via gRPC, it cannot import from the core
-    ubo_app package.
-    """
-
-    server_id: str  # Format: {name}_{uuid}
-    name: str  # User-friendly name
-    type: str  # 'stdio' or 'sse' (enum value)
-    config: StdioMcpConfig | SseMcpConfig  # betterproto config from ubo_bindings
 
 
 @dataclass(frozen=True)
@@ -81,131 +67,51 @@ def create_ubo_standard_tools() -> ToolsSchema:
     return ToolsSchema(standard_tools=[draw_image_function, get_image_function])
 
 
-async def create_mcp_client_from_metadata(
-    server: MCPServerMetadata,
-) -> MCPClient | None:
-    """Create MCP client from server metadata.
-
-    Args:
-        server: MCP server metadata with betterproto config object
-
-    Returns:
-        MCPClient instance or None if creation fails
-
-    """
-    try:
-        config = server.config
-
-        if isinstance(config, StdioMcpConfig):
-            # STDIO configuration - config is betterproto StdioMcpConfig object
-
-            # Extract args from nested wrapper (StdioMcpConfigArgs.items)
-            args_wrapper = getattr(config, 'args', None)
-            if args_wrapper and hasattr(args_wrapper, 'items'):
-                args = list(args_wrapper.items)
-            else:
-                args = []
-
-            # Extract env from nested wrapper (StdioMcpConfigEnvDict.items)
-            env_wrapper = getattr(config, 'env', None)
-            if env_wrapper and hasattr(env_wrapper, 'items'):
-                env = dict(env_wrapper.items)
-            else:
-                env = {}
-
-            return MCPClient(
-                server_params=StdioServerParameters(
-                    command=config.command,
-                    args=args,
-                    env=env,
-                ),
-            )
-
-        if isinstance(config, SseMcpConfig):
-            # SSE configuration - config is betterproto SseMcpConfig object
-            return MCPClient(
-                server_params=SseServerParameters(
-                    url=config.url,
-                ),
-            )
-
-        logger.error(
-            'Unknown MCP server type',
-            extra={'server_id': server.server_id, 'type': server.type},
-        )
-    except Exception:
-        logger.exception(
-            'Failed to create MCP client',
-            extra={'server_id': server.server_id},
-        )
-        return None
-    else:
-        return None
-
-
 async def create_combined_tools(
     llm_service: LLMService,
     *,
-    mcp_servers: list[MCPServerMetadata] | None = None,
+    gateway_url: str | None = None,
+    gateway_token: str | None = None,
 ) -> CombinedTools:
-    """Create combined tools schema with standard and optionally MCP tools.
+    """Create combined tools schema with standard and gateway-provided tools.
 
     Args:
-        llm_service: LLM service to register tools with
-        mcp_servers: List of enabled MCP servers to load tools from
+        llm_service: LLM service to register tools with.
+        gateway_url: Streamable HTTP endpoint of the MCP gateway, or ``None`` to
+            skip MCP tools (e.g. no servers enabled).
+        gateway_token: Bearer token for the gateway.
 
     Returns:
-        Tools schema with combined standard and MCP tools, plus live MCP clients
+        Tools schema with standard tools plus the gateway's aggregated tools, and
+        the live gateway MCP client (empty if not connected).
 
     """
-    # Get standard tools
     ubo_standard_tools = create_ubo_standard_tools()
-    combined_tools: list[FunctionSchema | DirectFunction] = []
-    combined_tools.extend(ubo_standard_tools.standard_tools)
+    combined_tools = list(ubo_standard_tools.standard_tools)
     mcp_clients: list[MCPClient] = []
 
-    # If no MCP servers provided, return standard tools only
-    if not mcp_servers:
-        return CombinedTools(tools_schema=ubo_standard_tools, mcp_clients=[])
-
-    # Load tools from each enabled MCP server
-    for server in mcp_servers:
+    if gateway_url and gateway_token:
         try:
-            logger.info(
-                'Loading MCP server',
-                extra={'server_id': server.server_id, 'server_name': server.name},
+            mcp_client = MCPClient(
+                server_params=StreamableHttpParameters(
+                    url=gateway_url,
+                    headers={'Authorization': f'Bearer {gateway_token}'},
+                ),
             )
-            mcp_client = await create_mcp_client_from_metadata(server)
-            if not mcp_client:
-                logger.warning(
-                    'Failed to create MCP client',
-                    extra={'server_id': server.server_id},
-                )
-                continue
-
-            # Register MCP tools
+            await mcp_client.start()
             try:
-                await mcp_client.start()
                 mcp_tools = await mcp_client.register_tools(llm_service)
             except Exception:
                 await mcp_client.close()
                 raise
-
             combined_tools.extend(mcp_tools.standard_tools)
             mcp_clients.append(mcp_client)
             logger.info(
-                'Registered MCP tools',
-                extra={
-                    'server_id': server.server_id,
-                    'tool_count': len(mcp_tools.standard_tools),
-                },
+                'Registered MCP gateway tools',
+                extra={'tool_count': len(mcp_tools.standard_tools)},
             )
-
         except Exception:
-            logger.exception(
-                'Failed to load MCP server tools',
-                extra={'server_id': server.server_id},
-            )
+            logger.exception('Failed to connect to MCP gateway')
 
     return CombinedTools(
         tools_schema=ToolsSchema(standard_tools=combined_tools),

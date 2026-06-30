@@ -52,6 +52,16 @@ WEB_UI_LISTEN_PORT = int(os.environ.get('UBO_WEB_UI_LISTEN_PORT', '4321'))
 WEB_UI_DEBUG_MODE = str_to_bool(os.environ.get('UBO_WEB_UI_DEBUG_MODE', 'False'))
 WEB_UI_HOTSPOT_PASSWORD = os.environ.get('UBO_WEB_UI_HOTSPOT_PASSWORD', 'ubopod-setup')
 
+# MCP gateway — the in-tree FastMCP proxy aggregates every enabled MCP server
+# behind a single token-gated endpoint (``/sse`` + ``/mcp``). Bound to the LAN so
+# off-device clients (Claude Desktop, hermes, OpenCLAW) can reach it; the
+# assistant subprocess connects to it over localhost.
+MCP_GATEWAY_LISTEN_ADDRESS = os.environ.get('UBO_MCP_GATEWAY_LISTEN_ADDRESS', '0.0.0.0')  # noqa: S104
+MCP_GATEWAY_LISTEN_PORT = int(os.environ.get('UBO_MCP_GATEWAY_LISTEN_PORT', '4322'))
+# Bearer token the gateway requires; shared with the assistant subprocess so it
+# can authenticate to the local gateway with the same token.
+MCP_GATEWAY_TOKEN_SECRET_ID = 'mcp_gateway_token'  # noqa: S105
+
 UPDATE_ASSETS_PATH = Path(f'{INSTALLATION_PATH}/_update/')
 
 SERVICES_LOOP_GRACE_PERIOD = float(
@@ -106,6 +116,7 @@ CORE_SERVICE_IDS = [
     'keyboard',
     'keypad',
     'lightdm',
+    'mcp',
     'notifications',
     'rgb_ring',
     'rpi_connect',

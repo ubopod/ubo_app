@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import uuid
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast
 
@@ -36,7 +37,6 @@ from ubo_assistant.constants import (
     DEFAULT_TOOLS_MESSAGE,
     LIVE_PIPELINE_SOURCE_ID,
 )
-from ubo_assistant.tools import MCPServerMetadata
 
 if TYPE_CHECKING:
     from betterproto.lib.google.protobuf import StringValue
@@ -107,8 +107,8 @@ class UboSwitchMixin(Generic[T]):
         self.client = client
         self._store_selector = selector
         self._autoruns_started = False
-        self._mcp_servers_data: dict[str, MCPServerMetadata] = {}
         self._enabled_mcp_servers: set[str] = set()
+        self._gateway_token: str | None = None
         self._mcp_clients: list[MCPClient] = []
         self._mcp_tools_update_lock = asyncio.Lock()
         self._processor_setup: FrameProcessorSetup | None = None
@@ -240,14 +240,19 @@ class UboSwitchMixin(Generic[T]):
         """Set up autorun subscription for MCP server state changes."""
 
         @self.client.autorun([
-            'state.assistant.enabled_mcp_servers_with_metadata',
+            'state.mcp.enabled_mcp_servers_with_metadata',
         ])
         def handle_mcp_servers_change(data: list) -> None:
             """Handle MCP servers state changes from Redux store."""
             self._process_mcp_servers_data(data)
 
     def _process_mcp_servers_data(self, data: list) -> None:
-        """Process MCP servers data from autorun callback."""
+        """React to enabled-server-set changes by reconnecting to the gateway.
+
+        The assistant no longer connects to MCP servers individually — they live
+        behind the gateway. We only track *which* servers are enabled so a change
+        triggers a reconnect that refreshes the aggregated tool list.
+        """
         try:
             enabled_with_metadata_wrapper = data[0]
             items_wrapper = getattr(
@@ -262,37 +267,20 @@ class UboSwitchMixin(Generic[T]):
             if not isinstance(enabled_with_metadata, list):
                 enabled_with_metadata = []
 
-            mcp_servers_dict = {}
-            enabled_servers_set = set()
-            for server_metadata in enabled_with_metadata:
-                server_id = server_metadata.server_id
-                config_wrapper = server_metadata.config
-                stdio_cfg = getattr(config_wrapper, 'stdio_mcp_config', None)
-                sse_cfg = getattr(config_wrapper, 'sse_mcp_config', None)
-                if stdio_cfg:
-                    config = stdio_cfg
-                elif sse_cfg:
-                    config = sse_cfg
-                else:
-                    config = config_wrapper
-                mcp_servers_dict[server_id] = MCPServerMetadata(
-                    server_id=server_id,
-                    name=server_metadata.name,
-                    type=server_metadata.type.name.lower(),
-                    config=config,
-                )
-                enabled_servers_set.add(server_id)
+            enabled_servers_set = {
+                server_metadata.server_id
+                for server_metadata in enabled_with_metadata
+                if getattr(server_metadata, 'server_id', None)
+            }
 
             logger.info(
                 'MCP servers state changed via autorun',
                 extra={
-                    'servers_count': len(mcp_servers_dict),
                     'enabled_count': len(enabled_servers_set),
-                    'server_ids': list(mcp_servers_dict.keys()),
+                    'server_ids': list(enabled_servers_set),
                 },
             )
 
-            self._mcp_servers_data = mcp_servers_dict
             self._enabled_mcp_servers = enabled_servers_set
 
             if (
@@ -316,7 +304,6 @@ class UboSwitchMixin(Generic[T]):
 
         except Exception:
             logger.exception('Error handling MCP servers state change')
-            self._mcp_servers_data = {}
             self._enabled_mcp_servers = set()
 
     async def _close_mcp_clients(self, clients: list[MCPClient]) -> None:
@@ -333,21 +320,21 @@ class UboSwitchMixin(Generic[T]):
                     },
                 )
 
-    def _get_mcp_servers_from_state(self) -> list:
-        """Get enabled MCP servers from stored state."""
-        enabled_servers = [
-            server
-            for server_id, server in self._mcp_servers_data.items()
-            if server_id in self._enabled_mcp_servers
-        ]
-        logger.debug(
-            'Filtered enabled MCP servers',
-            extra={
-                'enabled_ids': list(self._enabled_mcp_servers),
-                'count': len(enabled_servers),
-            },
-        )
-        return enabled_servers
+    def _gateway_url(self) -> str:
+        """Localhost Streamable HTTP endpoint of the MCP gateway."""
+        port = os.environ.get('MCP_GATEWAY_LISTEN_PORT', '4322')
+        return f'http://localhost:{port}/mcp'
+
+    async def _get_gateway_token(self) -> str | None:
+        """Fetch (and cache) the gateway bearer token from ubo secrets."""
+        if self._gateway_token is None:
+            secret_id = os.environ.get('MCP_GATEWAY_TOKEN_SECRET_ID')
+            if secret_id:
+                self._gateway_token = await self.client.query_secret(
+                    secret_id,
+                    default='',
+                )
+        return self._gateway_token or None
 
     async def _get_combined_tools(
         self,
@@ -355,23 +342,28 @@ class UboSwitchMixin(Generic[T]):
         *,
         mcp_enabled: bool = True,
     ) -> CombinedTools:
-        """Get combined tools with optional MCP tools."""
+        """Get combined tools, connecting to the MCP gateway when servers exist."""
         from ubo_assistant.tools import create_combined_tools
 
-        logger.info('Starting to get combined tools')
-        mcp_servers = self._get_mcp_servers_from_state() if mcp_enabled else None
+        gateway_url: str | None = None
+        gateway_token: str | None = None
+        if mcp_enabled and self._enabled_mcp_servers:
+            gateway_url = self._gateway_url()
+            gateway_token = await self._get_gateway_token()
 
         logger.info(
             'Getting combined tools {extra}',
             extra={
                 'mcp_enabled': mcp_enabled,
-                'mcp_servers': mcp_servers,
+                'enabled_servers': len(self._enabled_mcp_servers),
+                'gateway': bool(gateway_url and gateway_token),
             },
         )
 
         combined_tools = await create_combined_tools(
             llm_service=llm_service,
-            mcp_servers=mcp_servers,
+            gateway_url=gateway_url,
+            gateway_token=gateway_token,
         )
         logger.info(
             'Combined tools ready',

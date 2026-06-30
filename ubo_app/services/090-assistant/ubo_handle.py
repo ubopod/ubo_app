@@ -21,6 +21,10 @@ def binary_env_provider() -> dict[str, str]:
     import os
     from pathlib import Path
 
+    from ubo_app.constants import (
+        MCP_GATEWAY_LISTEN_PORT,
+        MCP_GATEWAY_TOKEN_SECRET_ID,
+    )
     from ubo_app.constants.assistant import (
         ANTHROPIC_API_KEY_SECRET_ID,
         ASSEMBLYAI_API_KEY_SECRET_ID,
@@ -46,6 +50,8 @@ def binary_env_provider() -> dict[str, str]:
     )
 
     return {
+        'MCP_GATEWAY_TOKEN_SECRET_ID': MCP_GATEWAY_TOKEN_SECRET_ID,
+        'MCP_GATEWAY_LISTEN_PORT': str(MCP_GATEWAY_LISTEN_PORT),
         'ASSEMBLYAI_API_KEY_SECRET_ID': ASSEMBLYAI_API_KEY_SECRET_ID,
         'UBO_ASSISTANT_LOG_LEVEL': os.environ.get(
             'UBO_ASSISTANT_LOG_LEVEL',

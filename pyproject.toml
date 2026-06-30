@@ -134,19 +134,23 @@ version = "uvx --with hatch-vcs hatch version"
 "lint:self" = "ruff check ."
 "lint:rpc" = "poe --directory=ubo_app/rpc lint"
 "lint:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint"
+"lint:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service lint"
 "lint:gui" = "poe --directory=ubo_app/gui lint"
-lint = ['lint:self', 'lint:rpc', 'lint:assistant', 'lint:gui']
+lint = ['lint:self', 'lint:rpc', 'lint:assistant', 'lint:mcp', 'lint:gui']
 "lint:fix:self" = "ruff check . --fix --unsafe-fixes"
 "lint:fix:rpc" = "poe --directory=ubo_app/rpc lint --fix --unsafe-fixes"
 "lint:fix:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint --fix --unsafe-fixes"
+"lint:fix:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service lint --fix --unsafe-fixes"
 "lint:fix:gui" = "poe --directory=ubo_app/gui lint --fix --unsafe-fixes"
-"lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant", "lint:fix:gui"]
+"lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant", "lint:fix:mcp", "lint:fix:gui"]
 "typecheck:self" = "pyright -p pyproject.toml ."
 "typecheck:rpc" = "poe --directory=ubo_app/rpc typecheck"
 "typecheck:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service typecheck"
+"typecheck:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service typecheck"
 "typecheck:gui" = "poe --directory=ubo_app/gui typecheck"
-typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant", "typecheck:gui"]
+typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant", "typecheck:mcp", "typecheck:gui"]
 test = "pytest"
+"test:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service test"
 "test:unit" = "pytest tests/store tests/navigation --ignore=tests/store/test_subscribe_event.py -v"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"

@@ -5,18 +5,12 @@
     "active_audio_source": "",
     "active_policy": null,
     "active_source": null,
-    "enabled_mcp_servers": [],
-    "enabled_mcp_servers_with_metadata": {
-      "_type": "EnabledMcpServersWithMetadata",
-      "items": []
-    },
     "generic_llm_providers": [],
     "is_active": false,
     "is_listening": false,
     "is_microphone_mute": true,
     "kokoro_is_downloaded": false,
     "last_stop_reason": null,
-    "mcp_servers": {},
     "ollama_downloaded_models": [],
     "ollama_downloaded_models_refreshed": true,
     "ollama_model_capabilities": {
@@ -450,17 +444,6 @@
         "label": "Language Model",
         "priority": 40
       },
-      "assistant:mcp_tools": {
-        "_type": "RegisteredAppEntry",
-        "action_id": null,
-        "app_category": null,
-        "background_color": null,
-        "category": "Assistant",
-        "icon": "󰒋",
-        "key": "assistant:mcp_tools",
-        "label": "MCP Tools",
-        "priority": 15
-      },
       "assistant:providers": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
@@ -747,6 +730,17 @@
         "label": "Desktop",
         "priority": 0
       },
+      "mcp:tools": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "MCP",
+        "icon": "󰒋",
+        "key": "mcp:tools",
+        "label": "MCP Tools",
+        "priority": 10
+      },
       "rpi_connect:": {
         "_type": "RegisteredAppEntry",
         "action_id": "rpi-connect:open_menu",
@@ -839,7 +833,6 @@
     "settings_items_priorities": {
       "assistant:image_generator": 20,
       "assistant:llm": 40,
-      "assistant:mcp_tools": 15,
       "assistant:providers": 10,
       "assistant:stt": 50,
       "assistant:tts": 30,
@@ -850,6 +843,7 @@
       "infrared:infrared": null,
       "ip:": 0,
       "lightdm:": 0,
+      "mcp:tools": 10,
       "rpi_connect:": null,
       "speech_recognition:": 30,
       "speech_synthesis:engines": 10,
@@ -900,6 +894,15 @@
       "temperature": 0.0,
       "title": "󰋜test-hostname.local"
     }
+  },
+  "mcp": {
+    "_type": "McpState",
+    "enabled_mcp_servers": [],
+    "enabled_mcp_servers_with_metadata": {
+      "_type": "EnabledMcpServersWithMetadata",
+      "items": []
+    },
+    "mcp_servers": {}
   },
   "notifications": {
     "_type": "NotificationsState",
@@ -1052,6 +1055,16 @@
         "is_active": true,
         "is_enabled": true,
         "label": "LightDM",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
+      "mcp": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "mcp",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "MCP",
         "log_level": 20,
         "should_auto_restart": false
       },

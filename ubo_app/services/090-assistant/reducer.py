@@ -18,11 +18,7 @@ from ubo_app.store.services.assistant import (
     DEFAULT_MODELS,
     AssistantAction,
     AssistantAddGenericLLMProviderAction,
-    AssistantAddMcpServerAction,
-    AssistantAddMcpServerEvent,
     AssistantCompleteAction,
-    AssistantDeleteMcpServerAction,
-    AssistantDeleteMcpServerEvent,
     AssistantDownloadKokoroAction,
     AssistantDownloadKokoroEvent,
     AssistantDownloadOllamaModelAction,
@@ -46,7 +42,6 @@ from ubo_app.store.services.assistant import (
     AssistantSelectGenericLLMProviderAction,
     AssistantSetIsActiveAction,
     AssistantSetKokoroDownloadedAction,
-    AssistantSetMcpServersAction,
     AssistantSetOllamaDownloadedModelsAction,
     AssistantSetOllamaModelCapabilitiesAction,
     AssistantSetOllamaThinkingAction,
@@ -66,16 +61,11 @@ from ubo_app.store.services.assistant import (
     AssistantStopTalkingAction,
     AssistantStopTalkingEvent,
     AssistantSTTName,
-    AssistantSyncMcpServersAction,
-    AssistantSyncMcpServersEvent,
     AssistantSynthesizeAction,
     AssistantToggleListeningAction,
-    AssistantToggleMcpServerAction,
-    AssistantToggleMcpServerEvent,
     AssistantTranscribeAction,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
-    EnabledMcpServersWithMetadata,
     GenericLLMProvider,
     StopTalkingPhraseStopReason,
     UserStopReason,
@@ -505,110 +495,6 @@ def reducer(
                     active_audio_source=action.audio_source,
                 ),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],
-            )
-
-        case AssistantAddMcpServerAction():
-            logger.info(
-                'AssistantAddMcpServerAction received',
-                extra={'server_name': action.name, 'mcp_type': action.type.value},
-            )
-            return CompleteReducerResult(
-                state=state,
-                events=[
-                    AssistantAddMcpServerEvent(
-                        name=action.name,
-                        type=action.type,
-                        config=action.config,
-                    ),
-                ],
-            )
-
-        case AssistantToggleMcpServerAction():
-            # Flip the in-memory enabled state purely; the on-disk write is
-            # performed by the AssistantToggleMcpServerEvent handler in setup.py.
-            enabled_servers = list(state.enabled_mcp_servers)
-            if action.server_id in enabled_servers:
-                enabled_servers.remove(action.server_id)
-            else:
-                enabled_servers.append(action.server_id)
-
-            enabled_with_metadata = EnabledMcpServersWithMetadata(
-                items=[
-                    state.mcp_servers[sid]
-                    for sid in enabled_servers
-                    if sid in state.mcp_servers
-                ],
-            )
-
-            return CompleteReducerResult(
-                state=replace(
-                    state,
-                    enabled_mcp_servers=enabled_servers,
-                    enabled_mcp_servers_with_metadata=enabled_with_metadata,
-                ),
-                events=[AssistantToggleMcpServerEvent(server_id=action.server_id)],
-            )
-
-        case AssistantDeleteMcpServerAction():
-            # Remove from enabled servers if present
-            enabled_servers = list(state.enabled_mcp_servers)
-            if action.server_id in enabled_servers:
-                enabled_servers.remove(action.server_id)
-            # Remove from mcp_servers dict
-            mcp_servers = {
-                k: v for k, v in state.mcp_servers.items() if k != action.server_id
-            }
-            # Build enabled servers with metadata for gRPC autorun
-            enabled_with_metadata = EnabledMcpServersWithMetadata(
-                items=[
-                    mcp_servers[sid]
-                    for sid in enabled_servers
-                    if sid in mcp_servers
-                ],
-            )
-
-            logger.info(
-                'AssistantDeleteMCPServerAction processed',
-                extra={
-                    'server_id': action.server_id,
-                    'remaining_servers': len(mcp_servers),
-                    'remaining_enabled': len(enabled_servers),
-                },
-            )
-            return CompleteReducerResult(
-                state=replace(
-                    state,
-                    enabled_mcp_servers=enabled_servers,
-                    mcp_servers=mcp_servers,
-                    enabled_mcp_servers_with_metadata=enabled_with_metadata,
-                ),
-                events=[AssistantDeleteMcpServerEvent(server_id=action.server_id)],
-            )
-
-        case AssistantSyncMcpServersAction():
-            # The filesystem read is done by the AssistantSyncMcpServersEvent
-            # handler in setup.py, which dispatches AssistantSetMcpServersAction
-            # with the result — keeping this reducer pure.
-            return CompleteReducerResult(
-                state=state,
-                events=[AssistantSyncMcpServersEvent()],
-            )
-
-        case AssistantSetMcpServersAction():
-            mcp_servers = {server.server_id: server for server in action.servers}
-            enabled_servers = [
-                server_id
-                for server_id in action.enabled_servers
-                if server_id in mcp_servers
-            ]
-            enabled_with_metadata = EnabledMcpServersWithMetadata(
-                items=[mcp_servers[sid] for sid in enabled_servers],
-            )
-            return replace(
-                state,
-                mcp_servers=mcp_servers,
-                enabled_mcp_servers=enabled_servers,
-                enabled_mcp_servers_with_metadata=enabled_with_metadata,
             )
 
         case AssistantTranscribeAction():
