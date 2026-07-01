@@ -26,7 +26,11 @@ from ubo_bindings.ubo.v1 import (
     McpSetServerStatusAction,
 )
 
-from ubo_mcp_gateway.gateway import build_mcp_config, extract_items
+from ubo_mcp_gateway.gateway import (
+    build_mcp_config,
+    extract_items,
+    with_stdio_keep_alive_false,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
@@ -78,7 +82,10 @@ class _BearerAuthMiddleware:
 def build_app(config: dict[str, Any], token: str) -> Starlette:
     """Build the parent ASGI app exposing both transports for ``config``."""
     if config.get('mcpServers'):
-        proxy: FastMCP = create_proxy(config)
+        # keep_alive=False so backends are torn down when the proxy is rebuilt
+        # (on an enabled-set change), rather than orphaning docker/uvx/npx
+        # children.
+        proxy: FastMCP = create_proxy(with_stdio_keep_alive_false(config))
     else:
         # Empty config: serve a valid but tool-less gateway rather than crash.
         proxy = FastMCP('ubo-mcp-gateway')
@@ -164,12 +171,14 @@ class GatewayServer:
         probe's child process — e.g. a ``docker run`` container — running after
         the probe. Disabling it tears the subprocess down when the probe exits.
         """
-        probe_entry = {**entry, 'keep_alive': False} if 'command' in entry else entry
+        probe_config = with_stdio_keep_alive_false(
+            {'mcpServers': {server_id: entry}},
+        )
         self._report_status(server_id, McpServerStatus.CHECKING)
         try:
             async with (
                 asyncio.timeout(PROBE_TIMEOUT),
-                Client({'mcpServers': {server_id: probe_entry}}) as client,
+                Client(probe_config) as client,
             ):
                 await client.list_tools()
         except asyncio.CancelledError:

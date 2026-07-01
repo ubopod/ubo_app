@@ -12,7 +12,11 @@ from starlette.routing import Route
 from ubo_bindings.ubo.v1 import Action, McpServerStatus
 
 import ubo_mcp_gateway.server as server_module
-from ubo_mcp_gateway.gateway import build_mcp_config, extract_items
+from ubo_mcp_gateway.gateway import (
+    build_mcp_config,
+    extract_items,
+    with_stdio_keep_alive_false,
+)
 from ubo_mcp_gateway.server import GatewayServer, _BearerAuthMiddleware
 
 
@@ -71,6 +75,29 @@ def test_build_mcp_config_skips_unknown() -> None:
     """A metadata with neither stdio nor sse config is skipped."""
     items = [_Metadata('x_1', _Config())]
     assert build_mcp_config(items) == {'mcpServers': {}}
+
+
+def test_with_stdio_keep_alive_false() -> None:
+    """keep_alive=False is added to stdio backends only; sse is left untouched."""
+    config = {
+        'mcpServers': {
+            's': {'command': 'docker', 'args': ['run'], 'env': {}},
+            'r': {'url': 'https://example.com/sse', 'transport': 'sse'},
+        },
+    }
+
+    out = with_stdio_keep_alive_false(config)
+
+    assert out['mcpServers']['s'] == {
+        'command': 'docker',
+        'args': ['run'],
+        'env': {},
+        'keep_alive': False,
+    }
+    assert out['mcpServers']['r'] == {
+        'url': 'https://example.com/sse',
+        'transport': 'sse',
+    }
 
 
 def test_extract_items_unwraps_double_wrapper() -> None:

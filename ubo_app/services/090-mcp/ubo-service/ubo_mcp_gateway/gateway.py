@@ -51,6 +51,24 @@ def _server_to_config_entry(metadata: Any) -> dict[str, Any] | None:  # noqa: AN
     return None
 
 
+def with_stdio_keep_alive_false(config: dict[str, Any]) -> dict[str, Any]:
+    """Force ``keep_alive=False`` on the stdio backends of an mcpServers config.
+
+    FastMCP defaults stdio ``keep_alive`` to ``True``, keeping the spawned child
+    (a ``docker``/``uvx``/``npx`` process) alive for reuse. The gateway rebuilds
+    its proxy on every enabled-set change and discards the old one, which would
+    orphan those children. Disabling keep_alive makes each backend terminate
+    when its session ends (including on rebuild), so nothing leaks.
+    """
+    servers = {
+        server_id: (
+            {**entry, 'keep_alive': False} if 'command' in entry else entry
+        )
+        for server_id, entry in config.get('mcpServers', {}).items()
+    }
+    return {'mcpServers': servers}
+
+
 def build_mcp_config(items: Sequence[Any]) -> dict[str, Any]:
     """Build a FastMCP ``{"mcpServers": {...}}`` config from autorun items.
 

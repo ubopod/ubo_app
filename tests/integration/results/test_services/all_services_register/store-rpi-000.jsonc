@@ -909,7 +909,8 @@
       "_type": "EnabledMcpServersWithMetadata",
       "items": []
     },
-    "mcp_servers": {}
+    "mcp_servers": {},
+    "server_statuses": {}
   },
   "notifications": {
     "_type": "NotificationsState",
