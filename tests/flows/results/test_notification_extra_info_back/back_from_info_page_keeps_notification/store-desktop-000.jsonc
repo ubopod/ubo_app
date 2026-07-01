@@ -1,0 +1,62 @@
+// store-desktop-000
+{
+  "current_view_type": "NotificationViewData",
+  "is_local_overlay_open": false,
+  "notification_ids_on_stack": [
+    "extra-info-back:notif"
+  ],
+  "notifications": [
+    {
+      "_type": "Notification",
+      "actions": [
+        {
+          "_type": "NotificationDispatchItem",
+          "action_id": null,
+          "background_color": "#ABA7A7",
+          "close_notification": false,
+          "color": "#ffffff",
+          "dismiss_notification": false,
+          "icon": "󰐲",
+          "is_short": true,
+          "key": "hotspot-qr",
+          "label": "WiFi QR",
+          "store_action": {
+            "_type": "OpenRenderAction",
+            "items": [],
+            "kind": "qr_code",
+            "props": {
+              "value": "WIFI:S:ubo;T:WPA;P:secret;;"
+            },
+            "stream_id": "",
+            "title": "WiFi QR"
+          }
+        }
+      ],
+      "blink": false,
+      "chime": null,
+      "color": "#2196F3",
+      "content": "Connect to the hotspot.",
+      "dismiss_on_close": false,
+      "display_type": "sticky",
+      "expiration_timestamp": null,
+      "extra_information": {
+        "_type": "ReadableInformation",
+        "picovoice_text": "Join the WiFi network shown, then open the page.",
+        "piper_text": "Join the WiFi network shown, then open the page.",
+        "text": "Join the WiFi network shown, then open the page."
+      },
+      "flash_time": 1000,
+      "icon": "󰌶",
+      "id": "extra-info-back:notif",
+      "importance": "low",
+      "is_read": false,
+      "on_close_id": null,
+      "progress": null,
+      "progress_weight": 1,
+      "sender": null,
+      "show_dismiss_action": true,
+      "timestamp": 0,
+      "title": "Hotspot"
+    }
+  ]
+}

@@ -7,18 +7,12 @@
     "active_source": null,
     "elevenlabs_available_voices": [],
     "elevenlabs_voices": [],
-    "enabled_mcp_servers": [],
-    "enabled_mcp_servers_with_metadata": {
-      "_type": "EnabledMcpServersWithMetadata",
-      "items": []
-    },
     "generic_llm_providers": [],
     "is_active": false,
     "is_listening": false,
     "is_microphone_mute": true,
     "kokoro_is_downloaded": false,
     "last_stop_reason": null,
-    "mcp_servers": {},
     "mistral_available_voices": [],
     "moonshine_downloaded_models": [],
     "moonshine_downloading_model": "",
@@ -265,6 +259,16 @@
       "ports": [],
       "status": "not_available"
     },
+    "node_red": {
+      "_type": "ImageState",
+      "container_ip": null,
+      "docker_id": null,
+      "id": "node_red",
+      "instructions": null,
+      "label": "Node-RED",
+      "ports": [],
+      "status": "not_available"
+    },
     "ollama": {
       "_type": "ImageState",
       "container_ip": null,
@@ -328,8 +332,15 @@
     "service": {
       "_type": "DockerServiceState",
       "expose_to_lan": {},
+      "macvlan_enabled": false,
+      "macvlan_gateway": "",
+      "macvlan_ip": "",
+      "macvlan_parent": "",
+      "macvlan_subnet": "",
       "status": "running",
-      "usernames": {}
+      "usernames": {},
+      "zigbee_adapter_by_id": "",
+      "zigbee_enabled": false
     },
     "twingate": {
       "_type": "ImageState",
@@ -397,6 +408,7 @@
       "docker:immich": null,
       "docker:n8n": null,
       "docker:ngrok": null,
+      "docker:node_red": null,
       "docker:ollama": null,
       "docker:open_webui": null,
       "docker:openclaw": null,
@@ -475,17 +487,6 @@
         "key": "assistant:llm",
         "label": "Language Model",
         "priority": 40
-      },
-      "assistant:mcp_tools": {
-        "_type": "RegisteredAppEntry",
-        "action_id": null,
-        "app_category": null,
-        "background_color": null,
-        "category": "Assistant",
-        "icon": "󰒋",
-        "key": "assistant:mcp_tools",
-        "label": "MCP Tools",
-        "priority": 15
       },
       "assistant:providers": {
         "_type": "RegisteredAppEntry",
@@ -628,6 +629,17 @@
         "icon": "󰛶",
         "key": "docker:ngrok",
         "label": "Ngrok",
+        "priority": null
+      },
+      "docker:node_red": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "docker:open:node_red",
+        "app_category": "Home Automation",
+        "background_color": null,
+        "category": null,
+        "icon": "󰚀",
+        "key": "docker:node_red",
+        "label": "Node-RED",
         "priority": null
       },
       "docker:ollama": {
@@ -773,6 +785,17 @@
         "label": "Desktop",
         "priority": 0
       },
+      "mcp:tools": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Assistant",
+        "icon": "󰒋",
+        "key": "mcp:tools",
+        "label": "MCP Tools",
+        "priority": 15
+      },
       "rpi_connect:": {
         "_type": "RegisteredAppEntry",
         "action_id": "rpi-connect:open_menu",
@@ -795,15 +818,15 @@
         "label": "Voice Shortcuts",
         "priority": 30
       },
-      "speech_recognition:voice": {
+      "speech_recognition:wake_up": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
         "app_category": null,
         "background_color": null,
         "category": "Assistant",
         "icon": "󰍯",
-        "key": "speech_recognition:voice",
-        "label": "Wake Phrases",
+        "key": "speech_recognition:wake_up",
+        "label": "Wake Up",
         "priority": 100
       },
       "speech_synthesis:": {
@@ -865,7 +888,6 @@
     "settings_items_priorities": {
       "assistant:image_generator": 20,
       "assistant:llm": 40,
-      "assistant:mcp_tools": 15,
       "assistant:providers": 10,
       "assistant:stt": 50,
       "assistant:tts": 30,
@@ -876,9 +898,10 @@
       "infrared:infrared": null,
       "ip:": 0,
       "lightdm:": 0,
+      "mcp:tools": 15,
       "rpi_connect:": null,
       "speech_recognition:": 30,
-      "speech_recognition:voice": 100,
+      "speech_recognition:wake_up": 100,
       "speech_synthesis:": 10,
       "ssh:": 1,
       "users:": 1,
@@ -926,6 +949,16 @@
       "temperature": 0.0,
       "title": "󰋜test-hostname.local"
     }
+  },
+  "mcp": {
+    "_type": "McpState",
+    "enabled_mcp_servers": [],
+    "enabled_mcp_servers_with_metadata": {
+      "_type": "EnabledMcpServersWithMetadata",
+      "items": []
+    },
+    "mcp_servers": {},
+    "server_statuses": {}
   },
   "notifications": {
     "_type": "NotificationsState",
@@ -1081,6 +1114,16 @@
         "log_level": 20,
         "should_auto_restart": false
       },
+      "mcp": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "mcp",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "MCP",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
       "notifications": {
         "_type": "ServiceState",
         "errors": [],
@@ -1207,6 +1250,7 @@
   },
   "speech_recognition": {
     "_type": "SpeechRecognitionState",
+    "assistant_enabled": false,
     "conversation_end_phrases": [
       "i am done talking",
       "i'm done talking"
@@ -1485,39 +1529,27 @@
         ]
       }
     ],
+    "openwakeword_models": [],
     "status": "idle",
-    "wake_slots": [
+    "wake_engines": [
       {
-        "_type": "WakeWordSlot",
-        "enabled": false,
-        "mode": "intents",
-        "phrases": [
-          "short voice command"
-        ]
+        "_type": "WakeWordEngineConfig",
+        "enabled": true,
+        "engine": "vosk",
+        "triggers": []
       },
       {
-        "_type": "WakeWordSlot",
+        "_type": "WakeWordEngineConfig",
         "enabled": false,
-        "mode": "quick_chat",
-        "phrases": [
-          "hey quick question"
-        ]
-      },
+        "engine": "openwakeword",
+        "triggers": []
+      }
+    ],
+    "wake_word_models_status": [
       {
-        "_type": "WakeWordSlot",
-        "enabled": false,
-        "mode": "conversation",
-        "phrases": [
-          "let's have a conversation"
-        ]
-      },
-      {
-        "_type": "WakeWordSlot",
-        "enabled": false,
-        "mode": "stop_talking",
-        "phrases": [
-          "okay enough"
-        ]
+        "_type": "WakeWordModelStatusEntry",
+        "engine": "openwakeword",
+        "status": "not_available"
       }
     ]
   },
