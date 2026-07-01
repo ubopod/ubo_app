@@ -67,15 +67,19 @@ class UboRPCClient:
         """Close the channel."""
         self.channel.close()
 
-    def dispatch(self, *, action: Action) -> None:
+    def dispatch(self, *, action: Action) -> asyncio.Task[object]:
         """Dispatch an action to the remote store.
 
         Events are emitted only from reducers; remote clients can only
         dispatch actions. To deliver data that needs to surface as an event,
         define an action whose reducer emits the event in
         ``CompleteReducerResult.events``.
+
+        Returns the fire-and-forget task so callers that need ordering can await
+        it (e.g. to ensure earlier dispatches reached the server before a
+        dependent one). Most callers ignore the return.
         """
-        self.event_loop.create_task(
+        return self.event_loop.create_task(
             self.store_service.dispatch_action(
                 DispatchActionRequest(action=action),
             ),

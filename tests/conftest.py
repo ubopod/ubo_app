@@ -138,8 +138,19 @@ def _persistent_store(
     persistent_store_marker = request.node.get_closest_marker('persistent_store')
     persistent_store_data = {
         'wifi_has_visited_onboarding': True,
-        'speech_recognition:is_intents_active': False,
-        'speech_recognition:is_assistant_active': False,
+        # All wake-word slots disabled so recognition is off by default in tests
+        # (stored as the JSON-string blob the app itself persists).
+        'speech_recognition:wake_slots': json.dumps(
+            [
+                {'mode': mode, 'phrases': [phrase], 'enabled': False}
+                for mode, phrase in (
+                    ('intents', 'short voice command'),
+                    ('quick_chat', 'hey quick question'),
+                    ('conversation', "let's have a conversation"),
+                    ('stop_talking', 'okay enough'),
+                )
+            ],
+        ),
     }
     if persistent_store_marker:
         persistent_store_data = {

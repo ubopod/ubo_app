@@ -6,7 +6,7 @@ import unittest
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
-from ubo_assistant.error_notification import classify_error
+from ubo_assistant.error_notification import classify_error, is_transient_error
 
 if TYPE_CHECKING:
     from pipecat.frames.frames import ErrorFrame
@@ -106,6 +106,34 @@ class TestClassifyError(unittest.TestCase):
         result = classify_error(_frame('boom', None))
         self.assertEqual(result.title, 'Assistant provider error')  # noqa: PT009
         self.assertEqual(result.content, 'boom')  # noqa: PT009
+
+
+class TestTransientErrorFilter(unittest.TestCase):
+    """Recoverable streaming-teardown errors are suppressed from notifications."""
+
+    def test_streaming_timeout_is_transient(self) -> None:
+        """Mistral realtime STT idle timeout is filtered out."""
+        frame = _frame(
+            'Mistral STT error: Timeout waiting for response from streaming '
+            'transcription.',
+            DeepgramSTTService(),
+        )
+        self.assertTrue(is_transient_error(frame))  # noqa: PT009
+
+    def test_websocket_1011_upstream_is_transient(self) -> None:
+        """A 1011 upstream-connection websocket close is filtered out."""
+        frame = _frame(
+            'Mistral STT receive error: received 1011 (internal error) '
+            'Upstream connection error; then sent 1011 (internal error) '
+            'Upstream connection error',
+            DeepgramSTTService(),
+        )
+        self.assertTrue(is_transient_error(frame))  # noqa: PT009
+
+    def test_genuine_error_is_not_transient(self) -> None:
+        """Real, actionable errors (auth/balance) still notify."""
+        frame = _frame('Error code: 401 - Unauthorized', DeepgramSTTService())
+        self.assertFalse(is_transient_error(frame))  # noqa: PT009
 
 
 if __name__ == '__main__':

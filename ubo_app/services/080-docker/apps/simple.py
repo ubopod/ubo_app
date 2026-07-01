@@ -7,15 +7,6 @@ from ubo_app.constants import DEBUG_DOCKER
 
 ENTRIES: list[ContainerEntry] = [
     ContainerEntry(
-        id='home_assistant',
-        label='Home Assistant',
-        icon='󰟐',
-        path='homeassistant/home-assistant:stable',
-        registry='docker.io',
-        ports={'8123/tcp': 8123},
-        category='Home Automation',
-    ),
-    ContainerEntry(
         id='home_bridge',
         label='Home Bridge',
         icon='󰘘',

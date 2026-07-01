@@ -16,11 +16,27 @@ from redux.basic_types import InitAction
 from ubo_app.logger import logger
 from ubo_app.store.services.assistant import (
     DEFAULT_MODELS,
+    DEFAULT_VOICES,
     AssistantAction,
+    AssistantAddElevenLabsVoiceAction,
     AssistantAddGenericLLMProviderAction,
+    AssistantAddMoonshineDownloadedModelAction,
     AssistantCompleteAction,
+    AssistantDeleteElevenLabsVoiceAction,
+    AssistantDeleteKokoroAction,
+    AssistantDeleteKokoroEvent,
+    AssistantDeleteMoonshineModelAction,
+    AssistantDeleteMoonshineModelEvent,
+    AssistantDeleteOllamaModelAction,
+    AssistantDeleteOllamaModelEvent,
+    AssistantDeletePiperVoiceAction,
+    AssistantDeletePiperVoiceEvent,
+    AssistantDeleteVoskModelAction,
+    AssistantDeleteVoskModelEvent,
     AssistantDownloadKokoroAction,
     AssistantDownloadKokoroEvent,
+    AssistantDownloadMoonshineModelAction,
+    AssistantDownloadMoonshineModelEvent,
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
     AssistantDownloadPiperVoiceAction,
@@ -36,12 +52,17 @@ from ubo_app.store.services.assistant import (
     AssistantOllamaThinkingChangedEvent,
     AssistantPipelineStage,
     AssistantRemoveGenericLLMProviderAction,
+    AssistantRemoveMoonshineDownloadedModelAction,
     AssistantReportAction,
     AssistantRunPipelineAction,
     AssistantRunPipelineEvent,
     AssistantSelectGenericLLMProviderAction,
+    AssistantSetConversationEndPhrasesAction,
+    AssistantSetElevenLabsAvailableVoicesAction,
     AssistantSetIsActiveAction,
     AssistantSetKokoroDownloadedAction,
+    AssistantSetMistralAvailableVoicesAction,
+    AssistantSetMoonshineDownloadingAction,
     AssistantSetOllamaDownloadedModelsAction,
     AssistantSetOllamaModelCapabilitiesAction,
     AssistantSetOllamaThinkingAction,
@@ -50,9 +71,11 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedKokoroVoiceAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
+    AssistantSetSelectedMoonshineModelAction,
     AssistantSetSelectedPiperVoiceAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
+    AssistantSetSelectedVoiceAction,
     AssistantSetSelectedVoskModelAction,
     AssistantSetVoskDownloadedModelsAction,
     AssistantStartListeningAction,
@@ -66,9 +89,13 @@ from ubo_app.store.services.assistant import (
     AssistantTranscribeAction,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
+    AssistantVoiceChangedEvent,
+    ElevenLabsVoiceEntry,
     GenericLLMProvider,
     StopTalkingPhraseStopReason,
     UserStopReason,
+    WakePhraseMatcher,
+    WakePhraseTriggerSource,
     resolve_policy,
 )
 from ubo_app.store.services.audio import (
@@ -89,6 +116,7 @@ from ubo_app.store.services.rgb_ring import (
     RgbRingBlinkAction,
     RgbRingRainbowAction,
 )
+from ubo_app.store.services.speech_recognition import WakeMode
 
 if TYPE_CHECKING:
     from redux import ReducerResult
@@ -115,6 +143,7 @@ def _make_run_pipeline_event(  # noqa: PLR0913
 ) -> AssistantRunPipelineEvent:
     """Build the canonical run-pipeline event, resolving providers/model from state."""
     resolved_llm = llm_provider if llm_provider is not None else state.selected_llm
+    resolved_tts = tts_provider if tts_provider is not None else state.selected_tts
     return AssistantRunPipelineEvent(
         session_id=session_id,
         stages=stages,
@@ -124,7 +153,7 @@ def _make_run_pipeline_event(  # noqa: PLR0913
         num_channels=num_channels,
         stt_provider=stt_provider if stt_provider is not None else state.selected_stt,
         llm_provider=resolved_llm,
-        tts_provider=tts_provider if tts_provider is not None else state.selected_tts,
+        tts_provider=resolved_tts,
         llm_model=llm_model
         if llm_model is not None
         else state.selected_models.get(resolved_llm, DEFAULT_MODELS[resolved_llm]),
@@ -132,10 +161,15 @@ def _make_run_pipeline_event(  # noqa: PLR0913
         enable_tools=enable_tools,
         # Resolve per-engine selections so the request handler doesn't fall
         # back to hardcoded module defaults (live and one-shot pipelines must
-        # agree on the same Vosk model / Piper voice / Kokoro voice).
+        # agree on the same Vosk model / Piper voice / Kokoro voice / cloud voice).
         vosk_model_id=state.selected_vosk_model,
+        moonshine_model_id=state.selected_moonshine_model,
         piper_voice_id=state.selected_piper_voice,
         kokoro_voice_id=state.selected_kokoro_voice,
+        tts_voice_id=state.selected_voices.get(
+            resolved_tts,
+            DEFAULT_VOICES.get(resolved_tts, ''),
+        ),
     )
 
 
@@ -156,6 +190,36 @@ def reducer(
     match action:
         case AssistantSetIsActiveAction():
             return replace(state, is_active=action.is_active)
+
+        case AssistantSetConversationEndPhrasesAction(phrases=phrases):
+            # Update the conversation entry in the policy table, and — if the
+            # conversation source is currently active — the live ``active_policy``
+            # the subprocess watches, so a mid-conversation edit takes effect now.
+            new_policies = tuple(
+                replace(
+                    entry,
+                    policy=replace(entry.policy, end_of_turn_phrases=phrases),
+                )
+                if isinstance(entry.matcher, WakePhraseMatcher)
+                and entry.matcher.mode is WakeMode.CONVERSATION
+                else entry
+                for entry in state.policies
+            )
+            new_active_policy = state.active_policy
+            if (
+                isinstance(state.active_source, WakePhraseTriggerSource)
+                and state.active_source.mode is WakeMode.CONVERSATION
+                and state.active_policy is not None
+            ):
+                new_active_policy = replace(
+                    state.active_policy,
+                    end_of_turn_phrases=phrases,
+                )
+            return replace(
+                state,
+                policies=new_policies,
+                active_policy=new_active_policy,
+            )
 
         case AssistantSetSelectedSTTAction():
             return replace(state, selected_stt=action.stt_name)
@@ -184,6 +248,27 @@ def reducer(
                     AssistantModelChangedEvent(
                         llm_name=llm_name,
                         model=action.model,
+                    ),
+                ],
+            )
+
+        case AssistantSetSelectedVoiceAction():
+            # Emit an event (not a plain update) because the subprocess can't
+            # track the ``selected_voices`` dict via a gRPC autorun — mirrors
+            # the LLM model-change path above.
+            new_state = replace(
+                state,
+                selected_voices={
+                    **state.selected_voices,
+                    action.tts_name: action.voice_id,
+                },
+            )
+            return CompleteReducerResult(
+                state=new_state,
+                events=[
+                    AssistantVoiceChangedEvent(
+                        tts_name=action.tts_name,
+                        voice_id=action.voice_id,
                     ),
                 ],
             )
@@ -266,6 +351,67 @@ def reducer(
         case AssistantSetKokoroDownloadedAction():
             return replace(state, kokoro_is_downloaded=action.downloaded)
 
+        case AssistantAddElevenLabsVoiceAction():
+            # Append, or update the name when an existing id is re-added.
+            entry = ElevenLabsVoiceEntry(id=action.voice_id, label=action.name)
+            others = tuple(
+                voice
+                for voice in state.elevenlabs_voices
+                if voice.id != action.voice_id
+            )
+            return replace(state, elevenlabs_voices=(*others, entry))
+
+        case AssistantDeleteElevenLabsVoiceAction():
+            remaining = tuple(
+                voice
+                for voice in state.elevenlabs_voices
+                if voice.id != action.voice_id
+            )
+            was_selected = (
+                state.selected_voices.get(AssistantTTSName.ELEVENLABS)
+                == action.voice_id
+            )
+            selected_voices = state.selected_voices
+            if was_selected:
+                # Fall back to '' so the subprocess resolves the primary voice
+                # from the ELEVENLABS_VOICE_ID secret — kept pure (no secret
+                # read inside the reducer).
+                selected_voices = {
+                    **state.selected_voices,
+                    AssistantTTSName.ELEVENLABS: '',
+                }
+            new_state = replace(
+                state,
+                elevenlabs_voices=remaining,
+                selected_voices=selected_voices,
+            )
+            if was_selected:
+                # Notify the subprocess so a live ElevenLabs service stops using
+                # the just-deleted voice (mirrors the select path) — without it
+                # the deleted voice lingers until restart or another selection.
+                return CompleteReducerResult(
+                    state=new_state,
+                    events=[
+                        AssistantVoiceChangedEvent(
+                            tts_name=AssistantTTSName.ELEVENLABS,
+                            voice_id='',
+                        ),
+                    ],
+                )
+            return new_state
+
+        case AssistantSetElevenLabsAvailableVoicesAction():
+            return replace(
+                state,
+                elevenlabs_available_voices=tuple(action.voices),
+            )
+
+        case AssistantSetMistralAvailableVoicesAction():
+            return replace(
+                state,
+                mistral_available_voices=tuple(action.voices),
+            )
+
         case AssistantSetSelectedVoskModelAction():
             # Plain state update — the assistant subprocess tracks
             # ``selected_vosk_model`` via a gRPC autorun and the
@@ -285,6 +431,83 @@ def reducer(
             return replace(
                 state,
                 vosk_downloaded_models=tuple(action.models),
+            )
+
+        case AssistantSetSelectedMoonshineModelAction():
+            # Selection only — the subprocess loads the model from cache if it's
+            # already downloaded. Downloads are a separate explicit action so a
+            # boot-time selection never triggers a surprise download.
+            return replace(state, selected_moonshine_model=action.model_id)
+
+        case AssistantDownloadMoonshineModelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDownloadMoonshineModelEvent(model_id=action.model_id),
+                ],
+            )
+
+        case AssistantDeleteMoonshineModelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDeleteMoonshineModelEvent(model_id=action.model_id),
+                ],
+            )
+
+        case AssistantAddMoonshineDownloadedModelAction():
+            if action.model_id in state.moonshine_downloaded_models:
+                return state
+            return replace(
+                state,
+                moonshine_downloaded_models=(
+                    *state.moonshine_downloaded_models,
+                    action.model_id,
+                ),
+            )
+
+        case AssistantRemoveMoonshineDownloadedModelAction():
+            return replace(
+                state,
+                moonshine_downloaded_models=tuple(
+                    model_id
+                    for model_id in state.moonshine_downloaded_models
+                    if model_id != action.model_id
+                ),
+            )
+
+        case AssistantSetMoonshineDownloadingAction():
+            return replace(
+                state,
+                moonshine_downloading_model=action.model_id,
+            )
+
+        case AssistantDeleteOllamaModelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[AssistantDeleteOllamaModelEvent(model=action.model)],
+            )
+
+        case AssistantDeletePiperVoiceAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDeletePiperVoiceEvent(voice_id=action.voice_id),
+                ],
+            )
+
+        case AssistantDeleteKokoroAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[AssistantDeleteKokoroEvent()],
+            )
+
+        case AssistantDeleteVoskModelAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    AssistantDeleteVoskModelEvent(model_id=action.model_id),
+                ],
             )
 
         case AssistantUpdateProvidersAction():
@@ -427,7 +650,7 @@ def reducer(
                 actions=[RgbRingBlankAction()],
             )
 
-        case AssistantStopTalkingAction():
+        case AssistantStopTalkingAction(phrase=phrase, detector=detector):
             return CompleteReducerResult(
                 state=state,
                 actions=[
@@ -445,8 +668,12 @@ def reducer(
                     # The user wants to fully exit the interaction — silence
                     # the bot AND end any active listening session, so any
                     # subsequent words don't get captured as a follow-up turn.
+                    # Forward the exact stop phrase + detecting engine.
                     AssistantStopListeningAction(
-                        reason=StopTalkingPhraseStopReason(),
+                        reason=StopTalkingPhraseStopReason(
+                            phrase=phrase,
+                            detector=detector,
+                        ),
                     ),
                 ],
                 events=[AssistantStopTalkingEvent()],

@@ -35,12 +35,14 @@ class GoogleEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     @property
     def label(self) -> str:
         """The label of the Google engine."""
-        return 'Google'
+        return 'Google AI Studio'
 
     @property
     def not_setup_message(self) -> str:
         """The message to display when the Google engine is not set up."""
-        return 'Google service API key is not set. You can set it in the settings.'
+        return (
+            'Google AI Studio API key is not set. You can set it in the settings.'
+        )
 
     @property
     @override

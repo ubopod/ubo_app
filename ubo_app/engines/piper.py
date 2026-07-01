@@ -365,3 +365,16 @@ class PiperEngine(NeedsSetupMixin, AIProviderMixin):
         store.dispatch(
             AssistantSetPiperDownloadedVoicesAction(voices=downloaded),
         )
+
+    async def delete_voice(self, voice_id: str) -> None:
+        """Delete a downloaded Piper voice's files and refresh the cache."""
+        for path in (_onnx_path(voice_id), _json_path(voice_id)):
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                logger.exception(
+                    'Failed to delete Piper voice file',
+                    extra={'voice_id': voice_id, 'path': str(path)},
+                )
+        await self.refresh_downloaded_voices()
+        store.dispatch(AssistantUpdateProvidersAction())

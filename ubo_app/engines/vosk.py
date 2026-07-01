@@ -34,7 +34,8 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionSetIsIntentsActiveAction,
+    SpeechRecognitionSetSlotEnabledAction,
+    WakeMode,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils.async_ import create_task
@@ -203,7 +204,10 @@ the screen.""",
 
                 await self.refresh_downloaded_models()
                 store.dispatch(
-                    SpeechRecognitionSetIsIntentsActiveAction(is_active=True),
+                    SpeechRecognitionSetSlotEnabledAction(
+                        mode=WakeMode.INTENTS,
+                        enabled=True,
+                    ),
                     AssistantUpdateProvidersAction(),
                 )
                 decide = getattr(self, 'decide_running_state', None)
@@ -265,3 +269,17 @@ the screen.""",
         store.dispatch(
             AssistantSetVoskDownloadedModelsAction(models=downloaded),
         )
+
+    async def delete_model(self, model_id: str) -> None:
+        """Delete a downloaded Vosk model directory and refresh the cache."""
+        model_dir = _model_dir(model_id)
+        try:
+            shutil.rmtree(model_dir, ignore_errors=True)
+            _download_zip(model_id).unlink(missing_ok=True)
+        except OSError:
+            logger.exception(
+                'Failed to delete Vosk model',
+                extra={'model_id': model_id, 'path': str(model_dir)},
+            )
+        await self.refresh_downloaded_models()
+        store.dispatch(AssistantUpdateProvidersAction())

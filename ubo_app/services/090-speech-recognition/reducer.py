@@ -11,12 +11,6 @@ from redux import (
     InitializationActionError,
 )
 
-from ubo_app.constants.assistant import (
-    ASSISTANT_CONVERSATION_WAKE_WORD,
-    ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
-    ASSISTANT_STOP_TALKING_PHRASE,
-    INTENTS_WAKE_WORD,
-)
 from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
     AssistantStopTalkingAction,
@@ -36,12 +30,14 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionReportIntentTimeoutAction,
     SpeechRecognitionReportSpeechAction,
     SpeechRecognitionReportWakeWordDetectionAction,
-    SpeechRecognitionSetIsAssistantActiveAction,
-    SpeechRecognitionSetIsIntentsActiveAction,
-    SpeechRecognitionSetSelectedEngineAction,
+    SpeechRecognitionSetAssistantSlotsEnabledAction,
+    SpeechRecognitionSetConversationEndPhrasesAction,
+    SpeechRecognitionSetSlotEnabledAction,
+    SpeechRecognitionSetWakePhrasesAction,
     SpeechRecognitionState,
     SpeechRecognitionStatus,
     SpeechRecognitionUpdateCommandAction,
+    WakeMode,
 )
 
 if TYPE_CHECKING:
@@ -68,29 +64,45 @@ def reducer(
         raise InitializationActionError(action)
 
     match action:
-        case SpeechRecognitionSetSelectedEngineAction():
-            return replace(
-                state,
-                selected_engine=action.engine_name,
-                status=SpeechRecognitionStatus.IDLE,
+        case SpeechRecognitionSetSlotEnabledAction(mode=mode, enabled=enabled):
+            # Conversation and Stop are coupled: toggling either sets both.
+            coupled = (
+                {WakeMode.CONVERSATION, WakeMode.STOP_TALKING}
+                if mode in (WakeMode.CONVERSATION, WakeMode.STOP_TALKING)
+                else {mode}
             )
-
-        case SpeechRecognitionSetIsIntentsActiveAction():
+            new_slots = tuple(
+                replace(slot, enabled=enabled) if slot.mode in coupled else slot
+                for slot in state.wake_slots
+            )
+            # Drop out of a waiting state if its triggering category was disabled.
+            clear_intents = (
+                not enabled
+                and WakeMode.INTENTS in coupled
+                and state.status is SpeechRecognitionStatus.INTENTS_WAITING
+            )
             return replace(
                 state,
-                is_intents_active=action.is_active,
+                wake_slots=new_slots,
                 status=SpeechRecognitionStatus.IDLE
-                if state.status is SpeechRecognitionStatus.INTENTS_WAITING
+                if clear_intents
                 else state.status,
             )
 
-        case SpeechRecognitionSetIsAssistantActiveAction():
+        case SpeechRecognitionSetAssistantSlotsEnabledAction(enabled=enabled):
+            assistant_modes = {
+                WakeMode.QUICK_CHAT,
+                WakeMode.CONVERSATION,
+                WakeMode.STOP_TALKING,
+            }
             return replace(
                 state,
-                is_assistant_active=action.is_active,
-                status=SpeechRecognitionStatus.IDLE
-                if state.status is SpeechRecognitionStatus.ASSISTANT_WAITING
-                else state.status,
+                wake_slots=tuple(
+                    replace(slot, enabled=enabled)
+                    if slot.mode in assistant_modes
+                    else slot
+                    for slot in state.wake_slots
+                ),
             )
 
         case SpeechRecognitionAddCommandAction():
@@ -133,41 +145,77 @@ def reducer(
 
         case SpeechRecognitionReportWakeWordDetectionAction(
             wake_word=wake_word,
+            engine_name=engine_name,
         ):
+            # Phrases are user-editable and live in state; match the detected
+            # word (lowercased by the engine) against any phrase of an *enabled*
+            # slot, case-folded.
+            detected = wake_word.casefold()
+            detector = engine_name or 'vosk'
+            matched = next(
+                (
+                    slot
+                    for slot in state.wake_slots
+                    if slot.enabled
+                    and detected in {phrase.casefold() for phrase in slot.phrases}
+                ),
+                None,
+            )
             if (
-                wake_word == INTENTS_WAKE_WORD
+                matched is not None
+                and matched.mode is WakeMode.INTENTS
                 and state.status is SpeechRecognitionStatus.IDLE
             ):
-                new_status = SpeechRecognitionStatus.INTENTS_WAITING
                 return CompleteReducerResult(
-                    state=replace(state, status=new_status),
+                    state=replace(
+                        state,
+                        status=SpeechRecognitionStatus.INTENTS_WAITING,
+                    ),
                     actions=[RgbRingSetAllAction(color=(0, 0, 255))],
                 )
             if (
-                wake_word
-                in (
-                    ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
-                    ASSISTANT_CONVERSATION_WAKE_WORD,
-                )
+                matched is not None
+                and matched.mode in (WakeMode.QUICK_CHAT, WakeMode.CONVERSATION)
                 and state.status is SpeechRecognitionStatus.IDLE
             ):
                 return CompleteReducerResult(
                     state=replace(state, status=SpeechRecognitionStatus.IDLE),
                     actions=[
                         AssistantStartListeningAction(
-                            source=WakePhraseTriggerSource(phrase=wake_word),
+                            source=WakePhraseTriggerSource(
+                                phrase=wake_word,
+                                detector=detector,
+                                mode=matched.mode,
+                            ),
                         ),
                     ],
                 )
-            if wake_word == ASSISTANT_STOP_TALKING_PHRASE:
+            if matched is not None and matched.mode is WakeMode.STOP_TALKING:
                 return CompleteReducerResult(
                     state=state,
-                    actions=[AssistantStopTalkingAction()],
+                    actions=[
+                        AssistantStopTalkingAction(
+                            phrase=wake_word,
+                            detector=detector,
+                        ),
+                    ],
                 )
             return CompleteReducerResult(
                 state=replace(state, status=SpeechRecognitionStatus.IDLE),
                 actions=[],
             )
+
+        case SpeechRecognitionSetWakePhrasesAction(mode=mode, phrases=phrases):
+            return replace(
+                state,
+                wake_slots=tuple(
+                    replace(slot, phrases=phrases) if slot.mode is mode else slot
+                    for slot in state.wake_slots
+                ),
+            )
+
+        case SpeechRecognitionSetConversationEndPhrasesAction(phrases=phrases):
+            return replace(state, conversation_end_phrases=phrases)
 
         case SpeechRecognitionReportIntentDetectionAction():
             # Stay pure: emit the event and let the service handler resolve the

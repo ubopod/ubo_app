@@ -34,6 +34,8 @@ class VeniceTTSService(OpenAITTSService):
     ) -> AsyncGenerator[Frame, None]:
         """Generate speech via Venice; voice is sent as-is (no OpenAI voice map)."""
         logger.debug('{self}: Generating TTS [{text}]', self=self, text=text)
+        frame_count = 0
+        byte_count = 0
         try:
             create_params = {
                 'input': text,
@@ -74,11 +76,30 @@ class VeniceTTSService(OpenAITTSService):
                 async for chunk in r.iter_bytes(chunk_size):
                     if len(chunk) > 0:
                         await self.stop_ttfb_metrics()
+                        frame_count += 1
+                        byte_count += len(chunk)
                         yield TTSAudioRawFrame(
                             chunk,
                             self.sample_rate,
                             1,
                             context_id=context_id,
                         )
+
+                # Concise per-run record: confirms Venice returned audio (and how
+                # much) vs. an empty/garbled stream.
+                logger.info(
+                    'venice tts: status={status} content_type={ct} '
+                    'frames={frames} bytes={bytes}',
+                    status=r.status_code,
+                    ct=r.headers.get('content-type'),
+                    frames=frame_count,
+                    bytes=byte_count,
+                )
         except BadRequestError as e:
             yield ErrorFrame(error=f'Unknown error occurred: {e}')
+        except Exception:
+            # The original guard caught only BadRequestError, so any other
+            # exception (transport/timeout/API error) escaped silently — leaving a
+            # clean-looking empty stream. Surface it, then re-raise.
+            logger.exception('venice tts: unexpected error during synthesis')
+            raise

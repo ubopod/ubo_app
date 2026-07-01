@@ -28,6 +28,11 @@ ASSISTANT_STOP_TALKING_PHRASE = os.environ.get(
 ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS: float = float(
     os.environ.get('UBO_ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS', '2.0'),
 )
+# Conversation mode tolerates long mid-sentence pauses: the turn completes on an
+# end-of-turn phrase OR after this many seconds of continuous silence.
+ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS: float = float(
+    os.environ.get('UBO_ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS', '5.0'),
+)
 ASSISTANT_DEBUG_PATH = os.environ.get('UBO_ASSISTANT_DEBUG_PATH')
 DEFAULT_LLM_OLLAMA_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_OLLAMA_MODEL',
@@ -91,7 +96,23 @@ DEFAULT_VENICE_TTS_MODEL = os.environ.get(
 )
 DEFAULT_VENICE_TTS_VOICE = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_VENICE_TTS_VOICE',
-    'af_sky',
+    # Venice serves Kokoro voices; default to the Kokoro default so the voice
+    # picker (which mirrors the Kokoro catalog) can highlight it.
+    'af_heart',
+)
+DEFAULT_VENICE_IMAGE_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_VENICE_IMAGE_MODEL',
+    'venice-sd35',
+)
+
+DEFAULT_MISTRAL_TTS_VOICE = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_MISTRAL_TTS_VOICE',
+    # Mistral TTS requires a voice and its voices are live-fetched (no static
+    # catalog). The hosted API expects ``{lang}_{name}_{style}`` preset slugs
+    # (e.g. ``en_paul_neutral``) — NOT the self-hosted-only ``casual_male``,
+    # which the hosted API rejects with 404. Used until the user picks one from
+    # the picker; override per-deployment if a different preset is preferred.
+    'en_paul_neutral',
 )
 
 GOOGLE_API_KEY_SECRET_ID = 'google_api_key'  # noqa: S105
@@ -120,7 +141,11 @@ GROK_API_KEY_SECRET_ID = 'grok_api_key'  # noqa: S105
 GROK_API_KEY_PATTERN = '^xai-[a-zA-Z0-9]{80}$'
 
 ELEVENLABS_API_KEY_SECRET_ID = 'elevenlabs_api_key'  # noqa: S105
-ELEVENLABS_API_KEY_PATTERN = '^[a-f0-9]{64}$'
+# Accept both the modern ``sk_<alphanumeric>`` keys and the legacy bare-hex
+# keys. Kept deliberately permissive — over-strict patterns reject valid keys
+# (the legacy ``^[a-f0-9]{64}$`` blocked every ``sk_`` key); the API is the
+# real validator.
+ELEVENLABS_API_KEY_PATTERN = '^(sk_)?[a-zA-Z0-9]{32,}$'
 ELEVENLABS_VOICE_ID = 'elevenlabs_voice_id'
 ELEVENLABS_VOICE_ID_PATTERN = '^[a-zA-Z0-9-_]{20,}$'
 
@@ -128,6 +153,7 @@ BRAVE_SEARCH_API_KEY_SECRET_ID = 'brave_search_api_key'  # noqa: S105
 BRAVE_SEARCH_API_KEY_PATTERN = '^BS[a-zA-Z0-9-_]{20,}$'
 
 VOSK_DOWNLOAD_NOTIFICATION_ID = 'assistant:download-vosk'
+MOONSHINE_DOWNLOAD_NOTIFICATION_ID = 'assistant:download-moonshine'
 
 OLLAMA_SETUP_NOTIFICATION_ID = 'assistant:ollama:setup'
 OLLAMA_RAM_LIMIT_NOTIFICATION_ID = 'assistant:ollama:ram-limit'
@@ -172,8 +198,6 @@ PIPER_DOWNLOAD_PROGRESS_NOTIFICATION_ID = 'speech_synthesis:download-piper:progr
 # progress wheel and survives navigation / dismiss of the sticky.
 KOKORO_DOWNLOAD_NOTIFICATION_ID = 'speech_synthesis:download-kokoro'
 KOKORO_DOWNLOAD_PROGRESS_NOTIFICATION_ID = 'speech_synthesis:download-kokoro:progress'
-
-PICOVOICE_ACCESS_KEY_SECRET_ID = 'picovoice_access_key'  # noqa: S105
 
 DEEPGRAM_API_KEY_SECRET_ID = 'deepgram_api_key'  # noqa: S105
 DEEPGRAM_API_KEY_PATTERN = '^[a-f0-9]{40}$'

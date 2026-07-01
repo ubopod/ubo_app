@@ -1,8 +1,8 @@
 """Lazy-load regression test for the core Vosk speech-recognition engine.
 
 On first-time setup the Vosk model is downloaded *after* the engine has already
-started (``is_intents_active`` defaults to ``True``, so the wake-word engine
-runs at boot). The engine must not require the model at loop start — an eager
+started (the command-interface wake slot is enabled by default, so the wake-word
+engine runs at boot). The engine must not require the model at loop start — an eager
 ``Model(...)`` load crashes the background task and nothing reliably restarts it
 once the download finishes, leaving recognition dead until an app restart.
 Instead ``_run`` reconciles before each chunk and builds the recognizer the

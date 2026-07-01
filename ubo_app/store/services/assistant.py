@@ -12,9 +12,8 @@ from redux import BaseAction, BaseEvent
 
 from ubo_app.constants.assistant import (
     ASSISTANT_CONVERSATION_END_PHRASES,
-    ASSISTANT_CONVERSATION_WAKE_WORD,
+    ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS,
     ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
-    ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
     DEFAULT_LLM_ANTHROPIC_MODEL,
     DEFAULT_LLM_CEREBRAS_MODEL,
     DEFAULT_LLM_DEEPSEEK_MODEL,
@@ -28,7 +27,10 @@ from ubo_app.constants.assistant import (
     DEFAULT_LLM_OPENROUTER_MODEL,
     DEFAULT_LLM_QWEN_MODEL,
     DEFAULT_LLM_VENICE_MODEL,
+    DEFAULT_MISTRAL_TTS_VOICE,
+    DEFAULT_VENICE_TTS_VOICE,
 )
+from ubo_app.store.services.speech_recognition import WakeMode
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 if TYPE_CHECKING:
@@ -40,12 +42,14 @@ class AssistantSTTName(StrEnum):
     """Available assistant speech-to-text engines."""
 
     VOSK = 'vosk'
+    MOONSHINE = 'moonshine'
     GOOGLE_SEGMENTED = 'google_segmented'
     GOOGLE = 'google'
     OPENAI = 'openai'
     DEEPGRAM = 'deepgram'
     ASSEMBLYAI = 'assemblyai'
     VENICE = 'venice'
+    MISTRAL = 'mistral'
 
 
 class AssistantLLMName(StrEnum):
@@ -179,6 +183,28 @@ def _load_vosk_model(value: object) -> str:
     return DEFAULT_VOSK_MODEL_ID
 
 
+# Hard-coded fallback. The full catalog lives in
+# ``ubo_app/engines/moonshine_catalog.py``.
+DEFAULT_MOONSHINE_MODEL_ID = 'tiny'
+
+
+def _load_moonshine_model(value: object) -> str:
+    if isinstance(value, str) and value:
+        return value
+    return DEFAULT_MOONSHINE_MODEL_ID
+
+
+def _load_moonshine_downloaded_models(value: object) -> tuple[str, ...]:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except (TypeError, json.JSONDecodeError):
+            return ()
+    if isinstance(value, (list, tuple)):
+        return tuple(str(item) for item in value)
+    return ()
+
+
 class AssistantTTSName(StrEnum):
     """Available assistant text-to-speech engines."""
 
@@ -189,6 +215,108 @@ class AssistantTTSName(StrEnum):
     ELEVENLABS = 'elevenlabs'
     RIME = 'rime'
     VENICE = 'venice'
+    DEEPGRAM = 'deepgram'
+    MISTRAL = 'mistral'
+
+
+class ElevenLabsVoiceEntry(Immutable):
+    """A single ElevenLabs voice surfaced in the voice picker.
+
+    Fetched live from ``GET /v2/voices`` (default/premade voices plus the
+    user's own cloned voices) and cached in
+    ``AssistantState.elevenlabs_available_voices``. ``label`` is the voice's
+    display name (falling back to its id when unnamed).
+    """
+
+    id: str
+    label: str
+
+
+class MistralVoiceEntry(Immutable):
+    """A single Mistral (Voxtral) TTS voice surfaced in the voice picker.
+
+    Fetched live from ``GET /v1/audio/voices`` (presets plus the account's own
+    cloned voices) and cached in ``AssistantState.mistral_available_voices``.
+    ``id`` is the voice slug (e.g. ``casual_male``) or its UUID; ``label`` is
+    the voice's display name (falling back to its id when unnamed).
+    """
+
+    id: str
+    label: str
+
+
+# Default voice id per cloud TTS provider. Local engines (Piper/Kokoro) keep
+# their own dedicated ``selected_*_voice`` fields and are intentionally absent
+# here. Values reproduce the previously hard-coded voices. ElevenLabs has no
+# fixed default — its voice comes from the ``ELEVENLABS_VOICE_ID`` secret — so
+# it maps to the empty string and the subprocess falls back to that secret.
+DEFAULT_VOICES: dict[AssistantTTSName, str] = {
+    AssistantTTSName.GOOGLE: 'en-US-Chirp3-HD-Aoede',
+    AssistantTTSName.OPENAI: 'alloy',
+    AssistantTTSName.ELEVENLABS: '',
+    AssistantTTSName.RIME: 'antoine',
+    # Venice keeps its env-overridable default (``UBO_DEFAULT_ASSISTANT_VENICE_
+    # TTS_VOICE``) so deployments can pin a voice; the out-of-box value is the
+    # Kokoro default Venice mirrors, which the curated catalog contains.
+    AssistantTTSName.VENICE: DEFAULT_VENICE_TTS_VOICE,
+    # Deepgram's Aura string encodes voice + model + language in one id; the
+    # default mirrors pipecat's own ``DeepgramTTSService`` default.
+    AssistantTTSName.DEEPGRAM: 'aura-2-helena-en',
+    # Mistral voices are live-fetched (no static catalog), but unlike
+    # ElevenLabs it has a sensible fixed slug default, so core resolves the
+    # env-overridable default into the pipeline event (the subprocess never
+    # receives ``UBO_DEFAULT_*`` env vars). The catalog test skips it since it
+    # has no static catalog to validate against.
+    AssistantTTSName.MISTRAL: DEFAULT_MISTRAL_TTS_VOICE,
+}
+
+
+def _load_selected_voices(value: str) -> dict[AssistantTTSName, str]:
+    """Load selected cloud TTS voices from persistent storage."""
+    try:
+        voices = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return DEFAULT_VOICES.copy()
+    if not isinstance(voices, dict):
+        return DEFAULT_VOICES.copy()
+    selected_voices = DEFAULT_VOICES.copy()
+    for key, voice in voices.items():
+        try:
+            tts_name = AssistantTTSName(key)
+        except ValueError:
+            continue
+        selected_voices[tts_name] = str(voice)
+    return selected_voices
+
+
+def _load_elevenlabs_voices(value: str) -> tuple[ElevenLabsVoiceEntry, ...]:
+    """Load user-added ElevenLabs voices from persistent storage.
+
+    Each voice is ``{'id': ..., 'label': ...}`` where ``label`` is the
+    optional human-readable name. Bare strings from the earlier schema are
+    still accepted (label defaults to '').
+    """
+    try:
+        entries = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return ()
+    if not isinstance(entries, list):
+        return ()
+    voices: list[ElevenLabsVoiceEntry] = []
+    for entry in entries:
+        if isinstance(entry, str) and entry:
+            voices.append(ElevenLabsVoiceEntry(id=entry, label=''))
+        elif isinstance(entry, dict):
+            voice_id = entry.get('id')
+            if isinstance(voice_id, str) and voice_id:
+                label = entry.get('label')
+                voices.append(
+                    ElevenLabsVoiceEntry(
+                        id=voice_id,
+                        label=label if isinstance(label, str) else '',
+                    ),
+                )
+    return tuple(voices)
 
 
 class AssistantImageGeneratorName(StrEnum):
@@ -196,6 +324,7 @@ class AssistantImageGeneratorName(StrEnum):
 
     GOOGLE = 'google'
     OPENAI = 'openai'
+    VENICE = 'venice'
 
 
 class AssistantPipelineStage(StrEnum):
@@ -229,6 +358,8 @@ class WakePhraseTriggerSource(AssistantTriggerSource):
 
     phrase: str
     detector: str = 'vosk'
+    mode: WakeMode | None = None
+    """Which wake slot matched, so policies can key on mode not literal text."""
 
 
 class KeypadTriggerSource(AssistantTriggerSource):
@@ -297,6 +428,21 @@ class StopTalkingPhraseStopReason(AssistantStopReason):
     the Pipecat pipeline by the configured end-of-turn phrases) — this reason
     fires when the Vosk-side always-on stop phrase ("okay enough" by default)
     is heard and the user wants to fully exit the interaction.
+
+    Carries the exact phrase that matched and the engine that detected it, so
+    consumers can branch on source.
+    """
+
+    phrase: str = ''
+    detector: str = ''
+
+
+class BotStartedSpeakingStopReason(AssistantStopReason):
+    """Stop dispatched when the assistant begins speaking (TTS playback starts).
+
+    The device has no acoustic echo cancellation, so listening must end the
+    instant the bot starts talking — otherwise the open mic captures the bot's
+    own speech and confuses the pipeline.
     """
 
 
@@ -306,6 +452,7 @@ AssistantStopReasonUnion: TypeAlias = (
     | EndOfTurnPhraseStopReason
     | ExternalStopReason
     | StopTalkingPhraseStopReason
+    | BotStartedSpeakingStopReason
 )
 
 
@@ -314,9 +461,14 @@ class AssistantTriggerPolicyMatcher(Immutable):
 
 
 class WakePhraseMatcher(AssistantTriggerPolicyMatcher):
-    """Match a wake-phrase trigger by phrase string (case-insensitive equality)."""
+    """Match a wake-phrase trigger.
 
-    phrase: str
+    Prefers the ``mode`` discriminator when set (so editing the phrase text never
+    orphans the policy); falls back to case-insensitive ``phrase`` equality.
+    """
+
+    phrase: str | None = None
+    mode: WakeMode | None = None
 
 
 class KeypadMatcher(AssistantTriggerPolicyMatcher):
@@ -341,12 +493,26 @@ AssistantTriggerPolicyMatcherUnion: TypeAlias = (
 )
 
 
+class AssistantTurnCompletionMode(StrEnum):
+    """How a listening session decides the user's turn is finished.
+
+    ``SILENCE`` completes the turn after ``silence_timeout_seconds`` of
+    continuous quiet (and/or an end-of-turn phrase). ``MANUAL`` is push-to-talk:
+    the turn never completes on silence while listening — it completes only when
+    the session ends (button release / listen toggle off), flushing whatever was
+    accumulated.
+    """
+
+    SILENCE = 'silence'
+    MANUAL = 'manual'
+
+
 class AssistantTriggerPolicy(Immutable):
     """Controls how the pipeline decides the user has stopped speaking."""
 
     silence_timeout_seconds: float | None = None
     end_of_turn_phrases: tuple[str, ...] = ()
-    requires_phrase_for_stop: bool = False
+    completion_mode: AssistantTurnCompletionMode = AssistantTurnCompletionMode.SILENCE
 
 
 class AssistantTriggerPolicyEntry(Immutable):
@@ -363,27 +529,37 @@ def _default_policies() -> tuple[AssistantTriggerPolicyEntry, ...]:
     Order is most-specific-first; ``AnySourceMatcher`` must remain last.
     """
     return (
+        # Conversation: tolerate long pauses — complete on an end-of-turn phrase
+        # OR after a long silence window.
         AssistantTriggerPolicyEntry(
-            matcher=WakePhraseMatcher(phrase=ASSISTANT_CONVERSATION_WAKE_WORD),
+            matcher=WakePhraseMatcher(mode=WakeMode.CONVERSATION),
             policy=AssistantTriggerPolicy(
+                silence_timeout_seconds=ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS,
                 end_of_turn_phrases=ASSISTANT_CONVERSATION_END_PHRASES,
-                requires_phrase_for_stop=True,
             ),
         ),
+        # Quick chat: single short turn, complete after a brief silence.
         AssistantTriggerPolicyEntry(
-            matcher=WakePhraseMatcher(phrase=ASSISTANT_QUICK_CHAT_WAKE_PHRASE),
+            matcher=WakePhraseMatcher(mode=WakeMode.QUICK_CHAT),
             policy=AssistantTriggerPolicy(
                 silence_timeout_seconds=ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
             ),
         ),
+        # Keypad and infrared are push-to-talk: accumulate while held / toggled
+        # on, and only flush when the session ends (release / toggle off).
         AssistantTriggerPolicyEntry(
             matcher=KeypadMatcher(),
-            policy=AssistantTriggerPolicy(),
+            policy=AssistantTriggerPolicy(
+                completion_mode=AssistantTurnCompletionMode.MANUAL,
+            ),
         ),
         AssistantTriggerPolicyEntry(
             matcher=InfraredMatcher(),
-            policy=AssistantTriggerPolicy(),
+            policy=AssistantTriggerPolicy(
+                completion_mode=AssistantTurnCompletionMode.MANUAL,
+            ),
         ),
+        # Unknown sources keep the conservative short-silence completion.
         AssistantTriggerPolicyEntry(
             matcher=AnySourceMatcher(),
             policy=AssistantTriggerPolicy(),
@@ -399,8 +575,12 @@ def _matcher_matches(
     if isinstance(matcher, AnySourceMatcher):
         return True
     if isinstance(matcher, WakePhraseMatcher):
+        if not isinstance(source, WakePhraseTriggerSource):
+            return False
+        if matcher.mode is not None:
+            return matcher.mode == source.mode
         return (
-            isinstance(source, WakePhraseTriggerSource)
+            matcher.phrase is not None
             and matcher.phrase.casefold() == source.phrase.casefold()
         )
     if isinstance(matcher, KeypadMatcher):
@@ -443,6 +623,18 @@ class AssistantSetIsActiveAction(AssistantAction):
     is_active: bool
 
 
+class AssistantSetConversationEndPhrasesAction(AssistantAction):
+    """Update the conversation end-of-turn phrases.
+
+    Mirrors ``state.speech_recognition.conversation_end_phrases`` into the
+    conversation policy: rewrites the matching entry in ``policies`` and, when
+    the conversation source is currently active, also replaces ``active_policy``
+    so an edit mid-conversation takes effect immediately.
+    """
+
+    phrases: tuple[str, ...]
+
+
 class AssistantSetSelectedSTTAction(AssistantAction):
     """Action to set the selected stt."""
 
@@ -472,6 +664,47 @@ class AssistantSetSelectedModelAction(AssistantAction):
 
     model: str
     llm_name: AssistantLLMName | None = None
+
+
+class AssistantSetSelectedVoiceAction(AssistantAction):
+    """Action to set the selected voice for a cloud TTS provider.
+
+    The reducer emits ``AssistantVoiceChangedEvent`` so the assistant
+    subprocess can hot-swap the active provider's voice — gRPC autorun cannot
+    serialise the ``selected_voices`` dict (mirrors the LLM model-change path).
+    """
+
+    tts_name: AssistantTTSName
+    voice_id: str
+
+
+class AssistantAddElevenLabsVoiceAction(AssistantAction):
+    """Action to add a user-supplied ElevenLabs voice to the picker.
+
+    ``name`` is an optional human-readable label shown instead of the raw
+    voice id; re-adding an existing id updates its name.
+    """
+
+    voice_id: str
+    name: str = ''
+
+
+class AssistantDeleteElevenLabsVoiceAction(AssistantAction):
+    """Action to remove a user-added ElevenLabs voice id from the picker."""
+
+    voice_id: str
+
+
+class AssistantSetElevenLabsAvailableVoicesAction(AssistantAction):
+    """Replace the live-fetched ElevenLabs voice cache (``GET /v2/voices``)."""
+
+    voices: tuple[ElevenLabsVoiceEntry, ...]
+
+
+class AssistantSetMistralAvailableVoicesAction(AssistantAction):
+    """Replace the live-fetched Mistral voice cache (``GET /v1/audio/voices``)."""
+
+    voices: tuple[MistralVoiceEntry, ...]
 
 
 class AssistantDownloadOllamaModelAction(AssistantAction):
@@ -583,6 +816,94 @@ class AssistantSetVoskDownloadedModelsAction(AssistantAction):
     """Replace the cached set of locally-downloaded Vosk model ids."""
 
     models: tuple[str, ...]
+
+
+class AssistantSetSelectedMoonshineModelAction(AssistantAction):
+    """Action to pick a Moonshine STT model (pipecat ``Model`` enum string).
+
+    Selection only — sets the model the live pipeline uses. The subprocess
+    tracks ``selected_moonshine_model`` via a gRPC autorun and, when that model
+    is already downloaded, loads it from cache before the next utterance. It
+    never downloads off this action (that would surprise-download on boot); the
+    download is a separate, explicit ``AssistantDownloadMoonshineModelAction``.
+    """
+
+    model_id: str
+
+
+class AssistantDownloadMoonshineModelAction(AssistantAction):
+    """Action explicitly requesting download of a Moonshine model.
+
+    Emitted as ``AssistantDownloadMoonshineModelEvent`` for the subprocess to
+    handle (the model is fetched into the subprocess's local cache). Dispatched
+    by the menu when the user picks a not-yet-downloaded model and by the engine
+    setup flow.
+    """
+
+    model_id: str
+
+
+class AssistantDeleteMoonshineModelAction(AssistantAction):
+    """Action requesting deletion of a downloaded Moonshine model.
+
+    Emitted as ``AssistantDeleteMoonshineModelEvent``; the subprocess removes
+    the cached model files and reports the removal.
+    """
+
+    model_id: str
+
+
+class AssistantAddMoonshineDownloadedModelAction(AssistantAction):
+    """Add a model id to the set of locally-downloaded Moonshine models.
+
+    Dispatched by the assistant subprocess (the sole writer) after it downloads
+    a model. Additive (union) so the persisted set survives subprocess restarts
+    without the subprocess having to know the full set.
+    """
+
+    model_id: str
+
+
+class AssistantRemoveMoonshineDownloadedModelAction(AssistantAction):
+    """Remove a model id from the set of locally-downloaded Moonshine models.
+
+    Dispatched by the assistant subprocess after it deletes a model's cached
+    files in response to ``AssistantDeleteMoonshineModelEvent``.
+    """
+
+    model_id: str
+
+
+class AssistantSetMoonshineDownloadingAction(AssistantAction):
+    """Set the Moonshine model id currently downloading (empty = idle).
+
+    Dispatched by the assistant subprocess around a model download to drive the
+    core's indeterminate "Downloading" spinner.
+    """
+
+    model_id: str
+
+
+class AssistantDeleteOllamaModelAction(AssistantAction):
+    """Action requesting deletion of a downloaded Ollama model."""
+
+    model: str
+
+
+class AssistantDeletePiperVoiceAction(AssistantAction):
+    """Action requesting deletion of a downloaded Piper voice's files."""
+
+    voice_id: str
+
+
+class AssistantDeleteKokoroAction(AssistantAction):
+    """Action requesting deletion of the Kokoro model + voices bundle."""
+
+
+class AssistantDeleteVoskModelAction(AssistantAction):
+    """Action requesting deletion of a downloaded Vosk model directory."""
+
+    model_id: str
 
 
 class AssistanceFrame(Immutable):
@@ -718,7 +1039,13 @@ class AssistantStopTalkingAction(AssistantAction):
     Differs from a wake-phrase barge-in (``AssistantStartListeningAction``):
     this action stops the in-flight TTS playback and LLM response but does
     NOT start a new listening session — the user explicitly asked for quiet.
+
+    ``phrase`` and ``detector`` carry the stop phrase that matched and the
+    engine that detected it (forwarded into ``StopTalkingPhraseStopReason``).
     """
+
+    phrase: str = ''
+    detector: str = ''
 
 
 class AssistantTranscribeAction(AssistantAction):
@@ -814,6 +1141,19 @@ class AssistantModelChangedEvent(AssistantEvent):
     model: str
 
 
+class AssistantVoiceChangedEvent(AssistantEvent):
+    """Event signalling that the user picked a new voice for a cloud TTS provider.
+
+    Emitted by the reducer in response to ``AssistantSetSelectedVoiceAction``
+    so the assistant subprocess can rebuild the active provider's Pipecat
+    service with the new voice. Goes through events because gRPC autorun cannot
+    serialise the raw ``selected_voices`` dict.
+    """
+
+    tts_name: AssistantTTSName
+    voice_id: str
+
+
 class AssistantGenericLLMProviderChangedEvent(AssistantEvent):
     """Event signalling that the active named generic LLM provider changed.
 
@@ -879,6 +1219,44 @@ class AssistantDownloadVoskModelEvent(AssistantEvent):
     model_id: str
 
 
+class AssistantDownloadMoonshineModelEvent(AssistantEvent):
+    """Event requesting download of a Moonshine model in the subprocess.
+
+    Unlike Vosk (downloaded core-side), Moonshine's model lives in the
+    subprocess's local cache, so the subprocess subscribes to this event.
+    """
+
+    model_id: str
+
+
+class AssistantDeleteMoonshineModelEvent(AssistantEvent):
+    """Event requesting deletion of a Moonshine model from the subprocess cache."""
+
+    model_id: str
+
+
+class AssistantDeleteOllamaModelEvent(AssistantEvent):
+    """Event requesting deletion of a downloaded Ollama model in core."""
+
+    model: str
+
+
+class AssistantDeletePiperVoiceEvent(AssistantEvent):
+    """Event requesting deletion of a downloaded Piper voice in core."""
+
+    voice_id: str
+
+
+class AssistantDeleteKokoroEvent(AssistantEvent):
+    """Event requesting deletion of the Kokoro bundle in core."""
+
+
+class AssistantDeleteVoskModelEvent(AssistantEvent):
+    """Event requesting deletion of a downloaded Vosk model in core."""
+
+    model_id: str
+
+
 class AssistantRunPipelineEvent(AssistantEvent):
     """Event for the assistant service to run a parametrized pipeline.
 
@@ -887,10 +1265,11 @@ class AssistantRunPipelineEvent(AssistantEvent):
     discrete shortcut actions and ``AssistantRunPipelineAction`` all funnel
     into this one canonical event.
 
-    Per-engine model/voice fields (``vosk_model_id``, ``piper_voice_id``,
-    ``kokoro_voice_id``) carry the user's current selection so the request
-    handler in the subprocess doesn't have to fall back to module-level
-    defaults — keeping live and one-shot pipelines on the same model.
+    Per-engine model/voice fields (``vosk_model_id``, ``moonshine_model_id``,
+    ``piper_voice_id``, ``kokoro_voice_id``) carry the user's current selection
+    so the request handler in the subprocess doesn't have to fall back to
+    module-level defaults — keeping live and one-shot pipelines on the same
+    model.
     """
 
     session_id: str
@@ -906,8 +1285,10 @@ class AssistantRunPipelineEvent(AssistantEvent):
     system_prompt: str | None
     enable_tools: bool
     vosk_model_id: str = ''
+    moonshine_model_id: str = ''
     piper_voice_id: str = ''
     kokoro_voice_id: str = ''
+    tts_voice_id: str = ''
 
 
 class AssistantState(Immutable):
@@ -1000,6 +1381,42 @@ class AssistantState(Immutable):
             else AssistantTTSName.PIPER,
         ),
     )
+    # Per-cloud-provider selected voice id (google/openai/elevenlabs/rime/
+    # venice). Local Piper/Kokoro keep their own dedicated fields below. A dict
+    # can't cross a gRPC autorun selector, so the subprocess learns of changes
+    # via ``AssistantVoiceChangedEvent`` (mirrors the LLM model-change path).
+    selected_voices: dict[AssistantTTSName, str] = field(
+        default_factory=lambda: read_from_persistent_store(
+            'assistant:selected_tts_voice',
+            # ``.copy()`` so a missing key (which returns this default verbatim,
+            # bypassing the mapper) doesn't alias the shared module-level dict.
+            default=DEFAULT_VOICES.copy(),
+            mapper=_load_selected_voices,
+        ),
+    )
+    # User-added ElevenLabs voices (persisted), each with an optional
+    # human-readable name. Supplement the live-fetched
+    # ``elevenlabs_available_voices`` cache and the primary
+    # ``ELEVENLABS_VOICE_ID`` secret in the voice picker.
+    elevenlabs_voices: tuple[ElevenLabsVoiceEntry, ...] = field(
+        default_factory=lambda: read_from_persistent_store(
+            'assistant:elevenlabs_voices',
+            default=(),
+            mapper=_load_elevenlabs_voices,
+        ),
+    )
+    # Live-fetched ElevenLabs voices (default/premade + the user's cloned
+    # voices) from ``GET /v2/voices``. Process-local cache — NOT persisted;
+    # refreshed by ``ElevenLabsEngine.fetch_voices()``.
+    elevenlabs_available_voices: tuple[ElevenLabsVoiceEntry, ...] = field(
+        default_factory=tuple,
+    )
+    # Live-fetched Mistral (Voxtral) voices (presets + the account's cloned
+    # voices) from ``GET /v1/audio/voices``. Process-local cache — NOT
+    # persisted; refreshed by ``MistralEngine.fetch_voices()``.
+    mistral_available_voices: tuple[MistralVoiceEntry, ...] = field(
+        default_factory=tuple,
+    )
     # Currently selected Piper voice id (HuggingFace path without
     # extension). Backs both the assistant subprocess TTS and the
     # standalone speech-synthesis service.
@@ -1044,6 +1461,32 @@ class AssistantState(Immutable):
     # Cached set of locally-downloaded Vosk model ids. Process-local;
     # refreshed by ``VoskEngine.refresh_downloaded_models()``.
     vosk_downloaded_models: tuple[str, ...] = field(default_factory=tuple)
+    # Currently selected Moonshine STT model id (pipecat ``Model`` enum string,
+    # e.g. ``tiny``). The assistant subprocess tracks this via a gRPC autorun
+    # and rebuilds its ``MoonshineSTTService`` — and downloads the model on
+    # first use — before the next utterance.
+    selected_moonshine_model: str = field(
+        default=read_from_persistent_store(
+            'assistant:selected_moonshine_model',
+            default=DEFAULT_MOONSHINE_MODEL_ID,
+            mapper=_load_moonshine_model,
+        ),
+    )
+    # Set of locally-downloaded (subprocess-cached) Moonshine model ids.
+    # Unlike Vosk, the download happens inside the assistant subprocess, so the
+    # subprocess is the sole writer: it reports the set via
+    # ``AssistantSetMoonshineDownloadedModelsAction``. Persisted so menu
+    # indicators are correct before the subprocess has reported in.
+    moonshine_downloaded_models: tuple[str, ...] = field(
+        default_factory=lambda: read_from_persistent_store(
+            'assistant:moonshine_downloaded_models',
+            default=(),
+            mapper=_load_moonshine_downloaded_models,
+        ),
+    )
+    # Model id currently being downloaded by the subprocess (empty = idle).
+    # Process-local; drives the indeterminate "Downloading" spinner.
+    moonshine_downloading_model: str = ''
     selected_image_generator: AssistantImageGeneratorName = field(
         default=read_from_persistent_store(
             'assistant:selected_image_generator',

@@ -26,6 +26,8 @@ from ubo_app.store.services.assistant import (
     AssistantLLMName,
     AssistantModelChangedEvent,
     AssistantOllamaThinkingChangedEvent,
+    AssistantTTSName,
+    AssistantVoiceChangedEvent,
 )
 from ubo_app.utils.error_handlers import report_service_error
 
@@ -209,6 +211,24 @@ def _send_initial_state(  # noqa: C901
                 )
 
         _send_initial_ollama_thinking()
+
+    if event_class is AssistantVoiceChangedEvent:
+        # Replay the persisted per-provider cloud TTS voice selections so the
+        # assistant subprocess seeds its voice cache from on-disk state at
+        # startup — same pattern as the LLM model replay above.
+        @store.with_state(lambda state: dict(state.assistant.selected_voices))
+        def _send_initial_selected_voices(
+            selected_voices: dict[AssistantTTSName, str],
+        ) -> None:
+            for tts_name, voice_id in selected_voices.items():
+                queue_event(
+                    AssistantVoiceChangedEvent(
+                        tts_name=tts_name,
+                        voice_id=voice_id,
+                    ),
+                )
+
+        _send_initial_selected_voices()
 
 
 def _make_queue_event(

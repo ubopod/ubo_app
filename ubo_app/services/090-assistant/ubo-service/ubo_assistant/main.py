@@ -40,6 +40,7 @@ from ubo_assistant.request_handler import setup_request_handler
 from ubo_assistant.silence_user_turn_stop import (
     UboPolicyAwareUserTurnStopStrategy,
 )
+from ubo_assistant.stop_listening_on_bot_speech import StopListeningOnBotSpeech
 from ubo_assistant.stop_talking import StopTalkingOnSignal
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
@@ -173,6 +174,7 @@ class Assistant:
                 deepgram_api_key=deepgram_api_key,
                 assemblyai_api_key=assemblyai_api_key,
                 venice_api_key=venice_api_key,
+                mistral_api_key=mistral_api_key,
             ),
             google_credentials=google_credentials,
             selector='state.assistant.selected_stt',
@@ -190,6 +192,7 @@ class Assistant:
         )
         barge_in_on_listen = BargeInOnListenSignal(client=self.client)
         stop_talking_on_signal = StopTalkingOnSignal(client=self.client)
+        stop_listening_on_bot_speech = StopListeningOnBotSpeech(client=self.client)
 
         ubo_llm_service = UboLLMService(
             client=self.client,
@@ -261,6 +264,7 @@ class Assistant:
                 elevenlabs_voice_id=elevenlabs_voice_id,
                 rime_api_key=rime_api_key,
                 venice_api_key=venice_api_key,
+                mistral_api_key=mistral_api_key,
             ),
             google_credentials=google_credentials,
             selector='state.assistant.selected_tts',
@@ -270,6 +274,7 @@ class Assistant:
             client=self.client,
             google_api_key=google_api_key,
             openai_api_key=openai_api_key,
+            venice_api_key=venice_api_key,
             selector='state.assistant.selected_image_generator',
         )
 
@@ -299,6 +304,9 @@ class Assistant:
                         ubo_llm_service,
                         image_producer,
                         ubo_tts_service,
+                        # After TTS so it sees the downstream TTSStartedFrame —
+                        # stop listening the instant the bot starts talking.
+                        stop_listening_on_bot_speech,
                     ],
                     [
                         image_consumer,

@@ -105,8 +105,21 @@ class VoskEngine(
         """Initialize Vosk speech recognition engine."""
         self.grammar_lock = asyncio.Lock()
         self.process_executor = ThreadPoolExecutor(max_workers=1)
+        # The single loaded model instance, cached for vocabulary validation
+        # (wake-phrase editing). None until ``_reconcile`` first loads a model;
+        # never a second ``Model`` — this is the same instance the recognizer uses.
+        self._loaded_model: Model | None = None
 
         super().__init__(label='Vosk')
+
+    def current_model(self) -> Model | None:
+        """Return the loaded Vosk model, or None if not loaded yet.
+
+        Used by the wake-phrase editor to validate words against the Kaldi
+        vocabulary (``model.vosk_model_find_word``). Best-effort: a plain
+        reference read of the one model the recognition loop already holds.
+        """
+        return self._loaded_model
 
     @override
     def _checked_run(self) -> bool:
@@ -158,6 +171,9 @@ class VoskEngine(
                         'Vosk - Loaded model',
                         extra={'model_id': requested_model_id},
                     )
+                    # Cache the one model instance for wake-phrase validation
+                    # (under ``grammar_lock``); never a second ``Model``.
+                    self._loaded_model = new_model
                     # ``loaded_model_id`` advances only here, on success.
                     return _RecognizerState(
                         new_model,

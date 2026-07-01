@@ -12,8 +12,17 @@ from __future__ import annotations
 
 import unittest
 
-from ubo_bindings.ubo.v1 import AssistantLlmName
+from ubo_bindings.ubo.v1 import (
+    AssistantLlmName,
+    AssistantSttName,
+    AssistantTtsName,
+)
 
+from ubo_assistant.request_handler import (
+    _LLM_PROVIDER_IDS,
+    _STT_PROVIDER_IDS,
+    _TTS_PROVIDER_IDS,
+)
 from ubo_assistant.ubo_llm import _SERVICE_ID_BY_LLM_NAME
 
 
@@ -37,6 +46,38 @@ class TestServiceIdMappingCoverage(unittest.TestCase):
                 'events.'
             ),
         )
+
+
+class TestOneShotProviderIdCoverage(unittest.TestCase):
+    """The one-shot ``request_handler`` maps must cover every proto member.
+
+    These maps key by proto enum *name* (e.g. ``'MISTRAL'``) and route the
+    decoupled screen-reader/one-shot pipeline. A missing entry resolves to
+    ``provider_id=None`` → the stage builds no service → silent output (the
+    live conversation pipeline uses a *different* map, so the gap is invisible
+    there). This guards both maps in lockstep.
+    """
+
+    def _assert_covers(self, enum: object, mapping: dict[str, str]) -> None:
+        names = [
+            member.name
+            for member in enum  # pyright: ignore[reportGeneralTypeIssues]
+            if 'UNSPECIFIED' not in (member.name or '')
+        ]
+        missing = [name for name in names if name not in mapping]
+        self.assertEqual(missing, [])  # noqa: PT009
+
+    def test_stt_provider_ids_cover_proto(self) -> None:
+        """Every STT proto member routes in the one-shot map."""
+        self._assert_covers(AssistantSttName, _STT_PROVIDER_IDS)
+
+    def test_llm_provider_ids_cover_proto(self) -> None:
+        """Every LLM proto member routes in the one-shot map."""
+        self._assert_covers(AssistantLlmName, _LLM_PROVIDER_IDS)
+
+    def test_tts_provider_ids_cover_proto(self) -> None:
+        """Every TTS proto member routes in the one-shot map."""
+        self._assert_covers(AssistantTtsName, _TTS_PROVIDER_IDS)
 
 
 if __name__ == '__main__':

@@ -18,17 +18,9 @@ class SpeechSynthesisAction(BaseAction): ...
 class SpeechSynthesisEvent(BaseEvent): ...
 
 
-class SpeechSynthesisUpdateAccessKeyStatus(SpeechSynthesisAction):
-    is_access_key_set: bool
-
-
 class SpeechSynthesisEngineName(StrEnum):
     PIPER = 'piper'
     PICOVOICE = 'picovoice'
-
-
-class SpeechSynthesisSetSelectedEngineAction(SpeechSynthesisAction):
-    engine_name: SpeechSynthesisEngineName
 
 
 class ReadableInformation(Immutable):
@@ -71,20 +63,39 @@ class ReadableInformation(Immutable):
 
 class SpeechSynthesisReadTextAction(SpeechSynthesisAction):
     information: ReadableInformation
+    # `speech_rate` and `engine` are deprecated no-ops, kept for backward
+    # compatibility with external/generated clients. Synthesis is now performed
+    # by the assistant's TTS pipeline, which has no per-request rate knob and
+    # selects its own provider.
     speech_rate: float | None = None
     engine: SpeechSynthesisEngineName | None = None
 
 
+class SpeechSynthesisSetIsEnabledAction(SpeechSynthesisAction):
+    is_enabled: bool
+
+
+class SpeechSynthesisSetPreferLocalAction(SpeechSynthesisAction):
+    is_enabled: bool
+
+
 class SpeechSynthesisSynthesizeTextEvent(SpeechSynthesisEvent):
     information: ReadableInformation
-    speech_rate: float | None = None
 
 
 class SpeechSynthesisState(Immutable):
-    is_access_key_set: bool | None = None
-    selected_engine: SpeechSynthesisEngineName = field(
+    is_screen_reader_enabled: bool = field(
         default_factory=lambda: read_from_persistent_store(
-            key='speech_synthesis:selected_engine',
-            default=SpeechSynthesisEngineName.PIPER,
+            key='speech_synthesis:is_screen_reader_enabled',
+            default=False,
+        ),
+    )
+    # When enabled, the screen reader prefers a configured local TTS engine
+    # (Piper, then Kokoro) over the assistant's selected default, which may be
+    # cloud-based. When disabled, it uses the assistant's default TTS.
+    is_prefer_local_enabled: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            key='speech_synthesis:is_prefer_local_enabled',
+            default=False,
         ),
     )

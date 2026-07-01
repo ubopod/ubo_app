@@ -1,6 +1,10 @@
 """Engines registry."""
 
-from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, TypeVar
+
+from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
 from ubo_app.engines.anthropic import AnthropicEngine
 from ubo_app.engines.assemblyai import AssemblyAIEngine
 from ubo_app.engines.cerebras import CerebrasEngine
@@ -13,6 +17,7 @@ from ubo_app.engines.google_cloud import GoogleCloudEngine
 from ubo_app.engines.grok import GrokEngine
 from ubo_app.engines.kokoro import KokoroEngine
 from ubo_app.engines.mistral import MistralEngine
+from ubo_app.engines.moonshine import MoonshineEngine
 from ubo_app.engines.ollama import OllamaEngine
 from ubo_app.engines.ollama_onprem import OllamaOnPremEngine
 from ubo_app.engines.openai import OpenAIEngine
@@ -29,24 +34,39 @@ from ubo_app.store.services.assistant import (
     AssistantTTSName,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
+
 # Single shared Venice engine reused across STT/LLM/TTS dicts — one API key
 # setup flow handles all three modalities (mirrors OpenAIEngine reuse).
 _VENICE_ENGINE = VeniceEngine()
 
+# Single shared Deepgram engine reused across STT + TTS — one ``deepgram_api_key``
+# setup flow covers both modalities (same rationale as ``_VENICE_ENGINE``).
+_DEEPGRAM_ENGINE = DeepgramEngine()
+
+# Single shared Mistral engine reused across STT/LLM/TTS — one ``mistral_api_key``
+# setup flow covers all three modalities (same rationale as ``_VENICE_ENGINE``).
+_MISTRAL_ENGINE = MistralEngine()
+
 STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
     AssistantSTTName.VOSK: VoskEngine(),
+    AssistantSTTName.MOONSHINE: MoonshineEngine(),
     AssistantSTTName.GOOGLE: GoogleCloudEngine(label='Google (continuous)'),
     AssistantSTTName.GOOGLE_SEGMENTED: GoogleCloudEngine(label='Google (segmented)'),
     AssistantSTTName.OPENAI: OpenAIEngine(),
-    AssistantSTTName.DEEPGRAM: DeepgramEngine(),
+    AssistantSTTName.DEEPGRAM: _DEEPGRAM_ENGINE,
     AssistantSTTName.ASSEMBLYAI: AssemblyAIEngine(),
     AssistantSTTName.VENICE: _VENICE_ENGINE,
+    AssistantSTTName.MISTRAL: _MISTRAL_ENGINE,
 }
 
 LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
     AssistantLLMName.OLLAMA: OllamaEngine(),
     AssistantLLMName.OLLAMA_ONPREM: OllamaOnPremEngine(),
-    AssistantLLMName.GOOGLE: GoogleCloudEngine(label='Google Vertex'),
+    AssistantLLMName.GOOGLE: GoogleCloudEngine(label='Google'),
     AssistantLLMName.GROK: GrokEngine(),
     AssistantLLMName.CEREBRAS: CerebrasEngine(),
     AssistantLLMName.OPENAI: OpenAIEngine(),
@@ -54,7 +74,7 @@ LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
     AssistantLLMName.QWEN: QwenEngine(),
     AssistantLLMName.DEEPSEEK: DeepSeekEngine(),
     AssistantLLMName.OPENROUTER: OpenRouterEngine(),
-    AssistantLLMName.MISTRAL: MistralEngine(),
+    AssistantLLMName.MISTRAL: _MISTRAL_ENGINE,
     AssistantLLMName.VENICE: _VENICE_ENGINE,
     # The id-less GenericLLMEngine is the "Add Generic LLM" adder: it is
     # permanently not-setup and its setup flow registers a new named
@@ -71,6 +91,8 @@ TTS_ENGINES: dict[AssistantTTSName, AIProviderMixin] = {
     AssistantTTSName.ELEVENLABS: ElevenLabsEngine(),
     AssistantTTSName.RIME: RimeEngine(),
     AssistantTTSName.VENICE: _VENICE_ENGINE,
+    AssistantTTSName.DEEPGRAM: _DEEPGRAM_ENGINE,
+    AssistantTTSName.MISTRAL: _MISTRAL_ENGINE,
 }
 
 IMAGE_GENERATOR_ENGINES: dict[
@@ -79,4 +101,52 @@ IMAGE_GENERATOR_ENGINES: dict[
 ] = {
     AssistantImageGeneratorName.GOOGLE: GoogleEngine(),
     AssistantImageGeneratorName.OPENAI: OpenAIEngine(),
+    AssistantImageGeneratorName.VENICE: _VENICE_ENGINE,
 }
+
+
+_EngineName = TypeVar('_EngineName')
+
+
+def is_engine_configured(
+    registry: Mapping[_EngineName, AIProviderMixin],
+    selected: _EngineName,
+    provider_setup_status: Mapping[str, bool],
+) -> bool:
+    """Return True if *selected* is set up — or absent from *registry*.
+
+    ``provider_setup_status`` is keyed by ``engine.name`` (see the
+    ``AssistantUpdateProvidersAction`` reducer), which is NOT the enum value for
+    every engine (e.g. the Google STT variants both map to ``'google_cloud'``),
+    so the lookup must go through the engine instance. Unknown selections (e.g.
+    the dynamic generic-LLM selection) return True so callers leave them alone.
+    """
+    engine = registry.get(selected)
+    if engine is None:
+        return True
+    return provider_setup_status.get(engine.name, True)
+
+
+def first_configured_engine(
+    registry: Mapping[_EngineName, AIProviderMixin],
+    provider_setup_status: Mapping[str, bool],
+    *,
+    skip: tuple[_EngineName, ...] = (),
+) -> _EngineName | None:
+    """Return the first set-up engine in *registry*, local engines first.
+
+    Local (offline) engines — Vosk, Ollama, Piper, Kokoro — are preferred over
+    cloud (``RemoteMixin``) engines, mirroring the UI's local/cloud split. The
+    sort is stable, so registry order breaks ties within each group. Returns
+    ``None`` when nothing in *registry* is configured.
+    """
+    entries = [(name, e) for name, e in registry.items() if name not in skip]
+    entries.sort(key=lambda item: isinstance(item[1], RemoteMixin))
+    return next(
+        (
+            name
+            for name, e in entries
+            if provider_setup_status.get(e.name, False)
+        ),
+        None,
+    )

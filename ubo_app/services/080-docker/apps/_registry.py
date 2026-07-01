@@ -16,6 +16,12 @@ if TYPE_CHECKING:
 
 COMPOSITIONS_PATH = CONFIG_PATH / 'docker_compositions'
 
+# Shared external bridge that Ubo-managed compositions attach to as the
+# cross-stack integration bus (e.g. reaching the bundled MQTT broker as
+# `mosquitto:1883`). Bootstrapped idempotently by the docker service; compose
+# files declare it `external: true`.
+UBO_NET = 'ubo_net'
+
 
 class ContainerEntry(Immutable):
     """Container entry."""
@@ -57,6 +63,10 @@ class ContainerEntry(Immutable):
     # deregistering its assistant LLM provider).
     cleanup: Callable[[], Awaitable[None] | None] | None = None
     is_composition: bool = False
+    # When True, this add-on integrates over the bundled MQTT bus (provided by
+    # the Home Assistant stack). Installing it while HA is absent/stopped emits
+    # a "broker needs HA" warning; the install still proceeds (warn + accept).
+    requires_mqtt: bool = False
     # When True, the app exposes a web UI/API with weak or no authentication,
     # so its published ports default to loopback (127.0.0.1) and a per-app menu
     # toggle lets the user opt into LAN (0.0.0.0) exposure. Apps that ship their

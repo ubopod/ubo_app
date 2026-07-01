@@ -83,6 +83,35 @@ class DockerImageSetExposeToLanAction(DockerAction):
     expose_to_lan: bool
 
 
+class DockerSetZigbeeIntentAction(DockerAction):
+    """Set the desired Zigbee USB coordinator passthrough into Home Assistant.
+
+    Persists *intent* (whether passthrough is wanted, and which adapter by its
+    stable ``/dev/serial/by-id`` symlink), never a compose line. The compose
+    ``devices:`` mapping is re-derived from this intent at render time so a
+    stale mapping to an unplugged dongle can't brick HA on an unattended start.
+    """
+
+    enabled: bool
+    adapter_by_id: str = ''
+
+
+class DockerSetMacvlanConfigAction(DockerAction):
+    """Set Home Assistant's optional macvlan "advanced discovery" config.
+
+    macvlan gives HA its own LAN IP so mDNS/SSDP discovery works. The LAN
+    parameters aren't in core state (``IpNetworkInterface`` has no subnet/
+    gateway), so they're discovered/confirmed via a web form and persisted
+    here; the compose macvlan network + attachment are re-derived at render.
+    """
+
+    enabled: bool
+    parent: str = ''
+    subnet: str = ''
+    gateway: str = ''
+    ip: str = ''
+
+
 class DockerImageAction(DockerAction):
     """Docker image action."""
 
@@ -168,6 +197,68 @@ class DockerServiceState(Immutable):
             read_from_persistent_store,
             'docker_expose_to_lan',
             output_type=dict[str, bool],
+        ),
+    )
+    # Desired Zigbee USB coordinator passthrough into Home Assistant's ZHA.
+    # Intent only — the compose `devices:` mapping is re-derived from this at
+    # render time against the live `/dev/serial/by-id` enumeration.
+    zigbee_enabled: bool = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            'docker_zigbee_enabled',
+            default=False,
+            output_type=bool,
+        ),
+    )
+    zigbee_adapter_by_id: str = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            'docker_zigbee_adapter_by_id',
+            default='',
+            output_type=str,
+        ),
+    )
+    # Optional macvlan "advanced discovery" config for Home Assistant. Intent
+    # only — the compose macvlan network + multi-homed attachment are derived
+    # from these at render time.
+    macvlan_enabled: bool = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            'docker_macvlan_enabled',
+            default=False,
+            output_type=bool,
+        ),
+    )
+    macvlan_parent: str = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            'docker_macvlan_parent',
+            default='',
+            output_type=str,
+        ),
+    )
+    macvlan_subnet: str = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            'docker_macvlan_subnet',
+            default='',
+            output_type=str,
+        ),
+    )
+    macvlan_gateway: str = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            'docker_macvlan_gateway',
+            default='',
+            output_type=str,
+        ),
+    )
+    macvlan_ip: str = field(
+        default_factory=functools.partial(
+            read_from_persistent_store,
+            'docker_macvlan_ip',
+            default='',
+            output_type=str,
         ),
     )
 

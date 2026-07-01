@@ -146,6 +146,36 @@ class TestDefaultCommands:
         assert len(ids) == len(set(ids))
 
 
+class TestEngineRemoval:
+    """Google Cloud engine + manual engine selection were removed."""
+
+    def test_state_has_no_selected_engine_field(
+        self,
+        speech: SimpleNamespace,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """The vestigial single-engine ``selected_engine`` field is gone."""
+        state = _init_state(speech, monkeypatch, tmp_path)
+        assert not hasattr(state, 'selected_engine')
+
+    def test_set_selected_engine_action_no_longer_exists(
+        self,
+        speech: SimpleNamespace,
+    ) -> None:
+        """The engine-selection action class was removed from the module."""
+        module = speech.reducer.__globals__
+        assert 'SpeechRecognitionSetSelectedEngineAction' not in module
+
+    def test_engine_enum_is_vosk_only(self) -> None:
+        """Only Vosk remains in the engine-name enum after Google removal."""
+        from ubo_app.store.services.speech_recognition import (
+            SpeechRecognitionEngineName,
+        )
+
+        assert [e.value for e in SpeechRecognitionEngineName] == ['vosk']
+
+
 class TestBindableCatalog:
     """Registration of the actions backing the default commands."""
 

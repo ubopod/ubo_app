@@ -35,13 +35,13 @@ class GoogleCloudEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     @property
     def label(self) -> str:
         """The label of the Google Cloud engine."""
-        return 'Google Cloud'
+        return 'Google'
 
     @property
     def not_setup_message(self) -> str:
         """The message to display when the Google Cloud engine is not set up."""
         return (
-            'Google Cloud service account key is not set. You can '
+            'Google service account key is not set. You can '
             'set it in the settings.'
         )
 
@@ -63,7 +63,7 @@ class GoogleCloudEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
 
     async def _setup(self) -> None:
         _, result = await ubo_input(
-            title='Google Cloud Service Account Key',
+            title='Google Cloud (Vertex) Service Account Key',
             prompt='Enter your service account key, it should have at least '
             '"Google Speech Client" role or "Vertex AI User" role.',
             descriptions=[
@@ -82,8 +82,9 @@ class GoogleCloudEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                     ],
                 ),
                 PathInputDescription(
-                    title='Google Cloud Service Account Key',
-                    prompt='Select the JSON key file for Google Cloud Service Account.',
+                    title='Google Cloud (Vertex) Service Account Key',
+                    prompt='Select the JSON key file for the Google Cloud '
+                    '(Vertex) service account.',
                     selector_config=PathSelectorConfig(
                         show_hidden=True,
                         accepts_files=True,
@@ -108,5 +109,5 @@ class GoogleCloudEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
 
     @override
     def _clear_credentials(self) -> None:
-        """Forget the Google Cloud service-account credentials."""
+        """Forget the Google service-account credentials."""
         secrets.clear_secret(GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID)

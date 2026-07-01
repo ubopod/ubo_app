@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import math
+import uuid
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -16,7 +19,10 @@ from engines_registry import (
     LLM_ENGINES,
     STT_ENGINES,
     TTS_ENGINES,
+    first_configured_engine,
+    is_engine_configured,
 )
+from redux import BaseAction
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
 from ubo_app.constants import SECRETS_PATH
@@ -29,12 +35,14 @@ from ubo_app.constants.assistant import (
     DEFAULT_LLM_OLLAMA_MODEL,
     ELEVENLABS_API_KEY_SECRET_ID,
     ELEVENLABS_VOICE_ID,
+    ELEVENLABS_VOICE_ID_PATTERN,
     GENERIC_LLM_API_KEY_SECRET_ID,
     GENERIC_LLM_BASE_URL_SECRET_ID,
     GENERIC_LLM_MODEL_SECRET_ID,
     GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY_SECRET_ID,
     GROK_API_KEY_SECRET_ID,
     MISTRAL_API_KEY_SECRET_ID,
+    MOONSHINE_DOWNLOAD_NOTIFICATION_ID,
     OLLAMA_RAM_LIMIT_NOTIFICATION_ID,
     OPENAI_API_KEY_SECRET_ID,
     OPENROUTER_API_KEY_SECRET_ID,
@@ -44,6 +52,17 @@ from ubo_app.constants.assistant import (
 )
 from ubo_app.engines.abstraction.needs_setup_mixin import NeedsSetupMixin
 from ubo_app.engines.abstraction.remote_mixin import RemoteMixin
+from ubo_app.engines.cloud_voice_catalog import (
+    FLAT_CATALOGS,
+    LANGUAGE_GROUPED_CATALOGS,
+    CloudVoiceEntry,
+)
+from ubo_app.engines.cloud_voice_catalog import language_for as cloud_language_for
+from ubo_app.engines.cloud_voice_catalog import (
+    visible_languages as cloud_visible_languages,
+)
+from ubo_app.engines.cloud_voice_catalog import voice_for as cloud_voice_for
+from ubo_app.engines.elevenlabs import ElevenLabsEngine
 from ubo_app.engines.generic_llm import (
     activate_provider,
     build_generic_llm_engines,
@@ -60,6 +79,14 @@ from ubo_app.engines.kokoro_catalog import (
 )
 from ubo_app.engines.kokoro_catalog import voice_for as kokoro_voice_for
 from ubo_app.engines.kokoro_catalog import voice_label as kokoro_voice_label
+from ubo_app.engines.mistral import MistralEngine
+from ubo_app.engines.moonshine import MoonshineEngine
+from ubo_app.engines.moonshine_catalog import (
+    DEFAULT_MOONSHINE_MODEL_ID,
+    MOONSHINE_MODELS,
+)
+from ubo_app.engines.moonshine_catalog import model_for as moonshine_model_for
+from ubo_app.engines.moonshine_catalog import model_label as moonshine_model_label
 from ubo_app.engines.ollama import OllamaEngine, _ollama_status
 from ubo_app.engines.ollama_catalog import (
     OLLAMA_CATALOG,
@@ -100,14 +127,32 @@ from ubo_app.store.core.types import (
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.core.view_registry import register_menu_content_dependency
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    WebUIInputDescription,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     DEFAULT_MODELS,
+    DEFAULT_VOICES,
     LIVE_PIPELINE_SOURCE_ID,
     AssistanceAudioFrame,
     AssistanceImageFrame,
+    AssistantAddElevenLabsVoiceAction,
+    AssistantDeleteElevenLabsVoiceAction,
+    AssistantDeleteKokoroAction,
+    AssistantDeleteKokoroEvent,
+    AssistantDeleteMoonshineModelAction,
+    AssistantDeleteOllamaModelAction,
+    AssistantDeleteOllamaModelEvent,
+    AssistantDeletePiperVoiceAction,
+    AssistantDeletePiperVoiceEvent,
+    AssistantDeleteVoskModelAction,
+    AssistantDeleteVoskModelEvent,
     AssistantDownloadKokoroAction,
     AssistantDownloadKokoroEvent,
+    AssistantDownloadMoonshineModelAction,
     AssistantDownloadOllamaModelAction,
     AssistantDownloadOllamaModelEvent,
     AssistantDownloadPiperVoiceAction,
@@ -123,19 +168,24 @@ from ubo_app.store.services.assistant import (
     AssistantSetSelectedKokoroVoiceAction,
     AssistantSetSelectedLLMAction,
     AssistantSetSelectedModelAction,
+    AssistantSetSelectedMoonshineModelAction,
     AssistantSetSelectedPiperVoiceAction,
     AssistantSetSelectedSTTAction,
     AssistantSetSelectedTTSAction,
+    AssistantSetSelectedVoiceAction,
     AssistantSetSelectedVoskModelAction,
     AssistantStartListeningAction,
     AssistantStopListeningAction,
     AssistantStopTalkingAction,
     AssistantSTTName,
+    AssistantSynthesizeAction,
     AssistantToggleListeningAction,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
+    ElevenLabsVoiceEntry,
     GenericLLMProvider,
     InfraredTriggerSource,
+    MistralVoiceEntry,
     UserStopReason,
     generic_llm_instance_key,
 )
@@ -150,6 +200,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
@@ -157,6 +208,9 @@ from ubo_app.utils.menu_items import (
     build_selection_menu,
 )
 from ubo_app.utils.persistent_store import register_persistent_store
+
+# Spoken when the user picks a TTS voice, so they immediately hear it.
+VOICE_PREVIEW_TEXT = 'This is a new voice.'
 
 
 def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
@@ -219,8 +273,18 @@ def _format_ram_gb(bytes_: int) -> str:
 def _communicate(event: AssistantHandleReportEvent) -> None:
     """Communicate the assistance."""
     match event.data:
-        case AssistanceAudioFrame(audio=sample, index=index, id=id):
-            if sample:
+        case AssistanceAudioFrame(
+            audio=sample,
+            index=index,
+            id=id,
+            is_last_frame=is_last_frame,
+        ):
+            # Dispatch on real audio OR the end-of-stream marker. The marker is an
+            # ``AssistanceAudioFrame(audio=None, is_last_frame=True)`` whose
+            # resulting ``sample=None`` action breaks the audio manager's play loop
+            # without the 1 s empty-buffer fallback — routed through this ordered
+            # report path (not a direct dispatch) so it can't overtake the chunks.
+            if sample or is_last_frame:
                 # Only the live pipeline drives chat-overlay reconciliation;
                 # one-shot programmatic requests share the audio bus but
                 # the chat reducer must ignore them — tagging the sequence
@@ -277,6 +341,19 @@ def _register_persistent_stores() -> None:
         lambda state: json.dumps(state.assistant.selected_models),
     )
     register_persistent_store(
+        'assistant:selected_tts_voice',
+        lambda state: json.dumps(state.assistant.selected_voices),
+    )
+    register_persistent_store(
+        'assistant:elevenlabs_voices',
+        lambda state: json.dumps(
+            [
+                {'id': voice.id, 'label': voice.label}
+                for voice in state.assistant.elevenlabs_voices
+            ],
+        ),
+    )
+    register_persistent_store(
         'assistant:generic_llm_providers',
         lambda state: json.dumps(
             [
@@ -301,6 +378,14 @@ def _register_persistent_stores() -> None:
         'assistant:selected_kokoro_voice',
         lambda state: state.assistant.selected_kokoro_voice,
     )
+    register_persistent_store(
+        'assistant:selected_moonshine_model',
+        lambda state: state.assistant.selected_moonshine_model,
+    )
+    register_persistent_store(
+        'assistant:moonshine_downloaded_models',
+        lambda state: json.dumps(list(state.assistant.moonshine_downloaded_models)),
+    )
 
 
 def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
@@ -316,6 +401,9 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
     _llm_action_ids: list[str] = []
     _llm_model_select_action_ids: list[str] = []
     _provider_detail_action_ids: list[str] = []
+    _piper_delete_action_ids: list[str] = []
+    _vosk_delete_action_ids: list[str] = []
+    _ollama_delete_action_ids: list[str] = []
     _tts_action_ids: list[str] = []
     _img_gen_action_ids: list[str] = []
 
@@ -327,6 +415,62 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         lambda: store.dispatch(MenuGoBackAction()),
         allow_reregister=True,
     )
+
+    def _register_delete_prompt(  # noqa: PLR0913
+        *,
+        delete_action_id: str,
+        confirm_action_id: str,
+        title: str,
+        prompt: str,
+        action: BaseAction,
+        tracker: list[str],
+        pop_count: int = 1,
+    ) -> None:
+        """Register a "delete downloaded model" item plus its confirm prompt.
+
+        The list item (``delete_action_id``) pushes a Yes/Cancel prompt; the
+        Yes button (``confirm_action_id``) dispatches *action* then pops
+        ``pop_count`` frames. Pass ``pop_count=1`` to pop just the prompt and
+        land back on the (rebuilt) delete list when models remain; pass
+        ``pop_count=2`` to also pop the now-empty delete list and land back on
+        the provider menu when this was the last deletable model.
+        """
+        tracker.append(delete_action_id)
+        tracker.append(confirm_action_id)
+        register_action(
+            confirm_action_id,
+            lambda a=action, n=pop_count: store.dispatch(
+                a,
+                *([MenuGoBackAction()] * n),
+            ),
+            allow_reregister=True,
+        )
+        register_action(
+            delete_action_id,
+            lambda t=title, p=prompt, c=confirm_action_id: store.dispatch(
+                StackPushPromptAction(
+                    title=t,
+                    prompt=p,
+                    icon='󰆴',
+                    items=(
+                        MenuItemData(
+                            key='yes',
+                            label='Delete',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id=c,
+                        ),
+                        MenuItemData(
+                            key='cancel',
+                            label='Cancel',
+                            icon='󰜺',
+                            action_id='assistant:provider-detail:cancel',
+                        ),
+                    ),
+                ),
+            ),
+            allow_reregister=True,
+        )
 
     # Secrets file monitor - tracks API key changes.
     #
@@ -398,9 +542,19 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             ),
         )
 
+    # Match by *type*, not identity: ``GoogleCloudEngine`` / ``OpenAIEngine``
+    # have separate per-modality instances (STT/LLM/TTS), but
+    # ``_deduped_providers`` collapses them to one arbitrary instance per type.
+    # Identity matching would then surface only whichever modality's instance
+    # happened to survive dedup, hiding the other (e.g. the LLM model picker
+    # disappearing once the engine also became a TTS voice provider).
     def _llm_name_for(provider: NeedsSetupMixin) -> AssistantLLMName | None:
         return next(
-            (name for name, eng in LLM_ENGINES.items() if eng is provider),
+            (
+                name
+                for name, eng in LLM_ENGINES.items()
+                if type(eng) is type(provider)
+            ),
             None,
         )
 
@@ -408,6 +562,124 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         return _llm_name_for(provider) is not None and bool(
             getattr(provider, 'CURATED_MODELS', ()),
         )
+
+    def _tts_name_for(provider: NeedsSetupMixin) -> AssistantTTSName | None:
+        return next(
+            (
+                name
+                for name, eng in TTS_ENGINES.items()
+                if type(eng) is type(provider)
+            ),
+            None,
+        )
+
+    def _has_voice_picker(tts_name: AssistantTTSName) -> bool:
+        return (
+            tts_name in LANGUAGE_GROUPED_CATALOGS
+            or tts_name in FLAT_CATALOGS
+            or tts_name in {AssistantTTSName.ELEVENLABS, AssistantTTSName.MISTRAL}
+        )
+
+    def _selected_cloud_voice(
+        selected_voices: dict[AssistantTTSName, str],
+        tts_name: AssistantTTSName,
+    ) -> str:
+        return selected_voices.get(tts_name) or DEFAULT_VOICES.get(tts_name, '')
+
+    def _cloud_voice_menu_key(tts_name: AssistantTTSName) -> str:
+        """Return the menu key the provider page pushes for the voice picker."""
+        if tts_name in LANGUAGE_GROUPED_CATALOGS:
+            return f'{tts_name.value}:languages'
+        return f'{tts_name.value}:voices'
+
+    def _cloud_voice_label(
+        tts_name: AssistantTTSName,
+        voice_id: str,
+        available: tuple[ElevenLabsVoiceEntry | MistralVoiceEntry, ...] = (),
+    ) -> str:
+        """Human label for the currently selected cloud voice."""
+        if not voice_id:
+            return 'Default'
+        entry = cloud_voice_for(
+            voice_id,
+            languages=LANGUAGE_GROUPED_CATALOGS.get(tts_name, ()),
+            flat=FLAT_CATALOGS.get(tts_name, ()),
+        )
+        if entry is not None:
+            return entry.label
+        for fetched_voice in available:
+            if fetched_voice.id == voice_id:
+                return fetched_voice.label or fetched_voice.id
+        return voice_id
+
+    def _elevenlabs_engine() -> ElevenLabsEngine | None:
+        engine = TTS_ENGINES.get(AssistantTTSName.ELEVENLABS)
+        return engine if isinstance(engine, ElevenLabsEngine) else None
+
+    async def _add_elevenlabs_voice() -> None:
+        """Collect a voice ID (+ optional name) and add it to the picker."""
+        try:
+            _, result = await ubo_input(
+                title='ElevenLabs Voice',
+                prompt='Enter an ElevenLabs voice ID and an optional name.',
+                descriptions=[
+                    WebUIInputDescription(
+                        fields=[
+                            InputFieldDescription(
+                                name='voice_id',
+                                type=InputFieldType.TEXT,
+                                label='Voice ID',
+                                description='Enter an ElevenLabs voice ID',
+                                required=True,
+                                pattern=ELEVENLABS_VOICE_ID_PATTERN,
+                            ),
+                            InputFieldDescription(
+                                name='name',
+                                type=InputFieldType.TEXT,
+                                label='Name (optional)',
+                                description='A human-readable name, e.g. '
+                                '"Deep Voice Man"',
+                                required=False,
+                            ),
+                        ],
+                    ),
+                ],
+            )
+        except asyncio.CancelledError:
+            return
+        voice_id = (result.data.get('voice_id') or '').strip()
+        name = (result.data.get('name') or '').strip()
+        if voice_id:
+            store.dispatch(
+                AssistantAddElevenLabsVoiceAction(voice_id=voice_id, name=name),
+            )
+
+    def _add_elevenlabs_voice_handler() -> None:
+        create_task(_add_elevenlabs_voice())
+
+    def _refresh_elevenlabs_voices_handler() -> None:
+        engine = _elevenlabs_engine()
+        if engine is not None:
+            create_task(engine.fetch_voices())
+
+    def _open_elevenlabs_voices() -> None:
+        """Open the ElevenLabs voice picker, refreshing the fetched list."""
+        _refresh_elevenlabs_voices_handler()
+        store.dispatch(StackPushMenuAction(menu_key='elevenlabs:voices'))
+
+    def _mistral_engine() -> MistralEngine | None:
+        engine = TTS_ENGINES.get(AssistantTTSName.MISTRAL)
+        return engine if isinstance(engine, MistralEngine) else None
+
+    def _refresh_mistral_voices_handler() -> None:
+        engine = _mistral_engine()
+        if engine is not None:
+            create_task(engine.fetch_voices())
+
+    def _open_mistral_voices() -> None:
+        """Open the Mistral voice picker, refreshing the fetched list."""
+        _refresh_mistral_voices_handler()
+        store.dispatch(StackPushMenuAction(menu_key='mistral:voices'))
 
     @store.autorun(
         lambda state: (
@@ -432,10 +704,10 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         for provider in _deduped_providers(data[2]):
             if isinstance(
                 provider,
-                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine),
+                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine, MoonshineEngine),
             ):
-                # Ollama, Piper, Kokoro, and Vosk share the pattern: the
-                # catalog picker is both the setup path *and* the
+                # Ollama, Piper, Kokoro, Vosk, and Moonshine share the pattern:
+                # the catalog picker is both the setup path *and* the
                 # day-to-day picker, so we always offer the drill-in
                 # regardless of whether the current selection has been
                 # downloaded yet.
@@ -538,9 +810,19 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             state.assistant.selected_kokoro_voice,
             state.assistant.selected_vosk_model,
             state.assistant.generic_llm_providers,
+            state.assistant.piper_downloaded_voices,
+            state.assistant.vosk_downloaded_models,
+            state.assistant.ollama_downloaded_models,
+            state.assistant.kokoro_is_downloaded,
+            state.assistant.selected_voices,
+            state.assistant.elevenlabs_available_voices,
+            state.assistant.elevenlabs_voices,
+            state.assistant.mistral_available_voices,
+            state.assistant.selected_moonshine_model,
+            state.assistant.moonshine_downloaded_models,
         ),
     )
-    def provider_details(  # noqa: C901, PLR0915
+    def provider_details(  # noqa: C901, PLR0912, PLR0915
         data: tuple[
             dict[str, bool],
             dict[AssistantLLMName, str],
@@ -551,6 +833,16 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             str,
             str,
             tuple[GenericLLMProvider, ...],
+            tuple[str, ...],
+            tuple[str, ...],
+            tuple[str, ...],
+            bool,
+            dict[AssistantTTSName, str],
+            tuple[ElevenLabsVoiceEntry, ...],
+            tuple[ElevenLabsVoiceEntry, ...],
+            tuple[MistralVoiceEntry, ...],
+            str,
+            tuple[str, ...],
         ],
     ) -> None:
         """Build per-provider detail menus reachable from Manage Providers."""
@@ -560,6 +852,17 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         selected_piper_voice = data[5] or DEFAULT_PIPER_VOICE_ID
         selected_kokoro_voice = data[6] or DEFAULT_KOKORO_VOICE_ID
         selected_vosk_model = data[7] or DEFAULT_VOSK_MODEL_ID
+        piper_downloaded_voices = data[9]
+        vosk_downloaded_models = data[10]
+        ollama_downloaded_models = data[11]
+        kokoro_is_downloaded = data[12]
+        selected_voices = data[13]
+        # User-added voices first so their human-readable names win over the
+        # raw-id fetched entries when labelling the selected ElevenLabs voice.
+        elevenlabs_voices = (*data[15], *data[14])
+        mistral_available_voices = data[16]
+        selected_moonshine_model = data[17] or DEFAULT_MOONSHINE_MODEL_ID
+        moonshine_downloaded_models = data[18]
 
         for action_id in _provider_detail_action_ids:
             unregister_action(action_id)
@@ -570,7 +873,7 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 continue
             if not provider.is_setup and not isinstance(
                 provider,
-                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine),
+                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine, MoonshineEngine),
             ):
                 continue
 
@@ -632,6 +935,28 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         ),
                     )
 
+                if ollama_downloaded_models:
+                    delete_list_action = (
+                        'assistant:provider-detail:ollama-delete-list'
+                    )
+                    _provider_detail_action_ids.append(delete_list_action)
+                    register_action(
+                        delete_list_action,
+                        lambda: store.dispatch(
+                            StackPushMenuAction(menu_key='ollama:delete-models'),
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='delete-models',
+                            label='Delete Models',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id=delete_list_action,
+                        ),
+                    )
+
                 store.dispatch(
                     UpdateDynamicMenuAction(
                         menu_id=f'assistant:provider:{provider.name}',
@@ -671,6 +996,27 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         action_id=voice_action,
                     ),
                 )
+                if piper_downloaded_voices:
+                    delete_list_action = (
+                        'assistant:provider-detail:piper-delete-list'
+                    )
+                    _provider_detail_action_ids.append(delete_list_action)
+                    register_action(
+                        delete_list_action,
+                        lambda: store.dispatch(
+                            StackPushMenuAction(menu_key='piper:delete-voices'),
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='delete-voices',
+                            label='Delete Voices',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id=delete_list_action,
+                        ),
+                    )
                 store.dispatch(
                     UpdateDynamicMenuAction(
                         menu_id=f'assistant:provider:{provider.name}',
@@ -710,6 +1056,27 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         action_id=kokoro_voice_action,
                     ),
                 )
+                if kokoro_is_downloaded:
+                    # Kokoro ships ALL voices in one bundle, so deletion is a
+                    # single all-or-nothing action — no per-voice list.
+                    _register_delete_prompt(
+                        delete_action_id='assistant:kokoro:delete',
+                        confirm_action_id='assistant:kokoro:confirm-delete',
+                        title='Delete Voices',
+                        prompt='Delete the downloaded Kokoro voices bundle? '
+                        'Kokoro will need to re-download before next use.',
+                        action=AssistantDeleteKokoroAction(),
+                        tracker=_provider_detail_action_ids,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='delete-voices',
+                            label='Delete Voices',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id='assistant:kokoro:delete',
+                        ),
+                    )
                 store.dispatch(
                     UpdateDynamicMenuAction(
                         menu_id=f'assistant:provider:{provider.name}',
@@ -749,6 +1116,86 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         action_id=model_action,
                     ),
                 )
+                if vosk_downloaded_models:
+                    delete_list_action = (
+                        'assistant:provider-detail:vosk-delete-list'
+                    )
+                    _provider_detail_action_ids.append(delete_list_action)
+                    register_action(
+                        delete_list_action,
+                        lambda: store.dispatch(
+                            StackPushMenuAction(menu_key='vosk:delete-models'),
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='delete-models',
+                            label='Delete Models',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id=delete_list_action,
+                        ),
+                    )
+                store.dispatch(
+                    UpdateDynamicMenuAction(
+                        menu_id=f'assistant:provider:{provider.name}',
+                        title=provider.label,
+                        heading=provider.label,
+                        sub_heading='Manage this provider',
+                        items=tuple(items),
+                    ),
+                )
+                continue
+
+            # Moonshine exposes a flat model picker (English-only, no Language
+            # drill-down). Selecting a model is the download trigger, so the
+            # picker is always rendered even before anything is downloaded.
+            if isinstance(provider, MoonshineEngine):
+                current_model_entry = moonshine_model_for(selected_moonshine_model)
+                current_label = (
+                    moonshine_model_label(current_model_entry)
+                    if current_model_entry is not None
+                    else selected_moonshine_model
+                )
+                model_action = 'assistant:provider-detail:moonshine-models'
+                _provider_detail_action_ids.append(model_action)
+                register_action(
+                    model_action,
+                    lambda: store.dispatch(
+                        StackPushMenuAction(menu_key='moonshine:models'),
+                    ),
+                    allow_reregister=True,
+                )
+                items.append(
+                    MenuItemData(
+                        key='select-model',
+                        label=f'Model: {current_label}',
+                        icon='󰧑',
+                        action_id=model_action,
+                    ),
+                )
+                if moonshine_downloaded_models:
+                    delete_list_action = (
+                        'assistant:provider-detail:moonshine-delete-list'
+                    )
+                    _provider_detail_action_ids.append(delete_list_action)
+                    register_action(
+                        delete_list_action,
+                        lambda: store.dispatch(
+                            StackPushMenuAction(menu_key='moonshine:delete-models'),
+                        ),
+                        allow_reregister=True,
+                    )
+                    items.append(
+                        MenuItemData(
+                            key='delete-models',
+                            label='Delete Models',
+                            icon='󰆴',
+                            color=DANGER_COLOR,
+                            action_id=delete_list_action,
+                        ),
+                    )
                 store.dispatch(
                     UpdateDynamicMenuAction(
                         menu_id=f'assistant:provider:{provider.name}',
@@ -786,6 +1233,50 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                         label=f'Model: {current_model}',
                         icon='󰧑',
                         action_id=select_model_action,
+                    ),
+                )
+
+            # "Voice" — for cloud TTS providers with a curated/fetched voice
+            # list. Local Piper/Kokoro handled their own drill-down above.
+            tts_name = _tts_name_for(provider)
+            if tts_name is not None and _has_voice_picker(tts_name):
+                current_voice_id = _selected_cloud_voice(selected_voices, tts_name)
+                current_label = _cloud_voice_label(
+                    tts_name,
+                    current_voice_id,
+                    (*elevenlabs_voices, *mistral_available_voices),
+                )
+                voice_action = (
+                    f'assistant:provider-detail:select-voice:{provider.name}'
+                )
+                _provider_detail_action_ids.append(voice_action)
+                if tts_name == AssistantTTSName.ELEVENLABS:
+                    register_action(
+                        voice_action,
+                        _open_elevenlabs_voices,
+                        allow_reregister=True,
+                    )
+                elif tts_name == AssistantTTSName.MISTRAL:
+                    register_action(
+                        voice_action,
+                        _open_mistral_voices,
+                        allow_reregister=True,
+                    )
+                else:
+                    voice_menu_key = _cloud_voice_menu_key(tts_name)
+                    register_action(
+                        voice_action,
+                        lambda key=voice_menu_key: store.dispatch(
+                            StackPushMenuAction(menu_key=key),
+                        ),
+                        allow_reregister=True,
+                    )
+                items.append(
+                    MenuItemData(
+                        key='select-voice',
+                        label=f'Voice: {current_label}',
+                        icon='󰔊',
+                        action_id=voice_action,
                     ),
                 )
 
@@ -1419,6 +1910,381 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         if engine is not None:
             engine.download_voice(event.voice_id)
 
+    # --- Cloud TTS voice pickers (Rime / Google / Venice / OpenAI) ---------
+    _cloud_voice_language_action_ids: list[str] = []
+    _cloud_voice_select_action_ids: list[str] = []
+
+    def _make_cloud_voice_handler(
+        tts_name: AssistantTTSName,
+        voice_id: str,
+        pop_count: int,
+    ) -> Callable[[], None]:
+        def _handler() -> None:
+            store.dispatch(
+                AssistantSetSelectedVoiceAction(
+                    tts_name=tts_name,
+                    voice_id=voice_id,
+                ),
+                # Audible preview in the just-selected voice. ``tts_provider``
+                # is explicit so it previews this provider even when it isn't
+                # the active ``selected_tts``.
+                AssistantSynthesizeAction(
+                    text=VOICE_PREVIEW_TEXT,
+                    session_id=uuid.uuid4().hex,
+                    tts_provider=tts_name,
+                ),
+                *([MenuGoBackAction()] * pop_count),
+            )
+
+        return _handler
+
+    def _build_cloud_voice_list(  # noqa: PLR0913
+        *,
+        menu_id: str,
+        tts_name: AssistantTTSName,
+        voices: tuple[CloudVoiceEntry, ...],
+        selected: str,
+        heading: str,
+        pop_count: int,
+    ) -> None:
+        items: list[MenuItemData] = []
+        for voice in voices:
+            is_selected = voice.id == selected
+            action_id = (
+                f'assistant:tts:select-voice:{tts_name.value}:{voice.id}'
+            )
+            _cloud_voice_select_action_ids.append(action_id)
+            register_action(
+                action_id,
+                _make_cloud_voice_handler(tts_name, voice.id, pop_count),
+                allow_reregister=True,
+            )
+            items.append(
+                MenuItemData(
+                    key=voice.id,
+                    label=voice.label,
+                    icon='󰄬' if is_selected else '󰔊',
+                    background_color=INFO_COLOR if is_selected else None,
+                    action_id=action_id,
+                ),
+            )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id=menu_id,
+                title='Voices',
+                heading=heading,
+                sub_heading='Pick a voice',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_voices,
+            state.localization.language,
+        ),
+    )
+    def cloud_voice_menus(
+        data: tuple[dict[AssistantTTSName, str], LanguageCode],
+    ) -> None:
+        """Build the cloud TTS voice pickers, adapting to the system language."""
+        selected_voices, system_language = data
+
+        for action_id in (
+            *_cloud_voice_language_action_ids,
+            *_cloud_voice_select_action_ids,
+        ):
+            unregister_action(action_id)
+        _cloud_voice_language_action_ids.clear()
+        _cloud_voice_select_action_ids.clear()
+
+        # Language-grouped providers — a Language → Voice drill-down whose
+        # language list follows the selected system language.
+        for tts_name, languages in LANGUAGE_GROUPED_CATALOGS.items():
+            selected = _selected_cloud_voice(selected_voices, tts_name)
+            current_language = cloud_language_for(languages, selected)
+            lang_items: list[MenuItemData] = []
+            for language in cloud_visible_languages(languages, system_language):
+                open_action = (
+                    f'assistant:tts:{tts_name.value}:'
+                    f'open-language:{language.code.value}'
+                )
+                _cloud_voice_language_action_ids.append(open_action)
+                register_action(
+                    open_action,
+                    lambda name=tts_name, code=language.code: store.dispatch(
+                        StackPushMenuAction(
+                            menu_key=f'{name.value}:voices:{code.value}',
+                        ),
+                    ),
+                    allow_reregister=True,
+                )
+                is_current = (
+                    current_language is not None
+                    and current_language.code == language.code
+                )
+                lang_items.append(
+                    MenuItemData(
+                        key=language.code.value,
+                        label=language.label,
+                        icon='󰄬' if is_current else '󰗊',
+                        background_color=INFO_COLOR if is_current else None,
+                        action_id=open_action,
+                    ),
+                )
+            store.dispatch(
+                UpdateDynamicMenuAction(
+                    menu_id=f'assistant:tts:{tts_name.value}:languages',
+                    title='Voices',
+                    heading='Voices',
+                    sub_heading='Pick a language',
+                    items=tuple(lang_items),
+                ),
+            )
+            for language in languages:
+                _build_cloud_voice_list(
+                    menu_id=(
+                        f'assistant:tts:{tts_name.value}:'
+                        f'voices:{language.code.value}'
+                    ),
+                    tts_name=tts_name,
+                    voices=language.voices,
+                    selected=selected,
+                    heading=language.label,
+                    pop_count=2,
+                )
+
+        # Flat providers (OpenAI) — a single multilingual voice list.
+        for tts_name, voices in FLAT_CATALOGS.items():
+            _build_cloud_voice_list(
+                menu_id=f'assistant:tts:{tts_name.value}:voices',
+                tts_name=tts_name,
+                voices=voices,
+                selected=_selected_cloud_voice(selected_voices, tts_name),
+                heading='Voices',
+                pop_count=1,
+            )
+
+    # --- ElevenLabs voice picker (live-fetched + user-added IDs) -----------
+    _elevenlabs_voice_action_ids: list[str] = []
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_voices,
+            state.assistant.elevenlabs_voices,
+            state.assistant.elevenlabs_available_voices,
+            secrets_monitor.value,
+        ),
+    )
+    def elevenlabs_voice_menu(
+        data: tuple[
+            dict[AssistantTTSName, str],
+            tuple[ElevenLabsVoiceEntry, ...],
+            tuple[ElevenLabsVoiceEntry, ...],
+            object,
+        ],
+    ) -> None:
+        """Build the ElevenLabs voice picker (no language filter)."""
+        selected_voices, user_voices, available_voices, _secrets = data
+        # ``_secrets`` (secrets_monitor.value) is only a refire trigger — it can
+        # still be the autorun's initial sentinel on the first run, so read the
+        # primary voice from the secret directly (matches how other autoruns
+        # treat secrets_monitor.value: a change signal, not a data source).
+        secret_voice = secrets.read_secret(ELEVENLABS_VOICE_ID) or ''
+        selected = selected_voices.get(AssistantTTSName.ELEVENLABS) or secret_voice
+
+        for action_id in _elevenlabs_voice_action_ids:
+            unregister_action(action_id)
+        _elevenlabs_voice_action_ids.clear()
+
+        # Union de-duplicated by id, ordered user-added → secret → fetched.
+        # A user-supplied name takes precedence over the raw id / fetched name;
+        # entries with no name fall back to the id.
+        labels: dict[str, str] = {}
+        for voice in user_voices:
+            labels[voice.id] = voice.label or voice.id
+        if secret_voice:
+            labels.setdefault(secret_voice, secret_voice)
+        for entry in available_voices:
+            labels.setdefault(entry.id, entry.label or entry.id)
+
+        items: list[MenuItemData] = []
+        for voice_id, label in labels.items():
+            is_selected = voice_id == selected
+            select_action = f'assistant:tts:elevenlabs:select:{voice_id}'
+            _elevenlabs_voice_action_ids.append(select_action)
+            register_action(
+                select_action,
+                lambda vid=voice_id: store.dispatch(
+                    AssistantSetSelectedVoiceAction(
+                        tts_name=AssistantTTSName.ELEVENLABS,
+                        voice_id=vid,
+                    ),
+                    AssistantSynthesizeAction(
+                        text=VOICE_PREVIEW_TEXT,
+                        session_id=uuid.uuid4().hex,
+                        tts_provider=AssistantTTSName.ELEVENLABS,
+                    ),
+                    MenuGoBackAction(),
+                ),
+                allow_reregister=True,
+            )
+            items.append(
+                MenuItemData(
+                    key=voice_id,
+                    label=label,
+                    icon='󰄬' if is_selected else '󰔊',
+                    background_color=INFO_COLOR if is_selected else None,
+                    action_id=select_action,
+                ),
+            )
+
+        # "Add Voice ID" + "Refresh voices" actions.
+        add_action = 'assistant:tts:elevenlabs:add-voice'
+        _elevenlabs_voice_action_ids.append(add_action)
+        register_action(
+            add_action,
+            _add_elevenlabs_voice_handler,
+            allow_reregister=True,
+        )
+        items.append(
+            MenuItemData(
+                key='add-voice',
+                label='Add Voice ID',
+                icon='󰐕',
+                action_id=add_action,
+            ),
+        )
+        refresh_action = 'assistant:tts:elevenlabs:refresh'
+        _elevenlabs_voice_action_ids.append(refresh_action)
+        register_action(
+            refresh_action,
+            _refresh_elevenlabs_voices_handler,
+            allow_reregister=True,
+        )
+        items.append(
+            MenuItemData(
+                key='refresh',
+                label='Refresh Voices',
+                icon='󰑐',
+                action_id=refresh_action,
+            ),
+        )
+
+        # Delete prompts for user-added voices only (fetched/secret stay).
+        for voice in user_voices:
+            display = voice.label or voice.id
+            _register_delete_prompt(
+                delete_action_id=f'assistant:tts:elevenlabs:delete:{voice.id}',
+                confirm_action_id=(
+                    f'assistant:tts:elevenlabs:confirm-delete:{voice.id}'
+                ),
+                title='Delete Voice',
+                prompt=f'Remove voice "{display}"?',
+                action=AssistantDeleteElevenLabsVoiceAction(voice_id=voice.id),
+                tracker=_elevenlabs_voice_action_ids,
+                pop_count=1,
+            )
+            items.append(
+                MenuItemData(
+                    key=f'delete:{voice.id}',
+                    label=f'Delete {display}',
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=f'assistant:tts:elevenlabs:delete:{voice.id}',
+                ),
+            )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:tts:elevenlabs:voices',
+                title='Voices',
+                heading='ElevenLabs',
+                sub_heading='Pick a voice',
+                items=tuple(items),
+            ),
+        )
+
+    # --- Mistral voice picker (live-fetched presets + account voices) ------
+    _mistral_voice_action_ids: list[str] = []
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_voices,
+            state.assistant.mistral_available_voices,
+        ),
+    )
+    def mistral_voice_menu(
+        data: tuple[
+            dict[AssistantTTSName, str],
+            tuple[MistralVoiceEntry, ...],
+        ],
+    ) -> None:
+        """Build the Mistral voice picker from the live-fetched voice list."""
+        selected_voices, available_voices = data
+        selected = selected_voices.get(AssistantTTSName.MISTRAL) or ''
+
+        for action_id in _mistral_voice_action_ids:
+            unregister_action(action_id)
+        _mistral_voice_action_ids.clear()
+
+        items: list[MenuItemData] = []
+        for entry in available_voices:
+            is_selected = entry.id == selected
+            select_action = f'assistant:tts:mistral:select:{entry.id}'
+            _mistral_voice_action_ids.append(select_action)
+            register_action(
+                select_action,
+                lambda vid=entry.id: store.dispatch(
+                    AssistantSetSelectedVoiceAction(
+                        tts_name=AssistantTTSName.MISTRAL,
+                        voice_id=vid,
+                    ),
+                    AssistantSynthesizeAction(
+                        text=VOICE_PREVIEW_TEXT,
+                        session_id=uuid.uuid4().hex,
+                        tts_provider=AssistantTTSName.MISTRAL,
+                    ),
+                    MenuGoBackAction(),
+                ),
+                allow_reregister=True,
+            )
+            items.append(
+                MenuItemData(
+                    key=entry.id,
+                    label=entry.label or entry.id,
+                    icon='󰄬' if is_selected else '󰔊',
+                    background_color=INFO_COLOR if is_selected else None,
+                    action_id=select_action,
+                ),
+            )
+
+        refresh_action = 'assistant:tts:mistral:refresh'
+        _mistral_voice_action_ids.append(refresh_action)
+        register_action(
+            refresh_action,
+            _refresh_mistral_voices_handler,
+            allow_reregister=True,
+        )
+        items.append(
+            MenuItemData(
+                key='refresh',
+                label='Refresh Voices',
+                icon='󰑐',
+                action_id=refresh_action,
+            ),
+        )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:tts:mistral:voices',
+                title='Voices',
+                heading='Mistral',
+                sub_heading='Pick a voice',
+                items=tuple(items),
+            ),
+        )
+
     _kokoro_language_action_ids: list[str] = []
     _kokoro_voice_action_ids: list[str] = []
 
@@ -1731,6 +2597,443 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         if engine is not None:
             engine.download_model(event.model_id)
 
+    _moonshine_model_action_ids: list[str] = []
+    _moonshine_delete_action_ids: list[str] = []
+    # ``None`` until the first autorun fire so the initial cold-start value is
+    # treated as "no transition" (no redundant provider refresh on boot).
+    _moonshine_prev_downloaded: list[tuple[str, ...] | None] = [None]
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_moonshine_model,
+            state.assistant.moonshine_downloaded_models,
+        ),
+    )
+    def moonshine_models_menu(data: tuple[str, tuple[str, ...]]) -> None:
+        """Build the flat Moonshine model picker (English-only, no languages)."""
+        selected_model, downloaded_models = data
+        selected_model = selected_model or DEFAULT_MOONSHINE_MODEL_ID
+        downloaded_set = set(downloaded_models)
+
+        for action_id in _moonshine_model_action_ids:
+            unregister_action(action_id)
+        _moonshine_model_action_ids.clear()
+
+        def _make_model_handler(
+            model_id: str,
+            *,
+            downloaded: bool,
+        ) -> Callable[[], None]:
+            # Select always; additionally request an explicit download when the
+            # model isn't on disk yet (selection alone never downloads). Pop back
+            # to the provider menu either way.
+            def _handler() -> None:
+                if downloaded:
+                    store.dispatch(
+                        AssistantSetSelectedMoonshineModelAction(model_id=model_id),
+                        MenuGoBackAction(),
+                    )
+                else:
+                    store.dispatch(
+                        AssistantSetSelectedMoonshineModelAction(model_id=model_id),
+                        AssistantDownloadMoonshineModelAction(model_id=model_id),
+                        MenuGoBackAction(),
+                    )
+
+            return _handler
+
+        items: list[MenuItemData] = []
+        for model in MOONSHINE_MODELS:
+            is_selected = model.id == selected_model
+            is_downloaded = model.id in downloaded_set
+            label = moonshine_model_label(model)
+            if is_downloaded and not is_selected:
+                label = f'{label}  •'
+
+            action_id = f'assistant:moonshine:select-model:{model.id}'
+            _moonshine_model_action_ids.append(action_id)
+            register_action(
+                action_id,
+                _make_model_handler(model.id, downloaded=is_downloaded),
+                allow_reregister=True,
+            )
+
+            items.append(
+                MenuItemData(
+                    key=model.id,
+                    label=label,
+                    icon='󰄬'
+                    if is_selected
+                    else ('󰇚' if not is_downloaded else '󰧑'),
+                    background_color=INFO_COLOR if is_selected else None,
+                    action_id=action_id,
+                ),
+            )
+
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:moonshine:models',
+                title='Moonshine',
+                heading='Moonshine',
+                sub_heading='Pick a model',
+                items=tuple(items),
+            ),
+        )
+
+    # Remembers the previous downloading flag so the notification autorun only
+    # flashes "ready" on a real download→idle transition, not on the initial
+    # autorun fire (which always sees the idle '' value).
+    _moonshine_prev_downloading: list[str] = ['']
+
+    @store.autorun(lambda state: state.assistant.moonshine_downloading_model)
+    def moonshine_download_notification(downloading_model: str) -> None:
+        """Render an indeterminate spinner while the subprocess downloads.
+
+        Moonshine's model is fetched inside the subprocess (local model cache),
+        which reports no byte progress, so this is a spinner (``progress=nan``)
+        rather than a radial bar like Vosk. The subprocess sets the downloading
+        flag around its model (re)build and clears it when done.
+        """
+        previous = _moonshine_prev_downloading[0]
+        _moonshine_prev_downloading[0] = downloading_model
+
+        if not downloading_model:
+            if previous:
+                # Real download just finished — flash so the spinner closes.
+                store.dispatch(
+                    NotificationsAddAction(
+                        notification=Notification(
+                            id=MOONSHINE_DOWNLOAD_NOTIFICATION_ID,
+                            title='Moonshine',
+                            content='Model ready',
+                            display_type=NotificationDisplayType.FLASH,
+                            flash_time=1,
+                            color=INFO_COLOR,
+                            icon='󰄬',
+                            show_dismiss_action=True,
+                            dismiss_on_close=True,
+                        ),
+                    ),
+                )
+            return
+
+        entry = moonshine_model_for(downloading_model)
+        label = entry.label if entry is not None else downloading_model
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id=MOONSHINE_DOWNLOAD_NOTIFICATION_ID,
+                    title='Downloading',
+                    content=f'Moonshine model: {label}',
+                    display_type=NotificationDisplayType.STICKY,
+                    color=INFO_COLOR,
+                    icon='󰇚',
+                    blink=False,
+                    progress=math.nan,
+                    show_dismiss_action=False,
+                    dismiss_on_close=False,
+                ),
+            ),
+        )
+
+    @store.autorun(lambda state: state.assistant.moonshine_downloaded_models)
+    def moonshine_refresh_providers_on_download(
+        downloaded_models: tuple[str, ...],
+    ) -> None:
+        """Recompute provider readiness when the downloaded set changes.
+
+        The download happens in the subprocess, so unlike Vosk nothing core-side
+        refreshes ``provider_setup_status`` after it completes. The STT engine
+        menu rebuilds off that status, so without this the Moonshine row stays
+        "needs setup" until some unrelated provider refresh. Skip the initial
+        fire (no transition) to avoid a redundant boot-time dispatch.
+        """
+        previous = _moonshine_prev_downloaded[0]
+        _moonshine_prev_downloaded[0] = downloaded_models
+        if previous is not None and previous != downloaded_models:
+            store.dispatch(AssistantUpdateProvidersAction())
+
+    @store.autorun(lambda state: state.assistant.moonshine_downloaded_models)
+    def moonshine_delete_menu(downloaded_models: tuple[str, ...]) -> None:
+        """List every downloaded Moonshine model the user can delete.
+
+        Deleting the selected model flips Moonshine to "needs setup".
+        """
+        for action_id in _moonshine_delete_action_ids:
+            unregister_action(action_id)
+        _moonshine_delete_action_ids.clear()
+
+        # Deleting the only remaining model also pops the (then-empty) delete
+        # list so the user lands back on the provider menu.
+        pop_count = 2 if len(downloaded_models) == 1 else 1
+        items: list[MenuItemData] = []
+        for model_id in downloaded_models:
+            entry = moonshine_model_for(model_id)
+            label = moonshine_model_label(entry) if entry is not None else model_id
+            _register_delete_prompt(
+                delete_action_id=f'assistant:moonshine:delete:{model_id}',
+                confirm_action_id=f'assistant:moonshine:confirm-delete:{model_id}',
+                title='Delete Model',
+                prompt=f'Delete downloaded model "{label}"?',
+                action=AssistantDeleteMoonshineModelAction(model_id=model_id),
+                tracker=_moonshine_delete_action_ids,
+                pop_count=pop_count,
+            )
+            items.append(
+                MenuItemData(
+                    key=model_id,
+                    label=label,
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=f'assistant:moonshine:delete:{model_id}',
+                ),
+            )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:moonshine:delete-models',
+                title='Delete Models',
+                heading='Delete Models',
+                sub_heading='Free up disk space',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(lambda state: state.assistant.piper_downloaded_voices)
+    def piper_delete_menu(downloaded_voices: tuple[str, ...]) -> None:
+        """List every downloaded Piper voice the user can delete to free space.
+
+        All downloaded voices are deletable — including the selected one;
+        deleting it flips Piper to "needs setup" (its ``is_setup`` checks the
+        selected voice's files), which is exactly the reset the user wants.
+        """
+        for action_id in _piper_delete_action_ids:
+            unregister_action(action_id)
+        _piper_delete_action_ids.clear()
+
+        # Deleting the only remaining voice also pops the (then-empty) delete
+        # list so the user lands back on the provider menu.
+        pop_count = 2 if len(downloaded_voices) == 1 else 1
+        items: list[MenuItemData] = []
+        for voice_id in downloaded_voices:
+            entry = voice_for(voice_id)
+            label = voice_label(entry) if entry is not None else voice_id
+            _register_delete_prompt(
+                delete_action_id=f'assistant:piper:delete:{voice_id}',
+                confirm_action_id=f'assistant:piper:confirm-delete:{voice_id}',
+                title='Delete Voice',
+                prompt=f'Delete downloaded voice "{label}"?',
+                action=AssistantDeletePiperVoiceAction(voice_id=voice_id),
+                tracker=_piper_delete_action_ids,
+                pop_count=pop_count,
+            )
+            items.append(
+                MenuItemData(
+                    key=voice_id,
+                    label=label,
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=f'assistant:piper:delete:{voice_id}',
+                ),
+            )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:piper:delete-voices',
+                title='Delete Voices',
+                heading='Delete Voices',
+                sub_heading='Free up disk space',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(lambda state: state.assistant.vosk_downloaded_models)
+    def vosk_delete_menu(downloaded_models: tuple[str, ...]) -> None:
+        """List every downloaded Vosk model the user can delete to free space.
+
+        Deleting the selected model flips Vosk to "needs setup".
+        """
+        for action_id in _vosk_delete_action_ids:
+            unregister_action(action_id)
+        _vosk_delete_action_ids.clear()
+
+        # Deleting the only remaining model also pops the (then-empty) delete
+        # list so the user lands back on the provider menu.
+        pop_count = 2 if len(downloaded_models) == 1 else 1
+        items: list[MenuItemData] = []
+        for model_id in downloaded_models:
+            entry = vosk_model_for(model_id)
+            label = vosk_model_label(entry) if entry is not None else model_id
+            _register_delete_prompt(
+                delete_action_id=f'assistant:vosk:delete:{model_id}',
+                confirm_action_id=f'assistant:vosk:confirm-delete:{model_id}',
+                title='Delete Model',
+                prompt=f'Delete downloaded model "{label}"?',
+                action=AssistantDeleteVoskModelAction(model_id=model_id),
+                tracker=_vosk_delete_action_ids,
+                pop_count=pop_count,
+            )
+            items.append(
+                MenuItemData(
+                    key=model_id,
+                    label=label,
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=f'assistant:vosk:delete:{model_id}',
+                ),
+            )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:vosk:delete-models',
+                title='Delete Models',
+                heading='Delete Models',
+                sub_heading='Free up disk space',
+                items=tuple(items),
+            ),
+        )
+
+    @store.autorun(lambda state: state.assistant.ollama_downloaded_models)
+    def ollama_delete_menu(downloaded_models: tuple[str, ...]) -> None:
+        """List every downloaded Ollama model the user can delete to free space.
+
+        Deleting the selected model flips Ollama to "needs setup".
+        """
+        for action_id in _ollama_delete_action_ids:
+            unregister_action(action_id)
+        _ollama_delete_action_ids.clear()
+
+        catalog_by_tag = {
+            normalize_model_tag(entry.id): entry
+            for category in OLLAMA_CATALOG
+            for entry in category.models
+        }
+
+        # Deleting the only remaining model also pops the (then-empty) delete
+        # list so the user lands back on the provider menu.
+        pop_count = 2 if len(downloaded_models) == 1 else 1
+        items: list[MenuItemData] = []
+        for tag in downloaded_models:
+            entry = catalog_by_tag.get(tag)
+            label = (
+                f'{entry.label}  {format_size(entry.size_bytes)}'
+                if entry is not None
+                else tag
+            )
+            _register_delete_prompt(
+                delete_action_id=f'assistant:ollama:delete:{tag}',
+                confirm_action_id=f'assistant:ollama:confirm-delete:{tag}',
+                title='Delete Model',
+                prompt=f'Delete downloaded model "{tag}"?',
+                action=AssistantDeleteOllamaModelAction(model=tag),
+                tracker=_ollama_delete_action_ids,
+                pop_count=pop_count,
+            )
+            items.append(
+                MenuItemData(
+                    key=tag,
+                    label=label,
+                    icon='󰆴',
+                    color=DANGER_COLOR,
+                    action_id=f'assistant:ollama:delete:{tag}',
+                ),
+            )
+        store.dispatch(
+            UpdateDynamicMenuAction(
+                menu_id='assistant:ollama:delete-models',
+                title='Delete Models',
+                heading='Delete Models',
+                sub_heading='Free up disk space',
+                items=tuple(items),
+            ),
+        )
+
+    def _handle_piper_delete(event: AssistantDeletePiperVoiceEvent) -> None:
+        """Delete a downloaded Piper voice's files."""
+        engine = _piper_engine()
+        if engine is not None:
+            create_task(engine.delete_voice(event.voice_id))
+
+    def _handle_vosk_delete(event: AssistantDeleteVoskModelEvent) -> None:
+        """Delete a downloaded Vosk model directory."""
+        engine = _vosk_engine()
+        if engine is not None:
+            create_task(engine.delete_model(event.model_id))
+
+    def _handle_kokoro_delete(_: AssistantDeleteKokoroEvent) -> None:
+        """Delete the Kokoro model + voices bundle."""
+        engine = _kokoro_engine()
+        if engine is not None:
+            create_task(engine.delete_bundle())
+
+    def _handle_ollama_delete(event: AssistantDeleteOllamaModelEvent) -> None:
+        """Delete a downloaded Ollama model from the local daemon."""
+        engine = LLM_ENGINES.get(AssistantLLMName.OLLAMA)
+        if isinstance(engine, OllamaEngine):
+            create_task(engine.delete_model(event.model))
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.selected_stt,
+            state.assistant.selected_llm,
+            state.assistant.selected_tts,
+            state.assistant.provider_setup_status,
+        ),
+    )
+    def keep_pipeline_providers_configured(
+        data: tuple[
+            AssistantSTTName,
+            AssistantLLMName,
+            AssistantTTSName,
+            dict[str, bool],
+        ],
+    ) -> None:
+        """Auto-switch a pipeline selection that has gone unconfigured.
+
+        When a provider's credentials are deleted or its selected on-disk model
+        is removed, its ``is_setup`` flips False. Rather than letting the
+        screen reader / conversation silently fail on a dangling selection,
+        switch that category (STT/LLM/TTS) to another configured engine,
+        preferring local over cloud. Only fires when the current selection is
+        genuinely broken AND a configured alternative exists, so it converges
+        and never overrides a working choice. The generic-LLM selection is left
+        alone (its named providers live outside ``provider_setup_status``).
+
+        This is the ONLY autorun that auto-dispatches ``AssistantSetSelected*``:
+        the ``stt_providers`` / ``llm_providers`` / ``tts_providers`` menu
+        autoruns dispatch those actions only from user-click callbacks, so there
+        is no competing writer to fight (which is why this can't oscillate).
+        """
+        selected_stt, selected_llm, selected_tts, status = data
+
+        # Boot guard: ``provider_setup_status`` is populated asynchronously after
+        # the service starts. Until then it's empty and every engine looks
+        # unconfigured; ``is_engine_configured`` already treats absent keys as
+        # configured, but bail out explicitly so a half-populated status during
+        # startup can never switch a still-loading selection.
+        if not status:
+            return
+
+        if not is_engine_configured(STT_ENGINES, selected_stt, status):
+            alternative = first_configured_engine(STT_ENGINES, status)
+            if alternative is not None and alternative != selected_stt:
+                store.dispatch(AssistantSetSelectedSTTAction(stt_name=alternative))
+
+        if selected_llm != AssistantLLMName.GENERIC and not is_engine_configured(
+            LLM_ENGINES,
+            selected_llm,
+            status,
+        ):
+            alternative = first_configured_engine(
+                LLM_ENGINES,
+                status,
+                skip=(AssistantLLMName.GENERIC,),
+            )
+            if alternative is not None and alternative != selected_llm:
+                store.dispatch(AssistantSetSelectedLLMAction(llm_name=alternative))
+
+        if not is_engine_configured(TTS_ENGINES, selected_tts, status):
+            alternative = first_configured_engine(TTS_ENGINES, status)
+            if alternative is not None and alternative != selected_tts:
+                store.dispatch(AssistantSetSelectedTTSAction(tts_name=alternative))
+
     @store.autorun(
         lambda state: (
             state.assistant.selected_tts,
@@ -1808,12 +3111,24 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         kokoro_voices_menus,
         vosk_languages_menu,
         vosk_models_menus,
+        moonshine_models_menu,
+        moonshine_download_notification,
+        moonshine_refresh_providers_on_download,
+        moonshine_delete_menu,
+        piper_delete_menu,
+        vosk_delete_menu,
+        ollama_delete_menu,
+        keep_pipeline_providers_configured,
         tts_providers,
         image_generator_providers,
         _handle_ollama_download,
         _handle_piper_download,
         _handle_kokoro_download,
         _handle_vosk_download,
+        _handle_ollama_delete,
+        _handle_piper_delete,
+        _handle_kokoro_delete,
+        _handle_vosk_delete,
     )
 
 
@@ -1842,7 +3157,7 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
         'assistant:image_generator': 'assistant:image_generator',
     }
 
-    def _match_catalog_tail(tail: str) -> str | None:
+    def _match_catalog_tail(tail: str) -> str | None:  # noqa: C901, PLR0912
         """Leaf segments owned by Ollama / Piper / Kokoro / Vosk drill-downs."""
         if tail == 'ollama:categories':
             return 'assistant:ollama:categories'
@@ -1852,6 +3167,12 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
             return 'assistant:piper:languages'
         if tail.startswith('piper:voices:'):
             return f'assistant:piper:voices:{tail[len("piper:voices:") :]}'
+        if tail == 'piper:delete-voices':
+            return 'assistant:piper:delete-voices'
+        if tail == 'vosk:delete-models':
+            return 'assistant:vosk:delete-models'
+        if tail == 'ollama:delete-models':
+            return 'assistant:ollama:delete-models'
         if tail == 'kokoro:languages':
             return 'assistant:kokoro:languages'
         if tail.startswith('kokoro:voices:'):
@@ -1860,6 +3181,28 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
             return 'assistant:vosk:languages'
         if tail.startswith('vosk:models:'):
             return f'assistant:vosk:models:{tail[len("vosk:models:") :]}'
+        if tail == 'moonshine:models':
+            return 'assistant:moonshine:models'
+        if tail == 'moonshine:delete-models':
+            return 'assistant:moonshine:delete-models'
+        # Cloud TTS voice pickers (language-grouped Rime/Google/Venice).
+        for tts_name in LANGUAGE_GROUPED_CATALOGS:
+            prefix = tts_name.value
+            if tail == f'{prefix}:languages':
+                return f'assistant:tts:{prefix}:languages'
+            if tail.startswith(f'{prefix}:voices:'):
+                return (
+                    f'assistant:tts:{prefix}:voices:'
+                    f'{tail[len(f"{prefix}:voices:") :]}'
+                )
+        # Flat cloud voice pickers (OpenAI) + ElevenLabs.
+        for tts_name in FLAT_CATALOGS:
+            if tail == f'{tts_name.value}:voices':
+                return f'assistant:tts:{tts_name.value}:voices'
+        if tail == 'elevenlabs:voices':
+            return 'assistant:tts:elevenlabs:voices'
+        if tail == 'mistral:voices':
+            return 'assistant:tts:mistral:voices'
         return None
 
     def _assistant_path_matcher(path: tuple[str, ...]) -> str | None:
@@ -1961,7 +3304,7 @@ def _register_bindable_actions() -> None:
     )
 
 
-async def init_service() -> None:
+async def init_service() -> None:  # noqa: PLR0915
     """Initialize the assistant service."""
     _register_persistent_stores()
     _register_bindable_actions()
@@ -2011,6 +3354,13 @@ async def init_service() -> None:
                 tuple(sorted(s.assistant.ollama_model_capabilities.items())),
                 s.assistant.selected_piper_voice,
                 s.assistant.selected_kokoro_voice,
+                s.assistant.selected_vosk_model,
+                # The "Delete Downloaded …" row appears/disappears as models
+                # are downloaded or removed.
+                tuple(s.assistant.piper_downloaded_voices),
+                tuple(s.assistant.vosk_downloaded_models),
+                tuple(s.assistant.ollama_downloaded_models),
+                s.assistant.kokoro_is_downloaded,
             ),
         )
     # Ollama categorised picker depends on the current selection so the
@@ -2031,6 +3381,20 @@ async def init_service() -> None:
                 '',
             ),
         )
+    # Delete-downloaded-model submenus list every downloaded model, so they
+    # depend only on the downloaded set (a row vanishes after deletion).
+    register_menu_content_dependency(
+        'assistant:ollama:delete-models',
+        lambda s: tuple(s.assistant.ollama_downloaded_models),
+    )
+    register_menu_content_dependency(
+        'assistant:piper:delete-voices',
+        lambda s: tuple(s.assistant.piper_downloaded_voices),
+    )
+    register_menu_content_dependency(
+        'assistant:vosk:delete-models',
+        lambda s: tuple(s.assistant.vosk_downloaded_models),
+    )
     register_menu_content_dependency(
         'assistant:tts',
         lambda s: s.assistant.selected_tts,
@@ -2097,12 +3461,24 @@ async def init_service() -> None:
         _kokoro_voices_menus,
         _vosk_languages_menu,
         _vosk_models_menus,
+        _moonshine_models_menu,
+        _moonshine_download_notification,
+        _moonshine_refresh_providers_on_download,
+        _moonshine_delete_menu,
+        _piper_delete_menu,
+        _vosk_delete_menu,
+        _ollama_delete_menu,
+        _keep_pipeline_providers_configured,
         _tts_providers,
         _image_generator_providers,
         handle_ollama_download,
         handle_piper_download,
         handle_kokoro_download,
         handle_vosk_download,
+        handle_ollama_delete,
+        handle_piper_delete,
+        handle_kokoro_delete,
+        handle_vosk_delete,
     ) = _setup_autorun_and_handlers()
 
     store.dispatch(
@@ -2166,6 +3542,22 @@ async def init_service() -> None:
     store.subscribe_event(
         AssistantDownloadVoskModelEvent,
         handle_vosk_download,
+    )
+    store.subscribe_event(
+        AssistantDeleteOllamaModelEvent,
+        handle_ollama_delete,
+    )
+    store.subscribe_event(
+        AssistantDeletePiperVoiceEvent,
+        handle_piper_delete,
+    )
+    store.subscribe_event(
+        AssistantDeleteKokoroEvent,
+        handle_kokoro_delete,
+    )
+    store.subscribe_event(
+        AssistantDeleteVoskModelEvent,
+        handle_vosk_delete,
     )
 
     _watch_ollama_container_status()

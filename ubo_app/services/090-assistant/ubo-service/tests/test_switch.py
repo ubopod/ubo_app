@@ -70,7 +70,7 @@ class RecordingLLM(LLMService):
         function_name: str | None,
         handler: FunctionCallHandler,
         *,
-        cancel_on_interruption: bool = True,
+        cancel_on_interruption: bool | None = True,
         timeout_secs: float | None = None,
     ) -> None:
         """Record and delegate function registration."""

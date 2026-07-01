@@ -257,6 +257,19 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
 
         create_task(download_ollama_model())
 
+    async def delete_model(self, model: str) -> None:
+        """Delete *model* from the local Ollama daemon and refresh the cache."""
+        try:
+            await self._client().delete(model)
+        except Exception:
+            logger.exception(
+                'Failed to delete Ollama model',
+                extra={'model': model},
+            )
+            report_service_error()
+            return
+        await self.refresh_downloaded_models()
+
     async def _probe_and_dispatch_capabilities(self, model: str) -> None:
         """Probe `client.show()` for *model* and cache its capability set.
 

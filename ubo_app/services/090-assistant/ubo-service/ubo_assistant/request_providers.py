@@ -37,7 +37,8 @@ _DEFAULT_VENICE_TTS_MODEL = os.environ.get(
 )
 _DEFAULT_VENICE_TTS_VOICE = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_VENICE_TTS_VOICE',
-    'af_sky',
+    # Kept in sync with core's ``DEFAULT_VENICE_TTS_VOICE``.
+    'af_heart',
 )
 
 
@@ -45,15 +46,21 @@ async def _secret(client: UboRPCClient, env_var: str) -> str | None:
     """Resolve the secret whose id is held by ``env_var``."""
     key = os.environ.get(env_var)
     if not key:
+        logger.error(f'screen-reader: secret env var {env_var!r} not exported')  # noqa: G004
         return None
-    return await client.query_secret(key)
+    value = await client.query_secret(key)
+    # Log only the resolution context + success — no secret value or length.
+    message = f'screen-reader: resolved secret for {env_var!r} -> present={bool(value)}'
+    logger.info(message)
+    return value
 
 
-async def _build_stt(  # noqa: C901
+async def _build_stt(  # noqa: C901, PLR0912
     provider_id: str,
     client: UboRPCClient,
     *,
     vosk_model_id: str = '',
+    moonshine_model_id: str = '',
 ) -> STTService | None:
     if provider_id == 'vosk':
         from ubo_assistant.vosk import DEFAULT_VOSK_MODEL_ID, VoskSTTService
@@ -65,6 +72,22 @@ async def _build_stt(  # noqa: C901
         return await asyncio.to_thread(
             VoskSTTService,
             model_id=vosk_model_id or DEFAULT_VOSK_MODEL_ID,
+        )
+
+    if provider_id == 'moonshine':
+        from ubo_assistant.moonshine import (
+            DEFAULT_MOONSHINE_MODEL_ID,
+            MoonshineSTTService,
+        )
+
+        # The Moonshine build downloads the model on first use — keep it off the
+        # event loop. The reducer resolves the user's selection into
+        # ``moonshine_model_id``; ``DEFAULT_MOONSHINE_MODEL_ID`` is the fallback.
+        model_id = moonshine_model_id or DEFAULT_MOONSHINE_MODEL_ID
+        return await asyncio.to_thread(
+            lambda: MoonshineSTTService(
+                settings=MoonshineSTTService.Settings(model=model_id),
+            ),
         )
 
     if provider_id in ('google', 'google_segmented'):
@@ -138,6 +161,14 @@ async def _build_stt(  # noqa: C901
             base_url=VENICE_BASE_URL,
             settings=VeniceSTTService.Settings(model=_DEFAULT_VENICE_STT_MODEL),
         )
+
+    if provider_id == 'mistral':
+        api_key = await _secret(client, 'MISTRAL_API_KEY_SECRET_ID')
+        if not api_key:
+            return None
+        from pipecat.services.mistral.stt import MistralSTTService
+
+        return MistralSTTService(api_key=api_key)
 
     return None
 
@@ -290,6 +321,7 @@ async def _build_tts(  # noqa: C901, PLR0912
     *,
     piper_voice_id: str = '',
     kokoro_voice_id: str = '',
+    tts_voice_id: str = '',
 ) -> TTSService | None:
     if provider_id == 'piper':
         from ubo_assistant.piper import DEFAULT_PIPER_VOICE_ID, PiperTTSService
@@ -318,7 +350,12 @@ async def _build_tts(  # noqa: C901, PLR0912
             return None
         from pipecat.services.google.tts import GoogleTTSService
 
-        return GoogleTTSService(credentials=credentials)
+        from ubo_assistant.tts_voice import google_voice_kwargs
+
+        return GoogleTTSService(
+            credentials=credentials,
+            **google_voice_kwargs(tts_voice_id),
+        )
 
     if provider_id == 'openai':
         api_key = await _secret(client, 'OPENAI_API_KEY_SECRET_ID')
@@ -326,7 +363,10 @@ async def _build_tts(  # noqa: C901, PLR0912
             return None
         from pipecat.services.openai.tts import OpenAITTSService
 
-        return OpenAITTSService(api_key=api_key)
+        openai_kwargs: dict[str, Any] = (
+            {'voice': tts_voice_id} if tts_voice_id else {}
+        )
+        return OpenAITTSService(api_key=api_key, **openai_kwargs)
 
     if provider_id == 'elevenlabs':
         api_key = await _secret(client, 'ELEVENLABS_API_KEY_SECRET_ID')
@@ -337,7 +377,7 @@ async def _build_tts(  # noqa: C901, PLR0912
 
         return ElevenLabsTTSService(
             api_key=api_key,
-            voice_id=voice_id,
+            voice_id=tts_voice_id or voice_id,
             sample_rate=24000,
             model='eleven_turbo_v2_5',
             enable_logging=True,
@@ -348,14 +388,16 @@ async def _build_tts(  # noqa: C901, PLR0912
         if not api_key:
             return None
         from pipecat.services.rime.tts import RimeTTSService
-        from pipecat.transcriptions.language import Language
 
+        from ubo_assistant.tts_voice import rime_language
+
+        rime_voice = tts_voice_id or 'antoine'
         return RimeTTSService(
             api_key=api_key,
-            voice_id='antoine',
+            voice_id=rime_voice,
             model='mistv2',
             params=RimeTTSService.InputParams(
-                language=Language.EN,
+                language=rime_language(rime_voice),
                 speed_alpha=1.0,
                 reduce_latency=False,
                 pause_between_brackets=True,
@@ -373,7 +415,33 @@ async def _build_tts(  # noqa: C901, PLR0912
             api_key=api_key,
             base_url=VENICE_BASE_URL,
             model=_DEFAULT_VENICE_TTS_MODEL,
-            voice=_DEFAULT_VENICE_TTS_VOICE,
+            voice=tts_voice_id or _DEFAULT_VENICE_TTS_VOICE,
+        )
+
+    if provider_id == 'deepgram':
+        api_key = await _secret(client, 'DEEPGRAM_API_KEY_SECRET_ID')
+        if not api_key:
+            return None
+        from pipecat.services.deepgram.tts import DeepgramTTSService
+
+        return DeepgramTTSService(
+            api_key=api_key,
+            settings=DeepgramTTSService.Settings(
+                voice=tts_voice_id or 'aura-2-helena-en',
+            ),
+        )
+
+    if provider_id == 'mistral':
+        api_key = await _secret(client, 'MISTRAL_API_KEY_SECRET_ID')
+        if not api_key:
+            return None
+        from pipecat.services.mistral.tts import MistralTTSService
+
+        return MistralTTSService(
+            api_key=api_key,
+            settings=MistralTTSService.Settings(
+                voice=tts_voice_id or 'en_paul_neutral',
+            ),
         )
 
     return None
@@ -384,10 +452,16 @@ async def build_stt_service(
     *,
     client: UboRPCClient,
     vosk_model_id: str = '',
+    moonshine_model_id: str = '',
 ) -> STTService | None:
     """Construct the STT service for ``provider_id``, or ``None`` if unavailable."""
     try:
-        return await _build_stt(provider_id, client, vosk_model_id=vosk_model_id)
+        return await _build_stt(
+            provider_id,
+            client,
+            vosk_model_id=vosk_model_id,
+            moonshine_model_id=moonshine_model_id,
+        )
     except Exception:
         logger.exception('Failed to build STT service', extra={'provider': provider_id})
         return None
@@ -413,6 +487,7 @@ async def build_tts_service(
     client: UboRPCClient,
     piper_voice_id: str = '',
     kokoro_voice_id: str = '',
+    tts_voice_id: str = '',
 ) -> TTSService | None:
     """Construct the TTS service for ``provider_id``, or ``None`` if unavailable."""
     try:
@@ -421,6 +496,7 @@ async def build_tts_service(
             client,
             piper_voice_id=piper_voice_id,
             kokoro_voice_id=kokoro_voice_id,
+            tts_voice_id=tts_voice_id,
         )
     except Exception:
         logger.exception('Failed to build TTS service', extra={'provider': provider_id})

@@ -14,6 +14,13 @@ import platformdirs
 LIVE_PIPELINE_SOURCE_ID = 'pipecat'
 REQUEST_PIPELINE_SOURCE_ID = 'assistant_request'
 
+# Push-to-talk (manual) turn completion: on button release / listen-toggle off,
+# wait for the streaming STT to finalize the last words before flushing the turn
+# to the LLM. Re-armed on each incoming transcript (quiet window), bounded by a
+# hard max ≈ the input transport's 2s trailing-silence flush plus margin.
+MANUAL_RELEASE_QUIET_WINDOW_SECONDS = 0.6
+MANUAL_RELEASE_MAX_WAIT_SECONDS = 2.5
+
 IS_RPI = Path('/etc/rpi-issue').exists()
 DATA_PATH = Path(
     os.environ.get(
