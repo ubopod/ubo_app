@@ -2651,7 +2651,6 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
-version = "2.0.1.dev260627103535057975"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
@@ -2814,7 +2813,6 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
-version = "2.0.1.dev260626103985052555"
 source = { editable = "ubo_app/rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },

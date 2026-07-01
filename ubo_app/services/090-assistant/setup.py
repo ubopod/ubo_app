@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from redux import BaseAction
+
     from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
     from ubo_app.store.services.localization import LanguageCode
 
@@ -22,7 +24,6 @@ from engines_registry import (
     first_configured_engine,
     is_engine_configured,
 )
-from redux import BaseAction
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
 from ubo_app.constants import SECRETS_PATH
@@ -3304,7 +3305,7 @@ def _register_bindable_actions() -> None:
     )
 
 
-async def init_service() -> None:  # noqa: PLR0915
+async def init_service() -> None:
     """Initialize the assistant service."""
     _register_persistent_stores()
     _register_bindable_actions()
