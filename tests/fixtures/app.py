@@ -395,8 +395,18 @@ async def app_context(
         # half-initialized singletons and crashes/hangs it.
         _join_background_threads(_BACKGROUND_THREAD_NAMES, timeout=10)
 
+        # The whole betterproto/ubo_bindings stack must persist as a unit: the
+        # generated proto message classes subclass ``betterproto.Message`` and
+        # betterproto resolves type hints lazily via ``sys.modules[cls.__module__]``.
+        # Pinning only the leaf proto module (e.g. ``ubo_bindings.ubo.v1``) while
+        # ``betterproto`` and the sibling proto modules get re-imported leaves the
+        # persisted classes inheriting the OLD ``betterproto.Message`` — a cross-
+        # version mismatch that breaks every gRPC round-trip (and hangs the flow
+        # tests). Skip both families so the proto object graph stays consistent.
         for module_name in set(sys.modules) - modules_snapshot:
-            if not module_name.startswith(('sdbus', 'gpiozero', 'lgpio')):
+            if not module_name.startswith(
+                ('sdbus', 'gpiozero', 'lgpio', 'betterproto', 'ubo_bindings'),
+            ):
                 del sys.modules[module_name]
 
         gc.collect()
