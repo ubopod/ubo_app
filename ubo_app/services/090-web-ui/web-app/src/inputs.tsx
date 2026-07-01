@@ -1,4 +1,9 @@
-import { Clear, InfoOutlined } from "@mui/icons-material";
+import {
+  Clear,
+  InfoOutlined,
+  Visibility,
+  VisibilityOff,
+} from "@mui/icons-material";
 import {
   Typography,
   TextField,
@@ -13,6 +18,7 @@ import {
   FormControlLabel,
   Switch,
   IconButton,
+  InputAdornment,
   Popover,
   Dialog,
   DialogTitle,
@@ -148,6 +154,24 @@ async function chunkedUpload(
   await dispatchActionAsync(store, completeAct);
 }
 
+type WebUIField = NonNullable<
+  WebUIInputDescription.AsObject["fields"]
+>["itemsList"][number];
+
+// Props shared by every plain-text-style TextField (text/number/password/…),
+// so the password branch and the default branch stay in sync.
+function fieldTextProps(field: WebUIField) {
+  return {
+    name: field.name,
+    label: field.label,
+    helperText: field.description,
+    defaultValue: field.defaultValue || undefined,
+    title: field.title || undefined,
+    required: field.required,
+    fullWidth: true as const,
+  };
+}
+
 export function Inputs({
   inputs,
   isGrpcConnected,
@@ -158,6 +182,9 @@ export function Inputs({
   store: StoreServiceClient | null;
 }) {
   const [files, setFiles] = useState<Record<string, Record<string, File>>>({});
+  const [visiblePasswords, setVisiblePasswords] = useState<
+    Record<string, boolean>
+  >({});
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -524,17 +551,50 @@ export function Inputs({
                     </Stack>
                     <FormHelperText>{field.description}</FormHelperText>
                   </FormControl>
+                ) : field.type === InputFieldType.INPUT_FIELD_TYPE_PASSWORD ? (
+                  <TextField
+                    key={field.name}
+                    type={
+                      visiblePasswords[`${id}:${field.name}`]
+                        ? "text"
+                        : "password"
+                    }
+                    {...fieldTextProps(field)}
+                    slotProps={{
+                      input: {
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton
+                              aria-label={
+                                visiblePasswords[`${id}:${field.name}`]
+                                  ? "Hide password"
+                                  : "Show password"
+                              }
+                              edge="end"
+                              onClick={() =>
+                                setVisiblePasswords((state) => ({
+                                  ...state,
+                                  [`${id}:${field.name}`]:
+                                    !state[`${id}:${field.name}`],
+                                }))
+                              }
+                            >
+                              {visiblePasswords[`${id}:${field.name}`] ? (
+                                <VisibilityOff />
+                              ) : (
+                                <Visibility />
+                              )}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                  />
                 ) : (
                   <TextField
                     key={field.name}
                     type={inputFieldTypes[field.type]}
-                    name={field.name}
-                    label={field.label}
-                    helperText={field.description}
-                    defaultValue={field.defaultValue || undefined}
-                    title={field.title || undefined}
-                    required={field.required}
-                    fullWidth
+                    {...fieldTextProps(field)}
                   />
                 ),
               )

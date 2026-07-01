@@ -46,6 +46,7 @@ from ubo_app.store.core.types import (
     ExecuteMenuActionEvent,
     InitEvent,
     InstructionStackItem,
+    LocalOverlayGoBackEvent,
     MainAction,
     MainEvent,
     MainState,
@@ -81,6 +82,7 @@ from ubo_app.store.core.types import (
     ScreenshotDataEvent,
     ScreenshotEvent,
     SetAreEnclosuresVisibleAction,
+    SetLocalOverlayOpenAction,
     StackChangedEvent,
     StackPageIndexChangedEvent,
     StackPopAction,
@@ -138,8 +140,23 @@ def reducer(
 
     match action:
         case MenuGoBackAction():
+            if state.is_local_overlay_open:
+                # A GUI-local overlay (e.g. the notification extra-information
+                # page) owns the screen but isn't on this stack. BACK must
+                # close THAT, not pop here — delegate to the GUI and clear the
+                # flag. If the overlay is already gone (stale flag), the client
+                # re-issues a normal BACK, which now pops (self-healing).
+                return CompleteReducerResult(
+                    state=replace(state, is_local_overlay_open=False),
+                    events=[LocalOverlayGoBackEvent()],
+                )
             result = pop_stack(state)
             return _complete_stack_pop_result(result, fallback=state)
+
+        case SetLocalOverlayOpenAction():
+            if state.is_local_overlay_open == action.is_open:
+                return state
+            return replace(state, is_local_overlay_open=action.is_open)
 
         case MenuGoHomeAction():
             result = pop_to_root(state)

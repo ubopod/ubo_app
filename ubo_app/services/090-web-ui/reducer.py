@@ -18,9 +18,9 @@ from ubo_app.store.services.notifications import (
     NotificationsClearByIdAction,
 )
 from ubo_app.store.services.web_ui import (
+    WebUIAction,
     WebUIInitializeEvent,
     WebUIState,
-    WebUIStopEvent,
 )
 
 if TYPE_CHECKING:
@@ -31,11 +31,11 @@ DispatchAction = InputCancelAction | NotificationsAction
 
 def reducer(
     state: WebUIState | None,
-    action: InputAction,
+    action: InputAction | WebUIAction,
 ) -> ReducerResult[
     WebUIState,
     DispatchAction,
-    WebUIInitializeEvent | WebUIStopEvent,
+    WebUIInitializeEvent,
 ]:
     if state is None:
         if isinstance(action, InitAction):
@@ -53,21 +53,22 @@ def reducer(
             )
 
         case InputResolveAction(id=id):
+            # NOTE: resolving an input no longer tears down the hotspot. The
+            # hotspot (owned by the wifi service) is stopped only by an explicit
+            # WiFiStopHotspotAction when the Wi-Fi journey is complete, so
+            # multi-step web flows keep it up across steps without dropping the
+            # user's connection.
             new_active_inputs = [
                 description
                 for description in state.active_inputs
                 if description.id != id
             ]
-            should_dispatch_stop_event = (
-                len(state.active_inputs) > 0 and len(new_active_inputs) == 0
-            )
             return CompleteReducerResult(
                 state=replace(
                     state,
                     active_inputs=new_active_inputs,
                 ),
                 actions=[NotificationsClearByIdAction(id=f'web_ui:pending:{id}')],
-                events=[WebUIStopEvent()] if should_dispatch_stop_event else [],
             )
 
         case _:

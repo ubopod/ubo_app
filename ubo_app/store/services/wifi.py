@@ -56,6 +56,37 @@ class WiFiUpdateRequestAction(WiFiAction):
     reset: bool = False
 
 
+class WiFiStartHotspotAction(WiFiAction):
+    """Bring up the Wi-Fi hotspot (wlan0 in AP mode).
+
+    ``mode`` is the OS networking mode: ``'captive'`` (DNS-hijack data-entry
+    portal) or ``'share'`` (NAT the clients out to the upstream uplink).
+    """
+
+    mode: str = 'captive'
+
+
+class WiFiStopHotspotAction(WiFiAction):
+    """Tear the Wi-Fi hotspot down and hand wlan0 back to managed mode.
+
+    Dispatched explicitly: from the settings toggle, when the onboarding journey
+    completes, or when a real network route appears - so the hotspot is never
+    torn down merely because an input demand resolved.
+    """
+
+
+class WiFiSetHotspotRunningAction(WiFiAction):
+    """Sync the tracked hotspot running state after a start/stop side effect.
+
+    ``user_enabled`` is True only for an explicitly toggled-on hotspot; the
+    route-driven auto-stop leaves those up (so an internet-sharing hotspot is not
+    torn down just because the device has an upstream route).
+    """
+
+    is_running: bool
+    user_enabled: bool = False
+
+
 class WiFiEvent(BaseEvent): ...
 
 
@@ -65,8 +96,17 @@ class WiFiInputConnectionEvent(WiFiEvent): ...
 class WiFiUpdateRequestEvent(WiFiEvent): ...
 
 
+class WiFiStartHotspotEvent(WiFiEvent):
+    mode: str = 'captive'
+
+
+class WiFiStopHotspotEvent(WiFiEvent): ...
+
+
 class WiFiState(Immutable):
     connections: Sequence[WiFiConnection] | None
     state: NetState
     current_connection: WiFiConnection | None
     has_visited_onboarding: bool | None = None
+    is_hotspot_running: bool = False
+    hotspot_user_enabled: bool = False

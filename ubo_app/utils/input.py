@@ -101,7 +101,7 @@ async def select_input_description(
         NotificationsAddAction(
             notification=Notification(
                 id='input:method',
-                icon='',
+                icon='󰌌',
                 title='Input method',
                 content='Do you want to use the camera or the web dashboard?',
                 display_type=NotificationDisplayType.STICKY,

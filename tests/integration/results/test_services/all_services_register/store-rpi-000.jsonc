@@ -5,12 +5,23 @@
     "active_audio_source": "",
     "active_policy": null,
     "active_source": null,
+    "elevenlabs_available_voices": [],
+    "elevenlabs_voices": [],
+    "enabled_mcp_servers": [],
+    "enabled_mcp_servers_with_metadata": {
+      "_type": "EnabledMcpServersWithMetadata",
+      "items": []
+    },
     "generic_llm_providers": [],
     "is_active": false,
     "is_listening": false,
     "is_microphone_mute": true,
     "kokoro_is_downloaded": false,
     "last_stop_reason": null,
+    "mcp_servers": {},
+    "mistral_available_voices": [],
+    "moonshine_downloaded_models": [],
+    "moonshine_downloading_model": "",
     "ollama_downloaded_models": [],
     "ollama_downloaded_models_refreshed": true,
     "ollama_model_capabilities": {
@@ -23,28 +34,30 @@
         "_type": "AssistantTriggerPolicyEntry",
         "matcher": {
           "_type": "WakePhraseMatcher",
-          "phrase": "let's have a conversation"
+          "mode": "conversation",
+          "phrase": null
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
+          "completion_mode": "silence",
           "end_of_turn_phrases": [
             "i am done talking",
             "i'm done talking"
           ],
-          "requires_phrase_for_stop": true,
-          "silence_timeout_seconds": null
+          "silence_timeout_seconds": 5.0
         }
       },
       {
         "_type": "AssistantTriggerPolicyEntry",
         "matcher": {
           "_type": "WakePhraseMatcher",
-          "phrase": "hey quick question"
+          "mode": "quick_chat",
+          "phrase": null
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
+          "completion_mode": "silence",
           "end_of_turn_phrases": [],
-          "requires_phrase_for_stop": false,
           "silence_timeout_seconds": 2.0
         }
       },
@@ -56,8 +69,8 @@
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
+          "completion_mode": "manual",
           "end_of_turn_phrases": [],
-          "requires_phrase_for_stop": false,
           "silence_timeout_seconds": null
         }
       },
@@ -70,8 +83,8 @@
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
+          "completion_mode": "manual",
           "end_of_turn_phrases": [],
-          "requires_phrase_for_stop": false,
           "silence_timeout_seconds": null
         }
       },
@@ -82,8 +95,8 @@
         },
         "policy": {
           "_type": "AssistantTriggerPolicy",
+          "completion_mode": "silence",
           "end_of_turn_phrases": [],
-          "requires_phrase_for_stop": false,
           "silence_timeout_seconds": null
         }
       }
@@ -101,6 +114,7 @@
       "grok": false,
       "kokoro": false,
       "mistral": false,
+      "moonshine": false,
       "ollama": false,
       "ollama_onprem": false,
       "openai": false,
@@ -130,9 +144,19 @@
       "qwen": "qwen-plus",
       "venice": "llama-3.3-70b"
     },
+    "selected_moonshine_model": "tiny",
     "selected_piper_voice": "en/en_US/kristin/medium/en_US-kristin-medium",
     "selected_stt": "vosk",
     "selected_tts": "piper",
+    "selected_voices": {
+      "deepgram": "aura-2-helena-en",
+      "elevenlabs": "",
+      "google": "en-US-Chirp3-HD-Aoede",
+      "mistral": "en_paul_neutral",
+      "openai": "alloy",
+      "rime": "antoine",
+      "venice": "af_heart"
+    },
     "selected_vosk_model": "vosk-model-small-en-us-0.15",
     "vosk_downloaded_models": []
   },
@@ -424,6 +448,7 @@
     },
     "is_footer_visible": true,
     "is_header_visible": true,
+    "is_local_overlay_open": false,
     "is_recording": false,
     "is_replaying": false,
     "path": [],
@@ -450,6 +475,17 @@
         "key": "assistant:llm",
         "label": "Language Model",
         "priority": 40
+      },
+      "assistant:mcp_tools": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Assistant",
+        "icon": "󰒋",
+        "key": "assistant:mcp_tools",
+        "label": "MCP Tools",
+        "priority": 15
       },
       "assistant:providers": {
         "_type": "RegisteredAppEntry",
@@ -737,17 +773,6 @@
         "label": "Desktop",
         "priority": 0
       },
-      "mcp:tools": {
-        "_type": "RegisteredAppEntry",
-        "action_id": null,
-        "app_category": null,
-        "background_color": null,
-        "category": "Assistant",
-        "icon": "󰒋",
-        "key": "mcp:tools",
-        "label": "MCP Tools",
-        "priority": 15
-      },
       "rpi_connect:": {
         "_type": "RegisteredAppEntry",
         "action_id": "rpi-connect:open_menu",
@@ -765,32 +790,32 @@
         "app_category": null,
         "background_color": null,
         "category": "Accessibility",
-        "icon": "",
+        "icon": "󰍮",
         "key": "speech_recognition:",
-        "label": "Speech Recognition",
+        "label": "Voice Shortcuts",
         "priority": 30
       },
-      "speech_synthesis:engines": {
+      "speech_recognition:voice": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Assistant",
+        "icon": "󰍯",
+        "key": "speech_recognition:voice",
+        "label": "Wake Phrases",
+        "priority": 100
+      },
+      "speech_synthesis:": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
         "app_category": null,
         "background_color": null,
         "category": "Accessibility",
         "icon": "󰔊",
-        "key": "speech_synthesis:engines",
-        "label": "Speech Synthesis",
+        "key": "speech_synthesis:",
+        "label": "Screen Reader",
         "priority": 10
-      },
-      "speech_synthesis:settings": {
-        "_type": "RegisteredAppEntry",
-        "action_id": null,
-        "app_category": null,
-        "background_color": null,
-        "category": "Accessibility",
-        "icon": "PV",
-        "key": "speech_synthesis:settings",
-        "label": "Picovoice Settings",
-        "priority": 0
       },
       "ssh:": {
         "_type": "RegisteredAppEntry",
@@ -840,6 +865,7 @@
     "settings_items_priorities": {
       "assistant:image_generator": 20,
       "assistant:llm": 40,
+      "assistant:mcp_tools": 15,
       "assistant:providers": 10,
       "assistant:stt": 50,
       "assistant:tts": 30,
@@ -850,11 +876,10 @@
       "infrared:infrared": null,
       "ip:": 0,
       "lightdm:": 0,
-      "mcp:tools": 15,
       "rpi_connect:": null,
       "speech_recognition:": 30,
-      "speech_synthesis:engines": 10,
-      "speech_synthesis:settings": 0,
+      "speech_recognition:voice": 100,
+      "speech_synthesis:": 10,
       "ssh:": 1,
       "users:": 1,
       "vscode:": null,
@@ -901,16 +926,6 @@
       "temperature": 0.0,
       "title": "󰋜test-hostname.local"
     }
-  },
-  "mcp": {
-    "_type": "McpState",
-    "enabled_mcp_servers": [],
-    "enabled_mcp_servers_with_metadata": {
-      "_type": "EnabledMcpServersWithMetadata",
-      "items": []
-    },
-    "mcp_servers": {},
-    "server_statuses": {}
   },
   "notifications": {
     "_type": "NotificationsState",
@@ -1066,16 +1081,6 @@
         "log_level": 20,
         "should_auto_restart": false
       },
-      "mcp": {
-        "_type": "ServiceState",
-        "errors": [],
-        "id": "mcp",
-        "is_active": true,
-        "is_enabled": true,
-        "label": "MCP",
-        "log_level": 20,
-        "should_auto_restart": false
-      },
       "notifications": {
         "_type": "ServiceState",
         "errors": [],
@@ -1202,6 +1207,10 @@
   },
   "speech_recognition": {
     "_type": "SpeechRecognitionState",
+    "conversation_end_phrases": [
+      "i am done talking",
+      "i'm done talking"
+    ],
     "intents": [
       {
         "_type": "SpeechRecognitionIntent",
@@ -1476,15 +1485,46 @@
         ]
       }
     ],
-    "is_assistant_active": false,
-    "is_intents_active": false,
-    "selected_engine": "vosk",
-    "status": "idle"
+    "status": "idle",
+    "wake_slots": [
+      {
+        "_type": "WakeWordSlot",
+        "enabled": false,
+        "mode": "intents",
+        "phrases": [
+          "short voice command"
+        ]
+      },
+      {
+        "_type": "WakeWordSlot",
+        "enabled": false,
+        "mode": "quick_chat",
+        "phrases": [
+          "hey quick question"
+        ]
+      },
+      {
+        "_type": "WakeWordSlot",
+        "enabled": false,
+        "mode": "conversation",
+        "phrases": [
+          "let's have a conversation"
+        ]
+      },
+      {
+        "_type": "WakeWordSlot",
+        "enabled": false,
+        "mode": "stop_talking",
+        "phrases": [
+          "okay enough"
+        ]
+      }
+    ]
   },
   "speech_synthesis": {
     "_type": "SpeechSynthesisState",
-    "is_access_key_set": false,
-    "selected_engine": "piper"
+    "is_prefer_local_enabled": false,
+    "is_screen_reader_enabled": false
   },
   "ssh": {
     "_type": "SSHState",
@@ -1576,6 +1616,8 @@
     "connections": [],
     "current_connection": null,
     "has_visited_onboarding": null,
+    "hotspot_user_enabled": false,
+    "is_hotspot_running": false,
     "state": "Disconnected"
   }
 }

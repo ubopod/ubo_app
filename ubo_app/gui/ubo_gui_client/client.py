@@ -384,6 +384,36 @@ class GUIClient:
             )
             self._client.dispatch(action=action)
 
+    def dispatch_set_local_overlay_open(self, *, is_open: bool) -> None:
+        """Tell the core a local-only GUI overlay opened/closed.
+
+        Lets the core route BACK to this overlay (e.g. the notification
+        extra-information page) instead of popping the navigation stack.
+        """
+        from ubo_bindings.ubo.v1 import Action, SetLocalOverlayOpenAction
+
+        if self._client:
+            logger.info(
+                '[GUIClient] dispatch_set_local_overlay_open: is_open=%s',
+                is_open,
+            )
+            self._client.dispatch(
+                action=Action(
+                    set_local_overlay_open_action=SetLocalOverlayOpenAction(
+                        is_open=is_open,
+                    ),
+                ),
+            )
+
+    def dispatch_menu_go_back(self) -> None:
+        """Request a normal BACK navigation from the core."""
+        from ubo_bindings.ubo.v1 import Action, MenuGoBackAction
+
+        if self._client:
+            self._client.dispatch(
+                action=Action(menu_go_back_action=MenuGoBackAction()),
+            )
+
     def dispatch_raw(self, action: Action) -> None:
         """Dispatch a raw protobuf Action to the core."""
         if self._client:
@@ -499,6 +529,33 @@ class GUIClient:
             callback=lambda event: callback(
                 event.application_scroll_event.direction,
             ),
+        )
+
+    def subscribe_local_overlay_go_back(
+        self,
+        callback: Callable[[], None],
+    ) -> Callable[[], None]:
+        """Subscribe to BACK events delegated to a local-only overlay.
+
+        Emitted by the core when BACK is pressed while a GUI-local overlay
+        (e.g. the notification extra-information page) is open, so the client
+        can close that overlay instead of the core popping the stack.
+
+        Returns:
+            Unsubscribe callable to stop receiving events.
+
+        """
+        if not self._client:
+            msg = 'Client not connected'
+            raise RuntimeError(msg)
+
+        from ubo_bindings.ubo.v1 import Event, LocalOverlayGoBackEvent
+
+        return self._client.subscribe_event(
+            event_type=Event(
+                local_overlay_go_back_event=LocalOverlayGoBackEvent(),
+            ),
+            callback=lambda _event: callback(),
         )
 
     def dispatch_wifi_update_request(self, *, reset: bool = False) -> None:

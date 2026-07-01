@@ -225,6 +225,10 @@ def setup_keyboard(  # noqa: C901, PLR0915
         ):
             logger.info('[Keyboard] BACK on local-only page — popping locally')
             menu_widget.go_back()
+            # The core never saw this BACK, so clear the overlay flag it set
+            # when the page opened (keeps the core's is_local_overlay_open in
+            # sync; otherwise a later BACK would be needlessly delegated).
+            client.dispatch_set_local_overlay_open(is_open=False)
             return
 
         action = None
