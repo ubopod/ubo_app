@@ -14,12 +14,17 @@ import socket
 from typing import TYPE_CHECKING, Any
 
 import uvicorn
-from fastmcp import FastMCP
+from fastmcp import Client, FastMCP
 from fastmcp.server import create_proxy
 from loguru import logger
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.routing import Mount
+from ubo_bindings.ubo.v1 import (
+    Action,
+    McpServerStatus,
+    McpSetServerStatusAction,
+)
 
 from ubo_mcp_gateway.gateway import build_mcp_config, extract_items
 
@@ -29,6 +34,10 @@ if TYPE_CHECKING:
     from ubo_bindings.client import UboRPCClient
 
 ASGIApp = Any
+
+# Upper bound on a single backend health probe (connect + initialize + one
+# ``list_tools`` round-trip). A hung stdio server must not stall the rebuild.
+PROBE_TIMEOUT = 15
 
 
 class _BearerAuthMiddleware:
@@ -126,6 +135,67 @@ class GatewayServer:
             self._desired_config = config
             self._restart_event.set()
 
+    def _report_status(
+        self,
+        server_id: str,
+        status: McpServerStatus,
+        message: str = '',
+    ) -> None:
+        """Push one server's probed health back into the core store."""
+        self._client.dispatch(
+            action=Action(
+                mcp_set_server_status_action=McpSetServerStatusAction(
+                    server_id=server_id,
+                    status=status,
+                    message=message,
+                ),
+            ),
+        )
+
+    async def _probe_server(self, server_id: str, entry: dict[str, Any]) -> None:
+        """Probe one backend: connect and list its tools. Report the result.
+
+        Uses a throwaway single-backend ``Client`` so a failure (bad command,
+        unreachable URL, protocol error) is attributable to this server. A
+        successful ``list_tools`` — even with zero tools — counts as healthy.
+
+        ``keep_alive=False`` is forced for stdio backends: FastMCP defaults it to
+        ``True`` (keeping the subprocess alive for reuse), which would leave the
+        probe's child process — e.g. a ``docker run`` container — running after
+        the probe. Disabling it tears the subprocess down when the probe exits.
+        """
+        probe_entry = {**entry, 'keep_alive': False} if 'command' in entry else entry
+        self._report_status(server_id, McpServerStatus.CHECKING)
+        try:
+            async with (
+                asyncio.timeout(PROBE_TIMEOUT),
+                Client({'mcpServers': {server_id: probe_entry}}) as client,
+            ):
+                await client.list_tools()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - any failure ⇒ unhealthy
+            logger.opt(exception=True).warning(
+                'MCP server probe failed {extra}',
+                extra={'server_id': server_id},
+            )
+            self._report_status(
+                server_id,
+                McpServerStatus.FAILED,
+                str(exc) or exc.__class__.__name__,
+            )
+        else:
+            self._report_status(server_id, McpServerStatus.HEALTHY)
+
+    async def _probe_all(self, config: dict[str, Any]) -> None:
+        """Probe every enabled backend concurrently and report each result."""
+        servers = config.get('mcpServers', {})
+        if not servers:
+            return
+        await asyncio.gather(
+            *(self._probe_server(sid, entry) for sid, entry in servers.items()),
+        )
+
     async def serve(self) -> None:
         """Run the gateway until cancelled, restarting on config changes."""
         self._client.autorun([
@@ -141,6 +211,7 @@ class GatewayServer:
             extra={'host': self._host, 'port': self._port},
         )
 
+        probe_task: asyncio.Task | None = None
         try:
             while True:
                 self._restart_event.clear()
@@ -161,10 +232,21 @@ class GatewayServer:
                     server.serve(sockets=[sock.dup()]),
                 )
 
+                # Probe the current enabled set (startup + after every change),
+                # reporting each server's health back to the store. Cancel any
+                # in-flight probe from the previous config first.
+                if probe_task is not None:
+                    probe_task.cancel()
+                probe_task = asyncio.create_task(
+                    self._probe_all(self._current_config),
+                )
+
                 # Wait until the enabled set changes, then cycle the server.
                 await self._restart_event.wait()
                 logger.info('MCP server set changed; rebuilding gateway')
                 server.should_exit = True
                 await serve_task
         finally:
+            if probe_task is not None:
+                probe_task.cancel()
             sock.close()

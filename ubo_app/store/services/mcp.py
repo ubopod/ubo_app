@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import field
-from enum import StrEnum
+from enum import StrEnum, auto
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
@@ -24,6 +24,28 @@ class McpServerType(StrEnum):
 
     STDIO = 'stdio'
     SSE = 'sse'
+
+
+class McpServerStatus(StrEnum):
+    """Runtime health status of an enabled MCP server.
+
+    Reported by the gateway subprocess after it probes each enabled backend:
+    ``CHECKING`` while a probe is in flight, then ``HEALTHY`` (the backend
+    connected and answered ``list_tools``) or ``FAILED`` (spawn/connect/protocol
+    error). ``UNKNOWN`` is the default for servers never probed (e.g. disabled).
+    """
+
+    UNKNOWN = auto()
+    CHECKING = auto()
+    HEALTHY = auto()
+    FAILED = auto()
+
+
+class McpServerHealth(Immutable):
+    """Per-server runtime health: a status plus an optional failure message."""
+
+    status: McpServerStatus = McpServerStatus.UNKNOWN
+    message: str = ''
 
 
 class StdioMcpConfig(Immutable):
@@ -75,6 +97,17 @@ class McpToggleServerAction(McpAction):
     """Action to enable/disable an MCP server."""
 
     server_id: str
+
+
+class McpSetServerStatusAction(McpAction):
+    """Action reporting an enabled server's probed runtime health.
+
+    Dispatched by the gateway subprocess over gRPC after probing a backend.
+    """
+
+    server_id: str
+    status: McpServerStatus
+    message: str = ''
 
 
 class McpDeleteServerAction(McpAction):
@@ -154,3 +187,6 @@ class McpState(Immutable):
     enabled_mcp_servers_with_metadata: EnabledMcpServersWithMetadata = field(
         default_factory=EnabledMcpServersWithMetadata,
     )
+    # Runtime health per server, keyed by server_id. Populated by the gateway's
+    # probe results (McpSetServerStatusAction); runtime-only, not persisted.
+    server_statuses: dict[str, McpServerHealth] = field(default_factory=dict)

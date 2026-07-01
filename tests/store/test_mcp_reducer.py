@@ -24,9 +24,12 @@ from ubo_app.store.services.mcp import (
     McpAddServerEvent,
     McpDeleteServerAction,
     McpDeleteServerEvent,
+    McpServerHealth,
     McpServerMetadata,
+    McpServerStatus,
     McpServerType,
     McpSetServersAction,
+    McpSetServerStatusAction,
     McpState,
     McpSyncServersAction,
     McpSyncServersEvent,
@@ -164,3 +167,79 @@ def test_sync_action_emits_sync_event() -> None:
     events = list(result.events or [])
     assert len(events) == 1
     assert isinstance(events[0], McpSyncServersEvent)
+
+
+def test_set_server_status_records_health() -> None:
+    """A status report is stored (with its message) for a known server."""
+    state = McpState(mcp_servers={'a_1': _server('a_1', 'a')})
+
+    healthy = reducer(
+        state,
+        McpSetServerStatusAction(server_id='a_1', status=McpServerStatus.HEALTHY),
+    )
+    assert isinstance(healthy, McpState)
+    assert healthy.server_statuses['a_1'] == McpServerHealth(
+        status=McpServerStatus.HEALTHY,
+    )
+
+    failed = reducer(
+        healthy,
+        McpSetServerStatusAction(
+            server_id='a_1',
+            status=McpServerStatus.FAILED,
+            message='boom',
+        ),
+    )
+    assert isinstance(failed, McpState)
+    assert failed.server_statuses['a_1'] == McpServerHealth(
+        status=McpServerStatus.FAILED,
+        message='boom',
+    )
+
+
+def test_set_server_status_ignores_unknown_server() -> None:
+    """A status for a server no longer configured is dropped (delete race)."""
+    state = McpState()
+
+    result = reducer(
+        state,
+        McpSetServerStatusAction(server_id='gone_1', status=McpServerStatus.FAILED),
+    )
+
+    assert result is state
+
+
+def test_delete_prunes_stale_status() -> None:
+    """Deleting a server drops its recorded health."""
+    state = McpState(
+        mcp_servers={'a_1': _server('a_1', 'a'), 'b_2': _server('b_2', 'b')},
+        enabled_mcp_servers=['a_1'],
+        server_statuses={
+            'a_1': McpServerHealth(status=McpServerStatus.FAILED, message='x'),
+            'b_2': McpServerHealth(status=McpServerStatus.HEALTHY),
+        },
+    )
+
+    result = reducer(state, McpDeleteServerAction(server_id='a_1'))
+
+    assert isinstance(result, CompleteReducerResult)
+    assert set(result.state.server_statuses) == {'b_2'}
+
+
+def test_set_servers_prunes_stale_status() -> None:
+    """A filesystem re-sync drops health for servers no longer present."""
+    state = McpState(
+        mcp_servers={'a_1': _server('a_1', 'a')},
+        server_statuses={
+            'a_1': McpServerHealth(status=McpServerStatus.HEALTHY),
+            'stale_9': McpServerHealth(status=McpServerStatus.FAILED),
+        },
+    )
+
+    new_state = reducer(
+        state,
+        McpSetServersAction(servers=[_server('a_1', 'a')], enabled_servers=['a_1']),
+    )
+
+    assert isinstance(new_state, McpState)
+    assert set(new_state.server_statuses) == {'a_1'}

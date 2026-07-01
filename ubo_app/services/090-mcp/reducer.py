@@ -16,7 +16,9 @@ from ubo_app.store.services.mcp import (
     McpDeleteServerAction,
     McpDeleteServerEvent,
     McpEvent,
+    McpServerHealth,
     McpSetServersAction,
+    McpSetServerStatusAction,
     McpState,
     McpSyncServersAction,
     McpSyncServersEvent,
@@ -113,6 +115,11 @@ def reducer(
                     enabled_mcp_servers=enabled_servers,
                     mcp_servers=mcp_servers,
                     enabled_mcp_servers_with_metadata=enabled_with_metadata,
+                    server_statuses={
+                        k: v
+                        for k, v in state.server_statuses.items()
+                        if k in mcp_servers
+                    },
                 ),
                 events=[McpDeleteServerEvent(server_id=action.server_id)],
             )
@@ -141,6 +148,27 @@ def reducer(
                 mcp_servers=mcp_servers,
                 enabled_mcp_servers=enabled_servers,
                 enabled_mcp_servers_with_metadata=enabled_with_metadata,
+                server_statuses={
+                    k: v
+                    for k, v in state.server_statuses.items()
+                    if k in mcp_servers
+                },
+            )
+
+        case McpSetServerStatusAction():
+            # Record the gateway's probe result for one server. Ignore statuses
+            # for servers no longer configured (a delete may have raced the probe).
+            if action.server_id not in state.mcp_servers:
+                return state
+            return replace(
+                state,
+                server_statuses={
+                    **state.server_statuses,
+                    action.server_id: McpServerHealth(
+                        status=action.status,
+                        message=action.message,
+                    ),
+                },
             )
 
         case _:

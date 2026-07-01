@@ -735,11 +735,11 @@
         "action_id": null,
         "app_category": null,
         "background_color": null,
-        "category": "MCP",
+        "category": "Assistant",
         "icon": "󰒋",
         "key": "mcp:tools",
         "label": "MCP Tools",
-        "priority": 10
+        "priority": 15
       },
       "rpi_connect:": {
         "_type": "RegisteredAppEntry",
@@ -843,7 +843,7 @@
       "infrared:infrared": null,
       "ip:": 0,
       "lightdm:": 0,
-      "mcp:tools": 10,
+      "mcp:tools": 15,
       "rpi_connect:": null,
       "speech_recognition:": 30,
       "speech_synthesis:engines": 10,
@@ -902,7 +902,8 @@
       "_type": "EnabledMcpServersWithMetadata",
       "items": []
     },
-    "mcp_servers": {}
+    "mcp_servers": {},
+    "server_statuses": {}
   },
   "notifications": {
     "_type": "NotificationsState",

@@ -25,7 +25,7 @@ from constants import (
 )
 from redux import AutorunOptions
 
-from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
+from ubo_app.colors import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.constants import MCP_GATEWAY_LISTEN_PORT
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
@@ -50,7 +50,9 @@ from ubo_app.store.main import store
 from ubo_app.store.services.mcp import (
     McpAddServerEvent,
     McpDeleteServerEvent,
+    McpServerHealth,
     McpServerMetadata,
+    McpServerStatus,
     McpServerType,
     McpSetServersAction,
     McpSyncServersAction,
@@ -58,10 +60,12 @@ from ubo_app.store.services.mcp import (
     McpToggleServerEvent,
 )
 from ubo_app.store.services.notifications import (
+    Chime,
     Importance,
     Notification,
     NotificationDisplayType,
     NotificationsAddAction,
+    NotificationsClearByIdAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils.async_ import create_task
@@ -165,6 +169,48 @@ def _show_gateway_token() -> None:
     )
 
 
+def _show_add_error(message: str) -> None:
+    """Surface an Add-Server validation failure to the user.
+
+    Previously these failures were only logged, so a malformed config looked
+    identical to a successful add. Uses a stable id so repeated attempts replace
+    rather than stack.
+    """
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                id='mcp:add-error',
+                title='Invalid MCP server',
+                content=message,
+                importance=Importance.HIGH,
+                icon='󰀪',
+                color=DANGER_COLOR,
+                display_type=NotificationDisplayType.FLASH,
+                chime=Chime.FAILURE,
+            ),
+        ),
+    )
+
+
+_STATUS_LABELS = {
+    McpServerStatus.UNKNOWN: 'Not checked yet',
+    McpServerStatus.CHECKING: 'Checking…',
+    McpServerStatus.HEALTHY: 'Healthy',
+    McpServerStatus.FAILED: 'Failed',
+}
+
+
+def _server_color_icon(*, is_enabled: bool, status: McpServerStatus) -> tuple[str, str]:
+    """Pick the list-item background color and icon for a server's state."""
+    if not is_enabled:
+        return WARNING_COLOR, '󰖭'
+    if status == McpServerStatus.FAILED:
+        return DANGER_COLOR, '󰀪'
+    if status == McpServerStatus.HEALTHY:
+        return SUCCESS_COLOR, '󰄬'
+    return INFO_COLOR, '󰔟'  # CHECKING / UNKNOWN
+
+
 def input_mcp_server() -> None:
     """Input MCP server configuration via WebUI."""
 
@@ -222,6 +268,7 @@ def input_mcp_server() -> None:
             config_str = result.data.get('config', '').strip()
 
             if not name or not server_type_str or not config_str:
+                _show_add_error('Name, type and configuration are all required.')
                 return
 
             server_type = McpServerType(server_type_str)
@@ -234,6 +281,7 @@ def input_mcp_server() -> None:
                         'Invalid stdio configuration',
                         extra={'error': error_msg},
                     )
+                    _show_add_error(error_msg or 'Invalid stdio configuration.')
                     return
                 # Extract server config and create typed object
                 mcp_servers_dict = parsed_config.get('mcpServers', {})
@@ -247,6 +295,7 @@ def input_mcp_server() -> None:
                 is_valid, error_msg = validate_sse_url(config_str)
                 if not is_valid:
                     logger.error('Invalid SSE URL', extra={'error': error_msg})
+                    _show_add_error(error_msg or 'Invalid SSE URL.')
                     return
                 typed_config = SseMcpConfig(url=config_str)
 
@@ -316,6 +365,9 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
 
     _mcp_action_ids: list[str] = []
     _mcp_server_unsubscribers: dict[str, Callable] = {}
+    # Stable notification ids we have raised for currently-failed servers, so we
+    # can clear them once a server recovers or is removed.
+    _raised_failure_ids: set[str] = set()
 
     def mcp_server_menu(server_id: str) -> Callable:
         """Set up dynamic menu updates for a specific MCP server."""
@@ -330,13 +382,14 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
             lambda state: (
                 state.mcp.mcp_servers.get(server_id),
                 server_id in state.mcp.enabled_mcp_servers,
+                state.mcp.server_statuses.get(server_id, McpServerHealth()),
             ),
             options=AutorunOptions(default_value=None),
         )
         def menu(
-            state_data: tuple[McpServerMetadata | None, bool],
+            state_data: tuple[McpServerMetadata | None, bool, McpServerHealth],
         ) -> None:
-            server, is_enabled = state_data
+            server, is_enabled, health = state_data
 
             for action_id in _server_action_ids:
                 unregister_action(action_id)
@@ -372,6 +425,11 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
             )
 
             status_text = 'Enabled' if is_enabled else 'Disabled'
+            # Only the actual (probed) health is meaningful for an enabled
+            # server; a disabled one is never probed.
+            health_text = (
+                f' • {_STATUS_LABELS[health.status]}' if is_enabled else ''
+            )
             items = (
                 MenuItemData(
                     key='toggle',
@@ -395,7 +453,7 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
                     title=f'MCP: {server.name}',
                     items=items,
                     heading=server.name,
-                    sub_heading=f'Type: {server.type} • {status_text}',
+                    sub_heading=f'Type: {server.type} • {status_text}{health_text}',
                 ),
             )
 
@@ -414,13 +472,18 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
         lambda state: (
             state.mcp.mcp_servers,
             state.mcp.enabled_mcp_servers,
+            state.mcp.server_statuses,
         ),
     )
     def mcp_servers_menu(
-        state_data: tuple[dict[str, McpServerMetadata], list[str]],
+        state_data: tuple[
+            dict[str, McpServerMetadata],
+            list[str],
+            dict[str, McpServerHealth],
+        ],
     ) -> None:
         """Update dynamic menu for MCP servers."""
-        loaded_servers, enabled_servers = state_data
+        loaded_servers, enabled_servers, server_statuses = state_data
 
         for action_id in _mcp_action_ids:
             unregister_action(action_id)
@@ -475,12 +538,17 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
                     StackPushMenuAction(menu_key=_sid),
                 ),
             )
+            status = server_statuses.get(server_id, McpServerHealth()).status
+            background_color, icon = _server_color_icon(
+                is_enabled=is_enabled,
+                status=status,
+            )
             items.append(
                 MenuItemData(
                     key=server_id,
                     label=server.name,
-                    icon='󰄬' if is_enabled else '󰖭',
-                    background_color=INFO_COLOR if is_enabled else WARNING_COLOR,
+                    icon=icon,
+                    background_color=background_color,
                     action_id=open_action_id,
                 ),
             )
@@ -498,6 +566,48 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
                 items=tuple(items),
             ),
         )
+
+    # Raise/clear a sticky notification as servers fail/recover. Keyed on the
+    # server + status maps so it re-runs on any health change.
+    @store.autorun(
+        lambda state: (state.mcp.server_statuses, state.mcp.mcp_servers),
+    )
+    def mcp_status_notifier(
+        state_data: tuple[dict[str, McpServerHealth], dict[str, McpServerMetadata]],
+    ) -> None:
+        statuses, servers = state_data
+
+        failed_now: set[str] = set()
+        for server_id, health in statuses.items():
+            if health.status != McpServerStatus.FAILED:
+                continue
+            server = servers.get(server_id)
+            if server is None:
+                continue
+            failed_now.add(server_id)
+            notification_id = f'mcp:server-status:{server_id}'
+            store.dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        id=notification_id,
+                        title=f'MCP: {server.name} failed',
+                        content=health.message or 'The server could not be reached.',
+                        importance=Importance.HIGH,
+                        icon='󰀪',
+                        color=DANGER_COLOR,
+                        display_type=NotificationDisplayType.STICKY,
+                        chime=Chime.FAILURE,
+                    ),
+                ),
+            )
+
+        # Clear notifications for servers that recovered or were removed.
+        for server_id in _raised_failure_ids - failed_now:
+            store.dispatch(
+                NotificationsClearByIdAction(id=f'mcp:server-status:{server_id}'),
+            )
+        _raised_failure_ids.clear()
+        _raised_failure_ids.update(failed_now)
 
     # Event handlers for MCP servers
     def handle_add_mcp_server(event: McpAddServerEvent) -> None:
@@ -597,5 +707,6 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
         unregister_servers_dependency,
         unregister_path_matcher,
         mcp_servers_menu.unsubscribe,
+        mcp_status_notifier.unsubscribe,
         cleanup_dynamic_menus,
     ]

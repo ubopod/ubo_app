@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Self
 
 import httpx
 from starlette.applications import Starlette
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
+from ubo_bindings.ubo.v1 import Action, McpServerStatus
 
+import ubo_mcp_gateway.server as server_module
 from ubo_mcp_gateway.gateway import build_mcp_config, extract_items
-from ubo_mcp_gateway.server import _BearerAuthMiddleware
+from ubo_mcp_gateway.server import GatewayServer, _BearerAuthMiddleware
 
 
 class _Wrapper:
@@ -106,3 +109,82 @@ def test_bearer_middleware_rejects_and_allows() -> None:
             assert good.text == 'ok'
 
     asyncio.run(_exercise())
+
+
+class _RecordingClient:
+    """Capture actions the gateway dispatches back to the store."""
+
+    def __init__(self) -> None:
+        self.actions: list[Action] = []
+
+    def dispatch(self, *, action: Action) -> None:
+        self.actions.append(action)
+
+
+class _FakeClient:
+    """Stand-in for ``fastmcp.Client`` as an async context manager."""
+
+    def __init__(
+        self,
+        _config: object,
+        *,
+        raise_exc: Exception | None = None,
+        tools: list | None = None,
+    ) -> None:
+        self._raise = raise_exc
+        self._tools = tools or []
+
+    async def __aenter__(self) -> Self:
+        if self._raise is not None:
+            raise self._raise
+        return self
+
+    async def __aexit__(self, *_exc: object) -> bool:
+        return False
+
+    async def list_tools(self) -> list:
+        return self._tools
+
+
+def _server(client: _RecordingClient) -> GatewayServer:
+    return GatewayServer(client=client, token='t', host='127.0.0.1', port=0)  # type: ignore[arg-type]  # noqa: S106
+
+
+def _statuses(recorder: _RecordingClient) -> list[McpServerStatus]:
+    return [a.mcp_set_server_status_action.status for a in recorder.actions]
+
+
+def test_probe_server_reports_checking_then_healthy(
+    monkeypatch: object,
+) -> None:
+    """A backend that lists tools transitions CHECKING → HEALTHY."""
+    monkeypatch.setattr(server_module, 'Client', _FakeClient)  # type: ignore[attr-defined]
+    recorder = _RecordingClient()
+
+    asyncio.run(_server(recorder)._probe_server('a_1', {'command': 'echo'}))
+
+    assert _statuses(recorder) == [
+        McpServerStatus.CHECKING,
+        McpServerStatus.HEALTHY,
+    ]
+
+
+def test_probe_server_reports_failed_with_message(
+    monkeypatch: object,
+) -> None:
+    """A backend that fails to connect transitions CHECKING → FAILED (+ message)."""
+
+    def _factory(config: object) -> _FakeClient:
+        return _FakeClient(config, raise_exc=RuntimeError('spawn failed'))
+
+    monkeypatch.setattr(server_module, 'Client', _factory)  # type: ignore[attr-defined]
+    recorder = _RecordingClient()
+
+    asyncio.run(_server(recorder)._probe_server('a_1', {'command': 'nope'}))
+
+    assert _statuses(recorder) == [
+        McpServerStatus.CHECKING,
+        McpServerStatus.FAILED,
+    ]
+    message = recorder.actions[-1].mcp_set_server_status_action.message
+    assert 'spawn failed' in (message or '')
