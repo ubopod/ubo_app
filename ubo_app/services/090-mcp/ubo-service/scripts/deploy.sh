@@ -48,6 +48,16 @@ function run_on_pod_as_root() {
   return 1
 }
 
+SERVICE_VENV="/opt/ubo/env/lib/python3.11/site-packages/ubo_app/services/090-mcp/ubo-service"
+
+# The per-service venv is normally created at install time by
+# `ubo-setup.sh`/`ubo-bootstrap`, which `pip install`s the service wheel from
+# PyPI. A brand-new service whose wheel is not published yet never gets that
+# venv, so `source .../bin/activate` below would fail. Create it on demand
+# (mirrors bootstrap's `venv.create(system_site_packages=True)`) so a dev
+# `deploy` provisions the service from scratch.
+ssh ubo-development-pod-$index "sudo XDG_RUNTIME_DIR=/run/user/\$(id -u ubo) -u ubo bash -c 'source \$HOME/.profile && source /etc/profile && [ -f $SERVICE_VENV/bin/activate ] || /opt/ubo/env/bin/python -m venv --system-site-packages $SERVICE_VENV'"
+
 run_on_pod_as_root "rm /tmp/ubo_app_mcp_gateway*.whl || true"
 scp dist/$LATEST_WHEEL ubo-development-pod-$index:/tmp/
 scp ../../../../dist/$LATEST_BINDINGS_WHEEL ubo-development-pod-$index:/tmp/
