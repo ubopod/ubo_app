@@ -1,10 +1,13 @@
-"""Reducer tests for slot-driven wake-phrase handling in speech-recognition.
+"""Reducer tests for the multi-engine, per-trigger wake-word model.
 
-The reducer matches a detected word against any phrase of an *enabled* slot,
-routes quick-chat/conversation to ``AssistantStartListeningAction`` (carrying a
-``WakePhraseTriggerSource`` with the phrase, mode and detector) and the stop
-phrase to ``AssistantStopTalkingAction`` (carrying phrase + detector). It also
-enforces the Conversation⟺Stop enable coupling.
+The reducer maps a reported detection ``(engine, trigger_id)`` to the trigger's
+mode and routes it through the shared ``_apply_wake_mode`` map: quick-chat /
+conversation → ``AssistantStartListeningAction`` (carrying a
+``WakePhraseTriggerSource``), the silence phrase → ``AssistantStopTalkingAction``,
+and intents → ``INTENTS_WAITING``. ``SpeechRecognitionTriggerModeAction`` (used by
+Infrared-bound remote keys) routes through the same map. The reducer also owns the
+engine toggle + trigger add/remove handlers, the ``assistant_enabled`` switch, the
+OWW model lifecycle handlers, and the ``wake_slots`` → ``wake_engines`` migration.
 
 Loads the service reducer via ``importlib.util.spec_from_file_location`` for the
 same reason ``test_assistant_listening_metadata.py`` does — integration tests
@@ -21,47 +24,24 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
 
-from ubo_app.constants.assistant import (
-    ASSISTANT_CONVERSATION_END_PHRASES,
-    ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS,
-    ASSISTANT_CONVERSATION_WAKE_WORD,
-    ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS,
-    ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
-    ASSISTANT_STOP_TALKING_PHRASE,
-    INTENTS_WAKE_WORD,
-)
-
 if TYPE_CHECKING:
     import pytest
     from redux import BaseAction, CompleteReducerResult
 
-    from ubo_app.store.services.assistant import (
-        AssistantStartListeningAction,
-        WakePhraseTriggerSource,
-    )
     from ubo_app.store.services.speech_recognition import SpeechRecognitionState
 
 
-SERVICE_PATH = (
-    Path(__file__).parents[2] / 'ubo_app/services/090-speech-recognition'
-)
-
-_DEFAULT_PHRASES = {
-    'intents': (INTENTS_WAKE_WORD,),
-    'quick_chat': (ASSISTANT_QUICK_CHAT_WAKE_PHRASE,),
-    'conversation': (ASSISTANT_CONVERSATION_WAKE_WORD,),
-    'stop_talking': (ASSISTANT_STOP_TALKING_PHRASE,),
-}
+SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app/services/090-speech-recognition'
 
 
-def _load_speech_recognition(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
+def _load(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     """Load the speech-recognition reducer + namespace of public classes."""
     monkeypatch.syspath_prepend(SERVICE_PATH.as_posix())
 
     assistant_module = importlib.reload(
         importlib.import_module('ubo_app.store.services.assistant'),
     )
-    speech_recognition_module = importlib.reload(
+    sr = importlib.reload(
         importlib.import_module('ubo_app.store.services.speech_recognition'),
     )
 
@@ -75,345 +55,696 @@ def _load_speech_recognition(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
 
-    sr = speech_recognition_module
     return SimpleNamespace(
+        sr=sr,
         reducer=module.reducer,
-        SpeechRecognitionState=sr.SpeechRecognitionState,
-        SpeechRecognitionStatus=sr.SpeechRecognitionStatus,
-        SpeechRecognitionReportWakeWordDetectionAction=(
-            sr.SpeechRecognitionReportWakeWordDetectionAction
-        ),
-        SpeechRecognitionSetSlotEnabledAction=sr.SpeechRecognitionSetSlotEnabledAction,
-        SpeechRecognitionSetWakePhrasesAction=sr.SpeechRecognitionSetWakePhrasesAction,
-        SpeechRecognitionSetConversationEndPhrasesAction=(
-            sr.SpeechRecognitionSetConversationEndPhrasesAction
-        ),
+        State=sr.SpeechRecognitionState,
+        Status=sr.SpeechRecognitionStatus,
         WakeMode=sr.WakeMode,
-        WakeWordSlot=sr.WakeWordSlot,
-        slot_for_mode=sr.slot_for_mode,
+        Engine=sr.WakeWordEngineName,
+        Trigger=sr.WakeWordTrigger,
+        EngineConfig=sr.WakeWordEngineConfig,
+        engine_config=sr.engine_config,
+        trigger_by_id=sr.trigger_by_id,
+        ReportDetection=sr.SpeechRecognitionReportWakeWordDetectionAction,
+        TriggerMode=sr.SpeechRecognitionTriggerModeAction,
+        WakeEngineSetEnabledAction=sr.WakeEngineSetEnabledAction,
+        WakeTriggerAddAction=sr.WakeTriggerAddAction,
+        WakeTriggerRemoveAction=sr.WakeTriggerRemoveAction,
+        SetAssistantEnabled=sr.SpeechRecognitionSetAssistantEnabledAction,
+        WakeWordDeleteModelAction=sr.WakeWordDeleteModelAction,
+        WakeWordDeleteModelEvent=sr.WakeWordDeleteModelEvent,
+        WakeWordSetAvailableModelsAction=sr.WakeWordSetAvailableModelsAction,
         AssistantStartListeningAction=assistant_module.AssistantStartListeningAction,
         AssistantStopTalkingAction=assistant_module.AssistantStopTalkingAction,
         WakePhraseTriggerSource=assistant_module.WakePhraseTriggerSource,
-        resolve_policy=assistant_module.resolve_policy,
-        _default_policies=assistant_module._default_policies,  # noqa: SLF001
     )
 
 
-def _slots(ns: SimpleNamespace, *enabled: object) -> tuple[object, ...]:
-    """Build the four slots with default phrases; *enabled* lists active modes."""
-    order = (
-        ns.WakeMode.INTENTS,
-        ns.WakeMode.QUICK_CHAT,
-        ns.WakeMode.CONVERSATION,
-        ns.WakeMode.STOP_TALKING,
-    )
-    return tuple(
-        ns.WakeWordSlot(
-            mode=mode,
-            phrases=_DEFAULT_PHRASES[mode.value],
-            enabled=mode in enabled,
-        )
-        for mode in order
-    )
+def _trigger(
+    ns: SimpleNamespace,
+    *,
+    id: str,
+    mode: object,
+    value: str,
+) -> object:
+    """Build a WakeWordTrigger."""
+    return ns.Trigger(id=id, label=value, mode=mode, value=value)
 
 
-def _init_state(ns: SimpleNamespace) -> SpeechRecognitionState:
-    init_action_type = cast(
+def _state(ns: SimpleNamespace, *configs: object) -> SpeechRecognitionState:
+    """Build an init state with the given engine configs.
+
+    ``assistant_enabled`` is forced on so detection tests don't depend on the
+    ambient persistent store (its default factory reads disk); the gate tests
+    flip it off explicitly via ``replace``.
+    """
+    init = cast(
         'type[BaseAction]',
         ns.reducer.__globals__['InitAction'],
     )
-    state = ns.reducer(None, init_action_type())
-    return cast('SpeechRecognitionState', state)
-
-
-def _state_with(ns: SimpleNamespace, *enabled: object) -> SpeechRecognitionState:
+    base = cast('SpeechRecognitionState', ns.reducer(None, init()))
     return cast(
         'SpeechRecognitionState',
-        replace(_init_state(ns), wake_slots=_slots(ns, *enabled)),
+        replace(base, wake_engines=tuple(configs), assistant_enabled=True),
     )
 
 
-def _step_wake_word(
+def _detect(
     ns: SimpleNamespace,
     state: SpeechRecognitionState,
-    wake_word: str,
-    engine_name: str = 'Vosk',
+    engine: object,
+    trigger_id: str,
+    phrase: str = '',
 ) -> CompleteReducerResult:
+    """Run a wake-word detection report through the reducer."""
     return cast(
         'CompleteReducerResult',
         ns.reducer(
             state,
-            ns.SpeechRecognitionReportWakeWordDetectionAction(
-                wake_word=wake_word,
-                engine_name=engine_name,
+            ns.ReportDetection(
+                engine_name=cast('Any', engine).value,
+                trigger_id=trigger_id,
+                phrase=phrase,
             ),
         ),
     )
 
 
-def _start_actions(ns: SimpleNamespace, result: CompleteReducerResult) -> list:
+def _starts(ns: SimpleNamespace, result: CompleteReducerResult) -> list:
+    """Return the AssistantStartListeningAction actions in a reducer result."""
     return [
         a
-        for a in cast('list[BaseAction]', result.actions)
+        for a in cast('list[BaseAction]', result.actions or [])
         if isinstance(a, ns.AssistantStartListeningAction)
     ]
 
 
-# ---------- wake-word routing ----------
-
-
-def test_quick_chat_wake_phrase_dispatches_start_listening(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Quick-chat wake phrase → start listening with phrase, mode and detector."""
-    ns = _load_speech_recognition(monkeypatch)
-    state = _state_with(ns, ns.WakeMode.QUICK_CHAT)
-
-    result = _step_wake_word(ns, state, ASSISTANT_QUICK_CHAT_WAKE_PHRASE)
-
-    starts = _start_actions(ns, result)
-    assert len(starts) == 1
-    source = cast('AssistantStartListeningAction', starts[0]).source
-    assert isinstance(source, ns.WakePhraseTriggerSource)
-    typed = cast('WakePhraseTriggerSource', source)
-    assert typed.phrase == ASSISTANT_QUICK_CHAT_WAKE_PHRASE
-    assert typed.mode is ns.WakeMode.QUICK_CHAT
-    assert typed.detector == 'Vosk'
-
-
-def test_conversation_wake_phrase_dispatches_start_listening(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Conversation wake phrase → start listening carrying the conversation mode."""
-    ns = _load_speech_recognition(monkeypatch)
-    state = _state_with(ns, ns.WakeMode.CONVERSATION)
-
-    result = _step_wake_word(ns, state, ASSISTANT_CONVERSATION_WAKE_WORD)
-
-    starts = _start_actions(ns, result)
-    assert len(starts) == 1
-    source = cast('WakePhraseTriggerSource', starts[0].source)
-    assert source.phrase == ASSISTANT_CONVERSATION_WAKE_WORD
-    assert source.mode is ns.WakeMode.CONVERSATION
-
-
-def test_disabled_slot_does_not_trigger(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A phrase whose slot is disabled is ignored."""
-    ns = _load_speech_recognition(monkeypatch)
-    # Quick-chat NOT enabled.
-    state = _state_with(ns, ns.WakeMode.CONVERSATION)
-
-    result = _step_wake_word(ns, state, ASSISTANT_QUICK_CHAT_WAKE_PHRASE)
-
-    assert not _start_actions(ns, result)
-
-
-def test_unknown_wake_word_does_not_dispatch_start_listening(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A wake word that isn't any enabled phrase → no start action."""
-    ns = _load_speech_recognition(monkeypatch)
-    state = _state_with(ns, ns.WakeMode.QUICK_CHAT)
-
-    result = _step_wake_word(ns, state, 'something else entirely')
-
-    assert not _start_actions(ns, result)
-
-
-def test_stop_talking_phrase_dispatches_stop_with_metadata(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Stop phrase → AssistantStopTalkingAction carrying phrase + detector."""
-    ns = _load_speech_recognition(monkeypatch)
-    state = _state_with(ns, ns.WakeMode.CONVERSATION, ns.WakeMode.STOP_TALKING)
-
-    result = _step_wake_word(ns, state, ASSISTANT_STOP_TALKING_PHRASE)
-
-    stops = [
+def _stops(ns: SimpleNamespace, result: CompleteReducerResult) -> list:
+    """Return the AssistantStopTalkingAction actions in a reducer result."""
+    return [
         a
-        for a in cast('list[BaseAction]', result.actions)
+        for a in cast('list[BaseAction]', result.actions or [])
         if isinstance(a, ns.AssistantStopTalkingAction)
     ]
-    assert len(stops) == 1
-    stop = cast('Any', stops[0])
-    assert stop.phrase == ASSISTANT_STOP_TALKING_PHRASE
-    assert stop.detector == 'Vosk'
-    assert not _start_actions(ns, result)
 
 
-def test_multi_phrase_alternative_triggers(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A non-first alternative in a slot triggers the right mode."""
-    ns = _load_speech_recognition(monkeypatch)
-    base = _init_state(ns)
-    slots = tuple(
-        ns.WakeWordSlot(
-            mode=slot.mode,
-            phrases=('hey there', 'yo computer')
-            if slot.mode is ns.WakeMode.QUICK_CHAT
-            else slot.phrases,
-            enabled=slot.mode is ns.WakeMode.QUICK_CHAT,
-        )
-        for slot in base.wake_slots
+# ---------- detection -> mode routing ----------
+
+
+def test_conversation_trigger_starts_listening(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Conversation trigger → start listening with phrase/mode/detector."""
+    ns = _load(monkeypatch)
+    trig = _trigger(ns, id='c1', mode=ns.WakeMode.CONVERSATION, value='hey ubo')
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
     )
-    state = cast('SpeechRecognitionState', replace(base, wake_slots=slots))
 
-    result = _step_wake_word(ns, state, 'yo computer')
+    result = _detect(ns, state, ns.Engine.VOSK, 'c1', phrase='hey ubo')
 
-    starts = _start_actions(ns, result)
+    starts = _starts(ns, result)
     assert len(starts) == 1
-    assert cast('WakePhraseTriggerSource', starts[0].source).mode is (
-        ns.WakeMode.QUICK_CHAT
-    )
+    source = cast('Any', starts[0]).source
+    assert isinstance(source, ns.WakePhraseTriggerSource)
+    assert source.phrase == 'hey ubo'
+    assert source.mode is ns.WakeMode.CONVERSATION
+    assert source.detector == ns.Engine.VOSK.value
 
 
-# ---------- enable/disable coupling ----------
-
-
-def test_disabling_conversation_also_disables_stop(
+def test_openwakeword_trigger_also_fires_same_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Conversation and Stop toggle together."""
-    ns = _load_speech_recognition(monkeypatch)
-    state = _state_with(ns, ns.WakeMode.CONVERSATION, ns.WakeMode.STOP_TALKING)
-
-    new_state = ns.reducer(
-        state,
-        ns.SpeechRecognitionSetSlotEnabledAction(
-            mode=ns.WakeMode.CONVERSATION,
-            enabled=False,
-        ),
+    """A different engine independently fires the same (conversation) mode."""
+    ns = _load(monkeypatch)
+    trig = _trigger(
+        ns,
+        id='hey_jarvis',
+        mode=ns.WakeMode.CONVERSATION,
+        value='hey_jarvis',
     )
-
-    assert not ns.slot_for_mode(new_state, ns.WakeMode.CONVERSATION).enabled
-    assert not ns.slot_for_mode(new_state, ns.WakeMode.STOP_TALKING).enabled
-
-
-def test_enabling_stop_also_enables_conversation(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The coupling is symmetric: enabling Stop enables Conversation."""
-    ns = _load_speech_recognition(monkeypatch)
-    state = _state_with(ns)  # all disabled
-
-    new_state = ns.reducer(
-        state,
-        ns.SpeechRecognitionSetSlotEnabledAction(
-            mode=ns.WakeMode.STOP_TALKING,
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=()),
+        ns.EngineConfig(
+            engine=ns.Engine.OPENWAKEWORD,
             enabled=True,
+            triggers=(trig,),
         ),
     )
 
-    assert ns.slot_for_mode(new_state, ns.WakeMode.STOP_TALKING).enabled
-    assert ns.slot_for_mode(new_state, ns.WakeMode.CONVERSATION).enabled
-    # Quick chat stays independent.
-    assert not ns.slot_for_mode(new_state, ns.WakeMode.QUICK_CHAT).enabled
+    result = _detect(ns, state, ns.Engine.OPENWAKEWORD, 'hey_jarvis')
+
+    starts = _starts(ns, result)
+    assert len(starts) == 1
+    assert cast('Any', starts[0]).source.detector == ns.Engine.OPENWAKEWORD.value
 
 
-# ---------- editing phrases ----------
+def test_intents_trigger_enters_waiting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Intents trigger → INTENTS_WAITING, no start action."""
+    ns = _load(monkeypatch)
+    trig = _trigger(ns, id='i1', mode=ns.WakeMode.INTENTS, value='ubo')
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
+    )
+
+    result = _detect(ns, state, ns.Engine.VOSK, 'i1')
+
+    assert result.state.status is ns.Status.INTENTS_WAITING
+    assert not _starts(ns, result)
 
 
-def test_set_wake_phrases_updates_the_right_slot(
+def test_stop_talking_trigger_dispatches_stop(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """SpeechRecognitionSetWakePhrasesAction replaces a slot's phrases."""
-    ns = _load_speech_recognition(monkeypatch)
-    state = _state_with(ns, ns.WakeMode.QUICK_CHAT)
+    """Stop-talking (Silence) trigger → AssistantStopTalkingAction."""
+    ns = _load(monkeypatch)
+    trig = _trigger(ns, id='s1', mode=ns.WakeMode.STOP_TALKING, value='okay stop')
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
+    )
 
-    new_state = ns.reducer(
+    result = _detect(ns, state, ns.Engine.VOSK, 's1', phrase='okay stop')
+
+    stops = _stops(ns, result)
+    assert len(stops) == 1
+    assert cast('Any', stops[0]).phrase == 'okay stop'
+    assert not _starts(ns, result)
+
+
+def test_unknown_trigger_id_is_noop(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unknown trigger id is a no-op."""
+    ns = _load(monkeypatch)
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=()),
+    )
+
+    assert not _starts(ns, _detect(ns, state, ns.Engine.VOSK, 'nope'))
+
+
+# ---------- direct mode trigger (Infrared-bound path) ----------
+
+
+def test_trigger_mode_action_routes_each_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SpeechRecognitionTriggerModeAction shares the detection mode→effect map."""
+    ns = _load(monkeypatch)
+    state = _state(ns)
+
+    conversation = ns.reducer(
         state,
-        ns.SpeechRecognitionSetWakePhrasesAction(
+        ns.TriggerMode(
+            mode=ns.WakeMode.CONVERSATION,
+            phrase='TV Power',
+            detector='infrared',
+        ),
+    )
+    starts = _starts(ns, conversation)
+    assert len(starts) == 1
+    assert cast('Any', starts[0]).source.detector == 'infrared'
+    assert cast('Any', starts[0]).source.phrase == 'TV Power'
+
+    stop = ns.reducer(state, ns.TriggerMode(mode=ns.WakeMode.STOP_TALKING))
+    assert len(_stops(ns, stop)) == 1
+
+    intents = ns.reducer(state, ns.TriggerMode(mode=ns.WakeMode.INTENTS))
+    assert intents.state.status is ns.Status.INTENTS_WAITING
+
+
+# ---------- assistant_enabled gate ----------
+
+
+def test_audio_detection_gated_by_assistant_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An off assistant switch swallows an audio assistant-mode detection.
+
+    The reducer enforces the ``assistant_enabled`` gate itself, not just the
+    EnginesManager.
+    """
+    ns = _load(monkeypatch)
+    trig = _trigger(ns, id='c1', mode=ns.WakeMode.CONVERSATION, value='hey ubo')
+    state = replace(
+        _state(
+            ns,
+            ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
+        ),
+        assistant_enabled=False,
+    )
+
+    result = _detect(ns, state, ns.Engine.VOSK, 'c1', phrase='hey ubo')
+
+    assert not _starts(ns, result)
+    assert result.state.status is ns.Status.IDLE
+
+
+def test_ir_trigger_mode_ignores_assistant_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Infrared-bound mode trigger overrides the off master switch.
+
+    An explicit remote-key binding still starts the assistant when the switch is
+    off (mirrors commands.py:_trigger_mode).
+    """
+    ns = _load(monkeypatch)
+    state = replace(_state(ns), assistant_enabled=False)
+
+    result = ns.reducer(
+        state,
+        ns.TriggerMode(
+            mode=ns.WakeMode.CONVERSATION,
+            phrase='TV Power',
+            detector='infrared',
+        ),
+    )
+
+    assert len(_starts(ns, result)) == 1
+
+
+# ---------- engine / trigger config ----------
+
+
+def test_set_engine_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """WakeEngineSetEnabledAction flips the engine enabled flag."""
+    ns = _load(monkeypatch)
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.OPENWAKEWORD, enabled=False, triggers=()),
+    )
+
+    new = ns.reducer(
+        state,
+        ns.WakeEngineSetEnabledAction(engine=ns.Engine.OPENWAKEWORD, enabled=True),
+    )
+
+    assert ns.engine_config(new, ns.Engine.OPENWAKEWORD).enabled is True
+
+
+def test_trigger_add_remove(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Add/Remove mutate the engine triggers correctly (no per-trigger update)."""
+    ns = _load(monkeypatch)
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=()),
+    )
+
+    state = ns.reducer(
+        state,
+        ns.WakeTriggerAddAction(
+            engine=ns.Engine.VOSK,
+            id='t1',
+            label='hey ubo',
+            mode=ns.WakeMode.CONVERSATION,
+            value='hey ubo',
+        ),
+    )
+    assert ns.trigger_by_id(state, ns.Engine.VOSK, 't1').value == 'hey ubo'
+
+    state = ns.reducer(
+        state,
+        ns.WakeTriggerRemoveAction(engine=ns.Engine.VOSK, id='t1'),
+    )
+    assert ns.trigger_by_id(state, ns.Engine.VOSK, 't1') is None
+
+
+def test_add_trigger_carries_sensitivity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """WakeTriggerAddAction stores its sensitivity; omitting it defaults to 0.5."""
+    ns = _load(monkeypatch)
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.OPENWAKEWORD, enabled=True, triggers=()),
+    )
+
+    state = ns.reducer(
+        state,
+        ns.WakeTriggerAddAction(
+            engine=ns.Engine.OPENWAKEWORD,
+            id='t1',
+            label='Hey Jarvis',
+            mode=ns.WakeMode.CONVERSATION,
+            value='hey_jarvis',
+            sensitivity=0.8,
+        ),
+    )
+    assert ns.trigger_by_id(state, ns.Engine.OPENWAKEWORD, 't1').sensitivity == 0.8
+
+    state = ns.reducer(
+        state,
+        ns.WakeTriggerAddAction(
+            engine=ns.Engine.OPENWAKEWORD,
+            id='t2',
+            label='Alexa',
             mode=ns.WakeMode.QUICK_CHAT,
-            phrases=('hey there friend', 'yo computer'),
+            value='alexa',
         ),
     )
-
-    assert ns.slot_for_mode(new_state, ns.WakeMode.QUICK_CHAT).phrases == (
-        'hey there friend',
-        'yo computer',
-    )
-    # Other slots untouched.
-    assert ns.slot_for_mode(new_state, ns.WakeMode.CONVERSATION).phrases == (
-        ASSISTANT_CONVERSATION_WAKE_WORD,
-    )
+    assert ns.trigger_by_id(state, ns.Engine.OPENWAKEWORD, 't2').sensitivity == 0.5
 
 
-def test_set_conversation_end_phrases_updates_field(
+def test_set_assistant_enabled_sets_flag(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """SpeechRecognitionSetConversationEndPhrasesAction replaces the tuple."""
-    ns = _load_speech_recognition(monkeypatch)
-    state = _init_state(ns)
+    """SetAssistantEnabled flips the single assistant_enabled boolean."""
+    ns = _load(monkeypatch)
+    state = _state(ns)
 
-    new_state = ns.reducer(
-        state,
-        ns.SpeechRecognitionSetConversationEndPhrasesAction(
-            phrases=('that is all', 'we are finished'),
+    off = ns.reducer(state, ns.SetAssistantEnabled(enabled=False))
+    assert off.assistant_enabled is False
+
+    on = ns.reducer(off, ns.SetAssistantEnabled(enabled=True))
+    assert on.assistant_enabled is True
+
+
+# ---------- OWW model lifecycle ----------
+
+
+def test_delete_model_prunes_pool_trigger_and_emits_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deleting a model prunes pool + trigger and emits the delete event."""
+    ns = _load(monkeypatch)
+    trig = _trigger(ns, id='my_word', mode=ns.WakeMode.CONVERSATION, value='my_word')
+    state = replace(
+        _state(
+            ns,
+            ns.EngineConfig(
+                engine=ns.Engine.OPENWAKEWORD,
+                enabled=True,
+                triggers=(trig,),
+            ),
         ),
+        openwakeword_models=('my_word', 'other'),
     )
 
-    assert new_state.conversation_end_phrases == ('that is all', 'we are finished')
+    result = _detect_delete(ns, state)
+
+    assert 'my_word' not in result.state.openwakeword_models
+    assert 'other' in result.state.openwakeword_models
+    assert ns.trigger_by_id(result.state, ns.Engine.OPENWAKEWORD, 'my_word') is None
+    assert any(
+        isinstance(event, ns.WakeWordDeleteModelEvent)
+        for event in (result.events or [])
+    )
 
 
-def test_custom_phrase_triggers_after_edit(monkeypatch: pytest.MonkeyPatch) -> None:
-    """An edited phrase triggers; the previous default no longer does."""
-    ns = _load_speech_recognition(monkeypatch)
-    base = _state_with(ns, ns.WakeMode.QUICK_CHAT)
-    state = cast(
-        'SpeechRecognitionState',
+def _detect_delete(
+    ns: SimpleNamespace,
+    state: SpeechRecognitionState,
+) -> CompleteReducerResult:
+    """Run a WakeWordDeleteModelAction for ``my_word`` through the reducer."""
+    return cast(
+        'CompleteReducerResult',
         ns.reducer(
-            base,
-            ns.SpeechRecognitionSetWakePhrasesAction(
-                mode=ns.WakeMode.QUICK_CHAT,
-                phrases=('talk to me now',),
+            state,
+            ns.WakeWordDeleteModelAction(
+                engine=ns.Engine.OPENWAKEWORD,
+                model_id='my_word',
             ),
         ),
     )
 
-    assert _start_actions(ns, _step_wake_word(ns, state, 'talk to me now'))
-    assert not _start_actions(
+
+def test_delete_model_not_in_pool_is_noop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deleting an id absent from the pool (e.g. a shared helper) does nothing.
+
+    A remote action must not be able to delete a model the device doesn't track:
+    with no matching pool entry the reducer leaves state untouched and emits no
+    delete event (so the off-reducer file delete never runs).
+    """
+    ns = _load(monkeypatch)
+    state = replace(
+        _state(
+            ns,
+            ns.EngineConfig(
+                engine=ns.Engine.OPENWAKEWORD,
+                enabled=True,
+                triggers=(),
+            ),
+        ),
+        openwakeword_models=('my_word',),
+    )
+
+    result = ns.reducer(
+        state,
+        ns.WakeWordDeleteModelAction(
+            engine=ns.Engine.OPENWAKEWORD,
+            model_id='embedding_model',
+        ),
+    )
+
+    new_state = result.state if hasattr(result, 'state') else result
+    assert new_state.openwakeword_models == ('my_word',)
+
+
+def test_delete_model_wrong_engine_is_noop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A delete naming a non-OWW engine can't touch the OpenWakeWord pool.
+
+    ``openwakeword_models`` is OWW-specific; a malformed/remote action with
+    ``engine=VOSK`` (even with a valid OWW stem) must leave the pool and triggers
+    untouched and emit no delete event.
+    """
+    ns = _load(monkeypatch)
+    state = replace(
+        _state(
+            ns,
+            ns.EngineConfig(
+                engine=ns.Engine.OPENWAKEWORD,
+                enabled=True,
+                triggers=(),
+            ),
+        ),
+        openwakeword_models=('my_word',),
+    )
+
+    result = ns.reducer(
+        state,
+        ns.WakeWordDeleteModelAction(engine=ns.Engine.VOSK, model_id='my_word'),
+    )
+
+    new_state = result.state if hasattr(result, 'state') else result
+    assert new_state.openwakeword_models == ('my_word',)
+    assert not getattr(result, 'events', None)
+
+
+def test_add_trigger_clamps_out_of_range_sensitivity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sensitivity from an action is clamped to [0,1]; non-finite → 0.5 default."""
+    ns = _load(monkeypatch)
+    base = _state(
         ns,
-        _step_wake_word(ns, state, ASSISTANT_QUICK_CHAT_WAKE_PHRASE),
+        ns.EngineConfig(engine=ns.Engine.OPENWAKEWORD, enabled=True, triggers=()),
     )
 
+    def _add(trigger_id: str, sensitivity: float) -> float:
+        state = ns.reducer(
+            base,
+            ns.WakeTriggerAddAction(
+                engine=ns.Engine.OPENWAKEWORD,
+                id=trigger_id,
+                label='Hey Jarvis',
+                mode=ns.WakeMode.CONVERSATION,
+                value='hey_jarvis',
+                sensitivity=sensitivity,
+            ),
+        )
+        return ns.trigger_by_id(state, ns.Engine.OPENWAKEWORD, trigger_id).sensitivity
 
-# ---------- default-policy resolution (assistant-side, mode-keyed) ----------
+    assert _add('hi', 5.0) == 1.0
+    assert _add('lo', -2.0) == 0.0
+    assert _add('nan', float('nan')) == 0.5
 
 
-def test_default_policy_for_quick_chat_uses_silence_timeout(
+def test_set_available_models_replaces_pool(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Quick-chat source → silence-timeout policy, no end phrases."""
-    ns = _load_speech_recognition(monkeypatch)
-    policies = ns._default_policies()  # noqa: SLF001
-    source = ns.WakePhraseTriggerSource(
-        phrase=ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
-        mode=ns.WakeMode.QUICK_CHAT,
+    """WakeWordSetAvailableModelsAction replaces the OWW pool."""
+    ns = _load(monkeypatch)
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.OPENWAKEWORD, enabled=True, triggers=()),
     )
 
-    policy = ns.resolve_policy(policies, source)
+    new = ns.reducer(
+        state,
+        ns.WakeWordSetAvailableModelsAction(
+            engine=ns.Engine.OPENWAKEWORD,
+            models=('a', 'b'),
+        ),
+    )
 
-    assert policy is not None
-    assert policy.silence_timeout_seconds == ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS
-    assert policy.end_of_turn_phrases == ()
-    assert policy.completion_mode == 'silence'
+    assert new.openwakeword_models == ('a', 'b')
 
 
-def test_default_policy_for_conversation_uses_end_phrases(
+# ---------- migration ----------
+
+
+def _patch_wake_slots(
+    monkeypatch: pytest.MonkeyPatch,
+    ns: SimpleNamespace,
+    blob: str | None,
+) -> None:
+    """Make the persistent store return *blob* for wake_slots and None otherwise."""
+
+    def _fake_read(key: str, **_: object) -> object:
+        return blob if key == 'speech_recognition:wake_slots' else None
+
+    monkeypatch.setattr(ns.sr, 'read_from_persistent_store', _fake_read)
+
+
+def test_migration_only_enabled_slots(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Only enabled slots migrate; a disabled mode maps to absence (not re-enabled)."""
+    import json
+
+    ns = _load(monkeypatch)
+    blob = json.dumps(
+        [
+            {'mode': 'intents', 'phrases': ['ubo'], 'enabled': True},
+            {'mode': 'quick_chat', 'phrases': ['hey ubo', 'yo ubo'], 'enabled': False},
+            {'mode': 'conversation', 'phrases': ["let's chat"], 'enabled': False},
+            {'mode': 'stop_talking', 'phrases': ['enough'], 'enabled': False},
+        ],
+    )
+    _patch_wake_slots(monkeypatch, ns, blob)
+
+    engines = ns.sr._load_wake_engines()  # noqa: SLF001
+    by_name = {config.engine: config for config in engines}
+    assert set(by_name) == {ns.Engine.VOSK, ns.Engine.OPENWAKEWORD}
+    vosk = by_name[ns.Engine.VOSK]
+    # Only the enabled INTENTS slot survives; every disabled slot is dropped.
+    assert {trigger.value for trigger in vosk.triggers} == {'ubo'}
+    assert by_name[ns.Engine.OPENWAKEWORD].triggers == ()
+    assert not hasattr(vosk.triggers[0], 'enabled')
+    # The assistant the user had off must NOT be re-enabled by migration.
+    assert ns.sr._load_assistant_enabled() is False  # noqa: SLF001
+
+
+def test_migration_mixed_assistant_modes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Conversation source → end-phrase policy with a long silence fallback."""
-    ns = _load_speech_recognition(monkeypatch)
-    policies = ns._default_policies()  # noqa: SLF001
-    source = ns.WakePhraseTriggerSource(
-        phrase=ASSISTANT_CONVERSATION_WAKE_WORD,
-        mode=ns.WakeMode.CONVERSATION,
+    """Quick Chat off + Conversation on → only Conversation migrates (not QC)."""
+    import json
+
+    ns = _load(monkeypatch)
+    blob = json.dumps(
+        [
+            {'mode': 'intents', 'phrases': ['ubo'], 'enabled': True},
+            {'mode': 'quick_chat', 'phrases': ['hey ubo'], 'enabled': False},
+            {'mode': 'conversation', 'phrases': ["let's chat"], 'enabled': True},
+            {'mode': 'stop_talking', 'phrases': ['enough'], 'enabled': False},
+        ],
     )
+    _patch_wake_slots(monkeypatch, ns, blob)
 
-    policy = ns.resolve_policy(policies, source)
+    vosk = next(
+        config
+        for config in ns.sr._load_wake_engines()  # noqa: SLF001
+        if config.engine is ns.Engine.VOSK
+    )
+    values = {trigger.value for trigger in vosk.triggers}
+    assert values == {'ubo', "let's chat"}  # disabled Quick Chat phrase dropped
+    assert 'hey ubo' not in values
+    # The gate is on (Conversation was enabled), but no Quick Chat trigger exists.
+    assert ns.sr._load_assistant_enabled() is True  # noqa: SLF001
 
-    assert policy is not None
-    assert policy.end_of_turn_phrases == ASSISTANT_CONVERSATION_END_PHRASES
-    assert policy.completion_mode == 'silence'
+
+def test_migration_enabled_assistant_keeps_stop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Enabled QC/CONV → assistant on; an enabled STOP slot keeps its phrase."""
+    import json
+
+    ns = _load(monkeypatch)
+    blob = json.dumps(
+        [
+            {'mode': 'intents', 'phrases': ['ubo'], 'enabled': True},
+            {'mode': 'quick_chat', 'phrases': ['hey ubo'], 'enabled': True},
+            {'mode': 'conversation', 'phrases': ["let's chat"], 'enabled': True},
+            {'mode': 'stop_talking', 'phrases': ['enough'], 'enabled': True},
+        ],
+    )
+    _patch_wake_slots(monkeypatch, ns, blob)
+
+    vosk = next(
+        config
+        for config in ns.sr._load_wake_engines()  # noqa: SLF001
+        if config.engine is ns.Engine.VOSK
+    )
+    assert 'enough' in {trigger.value for trigger in vosk.triggers}
+    assert ns.sr._load_assistant_enabled() is True  # noqa: SLF001
+
+
+def test_assistant_enabled_defaults_true_for_fresh_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No persisted keys at all → assistant on by default."""
+    ns = _load(monkeypatch)
+    _patch_wake_slots(monkeypatch, ns, None)
+    assert ns.sr._load_assistant_enabled() is True  # noqa: SLF001
+
+
+# ---------- model download idempotency ----------
+
+
+def _download_events(result: object) -> list:
+    """Return any WakeWordDownloadModelsEvent in a reducer result."""
+    events = getattr(result, 'events', None) or []
+    return list(events)
+
+
+def test_download_models_emits_event_when_idle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A first download dispatch marks DOWNLOADING and emits the download event."""
+    ns = _load(monkeypatch)
+    state = _state(ns)
+    result = cast(
+        'CompleteReducerResult',
+        ns.reducer(
+            state,
+            ns.sr.WakeWordDownloadModelsAction(engine_name=ns.Engine.OPENWAKEWORD),
+        ),
+    )
+    assert any(
+        isinstance(event, ns.sr.WakeWordDownloadModelsEvent)
+        for event in _download_events(result)
+    )
     assert (
-        policy.silence_timeout_seconds == ASSISTANT_CONVERSATION_SILENCE_TIMEOUT_SECONDS
+        ns.sr.model_status(result.state, ns.Engine.OPENWAKEWORD)
+        is ns.sr.WakeWordModelStatus.DOWNLOADING
+    )
+
+
+def test_download_models_is_noop_while_downloading(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A re-dispatch while DOWNLOADING emits no event (no overlapping loop)."""
+    ns = _load(monkeypatch)
+    downloading = replace(
+        _state(ns),
+        wake_word_models_status=ns.sr.set_model_status(
+            (),
+            ns.Engine.OPENWAKEWORD,
+            ns.sr.WakeWordModelStatus.DOWNLOADING,
+        ),
+    )
+    result = ns.reducer(
+        downloading,
+        ns.sr.WakeWordDownloadModelsAction(engine_name=ns.Engine.OPENWAKEWORD),
+    )
+    assert not any(
+        isinstance(event, ns.sr.WakeWordDownloadModelsEvent)
+        for event in _download_events(result)
     )

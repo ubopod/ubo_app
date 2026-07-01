@@ -17,6 +17,10 @@ if TYPE_CHECKING:
     from ubo_app.store.main import UboStore
 
 MAX_EXPECTED_LISTENERS = 600
+# Bumped from 95 to cover the speech-recognition wake-word model lifecycle event
+# handlers (WakeWordDownloadModelsEvent / WakeWordDeleteModelEvent), which run the
+# blocking download/delete off the reducer. These are intentional subscriptions,
+# not leaks; the guard still catches runaway handler growth.
 MAX_EXPECTED_EVENT_HANDLERS = 105
 
 

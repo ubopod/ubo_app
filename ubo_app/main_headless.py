@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from pathlib import Path
 
 import dotenv
@@ -13,9 +14,34 @@ from ubo_app.utils.error_handlers import setup_error_handling
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
 dotenv.load_dotenv(Path(__file__).parent / '.env')
 
+# Headroom above the steady-state fd usage (web server, gRPC, sockets, mics).
+_OPEN_FILE_LIMIT_TARGET = 8192
+
+
+def _raise_open_file_limit() -> None:
+    """Raise the soft open-files limit so services don't exhaust the inherited cap.
+
+    The core runs the Web UI server, gRPC, audio and many sockets concurrently; a
+    process launched from a context with the default soft limit (e.g. macOS
+    launchd's 256) runs only a few fds under the ceiling, and a single restart can
+    tip a service over — the Web UI setup then dies with ``OSError(24)`` and input
+    forms never render. Raise our own soft limit at startup, capped at the hard
+    limit, so launch context no longer decides this.
+    """
+    import resource
+
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    target = _OPEN_FILE_LIMIT_TARGET
+    if hard != resource.RLIM_INFINITY and 0 < hard < target:
+        target = hard
+    if soft < target:
+        with contextlib.suppress(ValueError, OSError):
+            resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
+
 
 def main() -> None:
     """Start the headless core (no Kivy/GUI dependencies)."""
+    _raise_open_file_limit()
     logger_cleanups = setup_loggers()
 
     setup_error_handling()

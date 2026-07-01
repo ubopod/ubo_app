@@ -40,6 +40,11 @@ dependencies = [
   "ubo-app-raw-bindings",
   "ubo-gui==0.13.17",
   "vosk==0.3.44",
+  "openwakeword==0.6.0",
+  # Speex noise suppression for OpenWakeWord — native, Linux-only (manylinux
+  # aarch64/x86_64 wheels). Marked so it's skipped on non-Linux dev (e.g. macOS);
+  # the engine enables suppression only when the package is importable.
+  "speexdsp-ns==0.1.2 ; sys_platform == 'linux'",
   "opencv-python==4.10.0.84",
   # Adafruit dependencies
   "adafruit-circuitpython-aw9523==1.1.12",

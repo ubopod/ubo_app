@@ -30,23 +30,139 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionReportIntentTimeoutAction,
     SpeechRecognitionReportSpeechAction,
     SpeechRecognitionReportWakeWordDetectionAction,
-    SpeechRecognitionSetAssistantSlotsEnabledAction,
+    SpeechRecognitionSetAssistantEnabledAction,
     SpeechRecognitionSetConversationEndPhrasesAction,
-    SpeechRecognitionSetSlotEnabledAction,
-    SpeechRecognitionSetWakePhrasesAction,
     SpeechRecognitionState,
     SpeechRecognitionStatus,
+    SpeechRecognitionTriggerModeAction,
     SpeechRecognitionUpdateCommandAction,
+    WakeEngineSetEnabledAction,
     WakeMode,
+    WakeTriggerAddAction,
+    WakeTriggerRemoveAction,
+    WakeWordDeleteModelAction,
+    WakeWordDeleteModelEvent,
+    WakeWordDownloadModelsAction,
+    WakeWordDownloadModelsEvent,
+    WakeWordEngineName,
+    WakeWordModelStatus,
+    WakeWordSetAvailableModelsAction,
+    WakeWordSetModelsStatusAction,
+    WakeWordTrigger,
+    clamp_sensitivity,
+    model_status,
+    set_model_status,
+    trigger_by_id,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from redux import ReducerResult
 
     from ubo_app.store.main import UboAction
 
 
 ACKNOWLEDGMENT_ACTION = RgbRingBlankAction()
+
+_ASSISTANT_MODES = (WakeMode.QUICK_CHAT, WakeMode.CONVERSATION)
+
+
+def _map_engine_triggers(
+    state: SpeechRecognitionState,
+    engine: WakeWordEngineName,
+    transform: Callable[
+        [tuple[WakeWordTrigger, ...]],
+        tuple[WakeWordTrigger, ...],
+    ],
+) -> SpeechRecognitionState:
+    """Return *state* with *engine*'s triggers replaced by ``transform(triggers)``."""
+    return replace(
+        state,
+        wake_engines=tuple(
+            replace(config, triggers=transform(config.triggers))
+            if config.engine is engine
+            else config
+            for config in state.wake_engines
+        ),
+    )
+
+
+def _apply_wake_mode(
+    state: SpeechRecognitionState,
+    mode: WakeMode,
+    phrase: str,
+    detector: str,
+    *,
+    enforce_assistant_gate: bool = True,
+) -> CompleteReducerResult[
+    SpeechRecognitionState,
+    UboAction,
+    SpeechRecognitionBoundActionTriggeredEvent
+    | WakeWordDownloadModelsEvent
+    | WakeWordDeleteModelEvent,
+]:
+    """Map a triggered wake *mode* to its assistant effect.
+
+    Shared by audio-stream detections (`SpeechRecognitionReportWakeWordDetection
+    Action`) and Infrared-bound triggers (`SpeechRecognitionTriggerModeAction`):
+    INTENTS arms the command listener (blue ring) when idle; QUICK_CHAT/
+    CONVERSATION start the assistant when idle; STOP_TALKING stops it talking.
+
+    ``enforce_assistant_gate`` makes the master ``assistant_enabled`` switch
+    authoritative here in the (pure) reducer for QUICK_CHAT/CONVERSATION: the
+    audio-detection path enforces it (a direct, e.g. remote-dispatched, detection
+    can't start the assistant while it's off), while the Infrared-bound path
+    passes ``False`` so an explicit remote-key binding stays an intentional
+    override (mirrors ``commands.py:_trigger_mode``). The EnginesManager's
+    trigger-dropping when the switch is off is now just an optimization, not the
+    sole enforcement.
+    """
+    if (
+        mode is WakeMode.INTENTS
+        and state.status is SpeechRecognitionStatus.IDLE
+    ):
+        return CompleteReducerResult(
+            state=replace(state, status=SpeechRecognitionStatus.INTENTS_WAITING),
+            actions=[RgbRingSetAllAction(color=(0, 0, 255))],
+        )
+    if (
+        mode in _ASSISTANT_MODES
+        and enforce_assistant_gate
+        and not state.assistant_enabled
+    ):
+        # Assistant master switch is off — swallow the wake without starting it.
+        return CompleteReducerResult(
+            state=replace(state, status=SpeechRecognitionStatus.IDLE),
+            actions=[],
+        )
+    if (
+        mode in _ASSISTANT_MODES
+        and state.status is SpeechRecognitionStatus.IDLE
+    ):
+        return CompleteReducerResult(
+            state=replace(state, status=SpeechRecognitionStatus.IDLE),
+            actions=[
+                AssistantStartListeningAction(
+                    source=WakePhraseTriggerSource(
+                        phrase=phrase,
+                        detector=detector,
+                        mode=mode,
+                    ),
+                ),
+            ],
+        )
+    if mode is WakeMode.STOP_TALKING:
+        return CompleteReducerResult(
+            state=state,
+            actions=[
+                AssistantStopTalkingAction(phrase=phrase, detector=detector),
+            ],
+        )
+    return CompleteReducerResult(
+        state=replace(state, status=SpeechRecognitionStatus.IDLE),
+        actions=[],
+    )
 
 
 def reducer(
@@ -55,7 +171,9 @@ def reducer(
 ) -> ReducerResult[
     SpeechRecognitionState,
     UboAction,
-    SpeechRecognitionBoundActionTriggeredEvent,
+    SpeechRecognitionBoundActionTriggeredEvent
+    | WakeWordDownloadModelsEvent
+    | WakeWordDeleteModelEvent,
 ]:
     if state is None:
         if isinstance(action, InitAction):
@@ -64,46 +182,54 @@ def reducer(
         raise InitializationActionError(action)
 
     match action:
-        case SpeechRecognitionSetSlotEnabledAction(mode=mode, enabled=enabled):
-            # Conversation and Stop are coupled: toggling either sets both.
-            coupled = (
-                {WakeMode.CONVERSATION, WakeMode.STOP_TALKING}
-                if mode in (WakeMode.CONVERSATION, WakeMode.STOP_TALKING)
-                else {mode}
-            )
-            new_slots = tuple(
-                replace(slot, enabled=enabled) if slot.mode in coupled else slot
-                for slot in state.wake_slots
-            )
-            # Drop out of a waiting state if its triggering category was disabled.
-            clear_intents = (
-                not enabled
-                and WakeMode.INTENTS in coupled
-                and state.status is SpeechRecognitionStatus.INTENTS_WAITING
-            )
-            return replace(
-                state,
-                wake_slots=new_slots,
-                status=SpeechRecognitionStatus.IDLE
-                if clear_intents
-                else state.status,
-            )
+        # --- wake engine / trigger configuration ---------------------------
 
-        case SpeechRecognitionSetAssistantSlotsEnabledAction(enabled=enabled):
-            assistant_modes = {
-                WakeMode.QUICK_CHAT,
-                WakeMode.CONVERSATION,
-                WakeMode.STOP_TALKING,
-            }
+        case WakeEngineSetEnabledAction(engine=engine, enabled=enabled):
             return replace(
                 state,
-                wake_slots=tuple(
-                    replace(slot, enabled=enabled)
-                    if slot.mode in assistant_modes
-                    else slot
-                    for slot in state.wake_slots
+                wake_engines=tuple(
+                    replace(config, enabled=enabled)
+                    if config.engine is engine
+                    else config
+                    for config in state.wake_engines
                 ),
             )
+
+        case WakeTriggerAddAction(
+            engine=engine,
+            id=trigger_id,
+            label=label,
+            mode=mode,
+            value=value,
+            sensitivity=sensitivity,
+        ):
+            trigger = WakeWordTrigger(
+                id=trigger_id,
+                label=label,
+                mode=mode,
+                value=value,
+                # Untrusted (a remote client can dispatch this) — clamp to [0,1].
+                sensitivity=clamp_sensitivity(sensitivity),
+            )
+            return _map_engine_triggers(
+                state,
+                engine,
+                lambda triggers: (*triggers, trigger),
+            )
+
+        case WakeTriggerRemoveAction(engine=engine, id=trigger_id):
+            return _map_engine_triggers(
+                state,
+                engine,
+                lambda triggers: tuple(
+                    trigger for trigger in triggers if trigger.id != trigger_id
+                ),
+            )
+
+        case SpeechRecognitionSetAssistantEnabledAction(enabled=enabled):
+            return replace(state, assistant_enabled=enabled)
+
+        # --- voice commands (intents) --------------------------------------
 
         case SpeechRecognitionAddCommandAction():
             return replace(
@@ -143,79 +269,131 @@ def reducer(
                 ],
             )
 
+        # --- wake-word detection -> assistant policy -----------------------
+
         case SpeechRecognitionReportWakeWordDetectionAction(
-            wake_word=wake_word,
             engine_name=engine_name,
+            trigger_id=trigger_id,
+            phrase=phrase,
         ):
-            # Phrases are user-editable and live in state; match the detected
-            # word (lowercased by the engine) against any phrase of an *enabled*
-            # slot, case-folded.
-            detected = wake_word.casefold()
-            detector = engine_name or 'vosk'
-            matched = next(
-                (
-                    slot
-                    for slot in state.wake_slots
-                    if slot.enabled
-                    and detected in {phrase.casefold() for phrase in slot.phrases}
-                ),
-                None,
+            try:
+                engine = WakeWordEngineName(engine_name)
+            except ValueError:
+                engine = None
+            trigger = (
+                trigger_by_id(state, engine, trigger_id)
+                if engine is not None
+                else None
             )
-            if (
-                matched is not None
-                and matched.mode is WakeMode.INTENTS
-                and state.status is SpeechRecognitionStatus.IDLE
-            ):
-                return CompleteReducerResult(
-                    state=replace(
-                        state,
-                        status=SpeechRecognitionStatus.INTENTS_WAITING,
-                    ),
-                    actions=[RgbRingSetAllAction(color=(0, 0, 255))],
-                )
-            if (
-                matched is not None
-                and matched.mode in (WakeMode.QUICK_CHAT, WakeMode.CONVERSATION)
-                and state.status is SpeechRecognitionStatus.IDLE
-            ):
+            if trigger is None:
                 return CompleteReducerResult(
                     state=replace(state, status=SpeechRecognitionStatus.IDLE),
-                    actions=[
-                        AssistantStartListeningAction(
-                            source=WakePhraseTriggerSource(
-                                phrase=wake_word,
-                                detector=detector,
-                                mode=matched.mode,
-                            ),
-                        ),
-                    ],
+                    actions=[],
                 )
-            if matched is not None and matched.mode is WakeMode.STOP_TALKING:
-                return CompleteReducerResult(
-                    state=state,
-                    actions=[
-                        AssistantStopTalkingAction(
-                            phrase=wake_word,
-                            detector=detector,
-                        ),
-                    ],
-                )
-            return CompleteReducerResult(
-                state=replace(state, status=SpeechRecognitionStatus.IDLE),
-                actions=[],
+            # Forward the trigger's human-readable label (not its engine-specific
+            # value, which for OpenWakeWord is a model stem like ``hey_jarvis_v0.1``)
+            # to the assistant trigger source / mic-buffer metadata.
+            return _apply_wake_mode(
+                state,
+                trigger.mode,
+                trigger.label or phrase or trigger.value,
+                engine_name or 'vosk',
             )
 
-        case SpeechRecognitionSetWakePhrasesAction(mode=mode, phrases=phrases):
-            return replace(
+        case SpeechRecognitionTriggerModeAction(
+            mode=mode,
+            phrase=phrase,
+            detector=detector,
+        ):
+            # Infrared-bound override: an explicit remote key fires the mode even
+            # when the assistant master switch is off (see commands.py:_trigger_mode).
+            return _apply_wake_mode(
                 state,
-                wake_slots=tuple(
-                    replace(slot, phrases=phrases) if slot.mode is mode else slot
-                    for slot in state.wake_slots
-                ),
+                mode,
+                phrase,
+                detector,
+                enforce_assistant_gate=False,
             )
 
         case SpeechRecognitionSetConversationEndPhrasesAction(phrases=phrases):
             return replace(state, conversation_end_phrases=phrases)
+
+        # --- wake-word model lifecycle -------------------------------------
+
+        case WakeWordDownloadModelsAction(engine_name=engine_name):
+            # Idempotent at the boundary: a re-dispatch while a download is already
+            # in flight (e.g. a remote/direct dispatch that bypasses the menu's UI
+            # guard) must not emit a second event and launch an overlapping loop.
+            if model_status(state, engine_name) is WakeWordModelStatus.DOWNLOADING:
+                return state
+            # Stay pure: mark the engine as downloading and let the service
+            # handler perform the actual (blocking) download off the loop.
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    wake_word_models_status=set_model_status(
+                        state.wake_word_models_status,
+                        engine_name,
+                        WakeWordModelStatus.DOWNLOADING,
+                    ),
+                ),
+                events=[WakeWordDownloadModelsEvent(engine_name=engine_name)],
+            )
+
+        case WakeWordSetModelsStatusAction(
+            engine_name=engine_name,
+            status=status,
+        ):
+            return replace(
+                state,
+                wake_word_models_status=set_model_status(
+                    state.wake_word_models_status,
+                    engine_name,
+                    status,
+                ),
+            )
+
+        case WakeWordSetAvailableModelsAction(engine=engine, models=models):
+            if engine is WakeWordEngineName.OPENWAKEWORD:
+                return replace(state, openwakeword_models=models)
+            return state
+
+        case WakeWordDeleteModelAction(engine=engine, model_id=model_id):
+            # Only OpenWakeWord has a deletable on-disk model pool. Guard the
+            # engine so a malformed/remote action with the wrong engine can't
+            # mutate ``openwakeword_models`` (or prune the wrong engine's triggers)
+            # while the file-deleting event is dropped service-side.
+            if engine is not WakeWordEngineName.OPENWAKEWORD:
+                return state
+            # Authorize against the known pool: a remote/client-dispatched action
+            # must not delete an arbitrary id (e.g. a shared helper model). Only
+            # ids present in ``openwakeword_models`` are deletable.
+            if model_id not in state.openwakeword_models:
+                return state
+            # Drop the model from the pool + any trigger referencing it; delete
+            # the file off-reducer via the event.
+            pruned = _map_engine_triggers(
+                replace(
+                    state,
+                    openwakeword_models=tuple(
+                        stem
+                        for stem in state.openwakeword_models
+                        if stem != model_id
+                    ),
+                ),
+                engine,
+                lambda triggers: tuple(
+                    trigger for trigger in triggers if trigger.value != model_id
+                ),
+            )
+            return CompleteReducerResult(
+                state=pruned,
+                events=[
+                    WakeWordDeleteModelEvent(engine=engine, model_id=model_id),
+                ],
+            )
+
+        # --- intents / speech reporting ------------------------------------
 
         case SpeechRecognitionReportIntentDetectionAction():
             # Stay pure: emit the event and let the service handler resolve the

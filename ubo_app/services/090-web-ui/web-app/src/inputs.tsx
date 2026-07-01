@@ -17,6 +17,7 @@ import {
   Stack,
   FormControlLabel,
   Switch,
+  Slider,
   IconButton,
   InputAdornment,
   Popover,
@@ -480,7 +481,9 @@ export function Inputs({
                     <Stack direction="row" spacing={1} width="100%" mt={5}>
                       <Button
                         component="label"
-                        variant={files[field.name] ? "contained" : "outlined"}
+                        variant={
+                          files[id]?.[field.name] ? "contained" : "outlined"
+                        }
                         sx={{ flexGrow: 1, textTransform: "none" }}
                       >
                         <input
@@ -490,35 +493,37 @@ export function Inputs({
                           required={field.required}
                           accept={field.fileMimetype || "*"}
                           onChange={async (event) => {
+                            const clearField = () =>
+                              setFiles((files) => {
+                                const fieldFiles = { ...files[id] };
+                                delete fieldFiles[field.name];
+                                return { ...files, [id]: fieldFiles };
+                              });
                             if (event.target.files?.length) {
                               const file = event.target.files[0];
-                              const content = await file.text();
-                              setFiles((files) => {
-                                if (
-                                  !field.pattern ||
-                                  new RegExp(field.pattern).test(content)
-                                ) {
-                                  return {
-                                    ...files,
-                                    [id]: {
-                                      ...files[id],
-                                      [field.name]: file,
-                                    },
-                                  };
-                                } else {
-                                  alert(
-                                    `The file "${file.name}" does not match the required pattern!`,
-                                  );
-                                  event.target.value = "";
-                                  const newFiles = files[id] || {};
-                                  delete newFiles[field.name];
-                                  return { ...files, [id]: newFiles };
-                                }
-                              });
+                              // Only decode the file as text when a pattern needs
+                              // to validate it; binary uploads (e.g. .onnx models)
+                              // have no pattern and must not be read as text.
+                              const matches =
+                                !field.pattern ||
+                                new RegExp(field.pattern).test(await file.text());
+                              if (matches) {
+                                setFiles((files) => ({
+                                  ...files,
+                                  [id]: {
+                                    ...files[id],
+                                    [field.name]: file,
+                                  },
+                                }));
+                              } else {
+                                alert(
+                                  `The file "${file.name}" does not match the required pattern!`,
+                                );
+                                event.target.value = "";
+                                clearField();
+                              }
                             } else {
-                              const newFiles = files[id] || {};
-                              delete newFiles[field.name];
-                              return { ...files, [id]: newFiles };
+                              clearField();
                             }
                           }}
                           hidden
@@ -529,7 +534,7 @@ export function Inputs({
                             : "Select a file"}
                         </Typography>
                       </Button>
-                      {files[field.name] && (
+                      {files[id]?.[field.name] && (
                         <IconButton
                           sx={{ flexGrow: 0, flexShrink: 0 }}
                           onClick={(event) => {
@@ -539,9 +544,9 @@ export function Inputs({
                               ) as HTMLInputElement;
                             input.value = "";
                             setFiles((files) => {
-                              const newFiles = { ...files };
-                              delete newFiles[field.name];
-                              return newFiles;
+                              const fieldFiles = { ...files[id] };
+                              delete fieldFiles[field.name];
+                              return { ...files, [id]: fieldFiles };
                             });
                           }}
                         >
@@ -590,6 +595,31 @@ export function Inputs({
                       },
                     }}
                   />
+                ) : field.type === InputFieldType.INPUT_FIELD_TYPE_RANGE ? (
+                  <FormControl
+                    key={field.name}
+                    fullWidth
+                    required={field.required}
+                    title={field.title || undefined}
+                  >
+                    <Typography gutterBottom>{field.label}</Typography>
+                    <Slider
+                      name={field.name}
+                      min={0}
+                      max={100}
+                      step={1}
+                      defaultValue={
+                        field.defaultValue !== "" &&
+                        Number.isFinite(Number(field.defaultValue))
+                          ? Number(field.defaultValue)
+                          : 50
+                      }
+                      valueLabelDisplay="auto"
+                      valueLabelFormat={(value) => `${value}%`}
+                      sx={{ mx: 1, width: "calc(100% - 16px)" }}
+                    />
+                    <FormHelperText>{field.description}</FormHelperText>
+                  </FormControl>
                 ) : (
                   <TextField
                     key={field.name}

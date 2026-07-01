@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ubo_app.store.services.speech_recognition import engine_config
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -17,7 +19,7 @@ if TYPE_CHECKING:
 
     from ubo_app.store.services.speech_recognition import (
         SpeechRecognitionState,
-        WakeMode,
+        WakeWordEngineName,
     )
 
 MIN_WORDS = 2
@@ -67,21 +69,35 @@ _MODE_LABELS: dict[str, str] = {
 
 def phrase_collisions(
     candidate: str,
-    mode: WakeMode,
+    engine: WakeWordEngineName,
     state: SpeechRecognitionState,
+    *,
+    exclude_trigger_id: str | None = None,
 ) -> list[str]:
-    """Return messages if *candidate* duplicates another phrase in *state*.
+    """Return messages if *candidate* duplicates another phrase on *engine*.
 
-    Two slots sharing a phrase would let reducer match-ordering silently decide
-    behaviour, so a new value must be unique across all *other* slots' phrases and
-    the conversation end-phrase alternatives.
+    A value must be unique across *all* of the engine's triggers: two triggers of
+    the same engine sharing a phrase would let reducer match-ordering silently decide
+    behaviour, and for OpenWakeWord the engine maps each model stem to a single
+    trigger id, so a same-mode duplicate silently collapses to one binding. Pass
+    *exclude_trigger_id* to ignore the trigger currently being edited so it does not
+    collide with itself. (Different engines may legitimately share a phrase.)
     """
     normalized = candidate.casefold()
+    config = engine_config(state, engine)
+    colliding_modes = (
+        {
+            trigger.mode
+            for trigger in config.triggers
+            if trigger.id != exclude_trigger_id
+            and trigger.value.casefold() == normalized
+        }
+        if config is not None
+        else set()
+    )
     problems = [
-        f'Already used by {_MODE_LABELS[slot.mode.value]}.'
-        for slot in state.wake_slots
-        if slot.mode != mode
-        and any(phrase.casefold() == normalized for phrase in slot.phrases)
+        f'Already used by {_MODE_LABELS[colliding.value]}.'
+        for colliding in colliding_modes
     ]
     end_phrases = state.conversation_end_phrases
     if any(phrase.casefold() == normalized for phrase in end_phrases):

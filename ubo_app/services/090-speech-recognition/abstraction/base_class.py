@@ -10,11 +10,13 @@ from ubo_app.engines.abstraction.background_running_mixin import BackgroundRunni
 from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.speech_recognition import (
-    SpeechRecognitionSetAssistantSlotsEnabledAction,
-    SpeechRecognitionSetSlotEnabledAction,
-    WakeMode,
+    WakeEngineSetEnabledAction,
+    WakeWordEngineName,
 )
 from ubo_app.utils.async_evicting_queue import AsyncEvictingQueue
+
+# Valid wake-engine name values, for guarding the disable-on-failure dispatch.
+_WAKE_ENGINE_NAMES = {member.value for member in WakeWordEngineName}
 
 
 class BaseSpeechRecognitionEngine(BackgroundRunningMixin):
@@ -33,13 +35,18 @@ class BaseSpeechRecognitionEngine(BackgroundRunningMixin):
     @override
     def run(self) -> bool:
         if not super().run():
-            store.dispatch(
-                SpeechRecognitionSetSlotEnabledAction(
-                    mode=WakeMode.INTENTS,
-                    enabled=False,
-                ),
-                SpeechRecognitionSetAssistantSlotsEnabledAction(enabled=False),
-            )
+            # The engine can't start (e.g. its model isn't set up) — disable the
+            # whole engine so the manager stops feeding it and the UI reflects it.
+            # Only wake engines have a config to disable; a speech-only engine
+            # whose name isn't a WakeWordEngineName is skipped rather than crashing
+            # the failure path with a ValueError.
+            if self.name in _WAKE_ENGINE_NAMES:
+                store.dispatch(
+                    WakeEngineSetEnabledAction(
+                        engine=WakeWordEngineName(self.name),
+                        enabled=False,
+                    ),
+                )
             return False
         return True
 
