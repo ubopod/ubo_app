@@ -293,6 +293,11 @@ jobs:
           enable-cache: true
           cache-suffix: ubuntu-latest
 
+      - name: Build protobuf files and gRPC bindings
+        run: |
+          uv run --frozen poe proto:generate:raw
+          uv run --frozen poe proto:compile:raw
+
       - name: Test Services
         env:
           PRETEND_VERSION: ${{ needs.version.outputs.version }}
