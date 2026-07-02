@@ -120,13 +120,17 @@ class WindowSnapshot:
         # costs nothing on success. It MUST be sized for the slowest hardware:
         # the first ever capture (``_latest_data is None``) pays the one-time
         # ``ubo-gui-client`` cold-boot (Kivy init + gRPC connect + first
-        # render), which on a Raspberry Pi 4 running the full suite under load
-        # can take well over a minute — hence ~120s cold. ``stability`` primes
-        # this first capture *before* starting its settle deadline so the
-        # cold-boot isn't charged against the settle budget. Once the client is
-        # warm every capture returns in well under a second; the warm ceiling
-        # (~30s) is just a safety net for momentary load spikes.
-        timeouts = [2] * 15 if self._latest_data is not None else [2] * 60
+        # render). On a Raspberry Pi 4 this now contends with the assistant +
+        # mcp subprocesses cold-starting concurrently — pipecat import, Silero
+        # VAD load, onnxruntime, and the full STT/TTS/LLM pipeline build — which
+        # saturates the 4 cores for the first ~2 minutes. Measured first-capture
+        # latency on a loaded Pi 4 is ~133s, so the cold ceiling is ~180s (Pi 5
+        # / Ubuntu answer well inside the old 120s and are unaffected).
+        # ``stability`` primes this first capture *before* starting its settle
+        # deadline so the cold-boot isn't charged against the settle budget.
+        # Once the client is warm every capture returns in well under a second;
+        # the warm ceiling (~30s) is just a safety net for momentary load spikes.
+        timeouts = [2] * 15 if self._latest_data is not None else [2] * 90
 
         for attempt, timeout in enumerate(timeouts):
             capture_event = threading.Event()
