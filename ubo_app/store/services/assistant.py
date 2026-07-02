@@ -205,6 +205,18 @@ def _load_moonshine_downloaded_models(value: object) -> tuple[str, ...]:
     return ()
 
 
+class MoonshineDownloadedModels(Immutable):
+    """Wrapper for the set of locally-downloaded Moonshine model ids.
+
+    gRPC selectors can't return bare container types, so the assistant
+    subprocess subscribes to this wrapped view instead of the raw
+    ``moonshine_downloaded_models`` tuple (mirrors
+    ``mcp.EnabledMcpServersWithMetadata``).
+    """
+
+    items: list[str] = field(default_factory=list)
+
+
 class AssistantTTSName(StrEnum):
     """Available assistant text-to-speech engines."""
 
@@ -1482,6 +1494,21 @@ class AssistantState(Immutable):
             'assistant:moonshine_downloaded_models',
             default=(),
             mapper=_load_moonshine_downloaded_models,
+        ),
+    )
+    # gRPC-serializable mirror of ``moonshine_downloaded_models``. A selector
+    # can't return the bare tuple over gRPC (containers are unsupported), so the
+    # assistant subprocess subscribes to this wrapper instead. Kept in sync with
+    # the tuple by the reducer at every write site.
+    moonshine_downloaded_models_wrapper: MoonshineDownloadedModels = field(
+        default_factory=lambda: MoonshineDownloadedModels(
+            items=list(
+                read_from_persistent_store(
+                    'assistant:moonshine_downloaded_models',
+                    default=(),
+                    mapper=_load_moonshine_downloaded_models,
+                ),
+            ),
         ),
     )
     # Model id currently being downloaded by the subprocess (empty = idle).

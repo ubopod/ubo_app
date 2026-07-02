@@ -92,6 +92,7 @@ from ubo_app.store.services.assistant import (
     AssistantVoiceChangedEvent,
     ElevenLabsVoiceEntry,
     GenericLLMProvider,
+    MoonshineDownloadedModels,
     StopTalkingPhraseStopReason,
     UserStopReason,
     WakePhraseMatcher,
@@ -458,21 +459,29 @@ def reducer(
         case AssistantAddMoonshineDownloadedModelAction():
             if action.model_id in state.moonshine_downloaded_models:
                 return state
+            updated_models = (
+                *state.moonshine_downloaded_models,
+                action.model_id,
+            )
             return replace(
                 state,
-                moonshine_downloaded_models=(
-                    *state.moonshine_downloaded_models,
-                    action.model_id,
+                moonshine_downloaded_models=updated_models,
+                moonshine_downloaded_models_wrapper=MoonshineDownloadedModels(
+                    items=list(updated_models),
                 ),
             )
 
         case AssistantRemoveMoonshineDownloadedModelAction():
+            updated_models = tuple(
+                model_id
+                for model_id in state.moonshine_downloaded_models
+                if model_id != action.model_id
+            )
             return replace(
                 state,
-                moonshine_downloaded_models=tuple(
-                    model_id
-                    for model_id in state.moonshine_downloaded_models
-                    if model_id != action.model_id
+                moonshine_downloaded_models=updated_models,
+                moonshine_downloaded_models_wrapper=MoonshineDownloadedModels(
+                    items=list(updated_models),
                 ),
             )
 

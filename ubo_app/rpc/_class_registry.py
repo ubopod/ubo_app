@@ -387,6 +387,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'MenuStackItem': 'ubo_app.store.core.types.stack_items',
     'MenuViewData': 'ubo_app.store.core.types.view_data',
     'MistralVoiceEntry': 'ubo_app.store.services.assistant',
+    'MoonshineDownloadedModels': 'ubo_app.store.services.assistant',
     'NetState': 'ubo_app.store.services.ethernet',
     'Notification': 'ubo_app.store.services.notifications',
     'NotificationActionItem': 'ubo_app.store.services.notifications',

@@ -430,8 +430,10 @@ class UboSTTService(UboSwitchService[STTService], STTService):
 
         # Seed/refresh the proxy's known-downloaded set from the persisted store
         # so it knows which models it may load from cache (and skips the
-        # download spinner for an already-downloaded model).
-        @self.client.autorun(['state.assistant.moonshine_downloaded_models'])
+        # download spinner for an already-downloaded model). Subscribes to the
+        # ``_wrapper`` mirror (a message with an ``items`` field): a gRPC
+        # selector can't return the bare tuple (containers are unsupported).
+        @self.client.autorun(['state.assistant.moonshine_downloaded_models_wrapper'])
         def _handle_moonshine_downloaded_change(data: list) -> None:
             wrapper = data[0]
             models = list(wrapper.items) if wrapper is not None else []

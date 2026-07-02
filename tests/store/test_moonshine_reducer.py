@@ -220,6 +220,36 @@ def test_add_downloaded_model_is_additive_and_deduped(
     assert same is state
 
 
+def test_downloaded_wrapper_mirrors_tuple(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The gRPC ``_wrapper`` mirror stays in sync with the raw tuple.
+
+    The subprocess subscribes to ``moonshine_downloaded_models_wrapper`` (a
+    selector can't return the bare tuple over gRPC), so every add/remove must
+    keep the wrapper's ``items`` equal to the tuple.
+    """
+    ns = _load_assistant(monkeypatch)
+    state = cast('AssistantState', ns.reducer(None, _init_action(ns)))
+
+    for model_id in ('tiny', 'base'):
+        state = cast(
+            'AssistantState',
+            ns.reducer(
+                state,
+                ns.AssistantAddMoonshineDownloadedModelAction(model_id=model_id),
+            ),
+        )
+    assert tuple(state.moonshine_downloaded_models_wrapper.items) == ('tiny', 'base')
+
+    state = cast(
+        'AssistantState',
+        ns.reducer(
+            state,
+            ns.AssistantRemoveMoonshineDownloadedModelAction(model_id='tiny'),
+        ),
+    )
+    assert tuple(state.moonshine_downloaded_models_wrapper.items) == ('base',)
+
+
 def test_set_downloading_flag_toggles(monkeypatch: pytest.MonkeyPatch) -> None:
     """The downloading flag tracks the model id the subprocess reports."""
     ns = _load_assistant(monkeypatch)
