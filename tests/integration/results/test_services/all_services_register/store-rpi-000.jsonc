@@ -15,6 +15,10 @@
     "last_stop_reason": null,
     "mistral_available_voices": [],
     "moonshine_downloaded_models": [],
+    "moonshine_downloaded_models_wrapper": {
+      "_type": "MoonshineDownloadedModels",
+      "items": []
+    },
     "moonshine_downloading_model": "",
     "ollama_downloaded_models": [],
     "ollama_downloaded_models_refreshed": true,
