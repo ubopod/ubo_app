@@ -16,7 +16,7 @@ which can be a different generation than the one imported here.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ubo_app.rpc.message_to_object import rebuild_object
 from ubo_app.rpc.object_to_message import build_message
@@ -41,3 +41,19 @@ def test_empty_downloaded_models_wrapper_roundtrips_to_empty() -> None:
     """An empty wrapper stays empty (no phantom ids) after a round-trip."""
     rebuilt = _roundtrip(MoonshineDownloadedModels(items=[]))
     assert list(rebuilt.items) == []
+
+
+def test_downloaded_models_wire_shape_nests_items() -> None:
+    """The raw betterproto message nests the model ids at ``items.items``.
+
+    This is the shape the assistant subprocess autorun callback actually sees
+    (``_unpack_from_any`` hands it the raw message, *not* the rebuilt object).
+    The proto generator lowers ``items: list[str]`` to a nested ``Items``
+    message, so ``message.items`` is that wrapper — the ids live one level
+    deeper. Reading ``message.items`` as a list raised
+    ``TypeError: 'MoonshineDownloadedModelsItems' object is not iterable``
+    on-device; this guards the double-unwrap in ``ubo_stt.py``.
+    """
+    built = build_message(MoonshineDownloadedModels(items=['tiny', 'base']))
+    message = cast('Any', built)
+    assert list(message.items.items) == ['tiny', 'base']

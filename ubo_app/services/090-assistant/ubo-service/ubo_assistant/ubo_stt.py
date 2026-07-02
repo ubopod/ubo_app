@@ -433,13 +433,22 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         # download spinner for an already-downloaded model). Subscribes to the
         # ``_wrapper`` mirror (a message with an ``items`` field): a gRPC
         # selector can't return the bare tuple (containers are unsupported).
+        #
+        # The proto generator lowers ``items: list[str]`` to a *nested* ``Items``
+        # message, so over the autorun wire the raw betterproto message exposes
+        # ``wrapper.items`` as that nested wrapper (not iterable) — the model ids
+        # live at ``wrapper.items.items``. Double-unwrap defensively, mirroring
+        # the MCP precedent (switch.py ``_process_mcp_servers_data``).
         @self.client.autorun(['state.assistant.moonshine_downloaded_models_wrapper'])
         def _handle_moonshine_downloaded_change(data: list) -> None:
             wrapper = data[0]
-            models = list(wrapper.items) if wrapper is not None else []
+            items_wrapper = getattr(wrapper, 'items', None)
+            models = getattr(items_wrapper, 'items', None)
+            if not isinstance(models, list):
+                models = []
             target = self.moonshine_stt
             if isinstance(target, MoonshineSTTProxy):
-                target.set_downloaded(models)
+                target.set_downloaded(list(models))
 
         # Explicit, user-initiated download/delete arrive as events (the
         # subprocess owns the model cache, unlike Vosk's core-side download).
