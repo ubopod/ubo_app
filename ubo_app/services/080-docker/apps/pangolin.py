@@ -130,6 +130,9 @@ def _write_pangolin_compose(
         '    image: fosrl/newt\n'
         '    container_name: newt\n'
         '    restart: unless-stopped\n'
+        # Share the host network namespace so Newt can reverse-proxy host
+        # services bound to 127.0.0.1 (loopback-only containers).
+        '    network_mode: host\n'
         '    environment:\n'
         f'      - PANGOLIN_ENDPOINT={endpoint}\n'
         f'      - NEWT_ID={newt_id}\n'

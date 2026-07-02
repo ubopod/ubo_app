@@ -113,6 +113,7 @@ async def test_prepare_pangolin_writes_compose_from_webui_input(
 
     compose = (tmp_path / 'pangolin' / 'docker-compose.yml').read_text()
     assert 'image: fosrl/newt' in compose
+    assert 'network_mode: host' in compose
     assert f'- PANGOLIN_ENDPOINT={expected_endpoint}' in compose
     assert '- NEWT_ID=site-id' in compose
     assert '- NEWT_SECRET=site-secret' in compose
