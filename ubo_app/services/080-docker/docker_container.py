@@ -99,6 +99,32 @@ def find_container(client: docker.DockerClient, *, image_path: str) -> Container
     return None
 
 
+def _container_bind_mounts_stale(container: Container, image_id: str) -> bool:
+    """Return True if a container's bind mounts differ from the app's desired.
+
+    TRANSITIONAL MIGRATION — safe to deprecate/remove once every device has been
+    updated past this version. Older software rendered some app configs (notably
+    Envoy's) *inside* the versioned install tree and bind-mounted that path; after
+    an update that path is chmod'd 0700 (unreadable to the container's non-root
+    user) and moves to a new version dir, so the reused container stays bound to a
+    stale, unreadable config and crash-loops. Comparing the container's actual
+    bind sources to the app's currently-declared ``volumes`` lets us detect such
+    pre-migration containers and recreate them against the stable ``CONFIG_PATH``
+    mount. Once no device runs the old layout this always returns False.
+    """
+    desired = IMAGES[image_id].volumes or []
+    if not desired:
+        return False
+    desired_sources = {spec.split(':', 1)[0] for spec in desired}
+    # ``containers.list()`` returns summary attrs without HostConfig.Binds, so
+    # reload to get the full inspect payload before comparing.
+    with contextlib.suppress(docker.errors.DockerException):
+        container.reload()
+    binds = ((container.attrs or {}).get('HostConfig') or {}).get('Binds') or []
+    actual_sources = {spec.split(':', 1)[0] for spec in binds}
+    return desired_sources != actual_sources
+
+
 @overload
 async def _process_str(
     value: str
@@ -163,6 +189,24 @@ async def run_container(
 
     docker_client = docker.from_env()
     container = find_container(docker_client, image_path=IMAGES[id].path)
+
+    # --- BEGIN transitional migration (deprecate once all users have updated) ---
+    # A container created by older software may be bound to a now-stale config
+    # path (e.g. Envoy's config rendered inside the versioned install tree, made
+    # unreadable by the installer's ``chmod -R 700 /opt/ubo``). Reusing it would
+    # just restart the same crash loop, so drop it and let the branch below
+    # recreate it against the current (``CONFIG_PATH``-based) mount. When every
+    # device has migrated, ``_container_bind_mounts_stale`` always returns False
+    # and this whole block can be removed.
+    if container is not None and _container_bind_mounts_stale(container, id):
+        logger.info(
+            'Recreating container with stale bind mounts',
+            extra={'image': id},
+        )
+        container.remove(v=True, force=True)
+        container = None
+    # --- END transitional migration ---
+
     if container:
         if container.status != 'running':
             container.start()

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import stat
 import sys
 from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast
 
+from ubo_app.constants import CONFIG_PATH
 from ubo_app.utils import IS_RPI
 
 if TYPE_CHECKING:
@@ -83,6 +85,25 @@ async def test_prepare_envoy_renders_combined_webui_and_grpc_routes(
     assert "prefix: '/grpc/'" in config
     assert "prefix_rewrite: '/'" in config
     assert config.index("prefix: '/grpc/'") < config.index("prefix: '/'")
+
+    # The container drops to its non-root ``envoy`` user before reading the
+    # bind-mounted config, so the rendered file must stay world-readable.
+    assert stat.S_IMODE(config_path.stat().st_mode) == 0o644
+
+
+def test_envoy_config_renders_outside_versioned_install_tree() -> None:
+    """The rendered config lives under CONFIG_PATH, not the versioned tree.
+
+    The installer runs ``chmod -R 700 /opt/ubo/<version>`` on every update, which
+    would make a config rendered inside that tree unreadable to the container's
+    non-root envoy user (and its path changes on every version bump). Keeping it
+    under ``CONFIG_PATH`` (stable, untouched by that chmod) is what makes the
+    Envoy container survive updates.
+    """
+    envoy = _import_envoy()
+
+    assert CONFIG_PATH in envoy.ENVOY_CONFIG_PATH.parents
+    assert DOCKER_SERVICE_PATH not in envoy.ENVOY_CONFIG_PATH.parents
 
 
 def test_web_ui_grpc_client_uses_same_origin_grpc_path() -> None:

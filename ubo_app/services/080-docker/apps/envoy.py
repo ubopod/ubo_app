@@ -7,6 +7,7 @@ from string import Template
 
 from apps._registry import ContainerEntry
 from ubo_app.constants import (
+    CONFIG_PATH,
     GRPC_ENVOY_LISTEN_PORT,
     GRPC_LISTEN_PORT,
     WEB_UI_LISTEN_PORT,
@@ -14,7 +15,15 @@ from ubo_app.constants import (
 from ubo_app.utils import IS_RPI
 
 ENVOY_TEMPLATE_PATH = Path(__file__).parent.parent / 'assets' / 'envoy.yaml.tmpl'
-ENVOY_CONFIG_PATH = Path(__file__).parent.parent / 'assets' / 'envoy.yaml'
+# Render the config under ``CONFIG_PATH`` (``~/.config/ubo``), NOT inside the
+# versioned install tree (``/opt/ubo/<version>/…``). The installer runs
+# ``chmod -R 700 /opt/ubo`` on every update, which makes a config rendered there
+# unreadable to the container's non-root ``envoy`` user, and the versioned path
+# also changes on every version bump — both leave the reused container bound to a
+# stale/unreadable config and stuck in a crash loop. ``CONFIG_PATH`` is stable
+# across versions and untouched by that chmod, matching how every other Docker
+# app (Hermes, Home Assistant, Node-RED) stores its runtime config.
+ENVOY_CONFIG_PATH = CONFIG_PATH / 'envoy' / 'envoy.yaml'
 
 
 async def prepare_envoy() -> bool:
@@ -27,7 +36,13 @@ async def prepare_envoy() -> bool:
         WEB_UI_LISTEN_PORT=f'{WEB_UI_LISTEN_PORT}',
         WEB_UI_SERVER_HOST=server_host,
     )
+    ENVOY_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     ENVOY_CONFIG_PATH.write_text(rendered)
+    # The container drops to its non-root ``envoy`` user (uid 100) before reading
+    # the bind-mounted config, so it must stay world-readable regardless of the
+    # rendering process's umask. The rendered config holds no secrets (only ports
+    # and hosts).
+    ENVOY_CONFIG_PATH.chmod(0o644)
     return True
 
 
