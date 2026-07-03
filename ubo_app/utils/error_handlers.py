@@ -18,13 +18,15 @@ if TYPE_CHECKING:
 
 def setup_sentry() -> None:  # pragma: no cover
     import os
+    import socket
 
     import sentry_sdk
 
     serial_number = read_serial_number()
+    hostname = socket.gethostname()
 
     if 'SENTRY_DSN' in os.environ:
-        from sentry_sdk import set_user
+        from sentry_sdk import set_tag, set_user
 
         sentry_sdk.init(
             traces_sample_rate=1.0,
@@ -32,7 +34,10 @@ def setup_sentry() -> None:  # pragma: no cover
             ignore_errors=[KeyboardInterrupt, asyncio.CancelledError],
             server_name=serial_number,
         )
-        set_user({'id': serial_number})
+        set_user({'id': serial_number, 'username': hostname})
+        # Hostname (e.g. ``ubo-r``) is easier for users to recognise than the
+        # serial number, so expose it as an indexed tag for searching/filtering.
+        set_tag('hostname', hostname)
 
 
 def get_all_thread_stacks() -> dict[str, list[str]]:

@@ -320,10 +320,14 @@ def update_container(*, image_id: str, container: Container) -> None:
             DockerImageSetStatusAction(
                 image=image_id,
                 status=DockerItemStatus.STARTING,
+                # Docker reports ``None`` (not ``[]``) for ports that are
+                # EXPOSEd but not published to the host, so skip empty values
+                # before iterating the binding list.
                 ports=[
-                    f'{i["HostIp"]}:{i["HostPort"]}'
-                    for i in container.ports.values()
-                    for i in i
+                    f'{binding["HostIp"]}:{binding["HostPort"]}'
+                    for bindings in container.ports.values()
+                    if bindings
+                    for binding in bindings
                 ],
                 ip=container.attrs['NetworkSettings']['Networks']['bridge']['IPAddress']
                 if container.attrs
