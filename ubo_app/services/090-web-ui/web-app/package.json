@@ -2,7 +2,10 @@
   "name": "ubo-rpc-client-grpc-web",
   "version": "0.0.0",
   "description": "A demo gRPC client for UBO using grpc-web",
-  "author": "Sassan Haradji <me@sassanh.com>",
+  "author": "Mehrdad M <mehrdad@getubo.com>",
+  "contributors": [
+    "Sassan Haradji <me@sassanh.com>"
+  ],
   "license": "Apache-2.0",
   "readme": "README.md",
   "keywords": [

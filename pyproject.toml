@@ -3,8 +3,14 @@ name = "ubo-app"
 dynamic = ["version"]
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 license = "Apache-2.0"
-authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
-maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+authors = [
+  { name = "Mehrdad M", email = "mehrdad@getubo.com" },
+  { name = "Sassan Haradji", email = "me@sassanh.com" },
+]
+maintainers = [
+  { name = "Mehrdad M", email = "mehrdad@getubo.com" },
+  { name = "Sassan Haradji", email = "me@sassanh.com" },
+]
 readme = "README.md"
 requires-python = ">=3.11, <3.12"
 keywords = ['ubo', 'ubo-pod', 'raspberry pi', 'rpi', 'home assistance']

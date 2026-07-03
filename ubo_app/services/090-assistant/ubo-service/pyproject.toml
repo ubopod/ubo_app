@@ -3,8 +3,14 @@ name = "ubo-app-assistant"
 dynamic = ["version"]
 description = "This is part of ubo-app and communicates with it over its gRPC API"
 license = "Apache-2.0"
-authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
-maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+authors = [
+  { name = "Mehrdad M", email = "mehrdad@getubo.com" },
+  { name = "Sassan Haradji", email = "me@sassanh.com" },
+]
+maintainers = [
+  { name = "Mehrdad M", email = "mehrdad@getubo.com" },
+  { name = "Sassan Haradji", email = "me@sassanh.com" },
+]
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 keywords = ['ubo', 'ubo-pod', 'ubo-service', 'pipecat', 'assistant']
