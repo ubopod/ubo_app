@@ -15,7 +15,7 @@ builds under `ubo_lvgl/` are untouched; this tree is only consumed by `idf.py`.
 | LCD QSPI (SPI2): CS / PCLK / D0 / D1 / D2 / D3 | 5 / 0 / 1 / 2 / 3 / 4 |
 | LCD reset | via TCA9554 IO-expander (pins 4,5) |
 | Touch I2C0: SCL / SDA / INT | 7 / 8 / 15 (INT unused; polled at 50Hz) |
-| BOOT button | 9 (active low → tap = HOME; hold ~3s = clear saved WiFi) |
+| BOOT button | 9 (active low → tap = HOME; hold ~8s = clear saved WiFi) |
 
 ## Toolchain environment (EIM install)
 
@@ -71,7 +71,7 @@ console. This is the **WiFi setup journey**:
    restarts. It now boots straight onto your network and renders the live ubo-core UI.
 
 **Re-provisioning / moving networks:** while the device is running, **hold the BOOT
-button (GPIO9) for ~3 seconds**. That erases the stored WiFi + endpoint and reboots
+button (GPIO9) for ~8 seconds**. That erases the stored WiFi + endpoint and reboots
 into `ubo-setup` so you can set them again. (A short BOOT tap is still HOME.)
 
 ### Notes
@@ -106,7 +106,7 @@ success it starts the client tasks (`client_app.c`) and the touch input task
   (the camera viewfinder is deferred — no `frame_stream` subscription).
 - **dispatch worker** → keypad actions + coalesced volume sets.
 - **touch/BOOT input** → tap a drawn item slot → L1/L2/L3, vertical swipe → UP/DOWN,
-  horizontal swipe → BACK, BOOT tap → HOME, BOOT hold ~3s → clear WiFi + reboot to
+  horizontal swipe → BACK, BOOT tap → HOME, BOOT hold ~8s → clear WiFi + reboot to
   setup, slide/tap the home volume bar → set volume.
 - **captive portal** (only when WiFi can't be joined) → SoftAP + DNS + HTTP form on
   `provisioning.c`; submitting creds saves them to NVS and reboots.
@@ -122,4 +122,4 @@ All phases complete and verified on-device:
 - **P4 — touch:** FT3168 tap/swipe + BOOT + interactive volume bar. ✅
 - **P5 — resilience:** reconnect/backoff, disconnect overlay, blanking. ✅
 - **P6 — provisioning:** WiFi captive portal (SoftAP + DNS + scan form) + optional
-  ubo-core endpoint fields, NVS-persisted, BOOT-hold (~3s) reset. ✅
+  ubo-core endpoint fields, NVS-persisted, BOOT-hold (~8s) reset. ✅
