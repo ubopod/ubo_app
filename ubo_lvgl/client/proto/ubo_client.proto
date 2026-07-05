@@ -116,13 +116,13 @@ message AudioReportSampleAction {
 
 message Action {
   oneof action {
-    AssistantStartListeningAction assistant_start_listening_action = 30;
-    AssistantStopListeningAction assistant_stop_listening_action = 31;
-    AudioReportSampleAction audio_report_sample_action = 47;
-    AudioSetVolumeAction audio_set_volume_action = 49;
-    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 53;
-    KeypadKeyPressAction keypad_key_press_action = 139;
-    KeypadKeyReleaseAction keypad_key_release_action = 140;
+    AssistantStartListeningAction assistant_start_listening_action = 43;
+    AssistantStopListeningAction assistant_stop_listening_action = 44;
+    AudioReportSampleAction audio_report_sample_action = 58;
+    AudioSetVolumeAction audio_set_volume_action = 60;
+    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 64;
+    KeypadKeyPressAction keypad_key_press_action = 152;
+    KeypadKeyReleaseAction keypad_key_release_action = 153;
   }
 }
 
@@ -171,11 +171,11 @@ message StackChangedEvent {}
 message Event {
   oneof event {
     ApplicationScrollEvent application_scroll_event = 1;
-    AudioPlayAudioSampleEvent audio_play_audio_sample_event = 22;
-    AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 23;
-    FrameStreamDataEvent frame_stream_data_event = 83;
-    MenuChooseByIndexEvent menu_choose_by_index_event = 98;
-    StackChangedEvent stack_changed_event = 124;
+    AudioPlayAudioSampleEvent audio_play_audio_sample_event = 25;
+    AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 26;
+    FrameStreamDataEvent frame_stream_data_event = 86;
+    MenuChooseByIndexEvent menu_choose_by_index_event = 107;
+    StackChangedEvent stack_changed_event = 133;
   }
 }
 
