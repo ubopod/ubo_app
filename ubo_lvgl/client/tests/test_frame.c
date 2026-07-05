@@ -137,6 +137,55 @@ static void test_is_trailer(void) {
     CHECK(ubo_grpc_web_is_trailer(UBO_GRPC_WEB_TRAILER_FLAG));
 }
 
+/* A header declaring a payload beyond UBO_GRPC_WEB_MAX_FRAME poisons the
+ * parser immediately (before any payload arrives) and everything after is
+ * rejected, so a hostile length can't grow the buffer unboundedly. */
+static void test_oversized_frame_poisons_parser(void) {
+    uint32_t huge = UBO_GRPC_WEB_MAX_FRAME + 1;
+    uint8_t header[UBO_GRPC_WEB_HEADER_SIZE] = {
+        UBO_GRPC_WEB_DATA_FLAG,
+        (uint8_t)((huge >> 24) & 0xFF),
+        (uint8_t)((huge >> 16) & 0xFF),
+        (uint8_t)((huge >> 8) & 0xFF),
+        (uint8_t)(huge & 0xFF),
+    };
+    ubo_grpc_web_parser p;
+    ubo_grpc_web_parser_init(&p);
+    CHECK(ubo_grpc_web_parser_feed(&p, header, sizeof(header)));
+    CHECK(!ubo_grpc_web_parser_bad(&p));
+    uint8_t flag;
+    const uint8_t *pl;
+    size_t pl_len;
+    CHECK(!ubo_grpc_web_parser_next(&p, &flag, &pl, &pl_len));
+    CHECK(ubo_grpc_web_parser_bad(&p));
+    /* Poisoned: further feeds are refused so the buffer can't grow. */
+    uint8_t junk[16] = {0};
+    CHECK(!ubo_grpc_web_parser_feed(&p, junk, sizeof(junk)));
+    ubo_grpc_web_parser_free(&p);
+}
+
+/* A payload length exactly at the cap is still accepted. */
+static void test_max_frame_boundary_ok(void) {
+    uint32_t max = UBO_GRPC_WEB_MAX_FRAME;
+    uint8_t header[UBO_GRPC_WEB_HEADER_SIZE] = {
+        UBO_GRPC_WEB_DATA_FLAG,
+        (uint8_t)((max >> 24) & 0xFF),
+        (uint8_t)((max >> 16) & 0xFF),
+        (uint8_t)((max >> 8) & 0xFF),
+        (uint8_t)(max & 0xFF),
+    };
+    ubo_grpc_web_parser p;
+    ubo_grpc_web_parser_init(&p);
+    CHECK(ubo_grpc_web_parser_feed(&p, header, sizeof(header)));
+    uint8_t flag;
+    const uint8_t *pl;
+    size_t pl_len;
+    /* Incomplete (payload not fed) but NOT poisoned. */
+    CHECK(!ubo_grpc_web_parser_next(&p, &flag, &pl, &pl_len));
+    CHECK(!ubo_grpc_web_parser_bad(&p));
+    ubo_grpc_web_parser_free(&p);
+}
+
 int main(void) {
     test_encode_roundtrip();
     test_encode_empty();
@@ -145,6 +194,8 @@ int main(void) {
     test_trailer();
     test_trailer_nonzero();
     test_is_trailer();
+    test_oversized_frame_poisons_parser();
+    test_max_frame_boundary_ok();
     if (failures) {
         printf("%d check(s) failed\n", failures);
         return 1;

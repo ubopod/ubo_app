@@ -21,6 +21,13 @@
 #define UBO_GRPC_WEB_TRAILER_FLAG 0x80u
 #define UBO_GRPC_WEB_HEADER_SIZE 5u
 
+/* Upper bound on a single frame's wire-declared payload length. The largest
+ * legitimate payload is a camera frame (~172KB); anything past 1 MiB is a
+ * corrupt or hostile length header. Without this cap a bogus 4-byte length
+ * would make the parser buffer grow until the heap is exhausted (fatal on the
+ * 512KB-SRAM ESP32-C6). */
+#define UBO_GRPC_WEB_MAX_FRAME (1u << 20)
+
 /* Wrap a serialized protobuf message in a single gRPC-Web data frame.
  * Returns a malloc'd buffer (caller frees) and sets *out_len; NULL on OOM. */
 uint8_t *ubo_grpc_web_encode(const uint8_t *payload, size_t payload_len,
@@ -43,14 +50,21 @@ typedef struct {
     size_t len; /* bytes currently buffered */
     size_t pos; /* read offset of the next unparsed frame */
     size_t cap; /* allocated capacity */
+    bool bad;   /* poisoned: a frame exceeded UBO_GRPC_WEB_MAX_FRAME */
 } ubo_grpc_web_parser;
 
 void ubo_grpc_web_parser_init(ubo_grpc_web_parser *p);
 void ubo_grpc_web_parser_free(ubo_grpc_web_parser *p);
 
-/* Append `len` bytes. Returns false on OOM. */
+/* Append `len` bytes. Returns false on OOM or when the parser is poisoned
+ * (see ubo_grpc_web_parser_bad); the caller should abort the stream. */
 bool ubo_grpc_web_parser_feed(ubo_grpc_web_parser *p, const uint8_t *data,
                               size_t len);
+
+/* True once a frame header declared a payload larger than
+ * UBO_GRPC_WEB_MAX_FRAME. The parser yields nothing further; the stream is
+ * unrecoverable and should be dropped (the reconnect loop starts a fresh one). */
+bool ubo_grpc_web_parser_bad(const ubo_grpc_web_parser *p);
 
 /* Pop the next complete frame. Returns true and sets *flag / *payload /
  * *payload_len when a frame is available; false when more bytes are needed. */

@@ -32,9 +32,11 @@ int ubo_http_post_unary(ubo_http *h, const char *path, const uint8_t *body,
 
 /* Streaming POST: send `body`, then invoke on_chunk(user, data, len) for each
  * response-body chunk as it arrives. Blocks until the server closes the stream,
- * an error occurs, or *stop becomes true (stop may be NULL). Returns 0 on a
- * clean end, <0 on a transport error. */
-typedef void (*ubo_http_chunk_cb)(void *user, const uint8_t *data, size_t len);
+ * an error occurs, *stop becomes true (stop may be NULL), or on_chunk returns
+ * false (an unrecoverable payload — the transport aborts and reports an error
+ * so the caller's reconnect loop starts a fresh stream). Returns 0 on a clean
+ * end, <0 on a transport error / callback abort. */
+typedef bool (*ubo_http_chunk_cb)(void *user, const uint8_t *data, size_t len);
 
 int ubo_http_post_stream(ubo_http *h, const char *path, const uint8_t *body,
                          size_t body_len, ubo_http_chunk_cb on_chunk, void *user,

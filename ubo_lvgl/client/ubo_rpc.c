@@ -7,6 +7,7 @@
 #include <pb_decode.h>
 #include <pb_encode.h>
 
+#include "client_log.h"
 #include "grpc_web_frame.h"
 #include "http_transport.h"
 
@@ -109,10 +110,10 @@ struct store_stream {
     void *user;
 };
 
-static void store_chunk(void *user, const uint8_t *data, size_t len) {
+static bool store_chunk(void *user, const uint8_t *data, size_t len) {
     struct store_stream *st = user;
     if (!ubo_grpc_web_parser_feed(&st->parser, data, len)) {
-        return;
+        return false; /* OOM or poisoned parser: abort the stream */
     }
     uint8_t flag;
     const uint8_t *pl;
@@ -126,9 +127,16 @@ static void store_chunk(void *user, const uint8_t *data, size_t len) {
         pb_istream_t is = pb_istream_from_buffer(pl, pl_len);
         if (pb_decode(&is, ubo_client_SubscribeStoreResponse_fields, &resp)) {
             st->cb(st->user, resp.results, resp.results_count);
+        } else {
+            UBO_CLIENT_LOGW("pb_decode failed: SubscribeStoreResponse");
         }
         pb_release(ubo_client_SubscribeStoreResponse_fields, &resp);
     }
+    if (ubo_grpc_web_parser_bad(&st->parser)) {
+        UBO_CLIENT_LOGW("store stream: oversized gRPC-Web frame; aborting");
+        return false;
+    }
+    return true;
 }
 
 int ubo_rpc_subscribe_store(ubo_rpc *r, const char *const *selectors,
@@ -160,10 +168,10 @@ struct event_stream {
     void *user;
 };
 
-static void event_chunk(void *user, const uint8_t *data, size_t len) {
+static bool event_chunk(void *user, const uint8_t *data, size_t len) {
     struct event_stream *st = user;
     if (!ubo_grpc_web_parser_feed(&st->parser, data, len)) {
-        return;
+        return false; /* OOM or poisoned parser: abort the stream */
     }
     uint8_t flag;
     const uint8_t *pl;
@@ -175,12 +183,20 @@ static void event_chunk(void *user, const uint8_t *data, size_t len) {
         ubo_client_SubscribeEventResponse resp =
             ubo_client_SubscribeEventResponse_init_zero;
         pb_istream_t is = pb_istream_from_buffer(pl, pl_len);
-        if (pb_decode(&is, ubo_client_SubscribeEventResponse_fields, &resp) &&
-            resp.event) {
-            st->cb(st->user, resp.event);
+        if (pb_decode(&is, ubo_client_SubscribeEventResponse_fields, &resp)) {
+            if (resp.event) {
+                st->cb(st->user, resp.event);
+            }
+        } else {
+            UBO_CLIENT_LOGW("pb_decode failed: SubscribeEventResponse");
         }
         pb_release(ubo_client_SubscribeEventResponse_fields, &resp);
     }
+    if (ubo_grpc_web_parser_bad(&st->parser)) {
+        UBO_CLIENT_LOGW("event stream: oversized gRPC-Web frame; aborting");
+        return false;
+    }
+    return true;
 }
 
 int ubo_rpc_subscribe_event(ubo_rpc *r, const ubo_client_Event *events,

@@ -136,8 +136,9 @@ static size_t stream_write_cb(char *ptr, size_t size, size_t nmemb, void *userp)
     if (s->stop && *s->stop) {
         return 0; /* abort transfer */
     }
-    if (n && s->on_chunk) {
-        s->on_chunk(s->user, (const uint8_t *)ptr, n);
+    if (n && s->on_chunk &&
+        !s->on_chunk(s->user, (const uint8_t *)ptr, n)) {
+        return 0; /* callback abort (poisoned stream) -> CURLE_WRITE_ERROR */
     }
     return n;
 }

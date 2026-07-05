@@ -87,21 +87,36 @@ void ubo_grpc_web_parser_init(ubo_grpc_web_parser *p) {
     p->len = 0;
     p->pos = 0;
     p->cap = 0;
+    p->bad = false;
 }
 
 void ubo_grpc_web_parser_free(ubo_grpc_web_parser *p) {
     free(p->buf);
     p->buf = NULL;
     p->len = p->pos = p->cap = 0;
+    p->bad = false;
+}
+
+bool ubo_grpc_web_parser_bad(const ubo_grpc_web_parser *p) {
+    return p->bad;
 }
 
 bool ubo_grpc_web_parser_feed(ubo_grpc_web_parser *p, const uint8_t *data,
                               size_t len) {
+    if (p->bad) {
+        return false;
+    }
     /* Reclaim already-consumed bytes from the front first. */
     if (p->pos > 0) {
         memmove(p->buf, p->buf + p->pos, p->len - p->pos);
         p->len -= p->pos;
         p->pos = 0;
+    }
+    /* Backstop: with callers draining after every feed, buffered bytes never
+     * legitimately exceed one max frame plus one transport chunk. */
+    if (p->len + len > (size_t)UBO_GRPC_WEB_MAX_FRAME * 2) {
+        p->bad = true;
+        return false;
     }
     if (p->len + len > p->cap) {
         size_t cap = p->cap ? p->cap : 256;
@@ -124,6 +139,9 @@ bool ubo_grpc_web_parser_feed(ubo_grpc_web_parser *p, const uint8_t *data,
 
 bool ubo_grpc_web_parser_next(ubo_grpc_web_parser *p, uint8_t *flag,
                               const uint8_t **payload, size_t *payload_len) {
+    if (p->bad) {
+        return false;
+    }
     size_t avail = p->len - p->pos;
     if (avail < UBO_GRPC_WEB_HEADER_SIZE) {
         return false;
@@ -131,6 +149,12 @@ bool ubo_grpc_web_parser_next(ubo_grpc_web_parser *p, uint8_t *flag,
     const uint8_t *h = p->buf + p->pos;
     uint32_t plen = ((uint32_t)h[1] << 24) | ((uint32_t)h[2] << 16) |
                     ((uint32_t)h[3] << 8) | (uint32_t)h[4];
+    if (plen > UBO_GRPC_WEB_MAX_FRAME) {
+        /* Poison as soon as the header is visible, before the (possibly
+         * never-arriving) payload can accumulate. */
+        p->bad = true;
+        return false;
+    }
     if (avail < UBO_GRPC_WEB_HEADER_SIZE + plen) {
         return false;
     }

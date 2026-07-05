@@ -189,8 +189,9 @@ int ubo_http_post_stream(ubo_http *h, const char *path, const uint8_t *body,
     while (!(stop && *stop)) {
         int n = esp_http_client_read(c, (char *)chunk, sizeof(chunk));
         if (n > 0) {
-            if (on_chunk) {
-                on_chunk(user, chunk, (size_t)n);
+            if (on_chunk && !on_chunk(user, chunk, (size_t)n)) {
+                rc = -1; /* callback abort (poisoned stream) */
+                break;
             }
         } else if (n == 0) {
             if (esp_http_client_is_complete_data_received(c)) {

@@ -45,6 +45,35 @@ static void url_decode(char *dst, const char *src, size_t dstlen) {
     dst[o] = '\0';
 }
 
+/* Escape `src` for HTML element content. SSIDs are attacker-controlled radio
+ * input (a nearby AP named "</option><script>..." would otherwise inject into
+ * the setup page); never emit them into markup raw. */
+static void html_escape(char *dst, const char *src, size_t dstlen) {
+    size_t o = 0;
+    for (size_t i = 0; src[i]; i++) {
+        const char *rep = NULL;
+        switch (src[i]) {
+        case '&': rep = "&amp;"; break;
+        case '<': rep = "&lt;"; break;
+        case '>': rep = "&gt;"; break;
+        case '"': rep = "&quot;"; break;
+        case '\'': rep = "&#39;"; break;
+        default: break;
+        }
+        size_t need = rep ? strlen(rep) : 1;
+        if (o + need + 1 > dstlen) {
+            break;
+        }
+        if (rep) {
+            memcpy(dst + o, rep, need);
+            o += need;
+        } else {
+            dst[o++] = src[i];
+        }
+    }
+    dst[o] = '\0';
+}
+
 /* GET /: scan nearby networks and render a form with an SSID dropdown. */
 static esp_err_t root_get(httpd_req_t *req) {
     esp_wifi_scan_start(NULL, true); /* blocking scan on the STA interface */
@@ -78,8 +107,11 @@ static esp_err_t root_get(httpd_req_t *req) {
         if (i > 0 && strcmp((char *)recs[i].ssid, (char *)recs[i - 1].ssid) == 0) {
             continue;
         }
+        /* 32-byte SSID, worst case all chars escape to 6 bytes. */
+        char ssid_esc[32 * 6 + 1];
+        html_escape(ssid_esc, (char *)recs[i].ssid, sizeof(ssid_esc));
         httpd_resp_sendstr_chunk(req, "<option>");
-        httpd_resp_sendstr_chunk(req, (char *)recs[i].ssid);
+        httpd_resp_sendstr_chunk(req, ssid_esc);
         httpd_resp_sendstr_chunk(req, "</option>");
     }
     httpd_resp_sendstr_chunk(
