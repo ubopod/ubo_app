@@ -192,6 +192,11 @@ at the moment.
 
 Contributions following Python best practices are welcome.
 
+> **New contributor?** Start with [CONTRIBUTING.md](CONTRIBUTING.md) — it walks
+> through the branch model, the local quality gate (`uv run poe sanity`), and
+> the optional [ubo-claude](https://github.com/ubopod/ubo-claude) Claude Code
+> tooling (specialized agents, `/onboard`, `/pr-preflight`).
+
 ### ℹ️️ Conventions
 
 - Use `UBO_` prefix for environment variables.
