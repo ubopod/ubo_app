@@ -99,13 +99,14 @@ void ubo_lvgl_render_instruction(const ubo_instruction_view *v);
 void ubo_lvgl_render_prompt(const ubo_prompt_view *v);
 void ubo_lvgl_render_application(const ubo_application_view *v);
 void ubo_lvgl_render_render(const ubo_render_view *v);
-void ubo_lvgl_update_frame(const uint8_t *rgb, int32_t width, int32_t height);
+void ubo_lvgl_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t width,
+                           int32_t height);
 void ubo_lvgl_render_scroll(const char *direction);
 void ubo_lvgl_render_choose(int index);
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
 void ubo_lvgl_set_blanked(bool blanked);
 void ubo_lvgl_set_connected(bool connected);
-void ubo_lvgl_set_disconnect_status(int attempt, int max_attempts, int seconds);
+void ubo_lvgl_set_disconnect_status(int attempt, int seconds);
 int  ubo_lvgl_run(bool threaded);
 void ubo_lvgl_shutdown(void);
 int  ubo_lvgl_snapshot(const char *path);
@@ -459,7 +460,7 @@ class Renderer:
     def update_frame(self, rgb: bytes, width: int, height: int) -> None:
         """Push a raw RGB888 frame into the current image/frame_stream view."""
         buf = self.ffi.new('uint8_t[]', rgb)
-        self.lib.ubo_lvgl_update_frame(buf, width, height)
+        self.lib.ubo_lvgl_update_frame(buf, len(rgb), width, height)
 
     def render_scroll(self, direction: str) -> None:
         """Scroll/cycle/zoom the current render widget ('up' or 'down')."""
@@ -512,11 +513,6 @@ class Renderer:
         """Show/hide the disconnect overlay."""
         self.lib.ubo_lvgl_set_connected(connected)
 
-    def set_disconnect_status(
-        self,
-        attempt: int,
-        max_attempts: int,
-        seconds: int,
-    ) -> None:
+    def set_disconnect_status(self, attempt: int, seconds: int) -> None:
         """Show the disconnect overlay with a reconnect countdown subtitle."""
-        self.lib.ubo_lvgl_set_disconnect_status(attempt, max_attempts, seconds)
+        self.lib.ubo_lvgl_set_disconnect_status(attempt, seconds)

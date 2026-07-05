@@ -240,7 +240,13 @@ void ubo_audio_mic_start(ubo_audio_mic_cb cb, void *user) {
     a.mic_stop = false;
     a.mic_active = true;
     xSemaphoreGive(a.lock);
-    xTaskCreate(mic_task, "ubo_mic", 4096, NULL, 6, NULL);
+    if (xTaskCreate(mic_task, "ubo_mic", 4096, NULL, 6, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "mic task creation failed");
+        xSemaphoreTake(a.lock, portMAX_DELAY);
+        a.mic_active = false;
+        esp_codec_dev_close(a.dev);
+        xSemaphoreGive(a.lock);
+    }
 }
 
 void ubo_audio_mic_stop(void) {
@@ -304,7 +310,10 @@ int ubo_audio_init(i2c_master_bus_handle_t i2c) {
     }
     /* Enable the speaker amplifier (TCA9554 IO-expander pin 7). */
     board_speaker_amp_enable(true);
-    xTaskCreate(play_task, "ubo_play", 4096, NULL, 5, NULL);
+    if (xTaskCreate(play_task, "ubo_play", 4096, NULL, 5, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "play task creation failed");
+        return -1;
+    }
 
     ESP_LOGI(TAG, "audio ready (ES8311); free heap after: %lu",
              (unsigned long)esp_get_free_heap_size());

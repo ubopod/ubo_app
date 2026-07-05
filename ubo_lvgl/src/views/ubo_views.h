@@ -140,8 +140,10 @@ void ubo_screen_set_frame_target(lv_obj_t *img);
 lv_obj_t *ubo_screen_frame_target(void);
 
 /* Convert a raw RGB888 (3 bytes/px) frame to the panel format and blit it into
- * the current frame target. No-op when there is no frame target. */
-void ubo_render_update_frame(const uint8_t *rgb, int32_t w, int32_t h);
+ * the current frame target. No-op when there is no frame target or when
+ * rgb_len < w*h*3 (w/h are wire-supplied and must not be trusted). */
+void ubo_render_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t w,
+                             int32_t h);
 
 /* Forget the active render widget's interaction state (called on every content
  * rebuild). Scroll/choose route to the current render widget only. */
@@ -155,7 +157,7 @@ void ubo_overlay_splash_hide(void);
 void ubo_overlay_blank(bool on);          /* full black cover */
 void ubo_overlay_disconnected(bool shown); /* red "Disconnected" cover */
 /* Show the disconnect cover with a reconnect countdown subtitle. */
-void ubo_overlay_disconnected_status(int attempt, int max_attempts, int seconds);
+void ubo_overlay_disconnected_status(int attempt, int seconds);
 /* WiFi-setup cover: "Join '<ap_ssid>' then open http://<ip>" (captive portal). */
 void ubo_overlay_provisioning(const char *ap_ssid, const char *ip);
 

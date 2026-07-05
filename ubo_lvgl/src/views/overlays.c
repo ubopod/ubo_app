@@ -106,15 +106,15 @@ void ubo_overlay_disconnected(bool shown)
     }
 }
 
-void ubo_overlay_disconnected_status(int attempt, int max_attempts, int seconds)
+void ubo_overlay_disconnected_status(int attempt, int seconds)
 {
     ensure_disc();
     if (seconds > 0) {
-        lv_label_set_text_fmt(s_disc_sub, "Reconnecting in %ds (attempt %d/%d)",
-                              seconds, attempt, max_attempts);
+        lv_label_set_text_fmt(s_disc_sub, "Reconnecting in %ds (attempt %d)",
+                              seconds, attempt);
     } else {
-        lv_label_set_text_fmt(s_disc_sub, "Reconnecting... (attempt %d/%d)",
-                              attempt, max_attempts);
+        lv_label_set_text_fmt(s_disc_sub, "Reconnecting... (attempt %d)",
+                              attempt);
     }
     lv_obj_move_foreground(s_disc);
     lv_obj_clear_flag(s_disc, LV_OBJ_FLAG_HIDDEN);

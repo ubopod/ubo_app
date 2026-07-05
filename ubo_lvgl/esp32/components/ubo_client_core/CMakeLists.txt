@@ -10,6 +10,7 @@ idf_component_register(
     SRCS
         "${CLIENT}/grpc_web_frame.c"
         "${CLIENT}/ubo_rpc.c"
+        "${CLIENT}/client_core.c"
         "${CLIENT}/view_translate.c"
         "${CLIENT}/keymap.c"
         "${CLIENT}/http_transport_esp.c"

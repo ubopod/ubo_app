@@ -24,6 +24,7 @@
 #define UBO_LVGL_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -236,8 +237,12 @@ void ubo_lvgl_render_chat(const ubo_chat_view *v);
 
 /* Push a raw RGB888 (3 bytes/px, top-to-bottom) frame into the current
  * image_viewer/frame_stream view. One-shot for an image, repeated for a live
- * stream. No-op unless such a view is being shown. */
-void ubo_lvgl_update_frame(const uint8_t *rgb, int32_t width, int32_t height);
+ * stream. No-op unless such a view is being shown. `rgb_len` is the size of the
+ * `rgb` buffer in bytes; the frame is dropped unless rgb_len >= width*height*3
+ * (width/height come from the wire and must never be trusted over the actual
+ * payload size). */
+void ubo_lvgl_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t width,
+                           int32_t height);
 
 /* Local interaction on the current generic render widget (from the core's
  * ApplicationScroll / MenuChooseByIndex events): scroll/cycle/zoom on
@@ -262,8 +267,10 @@ int ubo_lvgl_hit_volume(int x, int y);
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
 void ubo_lvgl_set_blanked(bool blanked);    /* backlight off + black overlay */
 void ubo_lvgl_set_connected(bool connected); /* show/hide disconnect overlay  */
-/* Show the disconnect overlay with a reconnect countdown subtitle. */
-void ubo_lvgl_set_disconnect_status(int attempt, int max_attempts, int seconds);
+/* Show the disconnect overlay with a reconnect countdown subtitle. The client
+ * retries forever (an appliance must self-heal when the core comes back), so
+ * there is no attempt cap to display. */
+void ubo_lvgl_set_disconnect_status(int attempt, int seconds);
 /* Show the WiFi-setup cover: "Join '<ap_ssid>' then open http://<ip>". Used by
  * the ESP32 firmware while the captive portal is up. */
 void ubo_lvgl_set_provisioning_status(const char *ap_ssid, const char *ip);

@@ -248,13 +248,21 @@ static void build_frame_view(bool stream)
     }
 }
 
-void ubo_render_update_frame(const uint8_t *rgb, int32_t w, int32_t h)
+/* Panels are <=1000px; anything larger is a corrupt/hostile size field. */
+#define FRAME_MAX_DIM 4096
+
+void ubo_render_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t w,
+                             int32_t h)
 {
     lv_obj_t *img = ubo_screen_frame_target();
-    if (!img || !rgb || w <= 0 || h <= 0) {
+    if (!img || !rgb || w <= 0 || h <= 0 || w > FRAME_MAX_DIM ||
+        h > FRAME_MAX_DIM) {
         return;
     }
     const size_t n = (size_t)w * (size_t)h;
+    if (rgb_len < n * 3) {
+        return; /* wire-claimed dimensions exceed the actual payload */
+    }
     uint16_t *buf = realloc(s_frame_buf, n * 2);
     if (!buf) {
         return;

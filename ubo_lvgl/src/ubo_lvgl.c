@@ -431,10 +431,11 @@ void ubo_lvgl_render_render(const ubo_render_view *v)
     ubo_unlock();
 }
 
-void ubo_lvgl_update_frame(const uint8_t *rgb, int32_t width, int32_t height)
+void ubo_lvgl_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t width,
+                           int32_t height)
 {
     ubo_lock();
-    ubo_render_update_frame(rgb, width, height);
+    ubo_render_update_frame(rgb, rgb_len, width, height);
     ubo_unlock();
 }
 
@@ -481,10 +482,10 @@ void ubo_lvgl_set_connected(bool connected)
     ubo_unlock();
 }
 
-void ubo_lvgl_set_disconnect_status(int attempt, int max_attempts, int seconds)
+void ubo_lvgl_set_disconnect_status(int attempt, int seconds)
 {
     ubo_lock();
-    ubo_overlay_disconnected_status(attempt, max_attempts, seconds);
+    ubo_overlay_disconnected_status(attempt, seconds);
     ubo_unlock();
 }
 

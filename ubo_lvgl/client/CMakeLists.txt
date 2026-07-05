@@ -41,6 +41,7 @@ add_library(ubo_client_core STATIC
     http_transport.c
     ubo_rpc.c
     client_config.c
+    client_core.c
     view_translate.c
     keymap.c
 )

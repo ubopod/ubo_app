@@ -8,8 +8,18 @@
 
 #include <pb_decode.h>
 
+#include "client_log.h"
 #include "ubo_client.pb.h"
 #include "ubo_lvgl.h"
+
+/* A pb_decode failure here is the classic signature of curated-proto tag
+ * drift (core rebased, oneof tags shifted): the client silently renders
+ * nothing. Always log the type so the symptom is visible in the serial/stderr
+ * log; the fix is the lvgl-maintenance skill (sync_tags.sh + regen.sh). */
+#define DECODE_FAIL(type_name_str)                                             \
+    UBO_CLIENT_LOGW("pb_decode failed: %s (curated proto tag drift? "          \
+                    "run lvgl-maintenance)",                                   \
+                    type_name_str)
 
 /* ── scratch arena: frees all transformed strings/arrays after a render ── */
 typedef struct {
@@ -328,6 +338,8 @@ static void render_home(arena *a, const uint8_t *value, size_t len) {
         v.ram_percent = m.ram_percent ? *m.ram_percent : 0.0;
         v.volume_level = m.volume_level ? *m.volume_level : 0.0;
         ubo_lvgl_render_home(&v);
+    } else {
+        DECODE_FAIL("HomeViewData");
     }
     pb_release(ubo_client_HomeViewData_fields, &m);
 }
@@ -362,6 +374,8 @@ static void render_menu(arena *a, const uint8_t *value, size_t len) {
         v.total_pages = m.total_pages ? (int)*m.total_pages : 1;
         v.stack_depth = m.stack_depth ? (int)*m.stack_depth : 1;
         ubo_lvgl_render_menu(&v);
+    } else {
+        DECODE_FAIL("MenuViewData");
     }
     pb_release(ubo_client_MenuViewData_fields, &m);
 }
@@ -394,6 +408,8 @@ static void render_notification(arena *a, const uint8_t *value, size_t len) {
         v.page_index = m.page_index ? (int)*m.page_index : 0;
         v.total_pages = m.total_pages ? (int)*m.total_pages : 1;
         ubo_lvgl_render_notification(&v);
+    } else {
+        DECODE_FAIL("NotificationViewData");
     }
     pb_release(ubo_client_NotificationViewData_fields, &m);
 }
@@ -414,6 +430,8 @@ static void render_instruction(arena *a, const uint8_t *value, size_t len) {
         v.progress_text = strip_markup(a, m.progress_text);
         v.footer_text = strip_markup(a, m.footer_text);
         ubo_lvgl_render_instruction(&v);
+    } else {
+        DECODE_FAIL("InstructionViewData");
     }
     pb_release(ubo_client_InstructionViewData_fields, &m);
 }
@@ -435,6 +453,8 @@ static void render_prompt(arena *a, const uint8_t *value, size_t len) {
                                    &v.item_count);
         }
         ubo_lvgl_render_prompt(&v);
+    } else {
+        DECODE_FAIL("PromptViewData");
     }
     pb_release(ubo_client_PromptViewData_fields, &m);
 }
@@ -449,6 +469,8 @@ static void render_application(arena *a, const uint8_t *value, size_t len) {
         v.show_status_bar = m.show_status_bar ? *m.show_status_bar : false;
         v.application_id = m.application_id ? m.application_id : "";
         ubo_lvgl_render_application(&v);
+    } else {
+        DECODE_FAIL("ApplicationViewData");
     }
     pb_release(ubo_client_ApplicationViewData_fields, &m);
 }
@@ -503,6 +525,8 @@ static void render_chat(arena *a, const uint8_t *value, size_t len) {
             v.item_count = count;
         }
         ubo_lvgl_render_chat(&v);
+    } else {
+        DECODE_FAIL("ChatViewData");
     }
     pb_release(ubo_client_ChatViewData_fields, &m);
 }
@@ -559,7 +583,7 @@ static void render_render(arena *a, const uint8_t *value, size_t len,
                     img->props_value.basic_type->basic_type.bytes_value;
                 int w = atoi(ws), h = atoi(hs);
                 if (w > 0 && h > 0) {
-                    ubo_lvgl_update_frame(bytes->bytes, w, h);
+                    ubo_lvgl_update_frame(bytes->bytes, bytes->size, w, h);
                 }
             }
         }
@@ -567,6 +591,8 @@ static void render_render(arena *a, const uint8_t *value, size_t len,
             m.stream_id[0]) {
             *out_stream_id = strdup(m.stream_id);
         }
+    } else {
+        DECODE_FAIL("RenderViewData");
     }
     pb_release(ubo_client_RenderViewData_fields, &m);
 }
@@ -644,6 +670,8 @@ void ubo_view_render_status_bar(const uint8_t *value, size_t value_len) {
             s.icon_count = (int)n;
         }
         ubo_lvgl_set_status_bar(&s);
+    } else {
+        DECODE_FAIL("StatusBarData");
     }
     pb_release(ubo_client_StatusBarData_fields, &sb);
     arena_free(&a);

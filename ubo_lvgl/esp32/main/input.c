@@ -151,6 +151,9 @@ static void input_task(void *arg) {
 }
 
 void ubo_input_start(esp_lcd_touch_handle_t touch) {
-    xTaskCreate(input_task, "ubo_input", 4096, touch, 5, NULL);
+    if (xTaskCreate(input_task, "ubo_input", 4096, touch, 5, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "input task creation failed");
+        return;
+    }
     ESP_LOGI(TAG, "touch + BOOT input started");
 }

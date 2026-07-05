@@ -22,20 +22,12 @@
 #include <string.h>
 #include <time.h>
 
-#include <pb_decode.h>
-
 #include "client_config.h"
+#include "client_core.h"
 #include "keymap.h"
 #include "ubo_client.pb.h"
 #include "ubo_lvgl.h"
 #include "ubo_rpc.h"
-#include "view_translate.h"
-
-/* Reconnect policy (mirrors web_client.py). */
-#define RECONNECT_INITIAL_DELAY_MS 200
-#define RECONNECT_MAX_DELAY_MS 30000
-#define HEALTHY_STREAM_SECONDS 5
-#define MAX_RECONNECT_ATTEMPTS 50
 
 #define QUEUE_CAP 32
 #define KEY_MAX 8
@@ -66,52 +58,29 @@ static void sleep_ms(int ms) {
 }
 
 /* ── store stream ── */
-static bool type_is(const char *type_url, const char *name) {
-    return type_url && strstr(type_url, name) != NULL;
+/* Runs inside ubo_client_handle_store after each view render; tracks the
+ * active frame_stream id so the event thread can filter frame events. */
+static void on_stream_id(void *user, const char *stream_id) {
+    (void)user;
+    pthread_mutex_lock(&app.fslock);
+    snprintf(app.active_stream, STREAM_ID_MAX, "%s", stream_id);
+    pthread_mutex_unlock(&app.fslock);
+    if (getenv("UBO_CLIENT_DEBUG") && stream_id[0]) {
+        fprintf(stderr, "[store] active frame stream = %s\n", stream_id);
+    }
 }
 
 static void on_store(void *user, const ubo_client_Any *results, size_t count) {
     (void)user;
-    if (!app.connected) {
-        app.connected = true;
-        ubo_lvgl_set_connected(true);
-    }
-    /* results: [current_view, status_bar, is_blanked] */
-    if (count > 1 && results[1].value && type_is(results[1].type_url, "StatusBarData")) {
-        ubo_view_render_status_bar(results[1].value->bytes, results[1].value->size);
-    }
-    if (count > 0 && results[0].value) {
-        char *stream_id = NULL;
-        ubo_view_render(results[0].type_url, results[0].value->bytes,
-                        results[0].value->size, &stream_id);
-        pthread_mutex_lock(&app.fslock);
-        if (stream_id) {
-            snprintf(app.active_stream, STREAM_ID_MAX, "%s", stream_id);
-        } else {
-            app.active_stream[0] = '\0';
-        }
-        pthread_mutex_unlock(&app.fslock);
-        if (getenv("UBO_CLIENT_DEBUG") && stream_id) {
-            fprintf(stderr, "[store] active frame stream = %s\n", stream_id);
-        }
-        free(stream_id);
-    }
-    if (count > 2 && results[2].value && type_is(results[2].type_url, "BoolValue")) {
-        ubo_client_BoolValue bv = ubo_client_BoolValue_init_zero;
-        pb_istream_t is =
-            pb_istream_from_buffer(results[2].value->bytes, results[2].value->size);
-        if (pb_decode(&is, ubo_client_BoolValue_fields, &bv)) {
-            ubo_lvgl_set_blanked(bv.value);
-        }
-    }
+    ubo_client_handle_store(results, count, &app.connected, on_stream_id, NULL);
 }
 
 static void *store_thread(void *arg) {
     (void)arg;
     const char *sel[] = {"state.main.current_view", "state.main.status_bar",
                          "state.display.is_blanked"};
-    int delay = RECONNECT_INITIAL_DELAY_MS;
-    int attempt = 0;
+    ubo_client_backoff bo;
+    ubo_client_backoff_init(&bo);
     while (!app.stop) {
         time_t start = time(NULL);
         ubo_rpc_subscribe_store(app.rpc, sel, 3, on_store, NULL, &app.stop);
@@ -120,16 +89,7 @@ static void *store_thread(void *arg) {
         }
         /* disconnected */
         app.connected = false;
-        if (time(NULL) - start >= HEALTHY_STREAM_SECONDS) {
-            delay = RECONNECT_INITIAL_DELAY_MS;
-            attempt = 0;
-        }
-        attempt++;
-        ubo_lvgl_set_disconnect_status(attempt, MAX_RECONNECT_ATTEMPTS,
-                                       delay / 1000);
-        sleep_ms(delay);
-        delay = delay * 2 > RECONNECT_MAX_DELAY_MS ? RECONNECT_MAX_DELAY_MS
-                                                   : delay * 2;
+        sleep_ms(ubo_client_backoff_step(&bo, time(NULL) - start, true));
     }
     return NULL;
 }
@@ -137,21 +97,10 @@ static void *store_thread(void *arg) {
 /* ── event stream ── */
 static void on_event(void *user, const ubo_client_Event *ev) {
     (void)user;
+    if (ubo_client_handle_event_common(ev)) {
+        return;
+    }
     switch (ev->which_event) {
-    case ubo_client_Event_application_scroll_event_tag: {
-        const ubo_client_ApplicationScrollEvent *e =
-            ev->event.application_scroll_event;
-        if (e && e->direction) {
-            ubo_lvgl_render_scroll(e->direction);
-        }
-        break;
-    }
-    case ubo_client_Event_menu_choose_by_index_event_tag: {
-        const ubo_client_MenuChooseByIndexEvent *e =
-            ev->event.menu_choose_by_index_event;
-        ubo_lvgl_render_choose(e && e->index ? (int)*e->index : 0);
-        break;
-    }
     case ubo_client_Event_frame_stream_data_event_tag: {
         const ubo_client_FrameStreamDataEvent *e = ev->event.frame_stream_data_event;
         if (!e || !e->stream_id || !e->data) {
@@ -165,7 +114,7 @@ static void on_event(void *user, const ubo_client_Event *ev) {
             int w = e->width ? (int)*e->width : 0;
             int h = e->height ? (int)*e->height : 0;
             if (w > 0 && h > 0) {
-                ubo_lvgl_update_frame(e->data->bytes, w, h);
+                ubo_lvgl_update_frame(e->data->bytes, e->data->size, w, h);
             }
         }
         break;
@@ -193,7 +142,8 @@ static void *event_thread(void *arg) {
     evs[2].which_event = ubo_client_Event_frame_stream_data_event_tag;
     evs[2].event.frame_stream_data_event = &fse;
 
-    int delay = RECONNECT_INITIAL_DELAY_MS;
+    ubo_client_backoff bo;
+    ubo_client_backoff_init(&bo);
     while (!app.stop) {
         time_t start = time(NULL);
         int rc = ubo_rpc_subscribe_event(app.rpc, evs, 3, on_event, NULL, &app.stop);
@@ -204,12 +154,7 @@ static void *event_thread(void *arg) {
         if (app.stop) {
             break;
         }
-        if (time(NULL) - start >= HEALTHY_STREAM_SECONDS) {
-            delay = RECONNECT_INITIAL_DELAY_MS;
-        }
-        sleep_ms(delay);
-        delay = delay * 2 > RECONNECT_MAX_DELAY_MS ? RECONNECT_MAX_DELAY_MS
-                                                   : delay * 2;
+        sleep_ms(ubo_client_backoff_step(&bo, time(NULL) - start, false));
     }
     return NULL;
 }
@@ -307,15 +252,20 @@ int main(int argc, char **argv) {
             cfg.web_grpc_url);
 
     pthread_t t_store, t_event, t_dispatch;
-    pthread_create(&t_store, NULL, store_thread, NULL);
-    pthread_create(&t_event, NULL, event_thread, NULL);
-    pthread_create(&t_dispatch, NULL, dispatch_thread, NULL);
+    if (pthread_create(&t_store, NULL, store_thread, NULL) != 0 ||
+        pthread_create(&t_event, NULL, event_thread, NULL) != 0 ||
+        pthread_create(&t_dispatch, NULL, dispatch_thread, NULL) != 0) {
+        fprintf(stderr, "failed to start client worker threads\n");
+        return 2;
+    }
 
     const char *test_keys = getenv("UBO_CLIENT_TEST_KEYS");
     pthread_t t_test;
     bool have_test = test_keys && test_keys[0];
-    if (have_test) {
-        pthread_create(&t_test, NULL, test_keys_thread, (void *)test_keys);
+    if (have_test &&
+        pthread_create(&t_test, NULL, test_keys_thread, (void *)test_keys) != 0) {
+        fprintf(stderr, "failed to start test-keys thread\n");
+        have_test = false;
     }
 
     ubo_lvgl_run(false); /* blocks until the window closes */
