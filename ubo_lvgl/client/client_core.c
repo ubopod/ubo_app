@@ -79,16 +79,24 @@ void ubo_client_handle_store(const ubo_client_Any *results, size_t count,
             free(stream_id);
         }
     }
-    if (count > 2 && results[2].value &&
-        type_is(results[2].type_url, "BoolValue")) {
-        ubo_client_BoolValue bv = ubo_client_BoolValue_init_zero;
-        pb_istream_t is = pb_istream_from_buffer(results[2].value->bytes,
-                                                 results[2].value->size);
-        if (pb_decode(&is, ubo_client_BoolValue_fields, &bv)) {
-            ubo_lvgl_set_blanked(bv.value);
-        } else {
-            UBO_CLIENT_LOGW("pb_decode failed for is_blanked BoolValue");
+    if (count > 2 && type_is(results[2].type_url, "BoolValue")) {
+        /* A false BoolValue serializes to an empty message, so the outer
+         * Any.value bytes field is absent on the wire (results[2].value ==
+         * NULL). Treat an absent/empty payload as false — otherwise the
+         * display blanks (true) but never un-blanks (false) on wake-up. */
+        bool blanked = false;
+        if (results[2].value) {
+            ubo_client_BoolValue bv = ubo_client_BoolValue_init_zero;
+            pb_istream_t is = pb_istream_from_buffer(results[2].value->bytes,
+                                                     results[2].value->size);
+            if (pb_decode(&is, ubo_client_BoolValue_fields, &bv)) {
+                blanked = bv.value && *bv.value;
+            } else {
+                UBO_CLIENT_LOGW("pb_decode failed for is_blanked BoolValue");
+            }
+            pb_release(ubo_client_BoolValue_fields, &bv);
         }
+        ubo_lvgl_set_blanked(blanked);
     }
 }
 
