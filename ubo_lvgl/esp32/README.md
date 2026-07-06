@@ -8,6 +8,29 @@ builds under `ubo_lvgl/` are untouched; this tree is only consumed by `idf.py`.
 > ESP32-C6: single-core RISC-V @160MHz, **512KB SRAM, no PSRAM**, 16MB flash.
 > Memory is tight — the camera viewfinder is deferred; transport is plain HTTP.
 
+## Flash from your browser (no toolchain required)
+
+Every release ships a prebuilt firmware image — no ESP-IDF install needed:
+
+1. Download `ubo-lvgl-esp32c6-<version>-merged.bin` from the repo's
+   [GitHub Releases](https://github.com/ubopod/ubo_app/releases) page.
+2. Connect the board over USB and open
+   [ESPConnect](https://thelastoutpostworkshop.github.io/ESPConnect/) in a
+   browser with Web Serial support (Chrome or Edge), then select the board's
+   serial port.
+3. In the **Flash** tab: choose the downloaded `.bin`, set the offset to
+   **`0x0`**, enable **Erase before flash**, and flash.
+4. After the reboot, join the `ubo-setup` WiFi AP to provision your network and
+   ubo-core endpoint — see [WiFi setup (captive portal)](#wifi-setup-captive-portal).
+
+The merged image bundles the bootloader, partition table, and app, so `0x0` is
+the only offset you need. **Compatibility:** the client's protobuf schema must
+match the ubo-core it connects to — flash the firmware release that corresponds
+to your installed ubo-app version.
+
+CI builds the image on every push via `.github/workflows/esp32_firmware.yml`
+(equivalent to `idf.py build && idf.py merge-bin`).
+
 ## Board pin map (fixed)
 
 | Function | GPIO |
