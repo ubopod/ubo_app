@@ -26,6 +26,13 @@ from ubo_bindings.ubo.v1 import (
 
 from ubo_assistant.constants import LIVE_PIPELINE_SOURCE_ID
 
+# Cap the size of each emitted ``AudioSample``. Pipecat can hand us ~0.5 s
+# frames (~48 KB at 48 kHz/16-bit), which overflow the heap of
+# memory-constrained clients (the ESP32 LVGL client has ~50 KB free): nanopb's
+# decode ``realloc`` fails and TTS goes silent. ~8 KB (~85 ms at 48 kHz) decodes
+# comfortably everywhere; fuller clients just reassemble more, smaller chunks.
+_MAX_AUDIO_CHUNK_BYTES = 8192
+
 
 class UboOutputTransport(BaseOutputTransport):
     """Output transport that writes audio samples to UBO RPC Client."""
@@ -120,22 +127,31 @@ class UboOutputTransport(BaseOutputTransport):
 
         """
         try:
-            self._report_assistance_frame(
-                AcceptableAssistanceFrame(
-                    assistance_audio_frame=AssistanceAudioFrame(
-                        audio=AudioSample(
-                            data=frame.audio,
-                            channels=frame.num_channels,
-                            rate=frame.sample_rate,
-                            width=2,
+            audio = frame.audio
+            # Split large frames into small, whole-sample-aligned chunks so
+            # memory-constrained clients can decode each ``AudioSample`` (see
+            # ``_MAX_AUDIO_CHUNK_BYTES``). Alignment keeps a 16-bit sample from
+            # being split across two chunks. ``len(audio) or 1`` preserves the
+            # single-frame behavior for an (empty) keepalive frame.
+            align = 2 * max(frame.num_channels, 1)
+            step = max(_MAX_AUDIO_CHUNK_BYTES // align, 1) * align
+            for offset in range(0, len(audio) or 1, step):
+                self._report_assistance_frame(
+                    AcceptableAssistanceFrame(
+                        assistance_audio_frame=AssistanceAudioFrame(
+                            audio=AudioSample(
+                                data=audio[offset : offset + step],
+                                channels=frame.num_channels,
+                                rate=frame.sample_rate,
+                                width=2,
+                            ),
+                            timestamp=self.client.event_loop.time(),
+                            id=self._assistance_id,
+                            index=self._audio_assistance_index,
                         ),
-                        timestamp=self.client.event_loop.time(),
-                        id=self._assistance_id,
-                        index=self._audio_assistance_index,
                     ),
-                ),
-            )
-            self._audio_assistance_index += 1
+                )
+                self._audio_assistance_index += 1
         except Exception as exception:
             logger.exception(
                 'Error writing audio frame {extra}',
