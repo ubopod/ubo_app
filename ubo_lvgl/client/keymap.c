@@ -80,11 +80,13 @@ int ubo_keymap_set_volume(ubo_rpc *rpc, float volume) {
     return ubo_rpc_dispatch(rpc, &act);
 }
 
-int ubo_keymap_assistant_listen(ubo_rpc *rpc, bool start) {
+int ubo_keymap_assistant_listen(ubo_rpc *rpc, bool start,
+                                const char *audio_source) {
     ubo_client_Action act = ubo_client_Action_init_zero;
     if (start) {
         ubo_client_AssistantStartListeningAction a =
             ubo_client_AssistantStartListeningAction_init_zero;
+        a.audio_source = (char *)audio_source;
         act.which_action = ubo_client_Action_assistant_start_listening_action_tag;
         act.action.assistant_start_listening_action = &a;
         return ubo_rpc_dispatch(rpc, &act);
@@ -97,7 +99,7 @@ int ubo_keymap_assistant_listen(ubo_rpc *rpc, bool start) {
 }
 
 int ubo_keymap_report_sample(ubo_rpc *rpc, const pb_bytes_array_t *bytes,
-                             float timestamp) {
+                             float timestamp, const char *audio_source) {
     float ts = timestamp;
     ubo_client_AudioReportSampleAction rs =
         ubo_client_AudioReportSampleAction_init_zero;
@@ -105,6 +107,7 @@ int ubo_keymap_report_sample(ubo_rpc *rpc, const pb_bytes_array_t *bytes,
     /* Caller owns `bytes` (a pre-wrapped pb_bytes_array_t that stays valid for
      * this synchronous dispatch); we only read it during encode. */
     rs.sample_speech_recognition = (pb_bytes_array_t *)bytes;
+    rs.audio_source = (char *)audio_source;
     ubo_client_Action act = ubo_client_Action_init_zero;
     act.which_action = ubo_client_Action_audio_report_sample_action_tag;
     act.action.audio_report_sample_action = &rs;

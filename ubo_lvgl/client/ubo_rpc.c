@@ -188,7 +188,12 @@ static bool event_chunk(void *user, const uint8_t *data, size_t len) {
                 st->cb(st->user, resp.event);
             }
         } else {
-            UBO_CLIENT_LOGW("pb_decode failed: SubscribeEventResponse");
+            /* Include the nanopb error and frame size: distinguishes a memory
+             * failure ("realloc failed" on a big frame) from tag drift /
+             * corruption, which otherwise look identical. */
+            UBO_CLIENT_LOGW(
+                "pb_decode failed: SubscribeEventResponse (err=%s frame=%u)",
+                PB_GET_ERROR(&is), (unsigned)pl_len);
         }
         pb_release(ubo_client_SubscribeEventResponse_fields, &resp);
     }

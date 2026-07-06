@@ -101,17 +101,25 @@ message AudioSample {
   int64 width = 5;
 }
 
-// Push-to-talk: start/stop a microphone listening session. The optional
-// source/reason fields (2) are intentionally omitted — we never set them.
-message AssistantStartListeningAction {}
+// Push-to-talk: start/stop a microphone listening session. `audio_source` tags
+// which mic feeds the session so the core binds the session to this client and
+// ignores every other mic (empty = on-device system mic). It must equal the
+// `audio_source` sent with each AudioReportSampleAction. The `source`/`reason`
+// metadata fields are intentionally omitted — we never set them.
+message AssistantStartListeningAction {
+  string audio_source = 3;
+}
 
 message AssistantStopListeningAction {}
 
-// Stream a captured mic chunk to the core (mirrors the web UI: only timestamp +
-// raw speech-recognition PCM bytes are set; the `sample` submessage is unused).
+// Stream a captured mic chunk to the core (mirrors the web UI: timestamp, raw
+// speech-recognition PCM bytes, and the `audio_source` id — which must match the
+// AssistantStartListeningAction so the core keeps only this client's mic; the
+// `sample` submessage is unused).
 message AudioReportSampleAction {
   float timestamp = 2;
   bytes sample_speech_recognition = 3;
+  string audio_source = 5;
 }
 
 message Action {

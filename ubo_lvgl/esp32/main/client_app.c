@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
@@ -20,6 +21,13 @@ static const char *TAG = "ubo_client";
 
 #define KEY_MAX 8
 #define QUEUE_CAP 16
+
+/* Stable per-device mic source id, e.g. "esp32:aabbccddeeff" (derived from the
+ * WiFi MAC at startup). Tags this client's push-to-talk session so the core
+ * binds to our mic and drops every other source, including the core host's
+ * on-device system mic (which reports an empty source). Mirrors the web UI's
+ * per-client AUDIO_SOURCE; passed to both the start action and every sample. */
+static char s_audio_source[24];
 
 static struct {
     ubo_rpc *rpc;
@@ -69,7 +77,8 @@ static void mic_drain(void) {
     mic.ready = -1;
     xSemaphoreGive(mic.mtx);
     if (idx >= 0) {
-        ubo_keymap_report_sample(st.rpc, &mic.pp[idx].arr, mic.ts[idx]);
+        ubo_keymap_report_sample(st.rpc, &mic.pp[idx].arr, mic.ts[idx],
+                                 s_audio_source);
     }
 }
 
@@ -210,12 +219,12 @@ static void dispatch_task(void *arg) {
         if (tc) {
             s_talk_cmd = 0;
             if (tc == 1) {
-                ubo_keymap_assistant_listen(st.rpc, true);
+                ubo_keymap_assistant_listen(st.rpc, true, s_audio_source);
                 ubo_audio_mic_start(mic_cb, NULL);
             } else {
                 ubo_audio_mic_stop();
                 mic_drain(); /* flush a trailing chunk before the stop action */
-                ubo_keymap_assistant_listen(st.rpc, false);
+                ubo_keymap_assistant_listen(st.rpc, false, NULL);
             }
         }
         /* Stream a captured mic chunk while a talk session is active. */
@@ -252,6 +261,13 @@ void ubo_client_talk_stop(void) {
 }
 
 void ubo_client_start(const char *web_grpc_url) {
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    snprintf(s_audio_source, sizeof(s_audio_source),
+             "esp32:%02x%02x%02x%02x%02x%02x", mac[0], mac[1], mac[2], mac[3],
+             mac[4], mac[5]);
+    ESP_LOGI(TAG, "mic audio_source=%s", s_audio_source);
+
     st.rpc = ubo_rpc_create(web_grpc_url);
     if (!st.rpc) {
         ESP_LOGE(TAG, "rpc create failed (%s)", web_grpc_url);

@@ -21,13 +21,19 @@ int ubo_keymap_dispatch(ubo_rpc *rpc, const char *key);
 int ubo_keymap_set_volume(ubo_rpc *rpc, float volume);
 
 /* Push-to-talk: dispatch AssistantStart/StopListeningAction (start=true/false).
- * Returns 0 on success. */
-int ubo_keymap_assistant_listen(ubo_rpc *rpc, bool start);
+ * On start, `audio_source` tags the mic session so the core keeps only this
+ * client's mic and ignores all others; it must equal the `audio_source` passed
+ * to ubo_keymap_report_sample. Ignored on stop (may be NULL). A NULL/empty
+ * source means the on-device system mic. Returns 0 on success. */
+int ubo_keymap_assistant_listen(ubo_rpc *rpc, bool start,
+                                const char *audio_source);
 
 /* Stream one captured mic chunk to the core as AudioReportSampleAction.
  * `bytes` is a caller-owned pb_bytes_array_t (size-prefixed 16-bit PCM) that
- * must stay valid for the call; `timestamp` is seconds. Returns 0 on success. */
+ * must stay valid for the call; `timestamp` is seconds. `audio_source` must
+ * match the id given to ubo_keymap_assistant_listen so the core binds this
+ * sample to the session (NULL/empty = on-device system mic). Returns 0. */
 int ubo_keymap_report_sample(ubo_rpc *rpc, const pb_bytes_array_t *bytes,
-                             float timestamp);
+                             float timestamp, const char *audio_source);
 
 #endif /* UBO_KEYMAP_H */

@@ -102,21 +102,27 @@ typedef struct _ubo_client_AudioSample {
     int64_t *width;
 } ubo_client_AudioSample;
 
-/* Push-to-talk: start/stop a microphone listening session. The optional
- source/reason fields (2) are intentionally omitted — we never set them. */
+/* Push-to-talk: start/stop a microphone listening session. `audio_source` tags
+ which mic feeds the session so the core binds the session to this client and
+ ignores every other mic (empty = on-device system mic). It must equal the
+ `audio_source` sent with each AudioReportSampleAction. The `source`/`reason`
+ metadata fields are intentionally omitted — we never set them. */
 typedef struct _ubo_client_AssistantStartListeningAction {
-    char dummy_field;
+    char *audio_source;
 } ubo_client_AssistantStartListeningAction;
 
 typedef struct _ubo_client_AssistantStopListeningAction {
     char dummy_field;
 } ubo_client_AssistantStopListeningAction;
 
-/* Stream a captured mic chunk to the core (mirrors the web UI: only timestamp +
- raw speech-recognition PCM bytes are set; the `sample` submessage is unused). */
+/* Stream a captured mic chunk to the core (mirrors the web UI: timestamp, raw
+ speech-recognition PCM bytes, and the `audio_source` id — which must match the
+ AssistantStartListeningAction so the core keeps only this client's mic; the
+ `sample` submessage is unused). */
 typedef struct _ubo_client_AudioReportSampleAction {
     float *timestamp;
     pb_bytes_array_t *sample_speech_recognition;
+    char *audio_source;
 } ubo_client_AudioReportSampleAction;
 
 typedef struct _ubo_client_Action {
@@ -509,9 +515,9 @@ extern "C" {
 #define ubo_client_AudioToggleMuteStatusAction_init_default {NULL}
 #define ubo_client_AudioSetVolumeAction_init_default {NULL, NULL}
 #define ubo_client_AudioSample_init_default      {NULL, NULL, NULL, NULL}
-#define ubo_client_AssistantStartListeningAction_init_default {0}
+#define ubo_client_AssistantStartListeningAction_init_default {NULL}
 #define ubo_client_AssistantStopListeningAction_init_default {0}
-#define ubo_client_AudioReportSampleAction_init_default {NULL, NULL}
+#define ubo_client_AudioReportSampleAction_init_default {NULL, NULL, NULL}
 #define ubo_client_Action_init_default           {0, {NULL}}
 #define ubo_client_ApplicationScrollEvent_init_default {NULL}
 #define ubo_client_MenuChooseByIndexEvent_init_default {NULL}
@@ -563,9 +569,9 @@ extern "C" {
 #define ubo_client_AudioToggleMuteStatusAction_init_zero {NULL}
 #define ubo_client_AudioSetVolumeAction_init_zero {NULL, NULL}
 #define ubo_client_AudioSample_init_zero         {NULL, NULL, NULL, NULL}
-#define ubo_client_AssistantStartListeningAction_init_zero {0}
+#define ubo_client_AssistantStartListeningAction_init_zero {NULL}
 #define ubo_client_AssistantStopListeningAction_init_zero {0}
-#define ubo_client_AudioReportSampleAction_init_zero {NULL, NULL}
+#define ubo_client_AudioReportSampleAction_init_zero {NULL, NULL, NULL}
 #define ubo_client_Action_init_zero              {0, {NULL}}
 #define ubo_client_ApplicationScrollEvent_init_zero {NULL}
 #define ubo_client_MenuChooseByIndexEvent_init_zero {NULL}
@@ -625,8 +631,10 @@ extern "C" {
 #define ubo_client_AudioSample_channels_tag      3
 #define ubo_client_AudioSample_rate_tag          4
 #define ubo_client_AudioSample_width_tag         5
+#define ubo_client_AssistantStartListeningAction_audio_source_tag 3
 #define ubo_client_AudioReportSampleAction_timestamp_tag 2
 #define ubo_client_AudioReportSampleAction_sample_speech_recognition_tag 3
+#define ubo_client_AudioReportSampleAction_audio_source_tag 5
 #define ubo_client_Action_assistant_start_listening_action_tag 43
 #define ubo_client_Action_assistant_stop_listening_action_tag 44
 #define ubo_client_Action_audio_report_sample_action_tag 58
@@ -849,7 +857,7 @@ X(a, POINTER,  SINGULAR, INT64,    width,             5)
 #define ubo_client_AudioSample_DEFAULT NULL
 
 #define ubo_client_AssistantStartListeningAction_FIELDLIST(X, a) \
-
+X(a, POINTER,  SINGULAR, STRING,   audio_source,      3)
 #define ubo_client_AssistantStartListeningAction_CALLBACK NULL
 #define ubo_client_AssistantStartListeningAction_DEFAULT NULL
 
@@ -860,7 +868,8 @@ X(a, POINTER,  SINGULAR, INT64,    width,             5)
 
 #define ubo_client_AudioReportSampleAction_FIELDLIST(X, a) \
 X(a, POINTER,  SINGULAR, FLOAT,    timestamp,         2) \
-X(a, POINTER,  SINGULAR, BYTES,    sample_speech_recognition,   3)
+X(a, POINTER,  SINGULAR, BYTES,    sample_speech_recognition,   3) \
+X(a, POINTER,  SINGULAR, STRING,   audio_source,      5)
 #define ubo_client_AudioReportSampleAction_CALLBACK NULL
 #define ubo_client_AudioReportSampleAction_DEFAULT NULL
 
@@ -1323,6 +1332,7 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 /* ubo_client_KeypadKeyPressAction_size depends on runtime parameters */
 /* ubo_client_KeypadKeyReleaseAction_size depends on runtime parameters */
 /* ubo_client_AudioSample_size depends on runtime parameters */
+/* ubo_client_AssistantStartListeningAction_size depends on runtime parameters */
 /* ubo_client_AudioReportSampleAction_size depends on runtime parameters */
 /* ubo_client_Action_size depends on runtime parameters */
 /* ubo_client_ApplicationScrollEvent_size depends on runtime parameters */
@@ -1361,7 +1371,6 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 /* ubo_client_PromptViewData_size depends on runtime parameters */
 /* ubo_client_PromptViewData_Items_size depends on runtime parameters */
 #define UBO_CLIENT_UBO_CLIENT_PB_H_MAX_SIZE      ubo_client_MenuChooseByIndexEvent_size
-#define ubo_client_AssistantStartListeningAction_size 0
 #define ubo_client_AssistantStopListeningAction_size 0
 #define ubo_client_AudioSetVolumeAction_size     7
 #define ubo_client_AudioToggleMuteStatusAction_size 2
