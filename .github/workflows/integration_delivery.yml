@@ -158,10 +158,39 @@ jobs:
           uv run --frozen poe proto:generate:raw
           uv run --frozen poe proto:compile:raw
 
+      # Provider secrets live in a file on the Pi runners (UBO_SECRETS_PATH),
+      # not in GitHub Secrets, so GitHub doesn't auto-mask them. Register every
+      # value with ::add-mask:: — parsed with the same dotenv reader the tests
+      # use — so any accidental print/traceback is redacted for the whole job.
+      - name: Mask provider secrets in logs
+        if: startsWith(matrix.runner, 'ubo-pod')
+        run: |
+          uv run --frozen python <<'PY'
+          import os
+          from dotenv import dotenv_values
+
+          path = os.environ.get('UBO_SECRETS_PATH')
+          values = dotenv_values(path).values() if path and os.path.exists(path) else []
+          for value in values:
+              for line in (value or '').splitlines():
+                  if line.strip():
+                      print(f'::add-mask::{line}')
+          PY
+
       - name: Run Tests
         run: |
           mkdir -p $HOME/.kivy/mods
           uv run --frozen poe test --showlocals --make-screenshots --cov=ubo_app --cov-report=xml --cov-report=html --log-level=DEBUG
+
+      # Real-credential provider round-trips run only on the Pi pods, which hold
+      # the secrets file (UBO_SECRETS_PATH); providers without keys self-skip.
+      # Invoke the service's own `test:providers` task directly — no
+      # `--showlocals`/`--log-level=DEBUG`, which would dump keys on failure.
+      - name: Run Provider E2E Tests
+        if: startsWith(matrix.runner, 'ubo-pod')
+        run: |
+          cd ubo_app/services/090-assistant/ubo-service
+          uv run poe test:providers
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4

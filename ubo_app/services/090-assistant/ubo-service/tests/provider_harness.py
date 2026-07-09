@@ -110,6 +110,10 @@ class FakeUboRPCClient:
         self.frames: list[Action] = []
         self._secrets = load_secrets()
 
+    def __repr__(self) -> str:
+        """Redact secrets so a ``--showlocals`` traceback can't leak keys."""
+        return f'<FakeUboRPCClient frames={len(self.frames)} secrets=***>'
+
     @property
     def event_loop(self) -> asyncio.AbstractEventLoop:
         """The running loop (the collector timestamps/creates tasks against it)."""
