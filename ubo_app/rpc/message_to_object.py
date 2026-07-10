@@ -108,7 +108,7 @@ def reduce_group(message: betterproto.Message) -> betterproto.Message:
 T = TypeVar('T', bound=betterproto.Message | betterproto.Enum)
 
 
-def rebuild_object(  # noqa: C901
+def rebuild_object(  # noqa: C901, PLR0912
     message: betterproto.Message | list[betterproto.Message],
 ) -> ReturnType:
     if isinstance(message, int | float | str | bytes | bool | None) and not isinstance(
@@ -144,6 +144,12 @@ def rebuild_object(  # noqa: C901
             if value is not None
         }
 
+    # ``None`` is encoded as a BasicType message with no selected oneof arm.
+    if type(message).__name__ == 'BasicType' and all(
+        attribute is None for attribute in message._group_current.values()
+    ):
+        return None
+
     if hasattr(message, '_group_current') and len(message._group_current) > 0:
         return rebuild_object(reduce_group(message))
 
@@ -156,7 +162,16 @@ def rebuild_object(  # noqa: C901
 
     keys = message._betterproto.sorted_field_names
     if len(keys) == 1 and keys[0] == 'items':
-        items = [rebuild_object(item) for item in getattr(message, 'items', [])]
+        raw_items = getattr(message, 'items', [])
+        if isinstance(raw_items, dict):
+            return {
+                key: rebuild_object(value)
+                for key, value in raw_items.items()
+                if value is not None
+            }
+        if not isinstance(raw_items, list | tuple | set):
+            return rebuild_object(raw_items)
+        items = [rebuild_object(item) for item in raw_items]
         if type(message).__name__.endswith('SetType'):
             return set(items)
         return items
