@@ -28,8 +28,11 @@ the only offset you need. **Compatibility:** the client's protobuf schema must
 match the ubo-core it connects to — flash the firmware release that corresponds
 to your installed ubo-app version.
 
-CI builds the image on every push via `.github/workflows/esp32_firmware.yml`
-(equivalent to `idf.py build && idf.py merge-bin`).
+CI builds the image on every push — the `esp32` job in
+`.github/workflows/integration_delivery.yml` (equivalent to
+`idf.py build && idf.py merge-bin`) — so the firmware artifact always comes
+from the same commit, version, and release as the ubo_app packages it must
+stay proto-compatible with.
 
 ## Board pin map (fixed)
 
