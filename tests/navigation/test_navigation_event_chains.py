@@ -8,8 +8,11 @@ from ubo_app.store.core.types import (
     ApplicationViewData,
     CloseApplicationAction,
     DynamicMenuData,
+    ExecuteMenuActionAction,
     HomeViewData,
+    MenuChooseByIconAction,
     MenuChooseByIndexAction,
+    MenuChooseByLabelAction,
     MenuGoBackAction,
     MenuGoHomeAction,
     MenuItemData,
@@ -28,6 +31,7 @@ from ubo_app.store.core.types import (
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationDisplayType,
+    NotificationsClearEvent,
 )
 
 if TYPE_CHECKING:
@@ -228,3 +232,62 @@ def test_prompt_and_application_button_selection_chain(
     finally:
         for action_id in handlers:
             unregister_action(action_id)
+
+
+def test_label_icon_and_execute_action_event_routing(
+    navigation_events: NavigationEventRunner,
+) -> None:
+    """Route field selection and action results through production handlers."""
+    from ubo_app.store.core.action_registry import register_action, unregister_action
+
+    navigation_events.dispatch(MenuChooseByLabelAction(label='Main'))
+    assert navigation_events.state.path == ('main',)
+    navigation_events.dispatch(MenuChooseByIconAction(icon='A'))
+    assert navigation_events.state.path == ('main', 'apps')
+
+    register_action('test:submenu', lambda: object())
+    register_action('test:no-submenu', lambda: None)
+    try:
+        navigation_events.dispatch(
+            ExecuteMenuActionAction(
+                action_id='test:submenu',
+                menu_key='details',
+            ),
+        )
+        assert navigation_events.state.path == ('main', 'apps', 'details')
+
+        navigation_events.dispatch(StackPopAction())
+        stack_before = navigation_events.state.stack
+        navigation_events.dispatch(
+            ExecuteMenuActionAction(
+                action_id='test:no-submenu',
+                menu_key='ignored',
+            ),
+        )
+        assert navigation_events.state.stack == stack_before
+    finally:
+        unregister_action('test:submenu')
+        unregister_action('test:no-submenu')
+
+
+def test_notification_clear_callback_runs_once(
+    navigation_events: NavigationEventRunner,
+) -> None:
+    """Clearing a notification invokes and unregisters its cleanup callback."""
+    from ubo_app.store.core.callback_registry import (
+        register_auto_callback,
+    )
+
+    calls: list[str] = []
+    callback_id = register_auto_callback(lambda: calls.append('closed'))
+    notification = Notification(
+        id='callback',
+        title='Callback',
+        content='',
+        on_close_id=callback_id,
+    )
+
+    navigation_events.handle_event(NotificationsClearEvent(notification=notification))
+    navigation_events.handle_event(NotificationsClearEvent(notification=notification))
+
+    assert calls == ['closed']

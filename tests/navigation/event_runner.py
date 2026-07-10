@@ -30,6 +30,7 @@ from ubo_app.store.core.types import (
 )
 from ubo_app.store.services.notifications import (
     Notification,
+    NotificationsClearEvent,
     NotificationsDisplayEvent,
     NotificationsState,
 )
@@ -136,6 +137,10 @@ class NavigationEventRunner(ReducerRunner):
             (
                 NotificationsDisplayEvent,
                 self.handlers._handle_notification_display,  # noqa: SLF001
+            ),
+            (
+                NotificationsClearEvent,
+                self.handlers._handle_notification_clear_callback,  # noqa: SLF001
             ),
         )
         self._sync_current_view()
