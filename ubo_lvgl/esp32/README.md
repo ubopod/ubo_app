@@ -137,6 +137,91 @@ success it starts the client tasks (`client_app.c`) and the touch input task
 - **captive portal** (only when WiFi can't be joined) → SoftAP + DNS + HTTP form on
   `provisioning.c`; submitting creds saves them to NVS and reboots.
 
+## Firmware architecture
+
+For contributors: the firmware is a plain **ESP-IDF v6 / FreeRTOS** application
+— no custom scheduler, no bare-metal loops. The ESP32-C6 is single-core, so
+FreeRTOS time-slices all tasks on one RISC-V hart; "parallel" below means
+concurrent, not simultaneous.
+
+### Source layout (`main/`)
+
+| File | Responsibility |
+|---|---|
+| `ubo_app_main.c` | `app_main` entry point: board bring-up, renderer init, WiFi join, then start client + input (or the captive portal) |
+| `board.c` | I2C bus, SH8601 QSPI panel, FT3168 touch, TCA9554 IO-expander (LCD reset, speaker amp) |
+| `client_app.c` | The gRPC-Web client: store/event stream tasks, dispatch worker, push-to-talk mic handoff |
+| `input.c` | Touch + BOOT button polling, gesture classification → Ubo keys |
+| `audio.c` | ES8311 codec over I2S: playback ring + task, mic capture task |
+| `net.c` | WiFi STA join, NVS persistence of creds + core endpoint |
+| `provisioning.c` | Captive portal: SoftAP + DNS catch-all + HTTP setup form |
+
+The renderer itself (LVGL widget tree, view translation, status bar) is **not**
+in this tree — it's the shared C renderer in `ubo_lvgl/src/`, compiled in as a
+component. Same for the transport (`ubo_lvgl/client/` via `client_core.c` /
+`ubo_rpc.h`) and the curated nanopb proto. This tree only contains what is
+ESP32-specific.
+
+### Boot sequence (`app_main`)
+
+1. Board bring-up: I2C → SH8601 panel → FT3168 touch.
+2. Audio init (ES8311 + full-duplex I2S) — non-fatal; UI runs without it.
+3. Renderer init on the SH8601 backend (splash shows until the first view).
+4. Spawn the `lvgl` task — the render loop runs from here on.
+5. WiFi: NVS creds first, else the Kconfig seed. On success → start the three
+   client tasks + the input task. On failure → run the captive portal
+   (blocks; reboots after provisioning).
+
+### FreeRTOS tasks
+
+| Task | Created in | Stack | Prio | Role |
+|---|---|---|---|---|
+| `main` | ESP-IDF | 8192 | 1 | `app_main`; becomes the portal server in setup mode |
+| `lvgl` | `ubo_app_main.c` | 12288 | 5 | `ubo_lvgl_run()`: `lv_timer_handler` + panel flushes. Stack-hungry (font rendering) |
+| `ubo_store` | `client_app.c` | 8192 | 5 | Store stream subscription (`current_view`, `status_bar`, `is_blanked`) → renderer; reconnect with backoff |
+| `ubo_event` | `client_app.c` | 6144 | 5 | Event stream: scroll / menu-choose / audio playback events; reconnect with backoff |
+| `ubo_disp` | `client_app.c` | 4096 | 5 | Dispatch worker — the **single HTTP-request owner** (see below) |
+| `ubo_input` | `input.c` | 4096 | 5 | Polls touch + BOOT at 50Hz; classifies tap/swipe/hold → keys |
+| `ubo_mic` | `audio.c` | 4096 | 6 | Push-to-talk capture: 16kHz mono frames → chunk callback. Spawned on talk start, deletes itself on stop |
+| `ubo_play` | `audio.c` | 4096 | 5 | Drains the playback ring into the codec; manages rate switches + idle close |
+
+### Concurrency model
+
+**All outgoing RPC is serialized on `ubo_disp`.** The other tasks never issue
+HTTP requests directly — they hand work to the dispatch worker instead, which
+keeps push-to-talk ordering (`start → samples → stop`) intact and avoids
+concurrent use of one HTTP client:
+
+- **Key presses** — `ubo_input` → `ubo_client_enqueue_key()` → a FreeRTOS
+  queue (16 × 8-byte entries) drained by `ubo_disp`.
+- **Volume** — coalesced through a single `s_pending_vol` slot; a slide
+  produces one in-flight set-volume at a time, always the latest value.
+- **Talk transitions** — `s_talk_cmd` (start/stop) is polled by `ubo_disp`,
+  which starts/stops the mic and sends the assistant actions.
+- **Mic chunks** — `ubo_mic`'s callback copies each chunk into one of two
+  pre-wrapped ping-pong buffers and publishes its index under a mutex
+  (drop-oldest, never blocks capture); `ubo_disp` drains and sends it.
+
+**LVGL is guarded by one global mutex** (`ubo_lock` in `ubo_lvgl/src/ubo_lvgl.c`
+— a pthread mutex, mapped to FreeRTOS by ESP-IDF's pthread layer). The `lvgl`
+task holds it around `lv_timer_handler`; every public `ubo_lvgl_*` call takes
+it, so `ubo_store` / `ubo_event` can update the widget tree from their own
+tasks. Never touch `lv_*` APIs directly from another task without it.
+
+**Audio** has its own mutex (`a.lock`) serializing codec open/close and mode
+transitions. Playback bytes flow through a 16KB FreeRTOS stream buffer (~0.5s
+at 16kHz mono; smooths HTTP jitter) drained by `ubo_play`. Mic capture and
+playback are mutually exclusive: a talk session closes the output and discards
+queued audio.
+
+### Memory budget
+
+512KB SRAM, **no PSRAM** — every buffer above is sized against this. Healthy
+figures: ~314KB free heap at boot, ~205KB after renderer-up. When adding code,
+prefer static buffers with explicit sizes over heap growth, and check
+`uxTaskGetStackHighWaterMark()` before raising a task stack. A silent reboot
+with no panic output is usually a task stack overflow.
+
 ## Status
 
 All phases complete and verified on-device:
