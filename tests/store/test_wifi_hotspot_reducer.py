@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import pytest
 from redux import CompleteReducerResult
 
 from ubo_app.store.services.ethernet import NetState
@@ -111,3 +112,74 @@ def test_set_running_tracks_user_enabled() -> None:
     new_state = result.state if isinstance(result, CompleteReducerResult) else result
     assert new_state.is_hotspot_running is True
     assert new_state.hotspot_user_enabled is True
+
+
+def _g(name: str) -> Any:  # noqa: ANN401
+    """Fetch a symbol the reducer imported, guaranteeing one module generation."""
+    return reducer.__globals__[name]
+
+
+def test_none_state_init_requests_update_and_non_init_raises() -> None:
+    """InitAction builds state and kicks off an update; else it raises."""
+    result = reducer(None, _g('InitAction')())
+    assert isinstance(result, CompleteReducerResult)
+    assert any(
+        isinstance(action, _g('WiFiUpdateRequestAction'))
+        for action in (result.actions or [])
+    )
+    with pytest.raises(_g('InitializationActionError')):
+        reducer(None, _g('WiFiStopHotspotAction')())
+
+
+def test_input_connection_emits_event() -> None:
+    """WiFiInputConnectionAction emits its input-connection event."""
+    result = reducer(_state(), _g('WiFiInputConnectionAction')())
+    assert any(
+        isinstance(event, _g('WiFiInputConnectionEvent'))
+        for event in (result.events or [])
+    )
+
+
+def test_set_has_visited_onboarding_updates_and_requests_refresh() -> None:
+    """Onboarding-visited flips the flag and requests a refresh."""
+    result = reducer(
+        _state(),
+        _g('WiFiSetHasVisitedOnboardingAction')(has_visited_onboarding=True),
+    )
+    assert result.state.has_visited_onboarding is True
+    assert any(
+        isinstance(event, _g('WiFiUpdateRequestEvent'))
+        for event in (result.events or [])
+    )
+
+
+def test_update_request_reset_clears_connections() -> None:
+    """A reset update-request wipes the cached connections before refreshing."""
+    state = _state()
+    request = _g('WiFiUpdateRequestAction')
+
+    plain = reducer(state, request(reset=False))
+    assert plain.state is state
+
+    reset = reducer(state, request(reset=True))
+    assert reset.state.connections is None
+
+
+def test_update_action_replaces_connection_snapshot() -> None:
+    """WiFiUpdateAction overwrites the connection list, state, and current."""
+    result = reducer(
+        _state(),
+        _g('WiFiUpdateAction')(
+            connections=[],
+            state=NetState.CONNECTED,
+            current_connection=None,
+        ),
+    )
+    new_state = result.state if isinstance(result, CompleteReducerResult) else result
+    assert new_state.state == NetState.CONNECTED
+
+
+def test_unknown_action_returns_state_unchanged() -> None:
+    """An action matching no case leaves the state untouched."""
+    state = _state()
+    assert reducer(state, _g('InitAction')()) is state
