@@ -9,8 +9,7 @@ Run (from the repo root):
 
 ```sh
 uv run ubo-core   # serves 127.0.0.1:50051
-PYTHONPATH=ubo_app/gui:ubo_app/rpc \
-  ubo_app/gui/ubo_lvgl_gui_client/.venv/bin/python -m ubo_lvgl_gui_client --backend sdl
+uv run --directory ubo_app/lvgl_gui python -m ubo_lvgl_gui_client --backend sdl
 ```
 
 Modules: `bridge.py` (CFFI ↔ C structs), `client.py` (gRPC subscribe/reconnect),

@@ -71,6 +71,10 @@ jobs:
           uv run --frozen poe proto:generate:raw
           uv run --frozen poe proto:compile:raw
 
+      - name: Sync LVGL GUI client virtualenv
+        run: |
+          uv sync --frozen --directory ubo_app/lvgl_gui
+
       - name: Type Check
         run: |
           uv run --frozen poe typecheck
@@ -360,6 +364,11 @@ jobs:
           done
           echo "Building GUI client"
           cd ubo_app/gui
+          uv build
+          cp dist/* $GITHUB_WORKSPACE/services-packages/
+          cd -
+          echo "Building LVGL GUI client"
+          cd ubo_app/lvgl_gui
           uv build
           cp dist/* $GITHUB_WORKSPACE/services-packages/
           cd -

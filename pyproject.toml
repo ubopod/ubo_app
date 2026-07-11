@@ -141,6 +141,7 @@ exclude = [
   "ubo_app/services/*/ubo-service",
   "ubo_app/services/080-docker/assets/envoy.yaml",
   "ubo_app/gui",
+  "ubo_app/lvgl_gui",
   "ubo_lvgl",
 ]
 artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
@@ -164,19 +165,22 @@ version = "uvx --with hatch-vcs hatch version"
 "lint:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint"
 "lint:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service lint"
 "lint:gui" = "poe --directory=ubo_app/gui lint"
-lint = ['lint:self', 'lint:rpc', 'lint:assistant', 'lint:mcp', 'lint:gui']
+"lint:lvgl-gui" = "poe --directory=ubo_app/lvgl_gui lint"
+lint = ['lint:self', 'lint:rpc', 'lint:assistant', 'lint:mcp', 'lint:gui', 'lint:lvgl-gui']
 "lint:fix:self" = "ruff check . --fix --unsafe-fixes"
 "lint:fix:rpc" = "poe --directory=ubo_app/rpc lint --fix --unsafe-fixes"
 "lint:fix:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint --fix --unsafe-fixes"
 "lint:fix:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service lint --fix --unsafe-fixes"
 "lint:fix:gui" = "poe --directory=ubo_app/gui lint --fix --unsafe-fixes"
-"lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant", "lint:fix:mcp", "lint:fix:gui"]
+"lint:fix:lvgl-gui" = "poe --directory=ubo_app/lvgl_gui lint --fix --unsafe-fixes"
+"lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant", "lint:fix:mcp", "lint:fix:gui", "lint:fix:lvgl-gui"]
 "typecheck:self" = "pyright -p pyproject.toml ."
 "typecheck:rpc" = "poe --directory=ubo_app/rpc typecheck"
 "typecheck:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service typecheck"
 "typecheck:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service typecheck"
 "typecheck:gui" = "poe --directory=ubo_app/gui typecheck"
-typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant", "typecheck:mcp", "typecheck:gui"]
+"typecheck:lvgl-gui" = "poe --directory=ubo_app/lvgl_gui typecheck"
+typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant", "typecheck:mcp", "typecheck:gui", "typecheck:lvgl-gui"]
 # Two pytest invocations on purpose — see the script's docstring. A cmd task
 # (not a poe sequence) so extra pytest args are forwarded to both tiers.
 test = "python scripts/run_test_tiers.py"
@@ -299,6 +303,7 @@ exclude = [
   "ubo_app/rpc/ubo_bindings",
   "ubo_app/services/*/ubo-service",
   "ubo_app/gui",
+  "ubo_app/lvgl_gui",
   "ubo_lvgl/lvgl",                        # git submodule (lvgl/lvgl)
   "ubo_lvgl/third_party",                 # git submodule (nanopb)
   "ubo_lvgl/esp32/managed_components",    # ESP-IDF component manager
@@ -417,7 +422,7 @@ extraPaths = ["."]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-norecursedirs = ["ubo_app/tui", "ubo_app/gui"]
+norecursedirs = ["ubo_app/tui", "ubo_app/gui", "ubo_app/lvgl_gui"]
 markers = ["persistent_store: run test with provided persistent store"]
 asyncio_mode = "auto"
 filterwarnings = [

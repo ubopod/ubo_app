@@ -12,7 +12,7 @@ It comes in three pieces:
 | Piece | Path | Language |
 |-------|------|----------|
 | Renderer library (`libubo_lvgl`) | `ubo_lvgl/` | C |
-| Python gRPC bridge / launcher | `ubo_app/gui/ubo_lvgl_gui_client/` | Python |
+| Python gRPC bridge / launcher | `ubo_app/lvgl_gui/ubo_lvgl_gui_client/` | Python |
 | Native C web-grpc client (`ubo_lvgl_client`) | `ubo_lvgl/client/` | C |
 
 ## Why three pieces (phases)
@@ -112,14 +112,9 @@ client). The offscreen buffer backend is always built. Run the C unit tests with
    ```sh
    uv run ubo-core            # serves 127.0.0.1:50051
    ```
-2. Set up the Python bridge venv (once) and run the client:
+2. Run the client (uv creates/syncs its venv on first run):
    ```sh
-   cd ubo_app/gui/ubo_lvgl_gui_client
-   uv venv && uv pip install cffi betterproto grpclib httpx pypng python-strtobool platformdirs
-   cd -
-   PYTHONPATH=ubo_app/gui:ubo_app/rpc \
-     ubo_app/gui/ubo_lvgl_gui_client/.venv/bin/python \
-     -m ubo_lvgl_gui_client --backend sdl
+   uv run --directory ubo_app/lvgl_gui python -m ubo_lvgl_gui_client --backend sdl
    ```
    An SDL window opens and mirrors what the core renders. Keys (desktop):
    `↑/k` up, `↓/j` down, `1/2/3` → L1/L2/L3, `←/esc/h` back, `backspace` home.
@@ -263,7 +258,7 @@ fallback. See `src/fonts/README.md` to regenerate / add glyphs.
 ## Verifying changes
 
 - C: build with `-Wall -Wextra` (clean), then snapshot a view and eyeball it.
-- Python: `cd ubo_app/gui/ubo_lvgl_gui_client && .venv/bin/pyright && .venv/bin/ruff check .`
+- Python: `uv run poe typecheck:lvgl-gui && uv run poe lint:lvgl-gui` (from the repo root)
 - End-to-end: run a core + the SDL client and compare to the Kivy client.
 
 ## Status / roadmap

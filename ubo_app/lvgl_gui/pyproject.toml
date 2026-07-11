@@ -11,6 +11,7 @@ dependencies = [
     "grpclib>=0.4.7",
     "betterproto>=2.0.0b7",
     "httpx>=0.27.0",
+    "pypng>=0.20220715.0",
     "ubo-app-raw-bindings",
     "platformdirs",
     "python-strtobool>=1.0.3",
@@ -37,7 +38,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 source = "code"
-path = "../parent_version.py"
+path = "../gui/parent_version.py"
 expression = "get_version()"
 
 [tool.hatch.build]
@@ -52,9 +53,6 @@ demo = "python -m ubo_lvgl_gui_client.demo"
 
 [tool.pyright]
 exclude = ["**/.venv", "dist/"]
-# ".." resolves the `ubo_lvgl_gui_client` package; "../../rpc" resolves the
-# `ubo_bindings` editable dependency.
-extraPaths = ["..", "../../rpc"]
 venvPath = "."
 venv = ".venv"
 reportMissingModuleSource = false

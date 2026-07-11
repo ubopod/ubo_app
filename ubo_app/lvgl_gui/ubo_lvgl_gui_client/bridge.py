@@ -264,10 +264,18 @@ def _default_lib_path() -> str:
     env = os.environ.get('UBO_LVGL_LIB')
     if env:
         return env
-    # ubo_app/gui/ubo_lvgl_gui_client/bridge.py -> repo root is 4 parents up.
+    # ubo_app/lvgl_gui/ubo_lvgl_gui_client/bridge.py -> repo root is 4 parents up.
     root = Path(__file__).resolve().parents[3]
     ext = 'dylib' if os.uname().sysname == 'Darwin' else 'so'
-    return str(root / 'ubo_lvgl' / 'build' / f'libubo_lvgl.{ext}')
+    lib_path = root / 'ubo_lvgl' / 'build' / f'libubo_lvgl.{ext}'
+    if not lib_path.exists():
+        msg = (
+            f'libubo_lvgl not found at {lib_path}; set UBO_LVGL_LIB to the '
+            f'built library or build the C renderer (cmake -S ubo_lvgl '
+            f'-B ubo_lvgl/build && cmake --build ubo_lvgl/build).'
+        )
+        raise FileNotFoundError(msg)
+    return str(lib_path)
 
 
 class Renderer:
@@ -293,7 +301,14 @@ class Renderer:
         # Point the C renderer at the icon-font assets unless already set.
         if 'UBO_LVGL_ASSETS_DIR' not in os.environ:
             root = Path(__file__).resolve().parents[3]
-            os.environ['UBO_LVGL_ASSETS_DIR'] = str(root / 'ubo_lvgl' / 'assets')
+            assets_dir = root / 'ubo_lvgl' / 'assets'
+            if not assets_dir.is_dir():
+                msg = (
+                    f'ubo_lvgl assets not found at {assets_dir}; set '
+                    f'UBO_LVGL_ASSETS_DIR to the assets directory.'
+                )
+                raise FileNotFoundError(msg)
+            os.environ['UBO_LVGL_ASSETS_DIR'] = str(assets_dir)
         cfg = self.ffi.new(
             'ubo_lvgl_config*', {'backend': backend, 'width': width, 'height': height},
         )
