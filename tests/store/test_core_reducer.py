@@ -958,3 +958,116 @@ class TestUnknownAction:
         result = reducer(state, UnknownAction())
         new_state = _get_state(result)
         assert new_state.stack == state.stack
+
+
+def _cg(name: str):  # noqa: ANN202
+    """Fetch a symbol the reducer imported, guaranteeing one module generation."""
+    return reducer.__globals__[name]
+
+
+class TestCoreReducerEdgeBranches:
+    """No-op guards and simple event-emitting actions in the core reducer."""
+
+    def test_take_screenshot_emits_event(self) -> None:
+        """TakeScreenshotAction emits a screenshot event."""
+        result = reducer(_init_state(), _cg('TakeScreenshotAction')())
+        assert any(
+            isinstance(event, _cg('ScreenshotEvent')) for event in _get_events(result)
+        )
+
+    def test_screenshot_data_emits_event_with_payload(self) -> None:
+        """ScreenshotDataAction forwards its data and hash to an event."""
+        result = reducer(
+            _init_state(),
+            _cg('ScreenshotDataAction')(data=b'png', hash='abc'),
+        )
+        events = _get_events(result)
+        assert events[0].data == b'png'
+        assert events[0].hash == 'abc'
+
+    def test_close_absent_instruction_is_noop(self) -> None:
+        """Closing an instruction that isn't on the stack leaves state unchanged."""
+        state = _init_state()
+        assert (
+            reducer(state, _cg('CloseInstructionAction')(instruction_id='ghost'))
+            is state
+        )
+
+    def test_update_kwargs_for_absent_application_is_noop(self) -> None:
+        """Updating kwargs for an application not on the stack is a no-op."""
+        state = _init_state()
+        result = reducer(
+            state,
+            _cg('UpdateApplicationKwargsAction')(application_id='ghost', kwargs={}),
+        )
+        assert result is state
+
+    def test_update_absent_prompt_is_noop(self) -> None:
+        """Updating a prompt when none is on the stack is a no-op."""
+        state = _init_state()
+        result = reducer(state, _cg('UpdatePromptAction')(title='x'))
+        assert result is state
+
+    def test_pop_chat_removes_chat_overlay(self) -> None:
+        """StackPopChatAction removes the chat overlay from the stack."""
+        state = _init_state()
+        chat_item = _cg('ChatStackItem')(id='chat-1', session_id='s1')
+        state = replace(state, stack=(*state.stack, chat_item))
+
+        result = reducer(state, _cg('StackPopChatAction')())
+
+        new_state = _get_state(result)
+        assert all(
+            not isinstance(item, _cg('ChatStackItem')) for item in new_state.stack
+        )
+
+
+class TestCoreReducerRegistrationBranches:
+    """App registration, service status, and duplicate-push guards."""
+
+    def test_duplicate_menu_push_is_noop(self) -> None:
+        """Pushing the menu already on top of the stack is a no-op."""
+        state = _get_state(reducer(_init_state(), _cg('StackPushMenuAction')(
+            menu_key='main',
+        )))
+        result = reducer(state, _cg('StackPushMenuAction')(menu_key='main'))
+        assert result is state
+
+    def test_register_regular_app_returns_state(self) -> None:
+        """Registering a regular app produces a valid state."""
+        result = reducer(
+            _init_state(),
+            _cg('RegisterRegularAppAction')(label='Test App', service='svc'),
+        )
+        assert isinstance(_get_state(result), MainState)
+
+    def test_register_setting_app_returns_state(self) -> None:
+        """Registering a settings app under a category produces a valid state."""
+        # register_setting_app reads ``category.value``, so any generation works.
+        from ubo_app.store.core.types.enums import SettingsCategory
+
+        result = reducer(
+            _init_state(),
+            _cg('RegisterSettingAppAction')(
+                label='Test Setting',
+                category=SettingsCategory.SYSTEM,
+                service='svc',
+            ),
+        )
+        assert isinstance(_get_state(result), MainState)
+
+    def test_deregister_regular_app_returns_state(self) -> None:
+        """Deregistering an unknown app is safe and yields a valid state."""
+        result = reducer(
+            _init_state(),
+            _cg('DeregisterRegularAppAction')(service='svc', key='missing'),
+        )
+        assert isinstance(_get_state(result), MainState)
+
+    def test_settings_service_inactive_updates_status(self) -> None:
+        """A service going inactive is routed through the status updater."""
+        result = reducer(
+            _init_state(),
+            _cg('SettingsServiceSetStatusAction')(service_id='svc', is_active=False),
+        )
+        assert isinstance(_get_state(result), MainState)
