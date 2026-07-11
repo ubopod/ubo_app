@@ -170,3 +170,74 @@ def test_start_and_stop_actions_emit_service_events() -> None:
     assert start_result.events == [SettingsStartServiceEvent(service_id='service')]
     assert isinstance(stop_result, CompleteReducerResult)
     assert stop_result.events == [SettingsStopServiceEvent(service_id='service')]
+
+
+def test_none_state_init_and_raise() -> None:
+    """InitAction builds state; any other action against None raises."""
+    import pytest
+    from redux import InitAction, InitializationActionError
+
+    from ubo_app.store.settings.types import SettingsToggleVisualDebugAction
+
+    assert isinstance(reducer(None, InitAction()), SettingsState)
+    with pytest.raises(InitializationActionError):
+        reducer(None, SettingsToggleVisualDebugAction())
+
+
+def test_toggle_pdb_signal_notifies_only_when_enabling() -> None:
+    """Enabling the PDB signal posts instructions; disabling stays quiet."""
+    from ubo_app.store.settings.types import SettingsTogglePdbSignalAction
+
+    # Read the action type off the reducer's own module generation: an earlier
+    # integration test may have reloaded ``notifications``, and a stale runtime
+    # import here would not be the class the reducer actually emits.
+    notifications_add_action = reducer.__globals__['NotificationsAddAction']
+
+    enabling = reducer(SettingsState(pdb_signal=False), SettingsTogglePdbSignalAction())
+    assert enabling.state.pdb_signal is True
+    assert any(
+        isinstance(action, notifications_add_action)
+        for action in (enabling.actions or [])
+    )
+
+    disabling = reducer(SettingsState(pdb_signal=True), SettingsTogglePdbSignalAction())
+    assert disabling.state.pdb_signal is False
+    assert not disabling.actions
+
+
+def test_toggle_visual_debug_flips_flag() -> None:
+    """Visual-debug toggles its flag with no side effects."""
+    from ubo_app.store.settings.types import SettingsToggleVisualDebugAction
+
+    result = reducer(
+        SettingsState(visual_debug=False),
+        SettingsToggleVisualDebugAction(),
+    )
+    assert result.visual_debug is True
+
+
+def test_toggle_beta_versions_triggers_update_check() -> None:
+    """Toggling beta versions flips the flag and re-checks for updates."""
+    from ubo_app.store.settings.types import SettingsToggleBetaVersionsAction
+
+    update_check_action = reducer.__globals__['UpdateManagerRequestCheckAction']
+
+    result = reducer(
+        SettingsState(beta_versions=False),
+        SettingsToggleBetaVersionsAction(),
+    )
+    assert result.state.beta_versions is True
+    assert any(
+        isinstance(action, update_check_action)
+        for action in (result.actions or [])
+    )
+
+
+def test_set_status_for_unknown_service_is_noop() -> None:
+    """Setting status for an id absent from a populated registry is a no-op."""
+    state = SettingsState(services={'known': _service('known')})
+    result = reducer(
+        state,
+        SettingsServiceSetStatusAction(service_id='ghost', is_active=True),
+    )
+    assert result is state
