@@ -88,3 +88,30 @@ def test_resolving_last_input_clears_it() -> None:
 
     assert isinstance(result, CompleteReducerResult)
     assert result.state.active_inputs == []
+
+
+def test_init_action_builds_empty_state() -> None:
+    """A None state plus InitAction yields an empty active-inputs state."""
+    from redux import InitAction
+
+    result = reducer(None, InitAction())
+
+    assert result.active_inputs == []
+
+
+def test_none_state_without_init_raises() -> None:
+    """Any non-init action against a None state is an initialization error."""
+    import pytest
+    from redux import InitializationActionError
+
+    with pytest.raises(InitializationActionError):
+        reducer(None, InputDemandAction(description=WebUIInputDescription(id='x')))
+
+
+def test_unhandled_action_returns_state_unchanged() -> None:
+    """An action matching no case leaves the state untouched."""
+    from redux import InitAction
+
+    state = WebUIState(active_inputs=[])
+
+    assert reducer(state, InitAction()) is state
