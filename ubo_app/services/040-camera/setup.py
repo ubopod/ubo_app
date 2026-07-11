@@ -44,6 +44,7 @@ from ubo_app.store.services.camera import (
 from ubo_app.utils import IS_RPI
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.error_handlers import report_service_error
+from ubo_app.utils.frame_stream import low_res_chunk_events
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
 
@@ -392,6 +393,12 @@ def _handle_report_image(event: CameraReportImageEvent) -> None:
                 data=event.data,
                 width=event.width,
                 height=event.height,
+            ),
+            *low_res_chunk_events(
+                'camera:viewfinder',
+                event.data,
+                event.width,
+                event.height,
             ),
         ],
     )

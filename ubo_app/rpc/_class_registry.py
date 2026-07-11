@@ -280,6 +280,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'FileUploadEvent': 'ubo_app.store.services.file_upload',
     'FileUploadStartAction': 'ubo_app.store.services.file_upload',
     'FileUploadStartEvent': 'ubo_app.store.services.file_upload',
+    'FrameStreamChunkEvent': 'ubo_app.store.core.types.events',
     'FrameStreamDataEvent': 'ubo_app.store.core.types.events',
     'GenericLLMProvider': 'ubo_app.store.services.assistant',
     'GrpcTriggerSource': 'ubo_app.store.services.assistant',

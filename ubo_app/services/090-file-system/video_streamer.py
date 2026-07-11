@@ -15,6 +15,7 @@ from ubo_app.store.services.audio import (
     AudioStopPlaybackAction,
 )
 from ubo_app.store.services.file_system import FileSystemVideoFrameEvent
+from ubo_app.utils.frame_stream import low_res_chunk_events
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -26,7 +27,10 @@ FRAME_INTERVAL = 1 / 15  # 15 fps for preview
 AUDIO_RATE = 22050
 AUDIO_CHANNELS = 1
 AUDIO_WIDTH = 2  # 16-bit PCM
-AUDIO_CHUNK_SECONDS = 1  # Send audio in 1-second chunks for smoother streaming
+# Cap audio events at ~8KB (~186ms) — larger payloads overflow the heap of
+# memory-constrained clients (see _MAX_AUDIO_CHUNK_BYTES in the assistant's
+# ubo_output_transport).
+AUDIO_CHUNK_BYTES = 8192
 
 # Track the active streaming session so it can be stopped.
 _active_session: list[_VideoSession | None] = [None]
@@ -94,8 +98,7 @@ class _VideoSession:
         if stdout is None:
             return
 
-        # Send audio in larger chunks to avoid flooding the store/logs
-        chunk_size = AUDIO_RATE * AUDIO_CHANNELS * AUDIO_WIDTH * AUDIO_CHUNK_SECONDS
+        chunk_size = AUDIO_CHUNK_BYTES
         sequence_id = f'video-audio:{id(self)}'
         chunk_index = 0
 
@@ -191,19 +194,26 @@ class _VideoSession:
 
                 # Ensure contiguous array for tobytes
                 frame = np.ascontiguousarray(frame)
+                data = frame.tobytes()
 
                 store._dispatch(  # noqa: SLF001
                     [
                         FileSystemVideoFrameEvent(
-                            data=frame.tobytes(),
+                            data=data,
                             width=new_w,
                             height=new_h,
                         ),
                         FrameStreamDataEvent(
                             stream_id='file-system:video',
-                            data=frame.tobytes(),
+                            data=data,
                             width=new_w,
                             height=new_h,
+                        ),
+                        *low_res_chunk_events(
+                            'file-system:video',
+                            data,
+                            new_w,
+                            new_h,
                         ),
                     ],
                 )
