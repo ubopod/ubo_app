@@ -13,7 +13,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from redux import InitAction
+import pytest
+from redux import InitAction, InitializationActionError
 
 from ubo_app.store.services.tailscale import (
     TailscaleDoneDownloadingAction,
@@ -105,3 +106,15 @@ def test_set_pending_resets_status() -> None:
     assert state.is_installed is None
     assert state.backend_state is None
     assert state.is_active is False
+
+
+def test_none_state_without_init_raises() -> None:
+    """A non-init action against a None state is an initialization error."""
+    with pytest.raises(InitializationActionError):
+        reducer(None, TailscaleStartDownloadingAction())
+
+
+def test_unhandled_action_returns_state_unchanged() -> None:
+    """An action matching no case leaves the state untouched."""
+    state = _init_state()
+    assert reducer(state, InitAction()) is state

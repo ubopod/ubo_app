@@ -17,8 +17,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
+import pytest
+
 if TYPE_CHECKING:
-    import pytest
     from redux import BaseAction
 
     # Static-only — see ``_load_localization`` for why we don't bind the
@@ -206,3 +207,23 @@ def test_persisted_missing_key_uses_default(
         mapper=ns.load_language,
     )
     assert loaded == ns.LanguageCode.EN
+
+
+def test_none_state_without_init_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A non-init action against a None state is an initialization error."""
+    from redux import InitializationActionError
+
+    ns = _load_localization(monkeypatch)
+
+    with pytest.raises(InitializationActionError):
+        ns.reducer(None, ns.LocalizationSetLanguageAction(language=ns.LanguageCode.EN))
+
+
+def test_unhandled_action_returns_state_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An action matching no case leaves the state untouched."""
+    ns = _load_localization(monkeypatch)
+    state = ns.LocalizationState(language=ns.LanguageCode.EN)
+
+    assert ns.reducer(state, _init_action(ns)) is state
