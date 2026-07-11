@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from redux import CompleteReducerResult
@@ -355,3 +355,210 @@ class TestBoundActionHandler:
         handle_bound_action(self._event('a:boom'))
 
         assert fake_store.dispatched == []
+
+
+def _ir(name: str) -> Any:  # noqa: ANN401
+    """Fetch a symbol the reducer imported, guaranteeing one module generation."""
+    return getattr(_reducer_module, name)
+
+
+class TestInfraredReducerBranches:
+    """Cover the infrared reducer's non-binding decision branches."""
+
+    def test_none_state_init_and_raise(self) -> None:
+        """InitAction builds state; any other action against None raises."""
+        assert isinstance(reducer(None, _ir('InitAction')()), InfraredState)
+        with pytest.raises(_ir('InitializationActionError')):
+            reducer(None, _ir('InfraredSetShouldReceiveAction')(should_receive=True))
+
+    def test_send_code_blinks_and_emits_event(self) -> None:
+        """Sending a code blinks the ring green and emits a send event."""
+        result = reducer(
+            InfraredState(),
+            _ir('InfraredSendCodeAction')(protocol='necx', scancode='0x1'),
+        )
+        assert any(
+            isinstance(a, _ir('RgbRingBlinkAction')) for a in (result.actions or [])
+        )
+        events = list(result.events or [])
+        assert len(events) == 1
+        assert events[0].protocol == 'necx'
+        assert events[0].scancode == '0x1'
+
+    def test_toggle_propagate_and_receive_flags(self) -> None:
+        """The propagate/receive flags are set verbatim from their actions."""
+        state = reducer(
+            InfraredState(),
+            _ir('InfraredSetShouldPropagateAction')(should_propagate=True),
+        )
+        assert state.should_propagate_keypad_actions is True
+        state = reducer(
+            state,
+            _ir('InfraredSetShouldReceiveAction')(should_receive=True),
+        )
+        assert state.should_receive_keypad_actions is True
+
+    def test_register_device_starts_registration_and_enables_receive(self) -> None:
+        """Registration turns on receiving, blinks, and announces the start."""
+        result = reducer(
+            InfraredState(should_receive_keypad_actions=False),
+            _ir('InfraredRegisterDeviceAction')(),
+        )
+        assert result.state.is_registering_device is True
+        assert result.state.original_should_receive_keypad_actions is False
+        assert any(
+            isinstance(a, _ir('InfraredSetShouldReceiveAction'))
+            for a in (result.actions or [])
+        )
+        assert any(
+            isinstance(e, _ir('InfraredDeviceRegistrationStartedEvent'))
+            for e in (result.events or [])
+        )
+
+    def test_stop_registration_restores_receive_flag(self) -> None:
+        """Ending registration restores the pre-registration receive flag."""
+        state = InfraredState(
+            is_registering_device=True,
+            original_should_receive_keypad_actions=False,
+        )
+        result = reducer(
+            state,
+            _ir('InfraredSetIsRegisteringDeviceAction')(is_registering=False),
+        )
+        assert result.state.is_registering_device is False
+        assert result.state.original_should_receive_keypad_actions is None
+        restores = [
+            a
+            for a in (result.actions or [])
+            if isinstance(a, _ir('InfraredSetShouldReceiveAction'))
+        ]
+        assert restores
+        assert restores[0].should_receive is False
+
+    def test_add_device_replaces_existing_same_code(self) -> None:
+        """Re-adding the same protocol/scancode updates the device in place."""
+        first = _ir('InfraredAddDeviceAction')(
+            name='Old',
+            protocol='necx',
+            scancode='0x1',
+            description='',
+            bound_action_key=None,
+        )
+        state = reducer(InfraredState(), first).state
+        second = _ir('InfraredAddDeviceAction')(
+            name='New',
+            protocol='necx',
+            scancode='0x1',
+            description='',
+            bound_action_key=None,
+        )
+
+        result = reducer(state, second)
+
+        assert [d.name for d in result.state.registered_devices] == ['New']
+
+    def test_remove_device(self) -> None:
+        """Removing a device drops the matching protocol/scancode entry."""
+        state = reducer(
+            InfraredState(),
+            _ir('InfraredAddDeviceAction')(
+                name='D',
+                protocol='necx',
+                scancode='0x1',
+                description='',
+                bound_action_key=None,
+            ),
+        ).state
+
+        result = reducer(
+            state,
+            _ir('InfraredRemoveDeviceAction')(protocol='necx', scancode='0x1'),
+        )
+
+        assert result.registered_devices == []
+
+    def test_registration_counts_then_completes(self) -> None:
+        """Five repeats of one code completes registration and restores state."""
+        state = InfraredState(
+            is_registering_device=True,
+            registration_signal_counts={'necx:0x1': 4},
+            original_should_receive_keypad_actions=False,
+        )
+
+        result = reducer(
+            state,
+            _ir('InfraredHandleReceivedCodeAction')(protocol='necx', scancode='0x1'),
+        )
+
+        assert result.state.is_registering_device is False
+        assert result.state.registration_signal_counts == {}
+        assert any(
+            isinstance(a, _ir('RgbRingBlankAction')) for a in (result.actions or [])
+        )
+        assert any(
+            isinstance(e, _ir('InfraredDeviceRegistrationCompleteEvent'))
+            for e in (result.events or [])
+        )
+
+    def test_registration_increments_below_threshold(self) -> None:
+        """A single signal below the threshold just bumps the counter."""
+        state = InfraredState(is_registering_device=True)
+
+        result = reducer(
+            state,
+            _ir('InfraredHandleReceivedCodeAction')(protocol='necx', scancode='0x9'),
+        )
+
+        assert result.registration_signal_counts == {'necx:0x9': 1}
+
+    def test_back_and_home_cancel_registration(self) -> None:
+        """BACK or HOME during registration blanks the ring and stops it."""
+        key_enum = _ir('Key')
+        release = _ir('KeypadKeyReleaseAction')
+        for key in (key_enum.BACK, key_enum.HOME):
+            result = reducer(
+                InfraredState(is_registering_device=True),
+                release(key=key, pressed_keys=()),
+            )
+            assert any(
+                isinstance(a, _ir('RgbRingBlankAction')) for a in (result.actions or [])
+            )
+            assert any(
+                isinstance(a, _ir('InfraredSetIsRegisteringDeviceAction'))
+                for a in (result.actions or [])
+            )
+
+    def test_propagate_keypad_press_sends_infrared_code(self) -> None:
+        """With propagate on, a keypad press is translated to a send-code action."""
+        key_enum = _ir('Key')
+        result = reducer(
+            InfraredState(should_propagate_keypad_actions=True),
+            _ir('KeypadKeyPressAction')(key=key_enum.L1, pressed_keys=(key_enum.L1,)),
+        )
+        sends = [
+            a
+            for a in (result.actions or [])
+            if isinstance(a, _ir('InfraredSendCodeAction'))
+        ]
+        assert sends
+        assert sends[0].scancode == '0xbf10'
+
+    def test_received_release_code_maps_to_keypad_release(self) -> None:
+        """A received release-mapped code replays the keypad release action."""
+        handle = _ir('InfraredHandleReceivedCodeAction')
+        result = reducer(
+            InfraredState(should_receive_keypad_actions=True),
+            handle(protocol='necx', scancode='0x7076d'),
+        )
+        releases = [
+            a
+            for a in (result.actions or [])
+            if isinstance(a, _ir('KeypadKeyReleaseAction'))
+        ]
+        assert releases
+        assert releases[0].key == _ir('Key').L1
+
+    def test_unknown_action_returns_state_unchanged(self) -> None:
+        """An action matching no case leaves the state untouched."""
+        state = InfraredState()
+        assert reducer(state, _ir('InitAction')()) is state
