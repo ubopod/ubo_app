@@ -31,6 +31,8 @@ AUDIO_WIDTH = 2  # 16-bit PCM
 # memory-constrained clients (see _MAX_AUDIO_CHUNK_BYTES in the assistant's
 # ubo_output_transport).
 AUDIO_CHUNK_BYTES = 8192
+# How far ahead of real time audio dispatch may run (jitter absorption).
+AUDIO_LEAD_SECONDS = 0.5
 
 # Track the active streaming session so it can be stopped.
 _active_session: list[_VideoSession | None] = [None]
@@ -104,6 +106,8 @@ class _VideoSession:
 
         import time
 
+        start_time = time.monotonic()
+        sent_duration = 0.0
         try:
             while self.is_running:
                 data = stdout.read(chunk_size)
@@ -122,12 +126,22 @@ class _VideoSession:
                     ),
                 )
                 chunk_index += 1
-                # Sleep slightly less than chunk duration to keep the buffer
-                # ahead and avoid gaps between chunks during playback
-                chunk_duration = len(data) / (
+                sent_duration += len(data) / (
                     AUDIO_RATE * AUDIO_CHANNELS * AUDIO_WIDTH
                 )
-                time.sleep(chunk_duration * 0.8)
+                # Dispatch on a real-time schedule with a small constant lead.
+                # Running permanently fast instead (the previous *0.8 pacing)
+                # piles an unbounded backlog into slow clients' subscription
+                # queues — heard as trailing audio after stop, and eventually
+                # dropped chunks on long videos.
+                sleep_time = (
+                    start_time
+                    + sent_duration
+                    - AUDIO_LEAD_SECONDS
+                    - time.monotonic()
+                )
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
         finally:
             # Signal end-of-stream so play_sequence closes the audio device
             store.dispatch(
