@@ -243,3 +243,21 @@ def test_set_servers_prunes_stale_status() -> None:
 
     assert isinstance(new_state, McpState)
     assert set(new_state.server_statuses) == {'a_1'}
+
+
+def test_none_state_init_and_raise() -> None:
+    """InitAction builds state; any other action against None raises."""
+    import pytest
+    from redux import InitAction, InitializationActionError
+
+    assert isinstance(reducer(None, InitAction()), McpState)
+    with pytest.raises(InitializationActionError):
+        reducer(None, McpSyncServersAction())
+
+
+def test_unhandled_action_returns_state_unchanged() -> None:
+    """An action matching no case leaves the state untouched."""
+    from redux import InitAction
+
+    state = McpState()
+    assert reducer(state, InitAction()) is state
