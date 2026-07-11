@@ -139,6 +139,7 @@ apt-get -y install \
   accountsservice \
   dhcpcd \
   dnsmasq \
+  ffmpeg \
   git \
   hostapd \
   i2c-tools \
