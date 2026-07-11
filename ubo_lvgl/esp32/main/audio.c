@@ -75,6 +75,7 @@ static struct {
 
     volatile bool mic_active;
     volatile bool mic_stop;
+    volatile bool flush; /* discard buffered playback (AudioStopPlaybackEvent) */
     ubo_audio_mic_cb mic_cb;
     void *mic_user;
 } a;
@@ -145,6 +146,14 @@ static void play_task(void *arg) {
         size_t n = xStreamBufferReceive(a.play_ring, buf, sizeof(buf),
                                         pdMS_TO_TICKS(50));
         xSemaphoreTake(a.lock, portMAX_DELAY);
+        if (a.flush) {
+            /* Reset is safe here: this is the only receiver (and it isn't
+             * blocked), and the sender never blocks on the buffer (0-timeout
+             * send). The chunk just pulled is pre-stop audio — discard it. */
+            a.flush = false;
+            xStreamBufferReset(a.play_ring);
+            n = 0;
+        }
         if (a.mic_active) {
             /* Don't play during a talk session; discard any stale audio. */
             if (n > 0) {
@@ -195,6 +204,13 @@ void ubo_audio_play(const uint8_t *pcm, size_t len, int rate, int channels,
         vTaskDelay(pdMS_TO_TICKS(10));
     }
     xStreamBufferSend(a.play_ring, pcm, len, 0);
+}
+
+void ubo_audio_stop_playback(void) {
+    if (!a.play_ring) {
+        return;
+    }
+    a.flush = true; /* the play task resets the ring within one 50ms cycle */
 }
 
 /* ── mic capture task: 16k mono frames -> accumulate a chunk -> callback ── */

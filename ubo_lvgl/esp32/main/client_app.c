@@ -196,6 +196,10 @@ static void on_event(void *user, const ubo_client_Event *ev) {
         }
         break;
     }
+    case ubo_client_Event_audio_stop_playback_event_tag:
+        /* Flush buffered speaker audio (e.g. video playback stopped). */
+        ubo_audio_stop_playback();
+        break;
     default:
         break;
     }
@@ -221,7 +225,9 @@ static void event_task(void *arg) {
      * at 240x240 RGB888) cannot decode within this board's free heap. */
     ubo_client_FrameStreamChunkEvent fsce =
         ubo_client_FrameStreamChunkEvent_init_zero;
-    ubo_client_Event evs[6];
+    ubo_client_AudioStopPlaybackEvent aspe =
+        ubo_client_AudioStopPlaybackEvent_init_zero;
+    ubo_client_Event evs[7];
     memset(evs, 0, sizeof(evs));
     evs[0].which_event = ubo_client_Event_application_scroll_event_tag;
     evs[0].event.application_scroll_event = &ase;
@@ -235,12 +241,14 @@ static void event_task(void *arg) {
     evs[4].event.stack_changed_event = &sce;
     evs[5].which_event = ubo_client_Event_frame_stream_chunk_event_tag;
     evs[5].event.frame_stream_chunk_event = &fsce;
+    evs[6].which_event = ubo_client_Event_audio_stop_playback_event_tag;
+    evs[6].event.audio_stop_playback_event = &aspe;
 
     ubo_client_backoff bo;
     ubo_client_backoff_init(&bo);
     while (!st.stop) {
         time_t start = time(NULL);
-        ubo_rpc_subscribe_event(st.rpc, evs, 6, on_event, NULL, &st.stop);
+        ubo_rpc_subscribe_event(st.rpc, evs, 7, on_event, NULL, &st.stop);
         if (st.stop) {
             break;
         }

@@ -75,6 +75,9 @@ PB_BIND(ubo_client_AudioPlayAudioSampleEvent, ubo_client_AudioPlayAudioSampleEve
 PB_BIND(ubo_client_AudioPlayAudioSequenceEvent, ubo_client_AudioPlayAudioSequenceEvent, AUTO)
 
 
+PB_BIND(ubo_client_AudioStopPlaybackEvent, ubo_client_AudioStopPlaybackEvent, AUTO)
+
+
 PB_BIND(ubo_client_StackChangedEvent, ubo_client_StackChangedEvent, AUTO)
 
 

@@ -29,6 +29,11 @@ int ubo_audio_init(i2c_master_bus_handle_t i2c);
 void ubo_audio_play(const uint8_t *pcm, size_t len, int rate, int channels,
                     int width, float volume);
 
+/* Stop playback: discard everything queued in the play ring (core dispatched
+ * AudioStopPlaybackEvent, e.g. video stopped). Async; applied by the play task
+ * within one ~50ms drain cycle. */
+void ubo_audio_stop_playback(void);
+
 /* Mic / PTT: switch to 16 kHz mono capture and start streaming. The capture
  * task invokes `cb` with each chunk (CONFIG_UBO_MIC_CHUNK_MS of 16-bit PCM).
  * `timestamp` is seconds. ubo_audio_mic_stop() ends the session. */

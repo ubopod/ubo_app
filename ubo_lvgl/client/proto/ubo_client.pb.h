@@ -182,6 +182,12 @@ typedef struct _ubo_client_AudioPlayAudioSequenceEvent {
     int64_t *index;
 } ubo_client_AudioPlayAudioSequenceEvent;
 
+/* Core -> client: stop and flush any buffered speaker playback immediately
+ (video stopped, etc.). Empty payload; receipt itself is the signal. */
+typedef struct _ubo_client_AudioStopPlaybackEvent {
+    char dummy_field;
+} ubo_client_AudioStopPlaybackEvent;
+
 /* Subscribed only to ESTABLISH the event stream at connect: StackChangedEvent
  has server "initial state" (sent the instant we subscribe, so the response
  headers flush immediately instead of waiting for a first real event — without
@@ -201,6 +207,7 @@ typedef struct _ubo_client_Event {
         struct _ubo_client_ApplicationScrollEvent *application_scroll_event;
         struct _ubo_client_AudioPlayAudioSampleEvent *audio_play_audio_sample_event;
         struct _ubo_client_AudioPlayAudioSequenceEvent *audio_play_audio_sequence_event;
+        struct _ubo_client_AudioStopPlaybackEvent *audio_stop_playback_event;
         struct _ubo_client_FrameStreamChunkEvent *frame_stream_chunk_event;
         struct _ubo_client_FrameStreamDataEvent *frame_stream_data_event;
         struct _ubo_client_MenuChooseByIndexEvent *menu_choose_by_index_event;
@@ -516,6 +523,7 @@ extern "C" {
 
 
 
+
 /* Initializer values for message structs */
 #define ubo_client_Any_init_default              {NULL, NULL}
 #define ubo_client_BoolValue_init_default        {NULL}
@@ -540,6 +548,7 @@ extern "C" {
 #define ubo_client_FrameStreamChunkEvent_init_default {NULL, NULL, NULL, NULL, NULL}
 #define ubo_client_AudioPlayAudioSampleEvent_init_default {NULL, NULL}
 #define ubo_client_AudioPlayAudioSequenceEvent_init_default {NULL, NULL, NULL, NULL}
+#define ubo_client_AudioStopPlaybackEvent_init_default {0}
 #define ubo_client_StackChangedEvent_init_default {0}
 #define ubo_client_Event_init_default            {0, {NULL}}
 #define ubo_client_BasicType_init_default        {0, {NULL}}
@@ -595,6 +604,7 @@ extern "C" {
 #define ubo_client_FrameStreamChunkEvent_init_zero {NULL, NULL, NULL, NULL, NULL}
 #define ubo_client_AudioPlayAudioSampleEvent_init_zero {NULL, NULL}
 #define ubo_client_AudioPlayAudioSequenceEvent_init_zero {NULL, NULL, NULL, NULL}
+#define ubo_client_AudioStopPlaybackEvent_init_zero {0}
 #define ubo_client_StackChangedEvent_init_zero   {0}
 #define ubo_client_Event_init_zero               {0, {NULL}}
 #define ubo_client_BasicType_init_zero           {0, {NULL}}
@@ -679,6 +689,7 @@ extern "C" {
 #define ubo_client_Event_application_scroll_event_tag 1
 #define ubo_client_Event_audio_play_audio_sample_event_tag 25
 #define ubo_client_Event_audio_play_audio_sequence_event_tag 26
+#define ubo_client_Event_audio_stop_playback_event_tag 30
 #define ubo_client_Event_frame_stream_chunk_event_tag 86
 #define ubo_client_Event_frame_stream_data_event_tag 87
 #define ubo_client_Event_menu_choose_by_index_event_tag 108
@@ -957,6 +968,11 @@ X(a, POINTER,  SINGULAR, INT64,    index,             5)
 #define ubo_client_AudioPlayAudioSequenceEvent_DEFAULT NULL
 #define ubo_client_AudioPlayAudioSequenceEvent_sample_MSGTYPE ubo_client_AudioSample
 
+#define ubo_client_AudioStopPlaybackEvent_FIELDLIST(X, a) \
+
+#define ubo_client_AudioStopPlaybackEvent_CALLBACK NULL
+#define ubo_client_AudioStopPlaybackEvent_DEFAULT NULL
+
 #define ubo_client_StackChangedEvent_FIELDLIST(X, a) \
 
 #define ubo_client_StackChangedEvent_CALLBACK NULL
@@ -966,6 +982,7 @@ X(a, POINTER,  SINGULAR, INT64,    index,             5)
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,application_scroll_event,event.application_scroll_event),   1) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sample_event,event.audio_play_audio_sample_event),  25) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sequence_event,event.audio_play_audio_sequence_event),  26) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_stop_playback_event,event.audio_stop_playback_event),  30) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_chunk_event,event.frame_stream_chunk_event),  86) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_data_event,event.frame_stream_data_event),  87) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,menu_choose_by_index_event,event.menu_choose_by_index_event), 108) \
@@ -975,6 +992,7 @@ X(a, POINTER,  ONEOF,    MESSAGE,  (event,stack_changed_event,event.stack_change
 #define ubo_client_Event_event_application_scroll_event_MSGTYPE ubo_client_ApplicationScrollEvent
 #define ubo_client_Event_event_audio_play_audio_sample_event_MSGTYPE ubo_client_AudioPlayAudioSampleEvent
 #define ubo_client_Event_event_audio_play_audio_sequence_event_MSGTYPE ubo_client_AudioPlayAudioSequenceEvent
+#define ubo_client_Event_event_audio_stop_playback_event_MSGTYPE ubo_client_AudioStopPlaybackEvent
 #define ubo_client_Event_event_frame_stream_chunk_event_MSGTYPE ubo_client_FrameStreamChunkEvent
 #define ubo_client_Event_event_frame_stream_data_event_MSGTYPE ubo_client_FrameStreamDataEvent
 #define ubo_client_Event_event_menu_choose_by_index_event_MSGTYPE ubo_client_MenuChooseByIndexEvent
@@ -1268,6 +1286,7 @@ extern const pb_msgdesc_t ubo_client_FrameStreamDataEvent_msg;
 extern const pb_msgdesc_t ubo_client_FrameStreamChunkEvent_msg;
 extern const pb_msgdesc_t ubo_client_AudioPlayAudioSampleEvent_msg;
 extern const pb_msgdesc_t ubo_client_AudioPlayAudioSequenceEvent_msg;
+extern const pb_msgdesc_t ubo_client_AudioStopPlaybackEvent_msg;
 extern const pb_msgdesc_t ubo_client_StackChangedEvent_msg;
 extern const pb_msgdesc_t ubo_client_Event_msg;
 extern const pb_msgdesc_t ubo_client_BasicType_msg;
@@ -1325,6 +1344,7 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 #define ubo_client_FrameStreamChunkEvent_fields &ubo_client_FrameStreamChunkEvent_msg
 #define ubo_client_AudioPlayAudioSampleEvent_fields &ubo_client_AudioPlayAudioSampleEvent_msg
 #define ubo_client_AudioPlayAudioSequenceEvent_fields &ubo_client_AudioPlayAudioSequenceEvent_msg
+#define ubo_client_AudioStopPlaybackEvent_fields &ubo_client_AudioStopPlaybackEvent_msg
 #define ubo_client_StackChangedEvent_fields &ubo_client_StackChangedEvent_msg
 #define ubo_client_Event_fields &ubo_client_Event_msg
 #define ubo_client_BasicType_fields &ubo_client_BasicType_msg
@@ -1410,6 +1430,7 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 #define UBO_CLIENT_UBO_CLIENT_PB_H_MAX_SIZE      ubo_client_MenuChooseByIndexEvent_size
 #define ubo_client_AssistantStopListeningAction_size 0
 #define ubo_client_AudioSetVolumeAction_size     7
+#define ubo_client_AudioStopPlaybackEvent_size   0
 #define ubo_client_AudioToggleMuteStatusAction_size 2
 #define ubo_client_BoolValue_size                2
 #define ubo_client_DispatchActionResponse_size   0

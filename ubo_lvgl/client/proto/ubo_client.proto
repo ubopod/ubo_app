@@ -178,6 +178,10 @@ message AudioPlayAudioSequenceEvent {
   int64 index = 5;
 }
 
+// Core -> client: stop and flush any buffered speaker playback immediately
+// (video stopped, etc.). Empty payload; receipt itself is the signal.
+message AudioStopPlaybackEvent {}
+
 // Subscribed only to ESTABLISH the event stream at connect: StackChangedEvent
 // has server "initial state" (sent the instant we subscribe, so the response
 // headers flush immediately instead of waiting for a first real event — without
@@ -194,6 +198,7 @@ message Event {
     ApplicationScrollEvent application_scroll_event = 1;
     AudioPlayAudioSampleEvent audio_play_audio_sample_event = 25;
     AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 26;
+    AudioStopPlaybackEvent audio_stop_playback_event = 30;
     FrameStreamChunkEvent frame_stream_chunk_event = 86;
     FrameStreamDataEvent frame_stream_data_event = 87;
     MenuChooseByIndexEvent menu_choose_by_index_event = 108;
