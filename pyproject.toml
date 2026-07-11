@@ -141,6 +141,7 @@ exclude = [
   "ubo_app/services/*/ubo-service",
   "ubo_app/services/080-docker/assets/envoy.yaml",
   "ubo_app/gui",
+  "ubo_lvgl",
 ]
 artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
 
@@ -254,6 +255,12 @@ cmd = "scripts/deploy.sh"
 
 [tool.ruff]
 target-version = 'py311'
+extend-exclude = [
+  "ubo_lvgl/lvgl",                        # git submodule (lvgl/lvgl)
+  "ubo_lvgl/third_party",                 # git submodule (nanopb)
+  "ubo_lvgl/esp32/managed_components",    # ESP-IDF component manager
+  "ubo_lvgl/esp32/build",                 # ESP-IDF build output
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -292,10 +299,13 @@ exclude = [
   "ubo_app/rpc/ubo_bindings",
   "ubo_app/services/*/ubo-service",
   "ubo_app/gui",
+  "ubo_lvgl/lvgl",                        # git submodule (lvgl/lvgl)
+  "ubo_lvgl/third_party",                 # git submodule (nanopb)
+  "ubo_lvgl/esp32/managed_components",    # ESP-IDF component manager
+  "ubo_lvgl/esp32/build",                 # ESP-IDF build output
   "**/.venv",
   "dist/",
 ]
-disableTaggedHints = true
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/000-audio"
