@@ -244,6 +244,17 @@ void ubo_lvgl_render_chat(const ubo_chat_view *v);
 void ubo_lvgl_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t width,
                            int32_t height);
 
+/* Chunked low-res variant (FrameStreamChunkEvent): `rgb565` holds whole rows
+ * of pre-packed RGB565 little-endian pixels (`len` = rows*width*2 bytes)
+ * starting at `row_offset`; `width`/`height` describe the full frame. Rows are
+ * copied into a resident width*height*2 buffer and the widget repaints once
+ * the frame completes (row_offset+rows == height). Chunks with malformed
+ * geometry are dropped. Unlike ubo_lvgl_update_frame, the frame upscales
+ * (nearest-neighbor, up to 4x) to fill the panel. */
+void ubo_lvgl_update_frame_chunk(const uint8_t *rgb565, size_t len,
+                                 int32_t row_offset, int32_t width,
+                                 int32_t height);
+
 /* Local interaction on the current generic render widget (from the core's
  * ApplicationScroll / MenuChooseByIndex events): scroll/cycle/zoom on
  * "up"/"down", and L1/L2/L3 (index 0/1/2) for the image viewer's mode. No-op

@@ -439,6 +439,15 @@ void ubo_lvgl_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t width,
     ubo_unlock();
 }
 
+void ubo_lvgl_update_frame_chunk(const uint8_t *rgb565, size_t len,
+                                 int32_t row_offset, int32_t width,
+                                 int32_t height)
+{
+    ubo_lock();
+    ubo_render_update_frame_chunk(rgb565, len, row_offset, width, height);
+    ubo_unlock();
+}
+
 void ubo_lvgl_render_scroll(const char *direction)
 {
     ubo_lock();

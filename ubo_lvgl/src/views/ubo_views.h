@@ -145,6 +145,13 @@ lv_obj_t *ubo_screen_frame_target(void);
 void ubo_render_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t w,
                              int32_t h);
 
+/* Chunked variant for constrained clients: copy whole pre-packed RGB565-LE
+ * rows (len = rows*w*2) into the resident frame buffer at `row_offset` and
+ * repaint once the frame completes (row_offset+rows == h). Unlike the full-res
+ * path this upscales to fill the panel. */
+void ubo_render_update_frame_chunk(const uint8_t *rgb565, size_t len,
+                                   int32_t row_offset, int32_t w, int32_t h);
+
 /* Forget the active render widget's interaction state (called on every content
  * rebuild). Scroll/choose route to the current render widget only. */
 void ubo_render_reset(void);

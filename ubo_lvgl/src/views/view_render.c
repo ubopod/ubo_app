@@ -89,6 +89,7 @@ static int s_img_mode;        /* 0=vertical pan, 1=horizontal pan, 2=zoom */
 static int32_t s_img_scale;   /* current scale, 256 = 1:1 */
 static int32_t s_img_fit;     /* fit-to-screen scale (zoom-out floor) */
 static lv_obj_t *s_frame_hint; /* "waiting" hint, hidden once a frame lands */
+static int32_t s_chunk_w, s_chunk_h; /* dims the chunked frame path configured */
 
 void ubo_render_reset(void)
 {
@@ -104,6 +105,8 @@ void ubo_render_reset(void)
     s_img_obj = NULL;
     s_img_mode = 0;
     s_frame_hint = NULL;
+    s_chunk_w = 0; /* a rebuilt view has a fresh image object; re-set its src */
+    s_chunk_h = 0;
 }
 
 static void build_text_viewer(const ubo_render_view *v)
@@ -295,9 +298,72 @@ void ubo_render_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t w,
     lv_obj_center(img);
     s_img_fit = scale;   /* zoom-out floor for the still-image viewer */
     s_img_scale = scale;
+    s_chunk_w = 0; /* force the chunked path to reconfigure if it takes over */
+    s_chunk_h = 0;
 
     if (s_frame_hint) {
         lv_obj_add_flag(s_frame_hint, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void ubo_render_update_frame_chunk(const uint8_t *rgb565, size_t len,
+                                   int32_t row_offset, int32_t w, int32_t h)
+{
+    lv_obj_t *img = ubo_screen_frame_target();
+    if (!img || !rgb565 || w <= 0 || h <= 0 || w > FRAME_MAX_DIM ||
+        h > FRAME_MAX_DIM || row_offset < 0) {
+        return;
+    }
+    const size_t row_bytes = (size_t)w * 2;
+    if (len == 0 || len % row_bytes != 0) {
+        return;
+    }
+    const int32_t rows = (int32_t)(len / row_bytes);
+    if (row_offset + rows > h) {
+        return;
+    }
+
+    if (w != s_chunk_w || h != s_chunk_h) {
+        const size_t n = (size_t)w * (size_t)h;
+        uint16_t *buf = realloc(s_frame_buf, n * 2);
+        if (!buf) {
+            return; /* keep prior state; drop the chunk */
+        }
+        s_frame_buf = buf;
+        memset(s_frame_buf, 0, n * 2);
+        s_chunk_w = w;
+        s_chunk_h = h;
+
+        memset(&s_frame_dsc, 0, sizeof(s_frame_dsc));
+        s_frame_dsc.header.cf = LV_COLOR_FORMAT_RGB565;
+        s_frame_dsc.header.w = (uint32_t)w;
+        s_frame_dsc.header.h = (uint32_t)h;
+        s_frame_dsc.header.stride = (uint32_t)w * 2;
+        s_frame_dsc.data = (const uint8_t *)s_frame_buf;
+        s_frame_dsc.data_size = (uint32_t)(n * 2);
+        lv_image_set_src(img, &s_frame_dsc);
+
+        /* Unlike the full-res path, low-res stream frames upscale to fill the
+         * panel (nearest-neighbor: antialiased transforms are too slow on the
+         * ESP32 and a viewfinder wants crisp pixels over smoothing). */
+        int32_t sx = (int32_t)((long)UBO_W * 256 / w);
+        int32_t sy = (int32_t)((long)UBO_H * 256 / h);
+        int32_t scale = sx < sy ? sx : sy;
+        if (scale > 1024) {
+            scale = 1024; /* cap the upscale at 4x */
+        }
+        lv_image_set_antialias(img, false);
+        lv_image_set_scale(img, (uint32_t)scale);
+        lv_obj_center(img);
+    }
+
+    memcpy(&s_frame_buf[(size_t)row_offset * (size_t)w], rgb565, len);
+
+    if (s_frame_hint) {
+        lv_obj_add_flag(s_frame_hint, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (row_offset + rows == h) {
+        lv_obj_invalidate(img); /* repaint once per completed frame */
     }
 }
 

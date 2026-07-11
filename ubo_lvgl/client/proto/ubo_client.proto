@@ -150,6 +150,19 @@ message FrameStreamDataEvent {
   int64 height = 5;
 }
 
+// Low-res RGB565 little-endian row chunk of a frame stream, produced by core
+// for memory-constrained clients (the ESP32). `data` holds whole rows
+// (`rows * width * 2` bytes) starting at `row_offset`; `width`/`height`
+// describe the full low-res frame. A frame is complete when
+// `row_offset + rows == height`.
+message FrameStreamChunkEvent {
+  string stream_id = 2;
+  bytes data = 3;
+  int64 width = 4;
+  int64 height = 5;
+  int64 row_offset = 6;
+}
+
 // Core -> client speaker playback. A one-shot sample, and a streamed sequence
 // (TTS): `sample` is optional (a chunk with no sample is a keepalive); `id` +
 // `index` identify the sequence ordering (the client trusts arrival order).
@@ -181,9 +194,10 @@ message Event {
     ApplicationScrollEvent application_scroll_event = 1;
     AudioPlayAudioSampleEvent audio_play_audio_sample_event = 25;
     AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 26;
-    FrameStreamDataEvent frame_stream_data_event = 86;
-    MenuChooseByIndexEvent menu_choose_by_index_event = 107;
-    StackChangedEvent stack_changed_event = 133;
+    FrameStreamChunkEvent frame_stream_chunk_event = 86;
+    FrameStreamDataEvent frame_stream_data_event = 87;
+    MenuChooseByIndexEvent menu_choose_by_index_event = 108;
+    StackChangedEvent stack_changed_event = 134;
   }
 }
 

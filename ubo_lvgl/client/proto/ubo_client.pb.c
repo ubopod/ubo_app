@@ -66,6 +66,9 @@ PB_BIND(ubo_client_MenuChooseByIndexEvent, ubo_client_MenuChooseByIndexEvent, AU
 PB_BIND(ubo_client_FrameStreamDataEvent, ubo_client_FrameStreamDataEvent, AUTO)
 
 
+PB_BIND(ubo_client_FrameStreamChunkEvent, ubo_client_FrameStreamChunkEvent, AUTO)
+
+
 PB_BIND(ubo_client_AudioPlayAudioSampleEvent, ubo_client_AudioPlayAudioSampleEvent, AUTO)
 
 

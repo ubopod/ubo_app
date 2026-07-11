@@ -87,7 +87,13 @@ add_executable(ubo_client_test_frame tests/test_frame.c)
 target_link_libraries(ubo_client_test_frame PRIVATE ubo_client_core)
 target_compile_options(ubo_client_test_frame PRIVATE -Wall -Wextra)
 
+# Chunked low-res frame path: nanopb round-trip + headless row-blit/upscale.
+add_executable(ubo_client_test_chunk tests/test_chunk.c)
+target_link_libraries(ubo_client_test_chunk PRIVATE ubo_client_core ubo_lvgl)
+target_compile_options(ubo_client_test_chunk PRIVATE -Wall -Wextra)
+
 add_test(NAME frame_codec COMMAND ubo_client_test_frame)
+add_test(NAME frame_chunk COMMAND ubo_client_test_chunk)
 add_test(NAME decode_home
          COMMAND ubo_client_test_decode home
                  ${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/home_view.bin)

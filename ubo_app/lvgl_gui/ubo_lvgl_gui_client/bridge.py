@@ -101,6 +101,9 @@ void ubo_lvgl_render_application(const ubo_application_view *v);
 void ubo_lvgl_render_render(const ubo_render_view *v);
 void ubo_lvgl_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t width,
                            int32_t height);
+void ubo_lvgl_update_frame_chunk(const uint8_t *rgb565, size_t len,
+                                 int32_t row_offset, int32_t width,
+                                 int32_t height);
 void ubo_lvgl_render_scroll(const char *direction);
 void ubo_lvgl_render_choose(int index);
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
