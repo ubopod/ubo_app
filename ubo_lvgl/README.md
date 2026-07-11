@@ -222,6 +222,18 @@ encoding its framebuffer to PNG and returning a `ScreenshotDataAction`. The core
 saves it under `screenshots/ubo-screenshot-NNN.png` — the same mechanism the Kivy
 client uses, enabling apple-to-apple comparison and CI window-snapshot tests.
 
+Reading the framebuffer requires the offscreen buffer backend, so run the Python
+client headless to enable screenshot-based testing (no window opens; everything
+else behaves the same):
+
+```sh
+uv run --directory ubo_app/lvgl_gui python -m ubo_lvgl_gui_client --backend buffer
+```
+
+Note the LVGL framebuffer is RGB565 (PNG-encoded as RGB888) while the Kivy
+client captures RGBA, so the two clients' screenshot hashes are compared
+against their own baselines — parity is visual, not byte-identical.
+
 ## How it works
 
 **View model.** `include/ubo_lvgl.h` declares one struct per view

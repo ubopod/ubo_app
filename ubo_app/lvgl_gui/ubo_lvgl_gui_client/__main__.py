@@ -35,7 +35,11 @@ def main() -> None:  # noqa: C901, PLR0915
     parser = argparse.ArgumentParser(description='Ubo LVGL GUI Client')
     parser.add_argument('--host', default='localhost')
     parser.add_argument('--port', type=int, default=50051)
-    parser.add_argument('--backend', choices=['sdl', 'st7789'], default='sdl')
+    parser.add_argument(
+        '--backend',
+        choices=['sdl', 'st7789', 'buffer'],
+        default='sdl',
+    )
     parser.add_argument(
         '--transport',
         choices=['grpc', 'web-grpc'],
@@ -54,12 +58,21 @@ def main() -> None:  # noqa: C901, PLR0915
     _setup_logging(verbose=args.verbose)
 
     from ubo_lvgl_gui_client import view_translator
-    from ubo_lvgl_gui_client.bridge import BACKEND_SDL, BACKEND_ST7789, Renderer
+    from ubo_lvgl_gui_client.bridge import (
+        BACKEND_BUFFER,
+        BACKEND_SDL,
+        BACKEND_ST7789,
+        Renderer,
+    )
     from ubo_lvgl_gui_client.client import GUIClient
     from ubo_lvgl_gui_client.keyboard import build_action
 
     renderer = Renderer()
-    backend = BACKEND_ST7789 if args.backend == 'st7789' else BACKEND_SDL
+    backend = {
+        'sdl': BACKEND_SDL,
+        'st7789': BACKEND_ST7789,
+        'buffer': BACKEND_BUFFER,
+    }[args.backend]
     renderer.init(backend, 240, 240)
 
     # Shared handles, populated by the gRPC thread.
