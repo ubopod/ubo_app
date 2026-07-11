@@ -45,8 +45,8 @@ int ubo_client_backoff_step(ubo_client_backoff *b, long stream_seconds,
  * first delivery after a drop; the caller resets it to false when its stream
  * ends. When `on_stream_id` is non-NULL it receives the active frame_stream id
  * ("" when the current view has none) after every view render — the desktop
- * build uses it to filter FrameStreamDataEvents; the ESP32 build passes NULL
- * (camera viewfinder deferred on-device). */
+ * build uses it to filter FrameStreamDataEvents; the ESP32 build filters the
+ * low-res FrameStreamChunkEvents with it. */
 typedef void (*ubo_client_stream_id_cb)(void *user, const char *stream_id);
 
 void ubo_client_handle_store(const ubo_client_Any *results, size_t count,

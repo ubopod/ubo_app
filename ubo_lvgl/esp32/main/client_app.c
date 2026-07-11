@@ -5,6 +5,7 @@
 
 #include "esp_log.h"
 #include "esp_mac.h"
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
@@ -101,11 +102,26 @@ static void play_sample(const ubo_client_AudioSample *s, float volume) {
  * one task and start->samples->stop ordering is preserved. */
 static volatile int s_talk_cmd; /* 0 none, 1 start, 2 stop */
 
+/* ── active frame stream (camera viewfinder / video playback) ──
+ * The store task writes the id after each view render; the event task reads it
+ * to filter FrameStreamChunkEvents, hence the mutex. */
+#define STREAM_ID_MAX 64
+static struct {
+    char active_stream[STREAM_ID_MAX];
+    SemaphoreHandle_t mtx;
+} fs;
+
+static void on_stream_id(void *user, const char *stream_id) {
+    (void)user;
+    xSemaphoreTake(fs.mtx, portMAX_DELAY);
+    snprintf(fs.active_stream, sizeof(fs.active_stream), "%s", stream_id);
+    xSemaphoreGive(fs.mtx);
+}
+
 /* ── store stream: [current_view, status_bar, is_blanked] ── */
 static void on_store(void *user, const ubo_client_Any *results, size_t count) {
     (void)user;
-    /* on_stream_id = NULL: the camera viewfinder is deferred on-device. */
-    ubo_client_handle_store(results, count, &st.connected, NULL, NULL);
+    ubo_client_handle_store(results, count, &st.connected, on_stream_id, NULL);
 }
 
 static void store_task(void *arg) {
@@ -127,13 +143,39 @@ static void store_task(void *arg) {
     vTaskDelete(NULL);
 }
 
-/* ── event stream: common events + audio playback (no frame_stream) ── */
+/* ── event stream: common events + audio playback + low-res frame chunks ── */
+static unsigned s_chunk_count; /* heap telemetry cadence */
+
 static void on_event(void *user, const ubo_client_Event *ev) {
     (void)user;
     if (ubo_client_handle_event_common(ev)) {
         return;
     }
     switch (ev->which_event) {
+    case ubo_client_Event_frame_stream_chunk_event_tag: {
+        const ubo_client_FrameStreamChunkEvent *e =
+            ev->event.frame_stream_chunk_event;
+        if (!e || !e->stream_id || !e->data) {
+            break;
+        }
+        bool active;
+        xSemaphoreTake(fs.mtx, portMAX_DELAY);
+        active = fs.active_stream[0] &&
+                 strcmp(fs.active_stream, e->stream_id) == 0;
+        xSemaphoreGive(fs.mtx);
+        if (!active) {
+            break;
+        }
+        const int32_t w = e->width ? (int32_t)*e->width : 0;
+        const int32_t h = e->height ? (int32_t)*e->height : 0;
+        const int32_t off = e->row_offset ? (int32_t)*e->row_offset : 0;
+        ubo_lvgl_update_frame_chunk(e->data->bytes, e->data->size, off, w, h);
+        if ((++s_chunk_count % 100) == 0) {
+            ESP_LOGD(TAG, "frame chunks=%u free_heap=%lu", s_chunk_count,
+                     (unsigned long)esp_get_free_heap_size());
+        }
+        break;
+    }
     case ubo_client_Event_audio_play_audio_sample_event_tag: {
         const ubo_client_AudioPlayAudioSampleEvent *e =
             ev->event.audio_play_audio_sample_event;
@@ -175,7 +217,11 @@ static void event_task(void *arg) {
      * every view/status tick, so it doesn't flood the shared subscription queue
      * during a chat reply. Ignored in on_event (default case). */
     ubo_client_StackChangedEvent sce = ubo_client_StackChangedEvent_init_zero;
-    ubo_client_Event evs[5];
+    /* Low-res frame chunks only — the full-res FrameStreamDataEvent (~173KB
+     * at 240x240 RGB888) cannot decode within this board's free heap. */
+    ubo_client_FrameStreamChunkEvent fsce =
+        ubo_client_FrameStreamChunkEvent_init_zero;
+    ubo_client_Event evs[6];
     memset(evs, 0, sizeof(evs));
     evs[0].which_event = ubo_client_Event_application_scroll_event_tag;
     evs[0].event.application_scroll_event = &ase;
@@ -187,12 +233,14 @@ static void event_task(void *arg) {
     evs[3].event.audio_play_audio_sequence_event = &apsq;
     evs[4].which_event = ubo_client_Event_stack_changed_event_tag;
     evs[4].event.stack_changed_event = &sce;
+    evs[5].which_event = ubo_client_Event_frame_stream_chunk_event_tag;
+    evs[5].event.frame_stream_chunk_event = &fsce;
 
     ubo_client_backoff bo;
     ubo_client_backoff_init(&bo);
     while (!st.stop) {
         time_t start = time(NULL);
-        ubo_rpc_subscribe_event(st.rpc, evs, 5, on_event, NULL, &st.stop);
+        ubo_rpc_subscribe_event(st.rpc, evs, 6, on_event, NULL, &st.stop);
         if (st.stop) {
             break;
         }
@@ -276,7 +324,8 @@ void ubo_client_start(const char *web_grpc_url) {
     st.keyq = xQueueCreate(QUEUE_CAP, KEY_MAX);
     mic.mtx = xSemaphoreCreateMutex();
     mic.ready = -1;
-    if (!st.keyq || !mic.mtx) {
+    fs.mtx = xSemaphoreCreateMutex();
+    if (!st.keyq || !mic.mtx || !fs.mtx) {
         ESP_LOGE(TAG, "client queue/mutex allocation failed");
         return;
     }

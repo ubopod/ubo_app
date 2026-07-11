@@ -182,7 +182,19 @@ void ubo_audio_play(const uint8_t *pcm, size_t len, int rate, int channels,
     a.want_ch = channels;
     a.want_width = width;
     a.want_vol = volume;
-    xStreamBufferSend(a.play_ring, pcm, len, pdMS_TO_TICKS(100));
+    /* All-or-nothing: a partial write on timeout would split a 16-bit sample
+     * and turn the rest of the stream into static. Wait for room (the play
+     * task drains in real time; longer than one ~186ms core audio chunk),
+     * then drop the WHOLE chunk. Safe as check-then-send: this is the only
+     * writer, so free space can only grow in between. */
+    const TickType_t deadline = xTaskGetTickCount() + pdMS_TO_TICKS(300);
+    while (xStreamBufferSpacesAvailable(a.play_ring) < len) {
+        if (xTaskGetTickCount() >= deadline) {
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    xStreamBufferSend(a.play_ring, pcm, len, 0);
 }
 
 /* ── mic capture task: 16k mono frames -> accumulate a chunk -> callback ── */
