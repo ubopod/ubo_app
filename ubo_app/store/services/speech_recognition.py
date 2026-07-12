@@ -181,6 +181,19 @@ class SpeechRecognitionRemoveCommandAction(SpeechRecognitionAction):
     id: str
 
 
+class SpeechRecognitionRunCommandAction(SpeechRecognitionAction):
+    """Run the voice command with the matching ``id`` (LLM tool path).
+
+    Dispatched (over gRPC) by the assistant subprocess when the LLM calls the
+    ``run_device_command`` tool for an utterance that stage-1 phrase matching
+    missed. The reducer validates the id against ``intents`` and emits
+    :class:`SpeechRecognitionBoundActionTriggeredEvent`; unknown ids are a
+    no-op.
+    """
+
+    command_id: str
+
+
 class SpeechRecognitionSetConversationEndPhrasesAction(SpeechRecognitionAction):
     """Replace the conversation end-of-turn phrases (a set of alternatives)."""
 
@@ -199,6 +212,30 @@ class SpeechRecognitionIntent(Immutable):
     label: str
     phrases: list[str]
     action_keys: list[str]
+
+
+class SpeechRecognitionCommandDescriptor(Immutable):
+    """A command's id/label plus a few sample phrases, for LLM tool exposure.
+
+    A trimmed, serialization-friendly view of :class:`SpeechRecognitionIntent`
+    (patterns pre-expanded into concrete sample phrases) consumed by the
+    assistant subprocess to build the ``run_device_command`` tool schema.
+    """
+
+    id: str
+    label: str
+    sample_phrases: list[str]
+
+
+class SpeechRecognitionCommandsCatalog(Immutable):
+    """Wrapper for the list of command descriptors.
+
+    gRPC selectors can't return bare container types, so the assistant
+    subprocess subscribes to this wrapped view (mirrors
+    ``mcp.EnabledMcpServersWithMetadata``).
+    """
+
+    items: list[SpeechRecognitionCommandDescriptor] = field(default_factory=list)
 
 
 class SpeechRecognitionReportWakeWordDetectionAction(SpeechRecognitionAction):
@@ -226,6 +263,20 @@ class SpeechRecognitionTriggerModeAction(SpeechRecognitionAction):
     mode: WakeMode
     phrase: str = ''
     detector: str = ''
+
+
+class SpeechRecognitionSetAssistantListeningAction(SpeechRecognitionAction):
+    """Arm/disarm stage-1 command matching for a quick-chat assistant session.
+
+    Dispatched by the speech-recognition service's autorun tracking the
+    assistant's ``is_listening`` state: ``active=True`` when a QUICK_CHAT
+    wake-phrase session starts listening (``audio_source`` is that session's
+    mic; ``''`` = on-device), ``active=False`` on any stop path. The reducer
+    only moves ``IDLE`` → ``ASSISTANT_WAITING`` and back.
+    """
+
+    active: bool
+    audio_source: str = ''
 
 
 class SpeechRecognitionReportIntentDetectionAction(SpeechRecognitionAction):
@@ -284,7 +335,15 @@ class SpeechRecognitionBoundActionTriggeredEvent(SpeechRecognitionEvent):
 
 
 class SpeechRecognitionStatus(StrEnum):
-    """State for speech recognition service."""
+    """State for speech recognition service.
+
+    ``INTENTS_WAITING``: an INTENTS wake word armed the standalone command
+    listener (blue ring, 10 s timeout).
+    ``ASSISTANT_WAITING``: a QUICK_CHAT assistant session is listening and
+    stage-1 command matching is armed alongside it — Vosk recognizes against
+    the intent-phrase grammar and a match short-circuits the LLM. Lifetime is
+    bound to the assistant's ``is_listening``, not a timeout.
+    """
 
     IDLE = 'idle'
     INTENTS_WAITING = 'intents_waiting'
@@ -587,6 +646,17 @@ class SpeechRecognitionState(Immutable):
         ),
     )
     status: SpeechRecognitionStatus = SpeechRecognitionStatus.IDLE
+    # The mic source of the quick-chat session stage-1 matching is armed for
+    # (only meaningful while ``status`` is ``ASSISTANT_WAITING``). ``''`` = the
+    # on-device system mic — the only source Vosk consumes, so a non-empty
+    # value (web mic) keeps the Vosk grammar disarmed.
+    assistant_session_audio_source: str = ''
+    # Trimmed mirror of ``intents`` (patterns expanded into sample phrases) for
+    # the assistant subprocess's ``run_device_command`` LLM tool. Rebuilt by the
+    # reducer at every intents write site.
+    commands_catalog: SpeechRecognitionCommandsCatalog = field(
+        default_factory=SpeechRecognitionCommandsCatalog,
+    )
     wake_word_models_status: tuple[WakeWordModelStatusEntry, ...] = field(
         default_factory=tuple,
     )

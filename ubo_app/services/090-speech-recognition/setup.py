@@ -47,6 +47,8 @@ from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     DEFAULT_VOSK_MODEL_ID,
     AssistantDownloadVoskModelAction,
+    AssistantTriggerSourceUnion,
+    WakePhraseTriggerSource,
 )
 from ubo_app.store.services.notifications import (
     Importance,
@@ -64,7 +66,9 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionBoundActionTriggeredEvent,
     SpeechRecognitionIntent,
     SpeechRecognitionRemoveCommandAction,
+    SpeechRecognitionSetAssistantListeningAction,
     SpeechRecognitionUpdateCommandAction,
+    WakeMode,
     WakeWordDeleteModelEvent,
     WakeWordDownloadModelsEvent,
     WakeWordEngineConfig,
@@ -784,6 +788,36 @@ def init_service() -> Subscriptions:
         ),
     )
 
+    @store.autorun(
+        lambda state: (
+            state.assistant.is_listening,
+            state.assistant.active_source,
+            state.assistant.active_audio_source,
+        ),
+    )
+    def assistant_listening_arming(
+        data: tuple[bool, AssistantTriggerSourceUnion | None, str],
+    ) -> None:
+        """Arm stage-1 command matching for the life of a quick-chat session.
+
+        Only wake-phrase QUICK_CHAT sessions arm it — those are the ones the user
+        expects to answer a shortcut. Keying the disarm off ``is_listening`` covers
+        every stop path at once (silence flush, end phrase, stop-talking, toggle,
+        bot speech, a swallowed wake while the mic is muted).
+        """
+        is_listening, active_source, active_audio_source = data
+        is_quick_chat = (
+            is_listening
+            and isinstance(active_source, WakePhraseTriggerSource)
+            and active_source.mode is WakeMode.QUICK_CHAT
+        )
+        store.dispatch(
+            SpeechRecognitionSetAssistantListeningAction(
+                active=is_quick_chat,
+                audio_source=active_audio_source if is_quick_chat else '',
+            ),
+        )
+
     from ubo_app.store.core.view_registry import register_path_menu_matcher
 
     unregister_path_matcher = register_path_menu_matcher(
@@ -793,6 +827,7 @@ def init_service() -> Subscriptions:
 
     return [
         *engines_manager.subscriptions,
+        assistant_listening_arming.unsubscribe,
         *wake_handler_cleanups,
         *command_action_cleanups,
         *static_menu_cleanups,

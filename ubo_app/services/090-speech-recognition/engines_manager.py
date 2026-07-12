@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 
 from abstraction.wake_word_recognition_mixin import WakeTrigger
 from constants import INTENTS_LISTENING_TIMEOUT_SECONDS
+from matching import expand_phrases, match_recognition, stop_talking_triggers
 from mic_buffer import MicBuffer
 from openwakeword_engine import OpenWakeWordEngine
-from pattern import PatternError, expand_pattern
 from vosk_engine import VoskEngine
 
 from ubo_app.constants import DATA_PATH
@@ -18,9 +18,7 @@ from ubo_app.store.main import store
 from ubo_app.store.services.audio import AudioReportSampleEvent
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionIntent,
-    SpeechRecognitionReportIntentDetectionAction,
     SpeechRecognitionReportIntentTimeoutAction,
-    SpeechRecognitionReportSpeechAction,
     SpeechRecognitionReportWakeWordDetectionAction,
     SpeechRecognitionStatus,
     WakeMode,
@@ -53,23 +51,6 @@ _DETECTION_DEBOUNCE_SECONDS = 1.0
 _ASSISTANT_MODES = (WakeMode.QUICK_CHAT, WakeMode.CONVERSATION)
 
 
-def _expand_phrases(phrases: Sequence[str]) -> list[str]:
-    """Expand each utterance pattern to its concrete phrases (lowercased).
-
-    A malformed pattern falls back to the raw line as a literal so a bad pattern
-    can never break recognition for the whole command set.
-    """
-    expanded: list[str] = []
-    for phrase in phrases:
-        try:
-            expanded.extend(expand_pattern(phrase))
-        except PatternError:
-            logger.warning(
-                'Invalid utterance pattern; using it as a literal phrase',
-                extra={'pattern': phrase},
-            )
-            expanded.append(phrase)
-    return [phrase.lower() for phrase in expanded]
 
 
 class EnginesManager:
@@ -121,6 +102,10 @@ class EnginesManager:
             lambda state: (
                 state.speech_recognition.status,
                 state.speech_recognition.intents,
+                # The stop-talking phrases ride along in the armed grammar, so an
+                # edit to them has to re-arm it.
+                state.speech_recognition.wake_engines,
+                state.speech_recognition.assistant_session_audio_source,
             ),
         )(self._sync_status)
 
@@ -225,32 +210,59 @@ class EnginesManager:
 
     async def _sync_status(
         self,
-        data: tuple[str, Sequence[SpeechRecognitionIntent]],
+        data: tuple[
+            str,
+            Sequence[SpeechRecognitionIntent],
+            Sequence[WakeWordEngineConfig],
+            str,
+        ],
     ) -> None:
-        """Sync speech recognition status and intents."""
-        status, intents = data
+        """Arm or disarm the Vosk grammar for the current listening status.
+
+        ``INTENTS_WAITING`` is the standalone command window (10 s timeout);
+        ``ASSISTANT_WAITING`` is stage-1 matching riding alongside a quick-chat
+        session, whose lifetime is the assistant's ``is_listening`` rather than a
+        timeout of ours. Both listen for the same phrases.
+        """
+        status, intents, wake_engines, assistant_audio_source = data
         logger.debug(
             'Syncing speech recognition status',
             extra={
                 'status': status,
                 'intents': [intent.phrases for intent in intents],
+                'assistant_audio_source': assistant_audio_source,
             },
         )
-        if status is SpeechRecognitionStatus.IDLE:
+
+        is_remote_session = (
+            status is SpeechRecognitionStatus.ASSISTANT_WAITING
+            and bool(assistant_audio_source)
+        )
+        if status is SpeechRecognitionStatus.IDLE or is_remote_session:
+            # A remote-mic session's audio is dropped by ``_queue_chunk``, so Vosk
+            # can never hear it — leave the grammar disarmed rather than pretend.
             self._cancel_intents_timeout()
             await self._speech_engine.deactivate_speech_recognition()
-        elif status is SpeechRecognitionStatus.INTENTS_WAITING:
-            await self._speech_engine.activate_speech_recognition(
-                phrases=[
+            return
+
+        # ``activate_speech_recognition`` refuses to re-enter while a recognition
+        # is ongoing, and this autorun re-fires on every intent / trigger edit.
+        await self._speech_engine.deactivate_speech_recognition()
+        await self._speech_engine.activate_speech_recognition(
+            phrases=[
+                *(
                     phrase
                     for intent in intents
-                    for phrase in _expand_phrases(intent.phrases)
-                ],
-            )
+                    for phrase in expand_phrases(intent.phrases)
+                ),
+                *stop_talking_triggers(wake_engines),
+            ],
+        )
+
+        if status is SpeechRecognitionStatus.INTENTS_WAITING:
             self._start_intents_timeout()
-        elif status is SpeechRecognitionStatus.ASSISTANT_WAITING:
+        else:
             self._cancel_intents_timeout()
-            await self._speech_engine.deactivate_speech_recognition()
 
     def _start_intents_timeout(self) -> None:
         """(Re)arm the timer that ends intent-listening if no command arrives."""
@@ -273,53 +285,45 @@ class EnginesManager:
         lambda state: (
             state.speech_recognition.status,
             state.speech_recognition.intents,
+            state.speech_recognition.wake_engines,
         ),
     )
     def handle_speech_recognition(
         self,
-        data: tuple[SpeechRecognitionStatus, Sequence[SpeechRecognitionIntent]],
+        data: tuple[
+            SpeechRecognitionStatus,
+            Sequence[SpeechRecognitionIntent],
+            Sequence[WakeWordEngineConfig],
+        ],
         recognition: Recognition,
     ) -> None:
-        """Handle speech recognitions."""
-        status, intents = data
-        if status is SpeechRecognitionStatus.INTENTS_WAITING:
-            if intent := next(
-                (
-                    intent
-                    for intent in intents
-                    if recognition.text.lower() in _expand_phrases(intent.phrases)
-                ),
-                None,
-            ):
-                logger.info(
-                    'Intent recognized',
-                    extra={
-                        'engine_name': recognition.engine_name,
-                        'text': recognition.text,
-                        'intent': intent,
-                    },
-                )
-                store.dispatch(
-                    SpeechRecognitionReportIntentDetectionAction(
-                        intent=intent,
-                        text=recognition.text,
-                    ),
-                )
-        elif status is SpeechRecognitionStatus.ASSISTANT_WAITING:
-            logger.info(
-                'Assistant command recognized',
-                extra={
-                    'engine_name': recognition.engine_name,
-                    'text': recognition.text,
-                },
-            )
-            store.dispatch(
-                SpeechRecognitionReportSpeechAction(
-                    audio=recognition.audio,
-                    text=recognition.text,
-                    engine_name=recognition.engine_name,
-                ),
-            )
+        """Dispatch whatever the armed grammar just matched.
+
+        Whether a matched command runs a voice shortcut or short-circuits a
+        quick-chat turn is the reducer's call, from ``status``.
+        """
+        status, intents, wake_engines = data
+        if status is SpeechRecognitionStatus.IDLE:
+            return
+
+        action = match_recognition(
+            recognition.text,
+            intents,
+            stop_talking_triggers(wake_engines),
+        )
+        if action is None:
+            return
+
+        logger.info(
+            'Speech recognition matched',
+            extra={
+                'engine_name': recognition.engine_name,
+                'text': recognition.text,
+                'status': status,
+                'action': type(action).__name__,
+            },
+        )
+        store.dispatch(action)
 
     async def _monitor_wake_engine(self, engine_name: WakeWordEngineName) -> None:
         """Monitor one wake engine's detections and dispatch reports."""

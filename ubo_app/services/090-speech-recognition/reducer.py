@@ -5,6 +5,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from commands import load_or_seed_commands
+from pattern import PatternError, expand_pattern
 from redux import (
     CompleteReducerResult,
     InitAction,
@@ -24,13 +25,17 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionAction,
     SpeechRecognitionAddCommandAction,
     SpeechRecognitionBoundActionTriggeredEvent,
+    SpeechRecognitionCommandDescriptor,
+    SpeechRecognitionCommandsCatalog,
     SpeechRecognitionIntent,
     SpeechRecognitionRemoveCommandAction,
     SpeechRecognitionReportIntentDetectionAction,
     SpeechRecognitionReportIntentTimeoutAction,
     SpeechRecognitionReportSpeechAction,
     SpeechRecognitionReportWakeWordDetectionAction,
+    SpeechRecognitionRunCommandAction,
     SpeechRecognitionSetAssistantEnabledAction,
+    SpeechRecognitionSetAssistantListeningAction,
     SpeechRecognitionSetConversationEndPhrasesAction,
     SpeechRecognitionState,
     SpeechRecognitionStatus,
@@ -66,6 +71,61 @@ if TYPE_CHECKING:
 ACKNOWLEDGMENT_ACTION = RgbRingBlankAction()
 
 _ASSISTANT_MODES = (WakeMode.QUICK_CHAT, WakeMode.CONVERSATION)
+
+# Reported as the stop `detector` when stage-1 matching ends a quick-chat session.
+QUICK_CHAT_COMMAND_DETECTOR = 'quick-chat-command'
+
+# How many concrete phrases per command are handed to the LLM as examples. Enough
+# to convey the shape of the command, few enough to keep the tool schema small.
+_MAX_SAMPLE_PHRASES = 3
+
+
+def _idle(state: SpeechRecognitionState) -> SpeechRecognitionState:
+    """Return *state* at rest: nothing armed, no quick-chat session tracked."""
+    return replace(
+        state,
+        status=SpeechRecognitionStatus.IDLE,
+        assistant_session_audio_source='',
+    )
+
+
+def _command_descriptor(
+    intent: SpeechRecognitionIntent,
+) -> SpeechRecognitionCommandDescriptor:
+    """Trim an intent to the id/label/examples the LLM tool schema needs.
+
+    A malformed pattern falls back to its raw line, mirroring
+    ``engines_manager._expand_phrases`` — one bad pattern must not take the whole
+    catalog down with it.
+    """
+    samples: list[str] = []
+    for phrase in intent.phrases:
+        try:
+            samples.extend(expand_pattern(phrase))
+        except PatternError:
+            samples.append(phrase)
+        if len(samples) >= _MAX_SAMPLE_PHRASES:
+            break
+    return SpeechRecognitionCommandDescriptor(
+        id=intent.id,
+        label=intent.label,
+        sample_phrases=samples[:_MAX_SAMPLE_PHRASES],
+    )
+
+
+def _with_commands_catalog(state: SpeechRecognitionState) -> SpeechRecognitionState:
+    """Refresh the LLM-facing mirror of ``intents``.
+
+    The catalog has to be materialised in state (rather than derived on read)
+    because the assistant subprocess subscribes to it over gRPC by *field path*,
+    not by selector.
+    """
+    return replace(
+        state,
+        commands_catalog=SpeechRecognitionCommandsCatalog(
+            items=[_command_descriptor(intent) for intent in state.intents],
+        ),
+    )
 
 
 def _map_engine_triggers(
@@ -107,7 +167,8 @@ def _apply_wake_mode(
     Shared by audio-stream detections (`SpeechRecognitionReportWakeWordDetection
     Action`) and Infrared-bound triggers (`SpeechRecognitionTriggerModeAction`):
     INTENTS arms the command listener (blue ring) when idle; QUICK_CHAT/
-    CONVERSATION start the assistant when idle; STOP_TALKING stops it talking.
+    CONVERSATION start the assistant when idle; STOP_TALKING stops it talking —
+    or, while the command listener is armed, dismisses that window instead.
 
     ``enforce_assistant_gate`` makes the master ``assistant_enabled`` switch
     authoritative here in the (pure) reducer for QUICK_CHAT/CONVERSATION: the
@@ -132,10 +193,7 @@ def _apply_wake_mode(
         and not state.assistant_enabled
     ):
         # Assistant master switch is off — swallow the wake without starting it.
-        return CompleteReducerResult(
-            state=replace(state, status=SpeechRecognitionStatus.IDLE),
-            actions=[],
-        )
+        return CompleteReducerResult(state=_idle(state), actions=[])
     if (
         mode in _ASSISTANT_MODES
         and state.status is SpeechRecognitionStatus.IDLE
@@ -153,16 +211,26 @@ def _apply_wake_mode(
             ],
         )
     if mode is WakeMode.STOP_TALKING:
+        if state.status is SpeechRecognitionStatus.INTENTS_WAITING:
+            # Dismiss the voice-shortcut window early — there is no assistant to
+            # silence, the user just wants out of it without waiting for timeout.
+            return CompleteReducerResult(
+                state=_idle(state),
+                actions=[ACKNOWLEDGMENT_ACTION],
+            )
         return CompleteReducerResult(
-            state=state,
+            state=_idle(state),
             actions=[
                 AssistantStopTalkingAction(phrase=phrase, detector=detector),
             ],
         )
-    return CompleteReducerResult(
-        state=replace(state, status=SpeechRecognitionStatus.IDLE),
-        actions=[],
-    )
+    if state.status is SpeechRecognitionStatus.ASSISTANT_WAITING:
+        # A wake detection mid-session. OpenWakeWord isn't grammar-constrained so
+        # it can still fire here; dropping to IDLE would disarm stage-1 for the
+        # rest of the session, and the arming autorun keys off the assistant's
+        # `is_listening` — which hasn't changed — so it would never re-arm.
+        return CompleteReducerResult(state=state, actions=[])
+    return CompleteReducerResult(state=_idle(state), actions=[])
 
 
 def reducer(
@@ -177,7 +245,9 @@ def reducer(
 ]:
     if state is None:
         if isinstance(action, InitAction):
-            return SpeechRecognitionState(intents=load_or_seed_commands())
+            return _with_commands_catalog(
+                SpeechRecognitionState(intents=load_or_seed_commands()),
+            )
 
         raise InitializationActionError(action)
 
@@ -232,40 +302,66 @@ def reducer(
         # --- voice commands (intents) --------------------------------------
 
         case SpeechRecognitionAddCommandAction():
-            return replace(
-                state,
-                intents=[
-                    *state.intents,
-                    SpeechRecognitionIntent(
-                        id=action.id,
-                        label=action.label,
-                        phrases=action.phrases,
-                        action_keys=action.action_keys,
-                    ),
-                ],
+            return _with_commands_catalog(
+                replace(
+                    state,
+                    intents=[
+                        *state.intents,
+                        SpeechRecognitionIntent(
+                            id=action.id,
+                            label=action.label,
+                            phrases=action.phrases,
+                            action_keys=action.action_keys,
+                        ),
+                    ],
+                ),
             )
 
         case SpeechRecognitionUpdateCommandAction():
-            return replace(
-                state,
-                intents=[
-                    SpeechRecognitionIntent(
-                        id=action.id,
-                        label=action.label,
-                        phrases=action.phrases,
-                        action_keys=action.action_keys,
-                    )
-                    if intent.id == action.id
-                    else intent
-                    for intent in state.intents
-                ],
+            return _with_commands_catalog(
+                replace(
+                    state,
+                    intents=[
+                        SpeechRecognitionIntent(
+                            id=action.id,
+                            label=action.label,
+                            phrases=action.phrases,
+                            action_keys=action.action_keys,
+                        )
+                        if intent.id == action.id
+                        else intent
+                        for intent in state.intents
+                    ],
+                ),
             )
 
         case SpeechRecognitionRemoveCommandAction():
-            return replace(
-                state,
-                intents=[
-                    intent for intent in state.intents if intent.id != action.id
+            return _with_commands_catalog(
+                replace(
+                    state,
+                    intents=[
+                        intent for intent in state.intents if intent.id != action.id
+                    ],
+                ),
+            )
+
+        case SpeechRecognitionRunCommandAction(command_id=command_id):
+            # Stage 2: the LLM matched an utterance stage-1 phrase matching missed.
+            # Status-independent — by the time the tool call lands the quick-chat
+            # session may already have ended.
+            intent = next(
+                (intent for intent in state.intents if intent.id == command_id),
+                None,
+            )
+            if intent is None:
+                return state
+            return CompleteReducerResult(
+                state=state,
+                events=[
+                    SpeechRecognitionBoundActionTriggeredEvent(
+                        action_keys=intent.action_keys,
+                        phrase=intent.label,
+                    ),
                 ],
             )
 
@@ -395,19 +491,48 @@ def reducer(
 
         # --- intents / speech reporting ------------------------------------
 
+        case SpeechRecognitionSetAssistantListeningAction(active=True):
+            # Arm stage-1 alongside a quick-chat session. Only from rest: an armed
+            # command window (INTENTS_WAITING) outranks it.
+            if state.status is not SpeechRecognitionStatus.IDLE:
+                return state
+            return replace(
+                state,
+                status=SpeechRecognitionStatus.ASSISTANT_WAITING,
+                assistant_session_audio_source=action.audio_source,
+            )
+
+        case SpeechRecognitionSetAssistantListeningAction(active=False):
+            if state.status is not SpeechRecognitionStatus.ASSISTANT_WAITING:
+                return state
+            return _idle(state)
+
         case SpeechRecognitionReportIntentDetectionAction():
             # Stay pure: emit the event and let the service handler resolve the
             # action keys against the bindable-actions registry and dispatch
             # them (with the acknowledgment sequence).
-            return CompleteReducerResult(
-                state=replace(state, status=SpeechRecognitionStatus.IDLE),
-                events=[
-                    SpeechRecognitionBoundActionTriggeredEvent(
-                        action_keys=action.intent.action_keys,
-                        phrase=action.text,
-                    ),
-                ],
+            event = SpeechRecognitionBoundActionTriggeredEvent(
+                action_keys=action.intent.action_keys,
+                phrase=action.text,
             )
+            if state.status is SpeechRecognitionStatus.INTENTS_WAITING:
+                return CompleteReducerResult(state=_idle(state), events=[event])
+            if state.status is SpeechRecognitionStatus.ASSISTANT_WAITING:
+                # Stage 1: run the command and end the quick-chat session, so the
+                # utterance is discarded instead of being answered by the LLM.
+                return CompleteReducerResult(
+                    state=_idle(state),
+                    actions=[
+                        AssistantStopTalkingAction(
+                            phrase=action.text,
+                            detector=QUICK_CHAT_COMMAND_DETECTOR,
+                        ),
+                    ],
+                    events=[event],
+                )
+            # IDLE — a late or duplicate detection. Dropping it is what keeps the
+            # command exactly-once.
+            return state
 
         case SpeechRecognitionReportIntentTimeoutAction():
             # No command was recognised within the listening window; leave

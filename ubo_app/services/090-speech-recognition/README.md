@@ -50,7 +50,9 @@ Slice: `state.speech_recognition` —
 | `assistant_enabled`       | `bool`                                  | Master switch for QUICK_CHAT/CONVERSATION wake modes (INTENTS/STOP_TALKING unaffected). Persisted. |
 | `openwakeword_models`     | `tuple[str, ...]`                       | OpenWakeWord model stems on disk (downloaded + uploaded). Derived from disk at startup; **not** persisted. |
 | `conversation_end_phrases`| `tuple[str, ...]`                       | End-of-turn phrases consumed assistant-side. Persisted.       |
-| `status`                  | `SpeechRecognitionStatus`               | `IDLE` / `INTENTS_WAITING` / `ASSISTANT_WAITING`.             |
+| `status`                  | `SpeechRecognitionStatus`               | `IDLE` / `INTENTS_WAITING` (standalone command window, 10 s) / `ASSISTANT_WAITING` (stage-1 matching armed alongside a quick-chat session). |
+| `assistant_session_audio_source` | `str`                            | The mic of the quick-chat session stage-1 is armed for (only meaningful while `ASSISTANT_WAITING`). `''` = on-device system mic — the only source Vosk consumes, so a non-empty value (web mic) keeps the grammar disarmed. |
+| `commands_catalog`        | `SpeechRecognitionCommandsCatalog`      | Trimmed mirror of `intents` (patterns pre-expanded into ≤3 sample phrases) for the assistant's `run_device_command` LLM tool. Rebuilt by the reducer at every `intents` write site; must be materialised because gRPC autoruns subscribe by *field path*, not selector. |
 | `wake_word_models_status` | `tuple[WakeWordModelStatusEntry, ...]`  | Per-engine default-model download status (tuple, not enum-map, so it round-trips over gRPC). |
 
 Each `WakeWordTrigger` carries `id`, `label`, `mode` (`WakeMode`), `value` (engine-specific: a Vosk
@@ -75,14 +77,50 @@ filesystem, action resolution) is done in `setup.py` event handlers.
 | `WakeWordDownloadModelsAction`                    | Mark engine `DOWNLOADING` → **`WakeWordDownloadModelsEvent`** → `_handle_download_models`. |
 | `WakeWordDeleteModelAction`                       | Prune pool + triggers → **`WakeWordDeleteModelEvent`** → `_handle_delete_model`. |
 | `WakeWordSetAvailableModelsAction` / `WakeWordSetModelsStatusAction` | Record disk-scan results (dispatched by the service). |
-| `SpeechRecognitionReportIntentDetectionAction`    | → **`SpeechRecognitionBoundActionTriggeredEvent`** → `_handle_bound_action_triggered`. |
+| `SpeechRecognitionReportIntentDetectionAction`    | **Status-gated.** From `INTENTS_WAITING` → **`SpeechRecognitionBoundActionTriggeredEvent`**. From `ASSISTANT_WAITING` → the same event *plus* `AssistantStopTalkingAction` (stage 1 — see below). From `IDLE` → dropped; this is the exactly-once guard. |
+| `SpeechRecognitionSetAssistantListeningAction`    | Arm (`IDLE` → `ASSISTANT_WAITING`) / disarm stage-1 matching. Dispatched by `setup.py`'s autorun on the assistant's `is_listening`. |
+| `SpeechRecognitionRunCommandAction`               | Stage 2 — the LLM's `run_device_command` tool. Status-independent; resolves `command_id` against `intents` → **`SpeechRecognitionBoundActionTriggeredEvent`**. Unknown id is a no-op. |
 | `SpeechRecognitionReportIntentTimeoutAction`      | Leave `INTENTS_WAITING`, blank the ring.                       |
-| `SpeechRecognitionReportSpeechAction`             | Return to `IDLE` + acknowledgment.                            |
+| `SpeechRecognitionReportSpeechAction`             | Return to `IDLE` + acknowledgment. (No longer dispatched by the service; kept as an RPC contract.) |
 
-`_apply_wake_mode` (`reducer.py:91`) is the single mode→effect map, shared by audio detections and
+`_apply_wake_mode` (`reducer.py`) is the single mode→effect map, shared by audio detections and
 Infrared-bound triggers: `INTENTS` arms the command listener (blue ring) when idle;
 `QUICK_CHAT`/`CONVERSATION` dispatch `AssistantStartListeningAction` when idle (subject to the
-`assistant_enabled` gate on the audio path); `STOP_TALKING` dispatches `AssistantStopTalkingAction`.
+`assistant_enabled` gate on the audio path); `STOP_TALKING` dispatches `AssistantStopTalkingAction`,
+or — while the command window is armed — simply dismisses it. A wake detected *during* a quick-chat
+session leaves `ASSISTANT_WAITING` intact: OpenWakeWord is not grammar-constrained and can still fire
+there, and dropping to `IDLE` would disarm stage-1 for the rest of the session (the arming autorun
+keys off `is_listening`, which has not changed, so it would never re-arm).
+
+## Two-stage voice commands during a quick-chat session
+
+A QUICK_CHAT wake ("hey quick question") starts an assistant session in which *every* utterance would
+otherwise be answered by the LLM — including "turn on the lights", which a configured voice shortcut
+already handles. Two stages avoid that:
+
+- **Stage 1 (local, offline).** While the session listens, `status` is `ASSISTANT_WAITING` and the
+  Vosk grammar is armed with the same expanded shortcut phrases the `INTENTS` window uses. A match
+  runs the bound action and ends the session, so the turn never reaches the LLM.
+- **Stage 2 (LLM).** The `commands_catalog` is exposed to the LLM as one generic
+  `run_device_command(command_id)` tool, so a near-miss phrasing that fell through to the LLM can
+  still trigger a shortcut. Unavailable on providers that don't support tools (`cerebras`, `ollama`,
+  `ollama_onprem`); stage 1 still works there.
+
+Two details are load-bearing:
+
+- **The stop phrase rides along in the armed grammar** (`matching.stop_talking_triggers`). Vosk's
+  grammar is whatever the *ongoing* recognition asks for and nothing else — its wake words are
+  dropped while one is active, and `SpeechRecognitionMixin.report` never falls through to the wake
+  mixin. Without folding the `STOP_TALKING` phrases in, arming stage-1 would take barge-in deaf for
+  the whole session. Shortcuts are matched *first*, so a shortcut containing the stop phrase ("stop
+  the music" against a "stop" trigger) still runs the shortcut.
+- **Discarding the turn is not automatic.** The `InterruptionFrame` raised by
+  `AssistantStopTalkingAction` cancels in-flight LLM/TTS but does *not* clear pipecat's user
+  aggregation, and session teardown flushes it. The assistant subprocess's `StopTalkingOnSignal` sits
+  downstream of STT and both resets the aggregator and swallows the late cloud-STT transcript.
+
+Stage-1 is armed only for on-device quick-chat sessions: `_queue_chunk` drops remote (web/mobile) mic
+audio, so Vosk could never hear such a session — hence the `assistant_session_audio_source` gate.
 
 ## Runtime & Setup
 

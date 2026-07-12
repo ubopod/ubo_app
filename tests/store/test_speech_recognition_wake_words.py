@@ -236,6 +236,81 @@ def test_stop_talking_trigger_dispatches_stop(
     assert not _starts(ns, result)
 
 
+def test_stop_talking_dismisses_the_command_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stop phrase during INTENTS_WAITING dismisses it — no 10s timeout wait.
+
+    There is no assistant to silence here, so the stop is a plain dismissal: the
+    listening indicator is cleared and no AssistantStopTalkingAction goes out.
+    """
+    ns = _load(monkeypatch)
+    trig = _trigger(ns, id='s1', mode=ns.WakeMode.STOP_TALKING, value='okay enough')
+    state = replace(
+        _state(
+            ns,
+            ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
+        ),
+        status=ns.Status.INTENTS_WAITING,
+    )
+
+    result = _detect(ns, state, ns.Engine.VOSK, 's1', phrase='okay enough')
+
+    assert result.state.status is ns.Status.IDLE
+    assert not _stops(ns, result)
+    assert result.actions  # the RGB blank acknowledgment
+
+
+def test_stop_talking_ends_an_armed_quick_chat_session(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stop phrase mid-quick-chat silences the assistant and disarms stage-1."""
+    ns = _load(monkeypatch)
+    trig = _trigger(ns, id='s1', mode=ns.WakeMode.STOP_TALKING, value='okay enough')
+    state = replace(
+        _state(
+            ns,
+            ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
+        ),
+        status=ns.Status.ASSISTANT_WAITING,
+    )
+
+    result = _detect(ns, state, ns.Engine.VOSK, 's1', phrase='okay enough')
+
+    assert result.state.status is ns.Status.IDLE
+    assert len(_stops(ns, result)) == 1
+
+
+def test_wake_detection_mid_session_does_not_disarm_stage_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stray wake while stage-1 is armed must leave ASSISTANT_WAITING intact.
+
+    OpenWakeWord isn't grammar-constrained, so it can still fire during a
+    quick-chat session. Dropping to IDLE here would disarm stage-1 for the rest
+    of the session, and the arming autorun keys off the assistant's
+    ``is_listening`` — unchanged — so it would never re-arm.
+    """
+    ns = _load(monkeypatch)
+    trig = _trigger(ns, id='w1', mode=ns.WakeMode.QUICK_CHAT, value='hey_jarvis')
+    state = replace(
+        _state(
+            ns,
+            ns.EngineConfig(
+                engine=ns.Engine.OPENWAKEWORD,
+                enabled=True,
+                triggers=(trig,),
+            ),
+        ),
+        status=ns.Status.ASSISTANT_WAITING,
+    )
+
+    result = _detect(ns, state, ns.Engine.OPENWAKEWORD, 'w1', phrase='hey_jarvis')
+
+    assert result.state.status is ns.Status.ASSISTANT_WAITING
+    assert not _starts(ns, result)
+
+
 def test_unknown_trigger_id_is_noop(monkeypatch: pytest.MonkeyPatch) -> None:
     """An unknown trigger id is a no-op."""
     ns = _load(monkeypatch)

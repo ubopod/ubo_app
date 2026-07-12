@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from pipecat.services.mcp_service import MCPClient
     from ubo_bindings.client import UboRPCClient
 
-    from ubo_assistant.tools import CombinedTools
+    from ubo_assistant.tools import CombinedTools, DeviceCommand
 
 T = TypeVar('T', bound=FrameProcessor)
 
@@ -108,6 +108,7 @@ class UboSwitchMixin(Generic[T]):
         self._store_selector = selector
         self._autoruns_started = False
         self._enabled_mcp_servers: set[str] = set()
+        self._device_commands: list[DeviceCommand] = []
         self._gateway_token: str | None = None
         self._mcp_clients: list[MCPClient] = []
         self._mcp_tools_update_lock = asyncio.Lock()
@@ -235,6 +236,7 @@ class UboSwitchMixin(Generic[T]):
         if isinstance(self, UboLLMSwitchService):
             logger.info('Service is LLMSwitcher, subscribing to MCP state changes')
             self._setup_mcp_autorun()
+            self._setup_device_commands_autorun()
 
     def _setup_mcp_autorun(self) -> None:
         """Set up autorun subscription for MCP server state changes."""
@@ -245,6 +247,76 @@ class UboSwitchMixin(Generic[T]):
         def handle_mcp_servers_change(data: list) -> None:
             """Handle MCP servers state changes from Redux store."""
             self._process_mcp_servers_data(data)
+
+    def _setup_device_commands_autorun(self) -> None:
+        """Track the voice-shortcut catalog so the LLM tool follows the user's edits."""
+
+        @self.client.autorun([
+            'state.speech_recognition.commands_catalog',
+        ])
+        def handle_device_commands_change(data: list) -> None:
+            self._process_device_commands_data(data)
+
+    def _process_device_commands_data(self, data: list) -> None:
+        """Re-register the ``run_device_command`` tool when the catalog changes.
+
+        Mirrors ``_process_mcp_servers_data``, including its double-``items``
+        unwrap: a list field inside a gRPC message arrives as a wrapper whose
+        ``items`` is itself a wrapper.
+        """
+        from ubo_assistant.tools import DeviceCommand
+
+        try:
+            catalog_wrapper = data[0]
+            items_wrapper = getattr(catalog_wrapper, 'items', None)
+            if items_wrapper is None:
+                descriptors = []
+            else:
+                descriptors = getattr(items_wrapper, 'items', [])
+            if not isinstance(descriptors, list):
+                descriptors = []
+
+            device_commands = [
+                DeviceCommand(
+                    id=descriptor.id,
+                    label=descriptor.label,
+                    sample_phrases=tuple(
+                        getattr(descriptor, 'sample_phrases', None) or (),
+                    ),
+                )
+                for descriptor in descriptors
+                if getattr(descriptor, 'id', None)
+            ]
+
+            logger.info(
+                'Device command catalog changed via autorun',
+                extra={'command_count': len(device_commands)},
+            )
+
+            self._device_commands = device_commands
+
+            if (
+                self._current_service_id is not None
+                and isinstance(
+                    cast('ServiceSwitcher', self).strategy.active_service,
+                    LLMService,
+                )
+            ):
+                native_switcher = cast('ServiceSwitcher', self)
+                active_service = cast(
+                    'LLMService',
+                    native_switcher.strategy.active_service,
+                )
+                native_switcher.create_task(
+                    self._update_llm_tools(
+                        service_id=self._current_service_id,
+                        llm_service=active_service,
+                    ),
+                )
+
+        except Exception:
+            logger.exception('Error handling device command catalog change')
+            self._device_commands = []
 
     def _process_mcp_servers_data(self, data: list) -> None:
         """React to enabled-server-set changes by reconnecting to the gateway.
@@ -357,6 +429,7 @@ class UboSwitchMixin(Generic[T]):
                 'mcp_enabled': mcp_enabled,
                 'enabled_servers': len(self._enabled_mcp_servers),
                 'gateway': bool(gateway_url and gateway_token),
+                'device_commands': len(self._device_commands),
             },
         )
 
@@ -364,6 +437,7 @@ class UboSwitchMixin(Generic[T]):
             llm_service=llm_service,
             gateway_url=gateway_url,
             gateway_token=gateway_token,
+            device_commands=self._device_commands,
         )
         logger.info(
             'Combined tools ready',

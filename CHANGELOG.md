@@ -6,6 +6,20 @@ history and may still collect terse maintainer-oriented entries during a release
 cycle.
 
 ## Upcoming
+- feat(speech-recognition): match configured voice shortcuts during a QUICK_CHAT
+  assistant session — a matched command runs its bound action and ends the session
+  instead of being answered by the LLM (stage 1, local Vosk, offline)
+- feat(assistant): expose the voice-shortcut catalog to the LLM as a
+  `run_device_command` tool, so a near-miss phrasing can still trigger a shortcut
+  (stage 2); omitted when no shortcuts are configured
+- feat(speech-recognition): the stop-talking phrase now also dismisses the voice
+  shortcut window, instead of having to wait out its 10 s timeout
+- fix(assistant): a stop-talking signal now actually discards the pending user
+  turn — pipecat's `InterruptionFrame` leaves the user aggregation intact and
+  session teardown flushed it to the LLM, so the assistant would answer an
+  utterance it had just been told to stay quiet about
+- fix(speech-recognition): keep the stop-talking phrase detectable while a
+  recognition is armed (it was dropped from the Vosk grammar for the whole window)
 
 ## Version 2.0.0
 - fix(speech-recognition): start Vosk wake-word engine at boot without its model

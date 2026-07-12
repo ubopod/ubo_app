@@ -37,6 +37,7 @@ from pipecat.services.xai.llm import GrokLLMService
 from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
+    Action,
     AssistanceTextFrame,
     AssistantGenericLlmProviderChangedEvent,
     AssistantLlmName,
@@ -44,6 +45,7 @@ from ubo_bindings.ubo.v1 import (
     AssistantOllamaThinkingChangedEvent,
     AssistantPipelineStage,
     Event,
+    SpeechRecognitionRunCommandAction,
 )
 
 from ubo_assistant.constants import IS_RPI
@@ -838,6 +840,7 @@ class UboLLMService(UboLLMSwitchService):
         for service in self.service_map.values():
             service.register_function('draw_image', self.draw_image)
             service.register_function('get_image', self.get_image)
+            service.register_function('run_device_command', self.run_device_command)
 
     def register_function(
         self,
@@ -867,6 +870,51 @@ class UboLLMService(UboLLMSwitchService):
         await self.push_frame(ImageGenFrame(text=prompt))
         await params.result_callback(
             f'Image generator here, going for {prompt}.',
+        )
+
+    async def run_device_command(self, params: FunctionCallParams) -> None:
+        """Run one of the user's configured voice shortcuts (stage 2).
+
+        Stage 1 matches shortcut phrases locally against the Vosk grammar and
+        never reaches the LLM. This is the fallback for a near-miss phrasing that
+        did.
+
+        The dispatch is optimistic: there is no ack channel back from the store,
+        so the result is reported as soon as the action is on the wire. The core
+        validates the id again anyway (an unknown one is a no-op there).
+        """
+        command_id = params.arguments['command_id']
+        command = next(
+            (
+                candidate
+                for candidate in self._device_commands
+                if candidate.id == command_id
+            ),
+            None,
+        )
+        if command is None:
+            logger.warning(
+                'LLM asked for an unknown device command',
+                extra={'command_id': command_id},
+            )
+            await params.result_callback(
+                f'There is no device command with the id {command_id!r}.',
+            )
+            return
+
+        logger.info(
+            'Running device command on behalf of the LLM',
+            extra={'command_id': command_id, 'label': command.label},
+        )
+        self.client.dispatch(
+            action=Action(
+                speech_recognition_run_command_action=(
+                    SpeechRecognitionRunCommandAction(command_id=command_id)
+                ),
+            ),
+        )
+        await params.result_callback(
+            f'Running the "{command.label}" command now.',
         )
 
     async def get_image(self, params: FunctionCallParams) -> None:

@@ -191,7 +191,6 @@ class Assistant:
             user_turn_stop_strategy=silence_user_turn_stop_strategy,
         )
         barge_in_on_listen = BargeInOnListenSignal(client=self.client)
-        stop_talking_on_signal = StopTalkingOnSignal(client=self.client)
         stop_listening_on_bot_speech = StopListeningOnBotSpeech(client=self.client)
 
         ubo_llm_service = UboLLMService(
@@ -232,6 +231,13 @@ class Assistant:
         )
         user_aggregator = context_aggregator.user()
         assistant_aggregator = context_aggregator.assistant()
+
+        # Needs the user aggregator (to clear an already-aggregated transcript) and
+        # a pipeline slot downstream of STT (to swallow the ones still arriving).
+        stop_talking_on_signal = StopTalkingOnSignal(
+            client=self.client,
+            user_aggregator=user_aggregator,
+        )
 
         async def g() -> None:
             while True:
@@ -297,8 +303,11 @@ class Assistant:
                     [
                         vad_processor,
                         barge_in_on_listen,
-                        stop_talking_on_signal,
                         ubo_stt_service,
+                        # After STT so it sees the transcription frames of a
+                        # discarded turn and can withhold them from the
+                        # aggregator (and from end-of-turn detection).
+                        stop_talking_on_signal,
                         end_of_turn_detector,
                         user_aggregator,
                         ubo_llm_service,

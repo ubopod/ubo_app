@@ -18,6 +18,8 @@ from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.services.mcp_service import MCPClient
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from pipecat.services.llm_service import LLMService
 
 
@@ -29,8 +31,64 @@ class CombinedTools:
     mcp_clients: list[MCPClient]
 
 
-def create_ubo_standard_tools() -> ToolsSchema:
-    """Create and return standard tools for the assistant."""
+@dataclass(frozen=True)
+class DeviceCommand:
+    """One voice shortcut, as the LLM sees it.
+
+    Mirrors the core's ``SpeechRecognitionCommandDescriptor``; kept as a plain
+    dataclass so the tool schema doesn't depend on the gRPC bindings.
+    """
+
+    id: str
+    label: str
+    sample_phrases: tuple[str, ...] = ()
+
+
+def _create_run_device_command_function(
+    device_commands: Sequence[DeviceCommand],
+) -> FunctionSchema:
+    """Build the one generic tool that runs any configured voice shortcut.
+
+    A single tool with an id enum, rather than one tool per command: the catalog
+    is user-editable and can be long, and re-registering N handlers on every edit
+    would be a lot of churn for no gain.
+    """
+    descriptions = '\n'.join(
+        f'- {command.id}: {command.label}'
+        + (
+            f' (e.g. {", ".join(repr(p) for p in command.sample_phrases)})'
+            if command.sample_phrases
+            else ''
+        )
+        for command in device_commands
+    )
+    return FunctionSchema(
+        name='run_device_command',
+        description=(
+            'Run one of the voice shortcuts the user has configured on their '
+            'device. Use this when the user asks for something a shortcut '
+            'already does, even if they phrased it differently.\n'
+            f'Available commands:\n{descriptions}'
+        ),
+        properties={
+            'command_id': {
+                'type': 'string',
+                'description': 'The id of the command to run.',
+                'enum': [command.id for command in device_commands],
+            },
+        },
+        required=['command_id'],
+    )
+
+
+def create_ubo_standard_tools(
+    device_commands: Sequence[DeviceCommand] = (),
+) -> ToolsSchema:
+    """Create and return standard tools for the assistant.
+
+    ``run_device_command`` is omitted entirely when no commands are configured —
+    an enum with no members is not a usable schema.
+    """
     draw_image_function = FunctionSchema(
         name='draw_image',
         description='Generate an image based on a text prompt.',
@@ -64,7 +122,11 @@ def create_ubo_standard_tools() -> ToolsSchema:
         required=['source', 'prompt'],
     )
 
-    return ToolsSchema(standard_tools=[draw_image_function, get_image_function])
+    standard_tools = [draw_image_function, get_image_function]
+    if device_commands:
+        standard_tools.append(_create_run_device_command_function(device_commands))
+
+    return ToolsSchema(standard_tools=standard_tools)
 
 
 async def create_combined_tools(
@@ -72,6 +134,7 @@ async def create_combined_tools(
     *,
     gateway_url: str | None = None,
     gateway_token: str | None = None,
+    device_commands: Sequence[DeviceCommand] = (),
 ) -> CombinedTools:
     """Create combined tools schema with standard and gateway-provided tools.
 
@@ -80,13 +143,15 @@ async def create_combined_tools(
         gateway_url: Streamable HTTP endpoint of the MCP gateway, or ``None`` to
             skip MCP tools (e.g. no servers enabled).
         gateway_token: Bearer token for the gateway.
+        device_commands: The user's configured voice shortcuts, exposed as the
+            ``run_device_command`` tool. Empty means the tool is omitted.
 
     Returns:
         Tools schema with standard tools plus the gateway's aggregated tools, and
         the live gateway MCP client (empty if not connected).
 
     """
-    ubo_standard_tools = create_ubo_standard_tools()
+    ubo_standard_tools = create_ubo_standard_tools(device_commands)
     combined_tools = list(ubo_standard_tools.standard_tools)
     mcp_clients: list[MCPClient] = []
 
