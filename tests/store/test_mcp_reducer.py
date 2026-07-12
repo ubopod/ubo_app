@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from redux import CompleteReducerResult
 
@@ -250,7 +250,7 @@ def test_none_state_init_and_raise() -> None:
     import pytest
     from redux import InitAction, InitializationActionError
 
-    assert isinstance(reducer(None, InitAction()), McpState)
+    assert isinstance(reducer(None, cast('McpAction', InitAction())), McpState)
     with pytest.raises(InitializationActionError):
         reducer(None, McpSyncServersAction())
 
@@ -260,4 +260,4 @@ def test_unhandled_action_returns_state_unchanged() -> None:
     from redux import InitAction
 
     state = McpState()
-    assert reducer(state, InitAction()) is state
+    assert reducer(state, cast('McpAction', InitAction())) is state

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from redux import CompleteReducerResult
 
 from ubo_app.store.settings.reducer import reducer
@@ -193,14 +195,20 @@ def test_toggle_pdb_signal_notifies_only_when_enabling() -> None:
     # import here would not be the class the reducer actually emits.
     notifications_add_action = reducer.__globals__['NotificationsAddAction']
 
-    enabling = reducer(SettingsState(pdb_signal=False), SettingsTogglePdbSignalAction())
+    enabling = cast(
+        'CompleteReducerResult',
+        reducer(SettingsState(pdb_signal=False), SettingsTogglePdbSignalAction()),
+    )
     assert enabling.state.pdb_signal is True
     assert any(
         isinstance(action, notifications_add_action)
         for action in (enabling.actions or [])
     )
 
-    disabling = reducer(SettingsState(pdb_signal=True), SettingsTogglePdbSignalAction())
+    disabling = cast(
+        'CompleteReducerResult',
+        reducer(SettingsState(pdb_signal=True), SettingsTogglePdbSignalAction()),
+    )
     assert disabling.state.pdb_signal is False
     assert not disabling.actions
 
@@ -209,9 +217,13 @@ def test_toggle_visual_debug_flips_flag() -> None:
     """Visual-debug toggles its flag with no side effects."""
     from ubo_app.store.settings.types import SettingsToggleVisualDebugAction
 
-    result = reducer(
-        SettingsState(visual_debug=False),
-        SettingsToggleVisualDebugAction(),
+    # No side effects, so this branch returns the bare state.
+    result = cast(
+        'SettingsState',
+        reducer(
+            SettingsState(visual_debug=False),
+            SettingsToggleVisualDebugAction(),
+        ),
     )
     assert result.visual_debug is True
 
@@ -222,9 +234,12 @@ def test_toggle_beta_versions_triggers_update_check() -> None:
 
     update_check_action = reducer.__globals__['UpdateManagerRequestCheckAction']
 
-    result = reducer(
-        SettingsState(beta_versions=False),
-        SettingsToggleBetaVersionsAction(),
+    result = cast(
+        'CompleteReducerResult',
+        reducer(
+            SettingsState(beta_versions=False),
+            SettingsToggleBetaVersionsAction(),
+        ),
     )
     assert result.state.beta_versions is True
     assert any(

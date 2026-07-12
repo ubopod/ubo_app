@@ -6,10 +6,13 @@ resolve/cancel actions into their matching events.
 
 from __future__ import annotations
 
+from typing import cast
+
 from redux import CompleteReducerResult, InitAction
 
 from ubo_app.store.input.reducer import reducer
 from ubo_app.store.input.types import (
+    InputAction,
     InputCancelAction,
     InputCancelEvent,
     InputProvideAction,
@@ -22,8 +25,9 @@ def test_provide_action_emits_provide_event() -> None:
     result = reducer(None, InputProvideAction(id='q', value='yes', result=None))
 
     assert isinstance(result, CompleteReducerResult)
-    assert len(result.events) == 1
-    event = result.events[0]
+    events = list(result.events or [])
+    assert len(events) == 1
+    event = events[0]
     assert isinstance(event, InputProvideEvent)
     assert event.id == 'q'
     assert event.value == 'yes'
@@ -34,11 +38,13 @@ def test_cancel_action_emits_cancel_event() -> None:
     result = reducer(None, InputCancelAction(id='q'))
 
     assert isinstance(result, CompleteReducerResult)
-    assert len(result.events) == 1
-    assert isinstance(result.events[0], InputCancelEvent)
-    assert result.events[0].id == 'q'
+    events = list(result.events or [])
+    assert len(events) == 1
+    event = events[0]
+    assert isinstance(event, InputCancelEvent)
+    assert event.id == 'q'
 
 
 def test_unhandled_action_returns_none() -> None:
     """An action matching no case yields the (None) state unchanged."""
-    assert reducer(None, InitAction()) is None
+    assert reducer(None, cast('InputAction', InitAction())) is None

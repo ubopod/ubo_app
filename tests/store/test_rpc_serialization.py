@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import betterproto
 import pytest
@@ -164,23 +164,32 @@ def test_protobuf_scalar_wrappers_and_empty_unwrap() -> None:
     assert rebuild_object(betterproto_protobuf.Empty()) is None
 
 
+# The three tests below pin down deliberately permissive runtime behaviour whose
+# signatures are narrower than what the functions actually accept (a bare enum
+# rather than a Message, a non-Immutable ``expected_type``, an untyped list). The
+# casts keep the type checker out of the way of exercising exactly that.
+
+
 def test_unspecified_enum_member_rebuilds_as_none() -> None:
     """A generated enum in its ``*_UNSPECIFIED`` state maps back to ``None``."""
-    assert rebuild_object(v1.InputMethod(0)) is None
+    assert rebuild_object(cast('betterproto.Message', v1.InputMethod(0))) is None
 
 
 def test_build_message_enum_falls_back_to_value() -> None:
     """A StrEnum serializes to its value with no or a non-enum expected type."""
     assert build_message(InputMethod.WEB_DASHBOARD) == InputMethod.WEB_DASHBOARD.value
     assert (
-        build_message(InputMethod.WEB_DASHBOARD, expected_type=str)
+        build_message(
+            InputMethod.WEB_DASHBOARD,
+            expected_type=cast('Any', str),
+        )
         == InputMethod.WEB_DASHBOARD.value
     )
 
 
 def test_build_message_list_without_expected_type_maps_items() -> None:
     """An untyped sequence serializes element-by-element to a plain list."""
-    assert build_message([1, 'two', True]) == [1, 'two', True]
+    assert build_message(cast('Any', [1, 'two', True])) == [1, 'two', True]
 
 
 def test_stdio_mcp_env_dict_roundtrips_as_simple_string_wrapper() -> None:

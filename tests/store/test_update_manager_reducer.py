@@ -6,6 +6,8 @@ and turns check/update requests into their events.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, cast
+
 import pytest
 from redux import InitAction, InitializationActionError
 
@@ -25,6 +27,15 @@ from ubo_app.store.update_manager.types import (
     UpdateStatus,
 )
 
+if TYPE_CHECKING:
+    from redux import CompleteReducerResult
+
+    from ubo_app.store.update_manager.types import UpdateManagerAction
+
+# The reducer's return type is the usual union: a bare state when it only mutates
+# the slice, a ``CompleteReducerResult`` when it also emits actions/events. Each
+# test knows which branch it exercises, so it casts to that.
+
 
 def _set_versions(
     current: str,
@@ -42,16 +53,17 @@ def _set_versions(
 
 def test_none_state_init_and_raise() -> None:
     """InitAction builds state; any other action against None raises."""
-    assert isinstance(reducer(None, InitAction()), UpdateManagerState)
+    init = cast('UpdateManagerAction', InitAction())
+    assert isinstance(reducer(None, init), UpdateManagerState)
     with pytest.raises(InitializationActionError):
         reducer(None, UpdateManagerRequestCheckAction())
 
 
 def test_newer_latest_marks_outdated_and_flashes() -> None:
     """A newer available version marks OUTDATED and flashes when asked."""
-    result = reducer(
-        UpdateManagerState(),
-        _set_versions('1.0.0', '2.0.0', flash=True),
+    result = cast(
+        'CompleteReducerResult',
+        reducer(UpdateManagerState(), _set_versions('1.0.0', '2.0.0', flash=True)),
     )
 
     assert result.state.update_status == UpdateStatus.OUTDATED
@@ -68,9 +80,9 @@ def test_newer_latest_marks_outdated_and_flashes() -> None:
 
 def test_outdated_uses_background_notification_when_not_flashing() -> None:
     """Without the flash flag the update notice is a background progress item."""
-    result = reducer(
-        UpdateManagerState(),
-        _set_versions('1.0.0', '2.0.0', flash=False),
+    result = cast(
+        'CompleteReducerResult',
+        reducer(UpdateManagerState(), _set_versions('1.0.0', '2.0.0', flash=False)),
     )
 
     notifications = [
@@ -86,9 +98,10 @@ def test_outdated_uses_background_notification_when_not_flashing() -> None:
 
 def test_equal_versions_are_up_to_date_without_notification() -> None:
     """When latest equals current the device is up to date and stays quiet."""
-    result = reducer(
-        UpdateManagerState(),
-        _set_versions('2.0.0', '2.0.0', flash=True),
+    # No notification to dispatch, so this branch returns the bare state.
+    result = cast(
+        'UpdateManagerState',
+        reducer(UpdateManagerState(), _set_versions('2.0.0', '2.0.0', flash=True)),
     )
 
     assert result.update_status == UpdateStatus.UP_TO_DATE
@@ -96,7 +109,10 @@ def test_equal_versions_are_up_to_date_without_notification() -> None:
 
 def test_request_check_transitions_and_emits_event() -> None:
     """A check request enters CHECKING and emits the check event."""
-    result = reducer(UpdateManagerState(), UpdateManagerRequestCheckAction())
+    result = cast(
+        'CompleteReducerResult',
+        reducer(UpdateManagerState(), UpdateManagerRequestCheckAction()),
+    )
 
     assert result.state.update_status == UpdateStatus.CHECKING
     assert any(
@@ -106,16 +122,22 @@ def test_request_check_transitions_and_emits_event() -> None:
 
 def test_failed_check_records_failure() -> None:
     """A failed check records FAILED_TO_CHECK."""
-    result = reducer(UpdateManagerState(), UpdateManagerReportFailedCheckAction())
+    result = cast(
+        'CompleteReducerResult',
+        reducer(UpdateManagerState(), UpdateManagerReportFailedCheckAction()),
+    )
 
     assert result.state.update_status == UpdateStatus.FAILED_TO_CHECK
 
 
 def test_request_update_transitions_and_carries_version() -> None:
     """An update request enters UPDATING and emits the target version."""
-    result = reducer(
-        UpdateManagerState(),
-        UpdateManagerRequestUpdateAction(version='3.1.4'),
+    result = cast(
+        'CompleteReducerResult',
+        reducer(
+            UpdateManagerState(),
+            UpdateManagerRequestUpdateAction(version='3.1.4'),
+        ),
     )
 
     assert result.state.update_status == UpdateStatus.UPDATING
@@ -131,4 +153,4 @@ def test_request_update_transitions_and_carries_version() -> None:
 def test_unhandled_action_returns_state_unchanged() -> None:
     """An action matching no case leaves the state untouched."""
     state = UpdateManagerState()
-    assert reducer(state, InitAction()) is state
+    assert reducer(state, cast('UpdateManagerAction', InitAction())) is state
