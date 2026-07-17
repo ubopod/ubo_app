@@ -25,12 +25,13 @@ static const char *TAG = "ubo_input";
 #define BOOT_RESET_MS 8000 /* hold BOOT this long -> clear WiFi creds + reboot */
 
 /* Gestures -> Ubo keys:
- *   tap        -> L1/L2/L3 by which vertical third was tapped (the slot)
+ *   tap        -> the transport switch, if the disconnect overlay is showing it;
+ *                 otherwise L1/L2/L3 by which vertical third was tapped (the slot)
  *   swipe up   -> UP        swipe down -> DOWN
  *   swipe horiz-> BACK
  *   BOOT tap   -> HOME
  *   BOOT hold  -> push-to-talk (stream mic while held; release stops)
- *   BOOT hold (>=8s) -> clear WiFi creds + reboot to setup
+ *   BOOT hold (>=8s) -> clear WiFi creds + transport preference, reboot to setup
  */
 static void input_task(void *arg) {
     esp_lcd_touch_handle_t tp = (esp_lcd_touch_handle_t)arg;
@@ -90,7 +91,20 @@ static void input_task(void *arg) {
                 const int dx = cx - sx, dy = cy - sy;
                 const int adx = dx < 0 ? -dx : dx, ady = dy < 0 ? -dy : dy;
                 const char *k = NULL;
-                if (adx < TAP_MAX_MOVE && ady < TAP_MAX_MOVE) {
+                if (adx < TAP_MAX_MOVE && ady < TAP_MAX_MOVE &&
+                    ubo_lvgl_hit_transport_switch(sx, sy)) {
+                    /* Only hittable while the disconnect overlay is up, so this
+                     * can't shadow a menu tap. Offer the transport we are NOT on
+                     * — from the active transport, not the stored preference
+                     * (they differ when pref is "usb" but we booted WiFi for
+                     * lack of a host). Then reboot: the client's base URL is
+                     * fixed at creation, so switching link means starting over. */
+                    const bool to_wifi = !ubo_net_transport_active_is_wifi();
+                    ESP_LOGW(TAG, "transport switch tapped: rebooting into %s",
+                             to_wifi ? "wifi" : "usb");
+                    ubo_net_transport_save(to_wifi);
+                    esp_restart();
+                } else if (adx < TAP_MAX_MOVE && ady < TAP_MAX_MOVE) {
                     /* Only select if the tap landed on an actual item bar. */
                     const int slot = ubo_lvgl_hit_test(sx, sy);
                     if (slot == 0) {

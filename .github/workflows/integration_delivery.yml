@@ -620,6 +620,28 @@ jobs:
           cp "$BUILD/ubo_lvgl_esp32c6.bin" esp32-firmware/
           cp "$BUILD/flasher_args.json" esp32-firmware/
 
+      # Second profile: PPP over the USB Serial/JTAG cable instead of WiFi (the
+      # Ubo Pod build). It hands the USJ endpoint to PPP, so it has no USB log
+      # console — which is why it is a separate image and not the default.
+      # sdkconfig.defaults* is only read when sdkconfig is absent, hence the rm.
+      - name: Build Firmware (USB/PPP profile)
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v6.0.1
+          target: esp32c6
+          path: ubo_lvgl/esp32
+          command: >-
+            rm -rf build sdkconfig sdkconfig.old &&
+            idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.ppp" build &&
+            idf.py merge-bin -o ubo-lvgl-esp32c6-usbppp-merged.bin
+
+      - name: Stage USB/PPP Artifact
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          cp ubo_lvgl/esp32/build/ubo-lvgl-esp32c6-usbppp-merged.bin \
+            "esp32-firmware/ubo-lvgl-esp32c6-$VERSION-usbppp-merged.bin"
+
       - name: Upload Firmware
         uses: actions/upload-artifact@v4
         with:

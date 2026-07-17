@@ -34,6 +34,44 @@ config UBO_CORE_GRPC_WEB_URL
         Base URL of ubo-core's Envoy gRPC-Web endpoint, e.g.
         http://<host-lan-ip>:50052/grpc. Plain HTTP (no TLS).
 
+config UBO_USB_PPP_ENABLE
+    bool "Prefer PPP-over-USB (USB Serial/JTAG) when a host is attached"
+    depends on LWIP_PPP_SUPPORT
+    default y
+    help
+        Carry gRPC-Web traffic to ubo-core over the USB cable instead of WiFi,
+        as a PPP link (lwIP PPP client here, pppd on the Pi). At boot, if a USB
+        host is detected (SOF packets — a bare charger doesn't count) and the
+        stored transport preference is "usb", the client connects over USB and
+        WiFi is never brought up. Otherwise the WiFi path runs unchanged.
+
+        Only selectable in the `.ppp` build profile, which enables
+        CONFIG_LWIP_PPP_SUPPORT and hands the USJ endpoint to PPP:
+          idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.ppp"
+        In the default profile lwIP has no PPP stack, so this is forced off and
+        the firmware is WiFi-only (and keeps its USB log console).
+
+config UBO_USB_PPP_PROBE_TIMEOUT_S
+    int "PPP negotiation timeout (seconds)"
+    default 5
+    range 2 30
+    depends on UBO_USB_PPP_ENABLE
+    help
+        How long to wait for pppd to answer LCP/IPCP before retrying. A USB host
+        that isn't running pppd (e.g. a laptop used for flashing) simply retries
+        on this interval; it never falls back to WiFi on its own — the user does
+        that from the on-screen switch.
+
+config UBO_USB_CORE_GRPC_WEB_URL
+    string "Core gRPC-Web base URL over USB"
+    default "http://10.66.0.1:50052/grpc"
+    depends on UBO_USB_PPP_ENABLE
+    help
+        Base URL of ubo-core's Envoy gRPC-Web endpoint as seen from the far end
+        of the PPP link. Must match the local address in the pppd unit
+        (10.66.0.1:10.66.0.2). Used instead of UBO_CORE_GRPC_WEB_URL and instead
+        of any NVS-provisioned host/port, which describe the WiFi-side address.
+
 config UBO_MIC_CHUNK_MS
     int "Push-to-talk mic chunk size (ms)"
     default 200

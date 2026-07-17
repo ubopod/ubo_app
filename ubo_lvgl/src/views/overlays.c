@@ -10,8 +10,9 @@
 static lv_obj_t *s_splash;
 static lv_obj_t *s_blank;
 static lv_obj_t *s_disc;
-static lv_obj_t *s_disc_sub; /* "Reconnecting in Ns (attempt A/M)" subtitle */
-static lv_obj_t *s_prov;     /* WiFi setup / captive-portal instructions cover */
+static lv_obj_t *s_disc_sub;    /* "Reconnecting in Ns (attempt A/M)" subtitle */
+static lv_obj_t *s_disc_switch; /* optional "Use WiFi" / "Use USB" touch target */
+static lv_obj_t *s_prov;        /* WiFi setup / captive-portal instructions cover */
 
 static lv_obj_t *full_cover(lv_color_t bg)
 {
@@ -118,6 +119,50 @@ void ubo_overlay_disconnected_status(int attempt, int seconds)
     }
     lv_obj_move_foreground(s_disc);
     lv_obj_clear_flag(s_disc, LV_OBJ_FLAG_HIDDEN);
+}
+
+/* The transport switch rides on the disconnect cover rather than being an overlay
+ * of its own: that cover is raised by the client's reconnect backoff, which is
+ * exactly when the link the user wants to escape from is the one that's failing.
+ * During a healthy session there is nothing to escape and a button would just sit
+ * on top of the core's UI. */
+void ubo_overlay_transport_switch(const char *label)
+{
+    if (!label) {
+        if (s_disc_switch) {
+            lv_obj_add_flag(s_disc_switch, LV_OBJ_FLAG_HIDDEN);
+        }
+        return;
+    }
+    ensure_disc();
+    if (!s_disc_switch) {
+        s_disc_switch = lv_label_create(s_disc);
+        lv_obj_set_width(s_disc_switch, UBO_W - 80); /* a generous touch target */
+        lv_obj_set_style_text_align(s_disc_switch, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_text_color(s_disc_switch, UBO_COL_FG, 0);
+        lv_obj_set_style_text_font(s_disc_switch, UBO_FONT_SM, 0);
+        lv_obj_set_style_bg_color(s_disc_switch, lv_color_hex(0x303030), 0);
+        lv_obj_set_style_bg_opa(s_disc_switch, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(s_disc_switch, 6, 0);
+        lv_obj_set_style_pad_all(s_disc_switch, 10, 0);
+    }
+    lv_label_set_text(s_disc_switch, label);
+    lv_obj_clear_flag(s_disc_switch, LV_OBJ_FLAG_HIDDEN);
+}
+
+bool ubo_overlay_hit_transport_switch(int x, int y)
+{
+    if (!s_disc || !s_disc_switch) {
+        return false;
+    }
+    /* Only hittable while the user can actually see it. */
+    if (lv_obj_has_flag(s_disc, LV_OBJ_FLAG_HIDDEN) ||
+        lv_obj_has_flag(s_disc_switch, LV_OBJ_FLAG_HIDDEN)) {
+        return false;
+    }
+    lv_area_t a;
+    lv_obj_get_coords(s_disc_switch, &a);
+    return x >= a.x1 && x <= a.x2 && y >= a.y1 && y <= a.y2;
 }
 
 void ubo_overlay_provisioning(const char *ap_ssid, const char *ip)

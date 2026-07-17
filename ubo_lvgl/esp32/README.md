@@ -119,6 +119,50 @@ idf -p /dev/cu.usbmodemXXXX flash monitor   # board on USB; Ctrl-] to exit monit
 
 `idf` with no `-p` auto-detects the port. Exit the serial monitor with `Ctrl-]`.
 
+## PPP over USB (the Ubo Pod build)
+
+There are **two build profiles**. The default one above is WiFi-only and keeps
+its log console on USB. The `.ppp` profile instead carries gRPC-Web traffic to
+ubo-core over the **USB cable itself**, as a PPP link — an lwIP PPP client on the
+board, `pppd` on the Pi.
+
+The C6 has no USB-OTG (its only USB is the fixed-function Serial/JTAG CDC-ACM
+controller), so USB-Ethernet is impossible and PPP is the way to get IP over the
+wire. Envoy already binds `0.0.0.0:50052` in the Pi's host netns, so `10.66.0.1`
+reaches it with no forwarding and **no core-side change at all**.
+
+```bash
+# sdkconfig.defaults* is only read when sdkconfig is absent — remove it first,
+# or the new keys are silently ignored.
+rm -f sdkconfig
+idf -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.ppp" build
+```
+
+> **This profile has no USB logs.** PPP must own the USJ endpoint, so
+> `CONFIG_ESP_CONSOLE_SECONDARY_NONE=y` and `idf monitor` over the cable shows
+> nothing. The primary console is still UART0. Flashing is unaffected (esptool
+> uses ROM download mode). Debug on the default profile; ship the `.ppp` one.
+
+Pi side (installed by `ubo-bootstrap`): `ubo_app/system/udev/99-ubo-esp32-ppp.rules`
+symlinks the board to `/dev/ubo-esp32` and device-activates
+`ubo-esp32-ppp.service`, which runs `pppd` with `10.66.0.1:10.66.0.2`. Plug the
+board in and the link comes up; unplug it and the unit stops.
+
+**Flashing a board that is cabled to a running Pi:** use `./flash.sh`, not bare
+`esptool`. `pppd` holds the port open, and esptool re-enumerates it mid-flash —
+which retriggers udev and would restart `pppd` into the flashing session. The
+script masks the unit for the duration.
+
+Transport selection at boot: if a USB host is present (SOF packets — a bare
+charger sends none, so power-only cabling costs nothing) and the stored
+preference isn't `wifi`, the board comes up on PPP and **never initializes WiFi
+at all**. It then retries the link forever rather than demoting itself, so a Pi
+reboot is ridden out. To move between links, tap the **Use WiFi** / **Use USB**
+button on the disconnect overlay — it persists the choice and reboots (the
+client's base URL is fixed at creation, so switching link means starting over).
+WiFi credentials are kept throughout, so switching to WiFi does not re-run the
+captive portal. The 8s BOOT hold clears creds *and* the transport preference.
+
 ## How it runs
 
 `ubo_app_main.c` brings up the board (`board.c`), the responsive renderer at
@@ -132,8 +176,9 @@ success it starts the client tasks (`client_app.c`) and the touch input task
   (the camera viewfinder is deferred — no `frame_stream` subscription).
 - **dispatch worker** → keypad actions + coalesced volume sets.
 - **touch/BOOT input** → tap a drawn item slot → L1/L2/L3, vertical swipe → UP/DOWN,
-  horizontal swipe → BACK, BOOT tap → HOME, BOOT hold ~8s → clear WiFi + reboot to
-  setup, slide/tap the home volume bar → set volume.
+  horizontal swipe → BACK, BOOT tap → HOME, BOOT hold ~8s → clear WiFi creds +
+  transport preference and reboot to setup, slide/tap the home volume bar → set
+  volume, tap the transport switch on the disconnect overlay → change link + reboot.
 - **captive portal** (only when WiFi can't be joined) → SoftAP + DNS + HTTP form on
   `provisioning.c`; submitting creds saves them to NVS and reboots.
 
@@ -148,12 +193,13 @@ concurrent, not simultaneous.
 
 | File | Responsibility |
 |---|---|
-| `ubo_app_main.c` | `app_main` entry point: board bring-up, renderer init, WiFi join, then start client + input (or the captive portal) |
+| `ubo_app_main.c` | `app_main` entry point: board bring-up, renderer init, transport selection (USB/PPP or WiFi), then start client + input (or the captive portal) |
 | `board.c` | I2C bus, SH8601 QSPI panel, FT3168 touch, TCA9554 IO-expander (LCD reset, speaker amp) |
 | `client_app.c` | The gRPC-Web client: store/event stream tasks, dispatch worker, push-to-talk mic handoff |
 | `input.c` | Touch + BOOT button polling, gesture classification → Ubo keys |
 | `audio.c` | ES8311 codec over I2S: playback ring + task, mic capture task |
-| `net.c` | WiFi STA join, NVS persistence of creds + core endpoint |
+| `net.c` | WiFi STA join, NVS persistence of creds + core endpoint + transport preference |
+| `usb_ppp.c` | PPP/IP over USB Serial/JTAG: USJ driver, esp_netif PPP glue, RX pump, link state (`.ppp` profile only) |
 | `provisioning.c` | Captive portal: SoftAP + DNS catch-all + HTTP setup form |
 
 The renderer itself (LVGL widget tree, view translation, status bar) is **not**
@@ -168,9 +214,14 @@ ESP32-specific.
 2. Audio init (ES8311 + full-duplex I2S) — non-fatal; UI runs without it.
 3. Renderer init on the SH8601 backend (splash shows until the first view).
 4. Spawn the `lvgl` task — the render loop runs from here on.
-5. WiFi: NVS creds first, else the Kconfig seed. On success → start the three
-   client tasks + the input task. On failure → run the captive portal
-   (blocks; reboots after provisioning).
+5. `ubo_net_init_base()`: NVS + netif + event loop — needed by either transport.
+6. **USB** (`.ppp` profile, preference not `wifi`, USB host attached): start the
+   input task, offer the *Use WiFi* switch, and hand the link to `usb_link_task`,
+   which negotiates PPP, starts the client on the first `GOT_IP`, and thereafter
+   keeps the link alive forever. WiFi is never initialized. Otherwise →
+7. **WiFi** (`ubo_net_wifi_init()`): NVS creds first, else the Kconfig seed. On
+   success → start the three client tasks + the input task. On failure → run the
+   captive portal (blocks; reboots after provisioning).
 
 ### FreeRTOS tasks
 
@@ -184,6 +235,8 @@ ESP32-specific.
 | `ubo_input` | `input.c` | 4096 | 5 | Polls touch + BOOT at 50Hz; classifies tap/swipe/hold → keys |
 | `ubo_mic` | `audio.c` | 4096 | 6 | Push-to-talk capture: 16kHz mono frames → chunk callback. Spawned on talk start, deletes itself on stop |
 | `ubo_play` | `audio.c` | 4096 | 5 | Drains the playback ring into the codec; manages rate switches + idle close |
+| `usb_link` | `ubo_app_main.c` | 3072 | 5 | *(`.ppp` profile, USB mode)* Owns the PPP link: negotiate → start client once → wait for link-down → retry forever |
+| `usb_ppp_rx` | `usb_ppp.c` | 3072 | 5 | *(`.ppp` profile, USB mode)* Pumps bytes off the USJ endpoint into lwIP's PPP input |
 
 ### Concurrency model
 

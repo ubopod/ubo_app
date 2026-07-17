@@ -1,0 +1,17 @@
+# PPP link to the ESP32-C6 display client over its USB Serial/JTAG port.
+#
+# 303a:1001 is Espressif's *generic* USB-JTAG/serial VID:PID — it is shared by
+# the C3/C6/S3/H2, so a second Espressif board plugged into the pod would match
+# this rule too. If that ever happens, narrow it with the board's serial:
+#   ATTRS{serial}=="60:55:f9:xx:xx:xx"
+#
+# SYMLINK gives pppd a stable path (/dev/ubo-esp32) rather than a racy ttyACMn.
+# TAG+="systemd" is what makes systemd synthesise the dev-ubo\x2desp32.device
+# unit that ubo-esp32-ppp.service is BindsTo, and SYSTEMD_WANTS starts the link
+# on plug — so the unit needs no [Install] section and never runs at boot with
+# no board attached.
+#
+# NOTE: esptool re-enumerates this port mid-flash, which would retrigger this
+# rule and restart pppd into the flashing session. ubo_lvgl/esp32/flash.sh masks
+# the unit for the duration of a flash; use it rather than calling esptool bare.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="1001", SYMLINK+="ubo-esp32", TAG+="systemd", ENV{SYSTEMD_WANTS}+="ubo-esp32-ppp.service"

@@ -1,0 +1,57 @@
+[Unit]
+Description=Ubo PPP link to the ESP32 display client over USB Serial/JTAG
+# Device-activated by /etc/udev/rules.d/99-ubo-esp32-ppp.rules. Deliberately no
+# [Install] section: the unit is installed-but-disabled (enabled=False in
+# bootstrap.SERVICES) and is pulled in by the udev rule when the board is
+# plugged in. BindsTo stops it again the moment the device goes away.
+BindsTo=dev-ubo\x2desp32.device
+After=dev-ubo\x2desp32.device
+
+[Service]
+Type=simple
+User=root
+# `local`, not `modem`: the CDC-ACM port is virtual and carries no real modem
+# control lines (the two options are opposites — passing both is a bug).
+# `novj` mirrors CONFIG_LWIP_PPP_VJ_HEADER_COMPRESSION=n in the firmware's .ppp
+# profile; `lcp-echo-*` mirrors the firmware's LCP echo so a dead peer is spotted
+# within ~10s on both ends. The baud rate is meaningless for a virtual port but
+# pppd wants the positional argument.
+#
+# The peer is anonymous (the udev rule matches Espressif's generic USB-JTAG
+# VID:PID, which is spoofable), so the address/route options are pinned
+# defensively rather than left to pppd defaults:
+#   noipdefault + the explicit local:remote  -> the peer cannot choose the IPs
+#   (ipcp-accept-* are off by default; do NOT add them)
+#   nodefaultroute + noproxyarp               -> the peer never enters the Pi's
+#   routing/ARP tables; it only reaches Envoy on 0.0.0.0:50052 (host netns)
+#   noipv6                                    -> matches the firmware (IPV6CP off)
+#   refuse-*                                  -> no auth handshake is negotiated
+# ExecStartPost/ExecStopPost enforce the "no forwarding" intent explicitly, so it
+# doesn't silently depend on the ambient FORWARD policy (which the hotspot's
+# ip_forward=1 can leave permissive). `-w` waits for a free slot; `|| true` keeps
+# a missing iptables from failing the unit on non-standard images.
+ExecStartPre=-/sbin/iptables -w -D FORWARD -i ubo-esp32-ppp0 -j DROP
+ExecStart=/usr/sbin/pppd /dev/ubo-esp32 115200 10.66.0.1:10.66.0.2 \
+    local noauth noipdefault nodefaultroute noproxyarp noipv6 noccp novj \
+    refuse-pap refuse-chap refuse-mschap refuse-mschap-v2 \
+    ifname ubo-esp32-ppp0 nocrtscts nodetach \
+    persist maxfail 0 holdoff 3 lcp-echo-interval 3 lcp-echo-failure 3
+ExecStartPost=-/sbin/iptables -w -I FORWARD -i ubo-esp32-ppp0 -j DROP
+ExecStopPost=-/sbin/iptables -w -D FORWARD -i ubo-esp32-ppp0 -j DROP
+Restart=always
+RestartSec=3
+KillMode=control-group
+
+# pppd needs only network admin + the tty; confine the rest so a bug in its
+# HDLC parsing (fed by an untrusted peer) has a small blast radius. Kept
+# deliberately mild: ProtectSystem=full (not strict) leaves /run writable for the
+# pid file, and ProtectKernelModules is omitted so the kernel can autoload the
+# ppp modules on the first link.
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_UNIX AF_PPPOX AF_PACKET AF_NETLINK

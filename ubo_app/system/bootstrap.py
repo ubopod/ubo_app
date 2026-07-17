@@ -16,6 +16,7 @@ from sys import stderr, stdout
 from typing import Literal, TypedDict
 
 from ubo_app.constants import INSTALLATION_PATH, USERNAME
+from ubo_app.utils.apt import install_package
 
 RETRIES = 5
 
@@ -32,6 +33,9 @@ SERVICES: list[Service] = [
     Service(name='ubo-system', scope='system', enabled=True),
     Service(name='ubo-hotspot', scope='system', enabled=False),
     Service(name='ubo-kiosk', scope='system', enabled=False),
+    # Device-activated by 99-ubo-esp32-ppp.rules when the ESP32 display client is
+    # plugged in; never started at boot, hence enabled=False.
+    Service(name='ubo-esp32-ppp', scope='system', enabled=False),
     Service(name='ubo-app', scope='user', enabled=True),
 ]
 
@@ -225,6 +229,37 @@ def configure_device() -> None:  # noqa: C901
             .replace('{{INSTALLATION_PATH}}', INSTALLATION_PATH)
             .replace('{{USERNAME}}', USERNAME),
         )
+
+    # Create the udev rule that device-activates the ESP32 PPP link, then make
+    # udev pick it up without waiting for a reboot.
+    udev_rules_path = Path('/etc/udev/rules.d')
+    udev_rules_path.mkdir(parents=True, exist_ok=True)
+    with (udev_rules_path / '99-ubo-esp32-ppp.rules').open('w') as file:
+        file.write(
+            (Path(__file__).parent / 'udev' / '99-ubo-esp32-ppp.rules')
+            .open()
+            .read()
+            .replace('{{INSTALLATION_PATH}}', INSTALLATION_PATH)
+            .replace('{{USERNAME}}', USERNAME),
+        )
+    subprocess.run(
+        ['/usr/bin/env', 'udevadm', 'control', '--reload-rules'],
+        check=True,
+    )
+    subprocess.run(
+        ['/usr/bin/env', 'udevadm', 'trigger', '--subsystem-match=tty'],
+        check=True,
+    )
+
+    # pppd, which the unit above execs. Present on Raspberry Pi OS full images,
+    # so this is best-effort: install_package raises ValueError both when the
+    # package is already installed and when it isn't in the APT cache, and
+    # neither is a reason to fail the bootstrap.
+    try:
+        install_package('ppp')
+    except ValueError as exception:
+        stdout.write(f'Skipping ppp package installation: {exception}\n')
+        stdout.flush()
 
 
 def _prepare(

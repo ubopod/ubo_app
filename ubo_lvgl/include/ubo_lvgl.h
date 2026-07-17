@@ -275,6 +275,10 @@ int ubo_lvgl_hit_test(int x, int y);
  * set the volume by tapping/sliding the bar. Thread-safe. */
 int ubo_lvgl_hit_volume(int x, int y);
 
+/* Hit-test a touch point against the transport switch (see below). Returns 1 if
+ * the point is on it and it is currently visible, 0 otherwise. Thread-safe. */
+int ubo_lvgl_hit_transport_switch(int x, int y);
+
 void ubo_lvgl_set_status_bar(const ubo_status_bar *s);
 void ubo_lvgl_set_blanked(bool blanked);    /* backlight off + black overlay */
 void ubo_lvgl_set_connected(bool connected); /* show/hide disconnect overlay  */
@@ -285,6 +289,13 @@ void ubo_lvgl_set_disconnect_status(int attempt, int seconds);
 /* Show the WiFi-setup cover: "Join '<ap_ssid>' then open http://<ip>". Used by
  * the ESP32 firmware while the captive portal is up. */
 void ubo_lvgl_set_provisioning_status(const char *ap_ssid, const char *ip);
+
+/* Offer a labelled touch target on the disconnect overlay for moving between
+ * links, e.g. "Use WiFi" while running over the USB (PPP) cable, or "Use USB"
+ * while on WiFi. NULL hides it. The ESP32 firmware sets this once at boot to
+ * match the transport it came up on; pair it with ubo_lvgl_hit_transport_switch()
+ * in the touch handler. Other targets never call it, so nothing is drawn. */
+void ubo_lvgl_set_transport_switch(const char *label);
 
 /* Run the LVGL loop.
  *   threaded=false: block on the calling thread until quit (sim / tests).

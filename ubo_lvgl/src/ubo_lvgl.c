@@ -505,6 +505,21 @@ void ubo_lvgl_set_provisioning_status(const char *ap_ssid, const char *ip)
     ubo_unlock();
 }
 
+void ubo_lvgl_set_transport_switch(const char *label)
+{
+    ubo_lock();
+    ubo_overlay_transport_switch(label);
+    ubo_unlock();
+}
+
+int ubo_lvgl_hit_transport_switch(int x, int y)
+{
+    ubo_lock();
+    const bool hit = ubo_overlay_hit_transport_switch(x, y);
+    ubo_unlock();
+    return hit ? 1 : 0;
+}
+
 /* ------------------------------------------------------------------------- */
 /* Loop                                                                      */
 /* ------------------------------------------------------------------------- */

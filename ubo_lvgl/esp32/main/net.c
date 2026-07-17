@@ -45,7 +45,7 @@ static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data) {
     }
 }
 
-void ubo_net_init(void) {
+void ubo_net_init_base(void) {
     esp_err_t r = nvs_flash_init();
     if (r == ESP_ERR_NVS_NO_FREE_PAGES || r == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -56,6 +56,9 @@ void ubo_net_init(void) {
     s_eg = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+}
+
+void ubo_net_wifi_init(void) {
     esp_netif_create_default_wifi_sta();
 
     const wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -64,6 +67,11 @@ void ubo_net_init(void) {
         WIFI_EVENT, ESP_EVENT_ANY_ID, on_event, NULL, NULL));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(
         IP_EVENT, IP_EVENT_STA_GOT_IP, on_event, NULL, NULL));
+}
+
+void ubo_net_init(void) {
+    ubo_net_init_base();
+    ubo_net_wifi_init();
 }
 
 bool ubo_net_connect(const char *ssid, const char *pass, uint32_t timeout_ms) {
@@ -131,6 +139,47 @@ void ubo_net_creds_clear(void) {
     nvs_commit(h);
     nvs_close(h);
     ESP_LOGI(TAG, "stored creds cleared");
+}
+
+/* Transport preference. Stored in the same namespace as the creds, so the BOOT
+ * long-hold (ubo_net_creds_clear -> nvs_erase_all) resets it to the USB default
+ * along with everything else — one factory-reset gesture, no second one to
+ * document. "usb" only means *prefer* USB: with no host attached the boot path
+ * still lands on WiFi, which is what makes offering "Use USB" always safe. The
+ * "wifi" value is one-shot — app_main resets it back to "usb" as it consumes it
+ * at boot, so a WiFi choice lasts exactly one boot and never sticks. */
+/* The transport the board actually booted on (not the stored preference — the
+ * two differ when pref is "usb" but no host was attached, so we fell through to
+ * WiFi). The on-screen switch offers to move to the *other* one, so it must be
+ * driven from this, not from the pref. Set once at boot. */
+static bool s_active_is_wifi;
+
+void ubo_net_transport_set_active(bool wifi) { s_active_is_wifi = wifi; }
+
+bool ubo_net_transport_active_is_wifi(void) { return s_active_is_wifi; }
+
+bool ubo_net_transport_is_wifi(void) {
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS, NVS_READONLY, &h) != ESP_OK) {
+        return false;
+    }
+    char v[8] = {0};
+    size_t vl = sizeof(v);
+    const esp_err_t r = nvs_get_str(h, "transport", v, &vl);
+    nvs_close(h);
+    return r == ESP_OK && strcmp(v, "wifi") == 0;
+}
+
+void ubo_net_transport_save(bool wifi) {
+    nvs_handle_t h;
+    if (nvs_open(NVS_NS, NVS_READWRITE, &h) != ESP_OK) {
+        ESP_LOGE(TAG, "transport save: nvs_open failed");
+        return;
+    }
+    ESP_ERROR_CHECK(nvs_set_str(h, "transport", wifi ? "wifi" : "usb"));
+    ESP_ERROR_CHECK(nvs_commit(h));
+    nvs_close(h);
+    ESP_LOGI(TAG, "transport preference saved: %s", wifi ? "wifi" : "usb");
 }
 
 void ubo_net_core_save(const char *host, const char *port) {

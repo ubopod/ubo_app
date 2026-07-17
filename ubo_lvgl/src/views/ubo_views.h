@@ -168,4 +168,9 @@ void ubo_overlay_disconnected_status(int attempt, int seconds);
 /* WiFi-setup cover: "Join '<ap_ssid>' then open http://<ip>" (captive portal). */
 void ubo_overlay_provisioning(const char *ap_ssid, const char *ip);
 
+/* Optional touch target on the disconnect cover for switching link (USB <-> WiFi).
+ * NULL hides it. hit() is false unless it is currently visible. */
+void ubo_overlay_transport_switch(const char *label);
+bool ubo_overlay_hit_transport_switch(int x, int y);
+
 #endif /* UBO_VIEWS_H */

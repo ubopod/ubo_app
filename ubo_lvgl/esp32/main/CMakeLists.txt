@@ -7,6 +7,7 @@ idf_component_register(
         "input.c"
         "provisioning.c"
         "audio.c"
+        "usb_ppp.c"
     INCLUDE_DIRS "."
     REQUIRES
         ubo_lvgl_renderer
@@ -17,6 +18,7 @@ idf_component_register(
         esp_driver_gpio
         esp_driver_i2c
         esp_driver_i2s
+        esp_driver_usb_serial_jtag
         esp_codec_dev
         esp_wifi
         esp_event
