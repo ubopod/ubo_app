@@ -50,6 +50,15 @@ GRPC_NATIVE_PROXY_LISTEN_PORT = int(
     os.environ.get('UBO_GRPC_NATIVE_PROXY_LISTEN_PORT', '50053'),
 )
 
+# Lightweight raw-TCP listener ("tcp-lite") for MCU/ESP32 clients — a second,
+# parallel transport alongside the grpclib/Envoy path, carrying only
+# DispatchAction/SubscribeStore/SubscribeEvent. Bound to the LAN in-process
+# (like MCP_GATEWAY_LISTEN_ADDRESS) so the device reaches it directly. Port
+# 50054 avoids the 50051/50052/50053/4321/4322 range. See ubo_app/rpc/mcu_server.py.
+DISABLE_MCU_SERVER = str_to_bool(os.environ.get('UBO_DISABLE_MCU_SERVER', 'False'))
+MCU_LISTEN_ADDRESS = os.environ.get('UBO_MCU_LISTEN_ADDRESS', '0.0.0.0')  # noqa: S104
+MCU_LISTEN_PORT = int(os.environ.get('UBO_MCU_LISTEN_PORT', '50054'))
+
 # Most of these should be changed in ubo-app and ubo-system-manager simultaneously to
 # avoid breaking the system.
 # TODO(sassanh): Make above comment visible to the end user when a change # noqa: FIX002

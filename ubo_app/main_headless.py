@@ -54,13 +54,18 @@ def main() -> None:
 
     logger.info('-------------------Starting the headless core-------------------')
 
-    from ubo_app.constants import DISABLE_GRPC
+    from ubo_app.constants import DISABLE_GRPC, DISABLE_MCU_SERVER
     from ubo_app.service import worker_thread
 
     if not DISABLE_GRPC:
         from ubo_app.rpc.server import serve as grpc_serve
 
         worker_thread.run_coroutine(grpc_serve())
+
+    if not DISABLE_MCU_SERVER:
+        from ubo_app.rpc.mcu_server import serve as mcu_serve
+
+        worker_thread.run_coroutine(mcu_serve())
 
     load_services()
 

@@ -50,12 +50,12 @@ static void lvgl_task(void *arg) {
 }
 
 #ifdef CONFIG_UBO_USB_PPP_ENABLE
-/* Own the PPP link for the lifetime of the boot. The gRPC client is started once,
- * on the first successful negotiation, and its own reconnect backoff
- * (client_core.c) then rides out any later PPP outage — while ppp0 is down its
- * HTTP requests simply fail and it retries, raising the disconnect overlay that
- * carries the "Use WiFi" switch. So there is nothing to tear down and restart
- * here; we only have to keep the link itself coming back. */
+/* Own the PPP link for the lifetime of the boot. The client (either transport)
+ * is started once, on the first successful negotiation, and its own reconnect
+ * backoff (client_core.c) then rides out any later PPP outage — while ppp0 is
+ * down its requests simply fail and it retries, raising the disconnect overlay
+ * that carries the "Use WiFi" switch. So there is nothing to tear down and
+ * restart here; we only have to keep the link itself coming back. */
 static void usb_link_task(void *arg) {
     (void)arg;
     const uint32_t probe_ms = CONFIG_UBO_USB_PPP_PROBE_TIMEOUT_S * 1000;
@@ -64,9 +64,13 @@ static void usb_link_task(void *arg) {
     for (;;) {
         if (ubo_usb_ppp_start(probe_ms) == 0) {
             if (!client_started) {
-                ESP_LOGI(TAG, "core endpoint (usb): %s",
-                         CONFIG_UBO_USB_CORE_GRPC_WEB_URL);
-                ubo_client_start(CONFIG_UBO_USB_CORE_GRPC_WEB_URL);
+#ifdef UBO_TRANSPORT_TCP_LITE
+                const char *core_url = CONFIG_UBO_USB_CORE_MCU_ADDR;
+#else
+                const char *core_url = CONFIG_UBO_USB_CORE_GRPC_WEB_URL;
+#endif
+                ESP_LOGI(TAG, "core endpoint (usb): %s", core_url);
+                ubo_client_start(core_url);
                 client_started = true;
             }
             ubo_usb_ppp_wait_link_down();
@@ -163,11 +167,17 @@ void app_main(void) {
     const uint32_t timeout_ms = CONFIG_UBO_WIFI_CONNECT_TIMEOUT_S * 1000;
     if (resolve_creds(ssid, pass) && ubo_net_connect(ssid, pass, timeout_ms)) {
         ubo_net_creds_save(ssid, pass); /* persist a working seed/retry */
+#ifdef UBO_TRANSPORT_TCP_LITE
+        /* tcp-lite: menuconfig-baked host:port only, no NVS override yet
+         * (phase 1 -- see UBO_CORE_MCU_ADDR's Kconfig help). */
+        const char *core_url = CONFIG_UBO_CORE_MCU_ADDR;
+#else
         /* Core endpoint: provisioned host/port (NVS) wins over the Kconfig URL. */
         char url[128];
         const char *core_url = ubo_net_core_url(url, sizeof(url))
                                    ? url
                                    : CONFIG_UBO_CORE_GRPC_WEB_URL;
+#endif
         ESP_LOGI(TAG, "core endpoint (wifi): %s (free heap: %lu bytes)", core_url,
                  (unsigned long)esp_get_free_heap_size());
         ubo_client_start(core_url);

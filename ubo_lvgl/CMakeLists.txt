@@ -9,6 +9,10 @@ option(UBO_WITH_SDL "Build the SDL desktop backend" ON)
 option(UBO_WITH_ST7789 "Build the ST7789 SPI backend (Raspberry Pi)" OFF)
 option(UBO_WITH_CLIENT "Build the native C web-grpc client (libcurl + nanopb)" ON)
 
+set(UBO_TRANSPORT "tcp_lite" CACHE STRING
+    "Wire transport for the native C client: tcp_lite (default, raw TCP) or grpc_web (Envoy/HTTP)")
+set_property(CACHE UBO_TRANSPORT PROPERTY STRINGS grpc_web tcp_lite)
+
 enable_testing()
 
 # Point LVGL at our lv_conf.h and trim its demo/example builds.

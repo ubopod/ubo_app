@@ -42,10 +42,33 @@ TESTS_ROOT = Path(__file__).resolve().parent.parent
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Iterable
+    from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable
     from types import TracebackType
 
     from _pytest.fixtures import SubRequest  # pyright: ignore[reportPrivateImportUsage]
+
+
+def _close_rpc_server(close: Callable[[], Awaitable[None]], label: str) -> None:
+    """Close an RPC server on the worker thread, waiting for it synchronously.
+
+    Waits on an explicit completion signal instead of a fixed sleep so shutdown
+    is deterministic and avoids port-reuse flakes between tests.
+    """
+    import threading
+
+    import ubo_app.service
+
+    closed = threading.Event()
+
+    async def _close_and_signal() -> None:
+        try:
+            await close()
+        finally:
+            closed.set()
+
+    ubo_app.service.worker_thread.run_coroutine(_close_and_signal())
+    if not closed.wait(timeout=5):
+        logger.warning('%s did not close within 5s', label)
 
 
 # Background threads that must fully exit before the per-test module cleanup
@@ -111,6 +134,12 @@ class AppContext:
         from ubo_app.service import worker_thread
 
         worker_thread.run_coroutine(grpc_serve())
+
+        # Start the MCU raw-TCP listener alongside the gRPC server, mirroring
+        # the boot above — full parity between the two listeners in tests.
+        from ubo_app.rpc.mcu_server import serve as mcu_serve
+
+        worker_thread.run_coroutine(mcu_serve())
 
         # Set up side effects and menu event handlers
         from ubo_app.side_effects import setup_side_effects
@@ -195,27 +224,14 @@ class AppContext:
             return
         self._cleanup_is_called = True
 
-        # Close the gRPC server first to release the port before shutdown.
-        # Wait on an explicit completion signal instead of a fixed sleep so
-        # that shutdown is deterministic and avoids port-reuse flakes.
-        import threading
-
+        # Close the gRPC server and the MCU raw-TCP listener first to release
+        # their ports before shutdown.
         import ubo_app.service
+        from ubo_app.rpc.mcu_server import close_server as close_mcu_server
         from ubo_app.rpc.server import close_server
 
-        server_closed = threading.Event()
-
-        async def _close_and_signal() -> None:
-            try:
-                await close_server()
-            finally:
-                server_closed.set()
-
-        ubo_app.service.worker_thread.run_coroutine(_close_and_signal())
-
-        # Wait up to 5s for the server to actually close
-        if not server_closed.wait(timeout=5):
-            logger.warning('gRPC server did not close within 5s')
+        _close_rpc_server(close_server, 'gRPC server')
+        _close_rpc_server(close_mcu_server, 'MCU server')
 
         from redux import FinishAction
 

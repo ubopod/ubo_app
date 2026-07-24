@@ -32,7 +32,18 @@ config UBO_CORE_GRPC_WEB_URL
     default "http://192.168.1.100:50052/grpc"
     help
         Base URL of ubo-core's Envoy gRPC-Web endpoint, e.g.
-        http://<host-lan-ip>:50052/grpc. Plain HTTP (no TLS).
+        http://<host-lan-ip>:50052/grpc. Plain HTTP (no TLS). Ignored when
+        built with -DUBO_TRANSPORT=tcp_lite; see UBO_CORE_MCU_ADDR instead.
+
+config UBO_CORE_MCU_ADDR
+    string "Core MCU raw-TCP address (tcp-lite builds only)"
+    default "192.168.1.100:50054"
+    help
+        host:port of ubo-core's raw-TCP "tcp-lite" listener (mcu_server.py),
+        e.g. <host-lan-ip>:50054. No scheme, no path — unlike
+        UBO_CORE_GRPC_WEB_URL this bypasses Envoy/HTTP entirely. Only used
+        when built with -DUBO_TRANSPORT=tcp_lite; ignored otherwise. No NVS
+        captive-portal override yet (menuconfig-baked only, phase 1).
 
 config UBO_USB_PPP_ENABLE
     bool "Prefer PPP-over-USB (USB Serial/JTAG) when a host is attached"
@@ -71,6 +82,20 @@ config UBO_USB_CORE_GRPC_WEB_URL
         of the PPP link. Must match the local address in the pppd unit
         (10.66.0.1:10.66.0.2). Used instead of UBO_CORE_GRPC_WEB_URL and instead
         of any NVS-provisioned host/port, which describe the WiFi-side address.
+        Ignored when built with -DUBO_TRANSPORT=tcp_lite; see
+        UBO_USB_CORE_MCU_ADDR instead.
+
+config UBO_USB_CORE_MCU_ADDR
+    string "Core MCU raw-TCP address over USB (tcp-lite builds only)"
+    default "10.66.0.1:50054"
+    depends on UBO_USB_PPP_ENABLE
+    help
+        host:port of ubo-core's raw-TCP "tcp-lite" listener (mcu_server.py) as
+        seen from the far end of the PPP link. Must match the local address in
+        the pppd unit (10.66.0.1:10.66.0.2) -- same host as
+        UBO_USB_CORE_GRPC_WEB_URL, different port, no scheme/path. Only used
+        when built with -DUBO_TRANSPORT=tcp_lite; ignored otherwise. No NVS
+        override (the WiFi-side provisioning flow doesn't apply to PPP).
 
 config UBO_MIC_CHUNK_MS
     int "Push-to-talk mic chunk size (ms)"

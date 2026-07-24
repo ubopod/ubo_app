@@ -4,7 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef UBO_TRANSPORT_TCP_LITE
+#define DEFAULT_MCU_PORT 50054
+#else
 #define DEFAULT_ENVOY_PORT 50052
+#endif
 
 static void copy_str(char *dst, size_t cap, const char *src) {
     snprintf(dst, cap, "%s", src);
@@ -50,8 +54,15 @@ bool ubo_client_config_parse(int argc, char **argv, ubo_client_config *out) {
     }
 
     if (out->web_grpc_url[0] == '\0') {
+#ifdef UBO_TRANSPORT_TCP_LITE
+        /* For a tcp-lite build the same --web-grpc-url / UBO_LVGL_GUI_WEB_GRPC_URL
+         * field is reinterpreted as a plain "host:port", not an HTTP URL. */
+        snprintf(out->web_grpc_url, sizeof(out->web_grpc_url), "%s:%d",
+                 out->host, DEFAULT_MCU_PORT);
+#else
         snprintf(out->web_grpc_url, sizeof(out->web_grpc_url),
                  "http://%s:%d/grpc", out->host, DEFAULT_ENVOY_PORT);
+#endif
     }
     return true;
 }

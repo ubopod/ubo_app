@@ -2,7 +2,6 @@
 # UBO_WITH_CLIENT is ON. Links the libubo_lvgl renderer, libcurl (HTTP/1.1),
 # and the nanopb runtime + committed generated bindings.
 
-find_package(CURL REQUIRED)
 find_package(Threads REQUIRED)
 
 set(NANOPB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/nanopb)
@@ -33,13 +32,27 @@ add_custom_target(ubo_client_proto_regen
     VERBATIM
 )
 
+# Select the RPC-glue + transport pair by UBO_TRANSPORT. Both frame codecs
+# (grpc_web_frame.c, tcp_lite_frame.c) are always compiled; only the transport
+# implementation differs. libcurl is required only by the grpc_web branch, so a
+# tcp_lite-only dev machine doesn't need it installed.
+if(UBO_TRANSPORT STREQUAL "tcp_lite")
+    set(UBO_TRANSPORT_SOURCES tcp_lite_transport.c ubo_rpc_tcp_lite.c)
+    set(UBO_TRANSPORT_LIBS "")
+    add_compile_definitions(UBO_TRANSPORT_TCP_LITE)
+else()
+    find_package(CURL REQUIRED)
+    set(UBO_TRANSPORT_SOURCES http_transport.c ubo_rpc.c)
+    set(UBO_TRANSPORT_LIBS CURL::libcurl)
+endif()
+
 # Reusable client core (transport + framing + RPC + config), no main / no
 # renderer dependency — shared by the client executable and the test harnesses.
 # view_translate.c is added in Phase 3.
 add_library(ubo_client_core STATIC
     grpc_web_frame.c
-    http_transport.c
-    ubo_rpc.c
+    tcp_lite_frame.c
+    ${UBO_TRANSPORT_SOURCES}
     client_config.c
     client_core.c
     view_translate.c
@@ -49,7 +62,7 @@ target_include_directories(ubo_client_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
 )
-target_link_libraries(ubo_client_core PUBLIC ubo_nanopb CURL::libcurl Threads::Threads)
+target_link_libraries(ubo_client_core PUBLIC ubo_nanopb ${UBO_TRANSPORT_LIBS} Threads::Threads)
 target_compile_options(ubo_client_core PRIVATE -Wall -Wextra)
 
 add_executable(ubo_lvgl_client client_main.c)
@@ -87,12 +100,18 @@ add_executable(ubo_client_test_frame tests/test_frame.c)
 target_link_libraries(ubo_client_test_frame PRIVATE ubo_client_core)
 target_compile_options(ubo_client_test_frame PRIVATE -Wall -Wextra)
 
+# Phase-2 tcp-lite framing codec unit tests.
+add_executable(ubo_client_test_tcp_lite_frame tests/test_tcp_lite_frame.c)
+target_link_libraries(ubo_client_test_tcp_lite_frame PRIVATE ubo_client_core)
+target_compile_options(ubo_client_test_tcp_lite_frame PRIVATE -Wall -Wextra)
+
 # Chunked low-res frame path: nanopb round-trip + headless row-blit/upscale.
 add_executable(ubo_client_test_chunk tests/test_chunk.c)
 target_link_libraries(ubo_client_test_chunk PRIVATE ubo_client_core ubo_lvgl)
 target_compile_options(ubo_client_test_chunk PRIVATE -Wall -Wextra)
 
 add_test(NAME frame_codec COMMAND ubo_client_test_frame)
+add_test(NAME tcp_lite_frame_codec COMMAND ubo_client_test_tcp_lite_frame)
 add_test(NAME frame_chunk COMMAND ubo_client_test_chunk)
 add_test(NAME decode_home
          COMMAND ubo_client_test_decode home
