@@ -122,7 +122,10 @@ static esp_err_t root_get(httpd_req_t *req) {
         "<p><label>Ubo hostname/IP (optional)<br><input name=host "
         "placeholder=\"e.g. 192.168.1.50\" "
         "style=\"width:100%;padding:8px\"></label></p>"
-        "<p><label>Port<br><input name=port value=\"50052\" inputmode=numeric "
+        /* Pre-filled with this build's transport port: 50054 for tcp-lite
+         * (mcu_server.py), 50052 for gRPC-Web via Envoy. */
+        "<p><label>Port<br><input name=port value=\"" UBO_DEFAULT_PORT
+        "\" inputmode=numeric "
         "style=\"width:100%;padding:8px\"></label></p>"
         "<p><button type=submit style=\"padding:10px 16px\">Connect</button></p>"
         "</form></body></html>");
@@ -162,7 +165,8 @@ static esp_err_t save_post(httpd_req_t *req) {
     }
 
     ubo_net_creds_save(ssid, pass);
-    ubo_net_core_save(host, port); /* empty host -> 0.0.0.0, empty port -> 50052 */
+    /* empty host -> 0.0.0.0, empty port -> UBO_DEFAULT_PORT */
+    ubo_net_core_save(host, port);
     httpd_resp_set_type(req, "text/html");
     httpd_resp_sendstr(req,
                        "<!DOCTYPE html><html><body style=\"font-family:sans-serif\">"

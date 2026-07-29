@@ -589,10 +589,21 @@ jobs:
           if-no-files-found: error
 
   esp32:
-    name: Build ESP32-C6 Firmware
+    name: Build ESP32 Firmware (${{ matrix.board }})
     needs:
       - version
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The USB/PPP profile is the Ubo Pod build and is C6-only for now.
+          - target: esp32c6
+            board: waveshare-c6-amoled
+            ppp: true
+          - target: esp32s3
+            board: esp-box-3
+            ppp: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -603,49 +614,59 @@ jobs:
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v6.0.1
-          target: esp32c6
+          target: ${{ matrix.target }}
           path: ubo_lvgl/esp32
-          command: idf.py build && idf.py merge-bin -o ubo-lvgl-esp32c6-merged.bin
+          command: >-
+            idf.py build &&
+            idf.py merge-bin -o ubo-lvgl-${{ matrix.target }}-merged.bin
 
+      # Staged per target: bootloader.bin / partition-table.bin /
+      # flasher_args.json have the same names for both boards and would
+      # otherwise collide when the artifacts are merged at publish time.
       - name: Stage Artifacts
         env:
           VERSION: ${{ needs.version.outputs.version }}
+          TARGET: ${{ matrix.target }}
         run: |
           BUILD=ubo_lvgl/esp32/build
-          mkdir -p esp32-firmware
-          cp "$BUILD/ubo-lvgl-esp32c6-merged.bin" \
-            "esp32-firmware/ubo-lvgl-esp32c6-$VERSION-merged.bin"
-          cp "$BUILD/bootloader/bootloader.bin" esp32-firmware/
-          cp "$BUILD/partition_table/partition-table.bin" esp32-firmware/
-          cp "$BUILD/ubo_lvgl_esp32c6.bin" esp32-firmware/
-          cp "$BUILD/flasher_args.json" esp32-firmware/
+          OUT="esp32-firmware/$TARGET"
+          mkdir -p "$OUT"
+          cp "$BUILD/ubo-lvgl-$TARGET-merged.bin" \
+            "$OUT/ubo-lvgl-$TARGET-$VERSION-merged.bin"
+          cp "$BUILD/bootloader/bootloader.bin" "$OUT/"
+          cp "$BUILD/partition_table/partition-table.bin" "$OUT/"
+          cp "$BUILD/ubo_lvgl_$TARGET.bin" "$OUT/"
+          cp "$BUILD/flasher_args.json" "$OUT/"
 
       # Second profile: PPP over the USB Serial/JTAG cable instead of WiFi (the
       # Ubo Pod build). It hands the USJ endpoint to PPP, so it has no USB log
       # console — which is why it is a separate image and not the default.
       # sdkconfig.defaults* is only read when sdkconfig is absent, hence the rm.
       - name: Build Firmware (USB/PPP profile)
+        if: matrix.ppp
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v6.0.1
-          target: esp32c6
+          target: ${{ matrix.target }}
           path: ubo_lvgl/esp32
           command: >-
             rm -rf build sdkconfig sdkconfig.old &&
             idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.ppp" build &&
-            idf.py merge-bin -o ubo-lvgl-esp32c6-usbppp-merged.bin
+            idf.py merge-bin -o ubo-lvgl-${{ matrix.target }}-usbppp-merged.bin
 
       - name: Stage USB/PPP Artifact
+        if: matrix.ppp
         env:
           VERSION: ${{ needs.version.outputs.version }}
+          TARGET: ${{ matrix.target }}
         run: |
-          cp ubo_lvgl/esp32/build/ubo-lvgl-esp32c6-usbppp-merged.bin \
-            "esp32-firmware/ubo-lvgl-esp32c6-$VERSION-usbppp-merged.bin"
+          cp "ubo_lvgl/esp32/build/ubo-lvgl-$TARGET-usbppp-merged.bin" \
+            "esp32-firmware/$TARGET/ubo-lvgl-$TARGET-$VERSION-usbppp-merged.bin"
 
       - name: Upload Firmware
         uses: actions/upload-artifact@v4
         with:
-          name: esp32c6-firmware-${{ needs.version.outputs.version }}
+          name: esp32-firmware-${{ matrix.target }}-${{ needs.version.outputs.version }}
           path: esp32-firmware/
           if-no-files-found: error
 
@@ -746,10 +767,13 @@ jobs:
           name: services-packages
           path: artifacts
 
+      # One artifact per board; merge-multiple flattens them into the shared
+      # esp32-firmware/ tree, where each board keeps its own <target>/ subdir.
       - name: Procure ESP32 Firmware
         uses: actions/download-artifact@v4
         with:
-          name: esp32c6-firmware-${{ needs.version.outputs.version }}
+          pattern: esp32-firmware-*-${{ needs.version.outputs.version }}
+          merge-multiple: true
           path: esp32-firmware
 
       - name: Split Large Files into 2GB chunks in a for loop only if they are
@@ -784,7 +808,7 @@ jobs:
         with:
           files: |
             artifacts/*
-            esp32-firmware/ubo-lvgl-esp32c6-*-merged.bin
+            esp32-firmware/*/ubo-lvgl-esp32*-merged.bin
           tag_name: v${{ needs.version.outputs.version }}
           body: |
             PyPI package: https://pypi.org/project/${{ needs.version.outputs.name }}/${{ needs.version.outputs.version }}

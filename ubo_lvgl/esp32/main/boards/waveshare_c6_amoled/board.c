@@ -1,7 +1,11 @@
 #include "board.h"
 
+#include "display/backend_esp_lcd.h"
 #include "driver/spi_master.h"
+#include "es8311_codec.h"
 #include "esp_check.h"
+#include "esp_codec_dev_defaults.h"
+#include "esp_heap_caps.h"
 #include "esp_io_expander_tca9554.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
@@ -17,7 +21,7 @@ static const char *TAG = "ubo_board";
  * Created in board_display_init, reused by board_speaker_amp_enable. */
 static esp_io_expander_handle_t s_io_expander;
 
-/* ── Pin map (fixed for ESP32-C6-Touch-AMOLED-1.8) ── */
+/* ── Pin map (fixed for ESP32-C6-Touch-AMOLED-1.8; geometry in board_pins.h) ── */
 #define LCD_HOST SPI2_HOST
 #define PIN_LCD_CS 5
 #define PIN_LCD_PCLK 0
@@ -27,6 +31,7 @@ static esp_io_expander_handle_t s_io_expander;
 #define PIN_LCD_D3 4
 #define PIN_TOUCH_SCL 7
 #define PIN_TOUCH_SDA 8
+#define PIN_TOUCH_INT 15
 #define LCD_BITS_PER_PIXEL 16
 
 /* SH8601 init sequence (Waveshare): sleep-out, TE on, brightness ctrl, window
@@ -58,8 +63,7 @@ i2c_master_bus_handle_t board_i2c_init(void) {
     return bus;
 }
 
-esp_lcd_panel_handle_t board_display_init(i2c_master_bus_handle_t i2c,
-                                          esp_lcd_panel_io_handle_t *out_io) {
+esp_lcd_panel_handle_t board_display_init(i2c_master_bus_handle_t i2c) {
     /* 1. Pulse the panel reset lines through the TCA9554 IO-expander (pins 4,5). */
     esp_io_expander_handle_t io_expander = NULL;
     ESP_ERROR_CHECK(esp_io_expander_new_i2c_tca9554(
@@ -105,9 +109,19 @@ esp_lcd_panel_handle_t board_display_init(i2c_master_bus_handle_t i2c,
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel, true));
     ESP_LOGI(TAG, "SH8601 panel ready (%dx%d)", BOARD_LCD_H_RES, BOARD_LCD_V_RES);
-    if (out_io) {
-        *out_io = io_handle;
-    }
+
+    /* Hand the panel to the renderer's esp_lcd backend. The AMOLED needs
+     * 2px-aligned flush windows and byte-swapped RGB565; the C6 has no PSRAM,
+     * so the two partial draw buffers come out of DMA-capable SRAM. */
+    const ubo_backend_esp_lcd_cfg backend_cfg = {
+        .panel = panel,
+        .io = io_handle,
+        .align_px = BOARD_LCD_ALIGN_PX,
+        .swap_rgb565 = true,
+        .buf_divisor = BOARD_LCD_BUF_DIVISOR,
+        .buf_caps = MALLOC_CAP_DMA,
+    };
+    ubo_backend_esp_lcd_configure(&backend_cfg);
     return panel;
 }
 
@@ -132,12 +146,64 @@ esp_lcd_touch_handle_t board_touch_init(i2c_master_bus_handle_t i2c) {
         .x_max = BOARD_LCD_H_RES,
         .y_max = BOARD_LCD_V_RES,
         .rst_gpio_num = -1,
-        .int_gpio_num = 15, /* TOUCH INT */
+        .int_gpio_num = PIN_TOUCH_INT,
         .levels = {.reset = 0, .interrupt = 0},
-        .flags = {.swap_xy = 0, .mirror_x = 0, .mirror_y = 0},
+        .flags = {.swap_xy = BOARD_TOUCH_SWAP_XY,
+                  .mirror_x = BOARD_TOUCH_MIRROR_X,
+                  .mirror_y = BOARD_TOUCH_MIRROR_Y},
     };
     esp_lcd_touch_handle_t tp = NULL;
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_ft5x06(tp_io, &tp_cfg, &tp));
     ESP_LOGI(TAG, "FT3168 touch ready");
     return tp;
+}
+
+int board_audio_codecs_init(i2c_master_bus_handle_t i2c,
+                            const audio_codec_data_if_t *data_if,
+                            board_codecs_t *out) {
+    /* One ES8311 does both directions on this board, so `in` and `out` are the
+     * same IN_OUT handle — audio.c's split call sites then behave exactly as
+     * they did when it held a single handle. */
+    audio_codec_i2c_cfg_t i2c_cfg = {
+        .port = I2C_NUM_0,
+        .addr = ES8311_CODEC_DEFAULT_ADDR,
+        .bus_handle = i2c,
+    };
+    const audio_codec_ctrl_if_t *ctrl = audio_codec_new_i2c_ctrl(&i2c_cfg);
+    const audio_codec_gpio_if_t *gpio = audio_codec_new_gpio();
+    if (!ctrl || !gpio) {
+        ESP_LOGE(TAG, "codec ctrl/gpio interface failed");
+        return -1;
+    }
+
+    es8311_codec_cfg_t es_cfg = {
+        .ctrl_if = ctrl,
+        .gpio_if = gpio,
+        .codec_mode = ESP_CODEC_DEV_WORK_MODE_BOTH,
+        /* The speaker amp is on TCA9554 pin 7, not an ESP32 GPIO, so the codec
+         * driver must not try to drive it: board_speaker_amp_enable() does. */
+        .pa_pin = -1,
+        .use_mclk = true,
+    };
+    const audio_codec_if_t *codec = es8311_codec_new(&es_cfg);
+    if (!codec) {
+        ESP_LOGE(TAG, "es8311_codec_new failed");
+        return -1;
+    }
+
+    esp_codec_dev_cfg_t dev_cfg = {
+        .dev_type = ESP_CODEC_DEV_TYPE_IN_OUT,
+        .codec_if = codec,
+        .data_if = data_if,
+    };
+    esp_codec_dev_handle_t dev = esp_codec_dev_new(&dev_cfg);
+    if (!dev) {
+        ESP_LOGE(TAG, "esp_codec_dev_new failed");
+        return -1;
+    }
+
+    out->out = dev;
+    out->in = dev;
+    out->mic_gain_db = BOARD_MIC_GAIN_DB;
+    return 0;
 }

@@ -1,15 +1,40 @@
-## Managed components for the ESP32-C6-Touch-AMOLED-1.8 board.
+## Managed components for the supported boards.
+## `rules:` keeps each board's panel/touch drivers off the other target's build,
+## so `idf.py set-target` only pulls what that chip actually needs.
 ## Driver versions are pinned loosely; `idf.py reconfigure` resolves & locks them.
 dependencies:
   idf: ">=5.5"
-  # SH8601 AMOLED QSPI panel driver (Waveshare).
-  waveshare/esp_lcd_sh8601: "^1.0.2"
-  # FT3168 capacitive touch (FT5x06-compatible driver).
-  espressif/esp_lcd_touch_ft5x06: "*"
-  # TCA9554 I2C IO-expander: drives the panel reset lines on this board.
-  espressif/esp_io_expander_tca9554: "*"
-  # ES8311 audio codec (speaker DAC + mic ADC) via the new I2C-master driver.
-  # Bundles the es8311 codec + i2s data interface used by main/audio.c.
+
+  ## ── Both boards ──
+  # ES8311 speaker DAC, ES7210 mic ADC, and the I2S data interface used by
+  # main/audio.c. ES7210 ships inside this component (CONFIG_CODEC_ES7210_SUPPORT
+  # defaults to y) — it is not a separate dependency.
   espressif/esp_codec_dev: "^1.5.0"
+  espressif/esp_lcd_touch: "*"
+
+  ## ── Waveshare ESP32-C6-Touch-AMOLED-1.8 ──
+  # SH8601 AMOLED QSPI panel driver (Waveshare).
+  waveshare/esp_lcd_sh8601:
+    version: "^1.0.2"
+    rules: [{ if: "target == esp32c6" }]
+  # FT3168 capacitive touch (FT5x06-compatible driver).
+  espressif/esp_lcd_touch_ft5x06:
+    version: "*"
+    rules: [{ if: "target == esp32c6" }]
+  # TCA9554 I2C IO-expander: panel reset + speaker amp on that board.
+  espressif/esp_io_expander_tca9554:
+    version: "*"
+    rules: [{ if: "target == esp32c6" }]
+
+  ## ── Espressif ESP32-S3-BOX-3 ──
+  # 320x240 landscape SPI LCD (ILI9341-family driver).
+  espressif/esp_lcd_ili9341:
+    version: "^2.0.0"
+    rules: [{ if: "target == esp32s3" }]
+  # GT911 capacitive touch.
+  espressif/esp_lcd_touch_gt911:
+    version: "^1.1.0"
+    rules: [{ if: "target == esp32s3" }]
+
   # (dns_server for the captive portal is vendored in-tree under
   #  esp32/components/dns_server/ — it is not a registry component.)

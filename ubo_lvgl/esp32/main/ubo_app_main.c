@@ -1,7 +1,7 @@
 /*
  * Device entry point.
- * Bring up the board (I2C + SH8601 QSPI panel), initialize the shared C renderer
- * on the SH8601 backend, run the LVGL loop on a dedicated task, bring up a
+ * Bring up the board (I2C + display panel), initialize the shared C renderer on
+ * the esp_lcd backend, run the LVGL loop on a dedicated task, bring up a
  * transport, then start the web-grpc client so live views from ubo-core render
  * on the panel.
  *
@@ -24,13 +24,13 @@
 #include "audio.h"
 #include "board.h"
 #include "client_app.h"
-#include "display/backend_sh8601.h"
 #include "input.h"
 #include "net.h"
 #include "provisioning.h"
 #include "ubo_lvgl.h"
 #include "usb_ppp.h"
 
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -99,11 +99,13 @@ static bool resolve_creds(char *ssid, char *pass) {
 }
 
 void app_main(void) {
-    /* 1. Hardware: I2C bus + SH8601 QSPI panel (returns the panel-IO too) + touch. */
+    /* 1. Hardware: I2C bus + display panel + touch. board_display_init also
+     * hands the panel to the renderer's esp_lcd backend (only the board knows
+     * that panel family's alignment/byte-order/buffer constraints). */
     i2c_master_bus_handle_t i2c = board_i2c_init();
-    esp_lcd_panel_io_handle_t io = NULL;
-    esp_lcd_panel_handle_t panel = board_display_init(i2c, &io);
+    esp_lcd_panel_handle_t panel = board_display_init(i2c);
     esp_lcd_touch_handle_t touch = board_touch_init(i2c);
+    (void)panel; /* retained for future display power management */
 
     /* 1b. Audio: ES8311 codec on the shared I2C bus + full-duplex I2S (speaker
      * playback + push-to-talk mic). Non-fatal if it fails — the UI still runs. */
@@ -111,11 +113,12 @@ void app_main(void) {
         ESP_LOGW(TAG, "audio init failed; continuing without audio");
     }
 
-    /* 2. Renderer: hand the panel to the SH8601 backend, then init LVGL. The
-     * renderer shows its splash until the first view arrives from the store. */
-    ubo_backend_sh8601_set_panel(panel, io);
+    /* 2. Renderer: init LVGL on the esp_lcd backend the board just configured.
+     * The renderer shows its splash until the first view arrives from the
+     * store. Geometry and fonts are derived from the panel size at runtime
+     * (ubo_layout_init, scale = height/240), so this is board-agnostic. */
     const ubo_lvgl_config cfg = {
-        .backend = UBO_BACKEND_SH8601,
+        .backend = UBO_BACKEND_ESP_LCD,
         .width = BOARD_LCD_H_RES,
         .height = BOARD_LCD_V_RES,
     };
@@ -126,8 +129,13 @@ void app_main(void) {
 
     /* 3. Run the LVGL loop. */
     xTaskCreate(lvgl_task, "lvgl", LVGL_TASK_STACK, NULL, 5, NULL);
-    ESP_LOGI(TAG, "renderer up; free heap: %lu bytes",
-             (unsigned long)esp_get_free_heap_size());
+    /* Report INTERNAL free separately: on a PSRAM board the total is dominated
+     * by PSRAM, but task stacks and DMA buffers can only come from internal
+     * RAM, so that is the number that actually constrains us. */
+    ESP_LOGI(TAG, "renderer up; free heap: %lu (internal %u, largest %u)",
+             (unsigned long)esp_get_free_heap_size(),
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
 
     /* 4. Transport. NVS + netif + event loop are shared by both; only the WiFi
      * path pays for esp_wifi_init. */
@@ -167,15 +175,18 @@ void app_main(void) {
     const uint32_t timeout_ms = CONFIG_UBO_WIFI_CONNECT_TIMEOUT_S * 1000;
     if (resolve_creds(ssid, pass) && ubo_net_connect(ssid, pass, timeout_ms)) {
         ubo_net_creds_save(ssid, pass); /* persist a working seed/retry */
+        /* Core endpoint: provisioned host/port (NVS) wins over the Kconfig
+         * value, for either transport. The captive portal saves one host/port
+         * pair; net.c renders it as a bare "host:port" for tcp-lite or a
+         * "http://host:port/grpc" URL for gRPC-Web. */
+        char endpoint[128];
 #ifdef UBO_TRANSPORT_TCP_LITE
-        /* tcp-lite: menuconfig-baked host:port only, no NVS override yet
-         * (phase 1 -- see UBO_CORE_MCU_ADDR's Kconfig help). */
-        const char *core_url = CONFIG_UBO_CORE_MCU_ADDR;
+        const char *core_url = ubo_net_core_addr(endpoint, sizeof(endpoint))
+                                   ? endpoint
+                                   : CONFIG_UBO_CORE_MCU_ADDR;
 #else
-        /* Core endpoint: provisioned host/port (NVS) wins over the Kconfig URL. */
-        char url[128];
-        const char *core_url = ubo_net_core_url(url, sizeof(url))
-                                   ? url
+        const char *core_url = ubo_net_core_url(endpoint, sizeof(endpoint))
+                                   ? endpoint
                                    : CONFIG_UBO_CORE_GRPC_WEB_URL;
 #endif
         ESP_LOGI(TAG, "core endpoint (wifi): %s (free heap: %lu bytes)", core_url,

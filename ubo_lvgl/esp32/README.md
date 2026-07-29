@@ -1,12 +1,44 @@
-# ubo_lvgl on ESP32-C6-Touch-AMOLED-1.8 (ESP-IDF)
+# ubo_lvgl on ESP32 (ESP-IDF)
 
-Native firmware that runs the **C LVGL renderer + web-grpc client** on the
-Waveshare **ESP32-C6-Touch-AMOLED-1.8** (SH8601 368×448 AMOLED over QSPI, FT3168
-touch, WiFi 6). This is **additive** — the desktop (SDL) and Raspberry Pi (ST7789)
-builds under `ubo_lvgl/` are untouched; this tree is only consumed by `idf.py`.
+Native firmware that runs the **C LVGL renderer + ubo-core client** on a
+supported ESP32 board. This is **additive** — the desktop (SDL) and Raspberry Pi
+(ST7789) builds under `ubo_lvgl/` are untouched; this tree is only consumed by
+`idf.py`.
 
-> ESP32-C6: single-core RISC-V @160MHz, **512KB SRAM, no PSRAM**, 16MB flash.
-> Memory is tight — the camera viewfinder is deferred; transport is plain HTTP.
+## Supported boards
+
+| | Waveshare **ESP32-C6-Touch-AMOLED-1.8** | Espressif **ESP32-S3-BOX-3** |
+|---|---|---|
+| Chip | C6, single-core RISC-V @160MHz | S3, dual-core Xtensa @240MHz |
+| RAM | **512KB SRAM, no PSRAM** | 512KB SRAM + **16MB octal PSRAM** |
+| Flash | 16MB | 16MB |
+| Panel | SH8601 368×448 AMOLED, QSPI | ILI9341-family 320×240 LCD, SPI3 @40MHz, BGR |
+| Touch | FT3168 (FT5x06 driver) | GT911 (probes 0x5D, falls back to 0x14) |
+| Audio out | ES8311, amp on TCA9554 pin 7 | ES8311, amp on GPIO46 |
+| Audio in | ES8311 ADC, 1 mic | **ES7210 ADC, 2 mics** |
+| Buttons | BOOT (GPIO9) | BOOT (GPIO0), Mute (GPIO1) |
+| Viewfinder | low-res chunked only | low-res **+ full-res** (needs PSRAM) |
+| USB/PPP profile | yes (the Ubo Pod build) | not yet — WiFi only |
+
+Both boards build from this one tree. `main/CMakeLists.txt` selects the board
+sources and driver components from **`IDF_TARGET`** — deliberately *not* from
+`CONFIG_UBO_BOARD_*`, because ESP-IDF's early requirements-expansion pass runs
+before Kconfig, so every `CONFIG_*` is undefined there and gating `REQUIRES` on
+one silently drops the component. The Kconfig choice exists for board tuning and
+asserts consistency.
+
+Board specifics live in `main/boards/<board>/`:
+
+| File | Contents |
+|---|---|
+| `board_pins.h` | Panel geometry, every GPIO, touch orientation flags, gesture thresholds, draw-buffer sizing |
+| `board.c` | I2C, panel bring-up + esp_lcd backend handoff, touch, speaker amp, codec construction |
+
+Everything else in `main/` is board-neutral and reads those constants through
+`board.h`. The renderer is untouched by board choice: geometry and fonts are
+derived at runtime from the panel size (`ubo_layout_init`, `scale = height/240`),
+so 320×240 reproduces the 240×240 Pi reference exactly and simply gets wider
+menu bars.
 
 ## Flash from your browser (no toolchain required)
 
@@ -34,14 +66,43 @@ CI builds the image on every push — the `esp32` job in
 from the same commit, version, and release as the ubo_app packages it must
 stay proto-compatible with.
 
-## Board pin map (fixed)
+## Board pin maps (fixed)
+
+### Waveshare ESP32-C6-Touch-AMOLED-1.8
 
 | Function | GPIO |
 |---|---|
 | LCD QSPI (SPI2): CS / PCLK / D0 / D1 / D2 / D3 | 5 / 0 / 1 / 2 / 3 / 4 |
 | LCD reset | via TCA9554 IO-expander (pins 4,5) |
+| Speaker amp enable | TCA9554 IO-expander pin 7 |
 | Touch I2C0: SCL / SDA / INT | 7 / 8 / 15 (INT unused; polled at 50Hz) |
+| I2S: MCLK / BCLK / WS / DOUT / DIN | 19 / 20 / 22 / 23 / 21 |
 | BOOT button | 9 (active low → tap = HOME; hold ~8s = clear saved WiFi) |
+
+### Espressif ESP32-S3-BOX-3
+
+| Function | GPIO |
+|---|---|
+| LCD SPI3: PCLK / DATA0 / CS / DC | 7 / 6 / 5 / 4 |
+| LCD reset | 48 — **active high**, and shared with the touch controller |
+| LCD backlight | 47 (LEDC PWM, 5kHz, 10-bit) |
+| Touch I2C0: SDA / SCL / INT | 8 / 18 / 3 |
+| I2S: MCLK / SCLK / LCLK / DOUT / DSIN | 2 / 17 / 45 / 15 / 16 |
+| Speaker amp enable | 46 (plain GPIO) |
+| BOOT / config button | 0 (active low → tap = HOME; hold ~8s = clear saved WiFi) |
+| Mute button | 1 (logic-gate *state* line → `M` → toggle mic mute) |
+
+> The BOX-3's panel init writes MADCTL `0x08` (BGR, MV=0) and the die is
+> natively landscape, so 320 columns work with no `swap_xy` — only
+> `esp_lcd_panel_mirror(true, true)`. The older ESP-BOX / BOX-3B pairs an
+> ST7789 with a TT21100 touch controller instead; `board_display_init()` probes
+> I2C 0x24 and logs a loud error if it finds one, since this build carries only
+> the BOX-3 driver.
+>
+> **Infrared is not on the BOX-3 main unit.** The emitter/receiver live on the
+> separate ESP32-S3-BOX-3-SENSOR dock, reached through the PCIe connector:
+> TX=39, RX=38, CTRL=44. Note GPIO44 is UART0 RX by default, so wiring IR up
+> means moving or dropping the UART console first. See "Infrared" below.
 
 ## Toolchain environment (EIM install)
 
@@ -110,12 +171,32 @@ into `ubo-setup` so you can set them again. (A short BOOT tap is still HOME.)
 
 ## Build / flash / monitor
 
+`CONFIG_IDF_TARGET` is **not** pinned in `sdkconfig.defaults` (per-chip settings
+live in `sdkconfig.defaults.<target>`, which ESP-IDF appends automatically), so
+`set-target` is a required first step rather than an optional one.
+
 ```bash
 cd ubo_lvgl/esp32
+
+# Waveshare C6 AMOLED
 idf set-target esp32c6        # once (fetches managed components)
 idf build
-idf -p /dev/cu.usbmodemXXXX flash monitor   # board on USB; Ctrl-] to exit monitor
+idf -p /dev/cu.usbmodemXXXX flash monitor   # Ctrl-] to exit monitor
 ```
+
+To keep both boards buildable side by side, give each its own build directory
+and sdkconfig — otherwise `set-target` wipes the other board's build:
+
+```bash
+# Espressif ESP32-S3-BOX-3, without disturbing the C6 build
+idf -B build.esp32s3 -D SDKCONFIG=sdkconfig.esp32s3 set-target esp32s3
+idf -B build.esp32s3 -D SDKCONFIG=sdkconfig.esp32s3 build
+idf -B build.esp32s3 -D SDKCONFIG=sdkconfig.esp32s3 -p /dev/cu.usbmodemXXXX flash
+```
+
+`build.*` and `sdkconfig.esp32*` are gitignored. The component manager's
+`rules:` in `main/idf_component.yml` mean each target only downloads its own
+panel/touch drivers.
 
 `idf` with no `-p` auto-detects the port. Exit the serial monitor with `Ctrl-]`.
 
@@ -173,7 +254,9 @@ success it starts the client tasks (`client_app.c`) and the touch input task
 - **store stream** → `view_translate` → renderer (current view + status bar +
   blanking), with exponential-backoff reconnect and a disconnect overlay + countdown.
 - **event stream** → local scroll / menu-choose on the active render widget
-  (the camera viewfinder is deferred — no `frame_stream` subscription).
+  (plus low-res `FrameStreamChunkEvent` for the camera viewfinder, and — where
+  `CONFIG_UBO_FRAME_STREAM_FULLRES` is available, i.e. on a PSRAM board —
+  full-res `FrameStreamDataEvent`).
 - **dispatch worker** → keypad actions + coalesced volume sets.
 - **touch/BOOT input** → tap a drawn item slot → L1/L2/L3, vertical swipe → UP/DOWN,
   horizontal swipe → BACK, BOOT tap → HOME, BOOT hold ~8s → clear WiFi creds +
@@ -185,9 +268,13 @@ success it starts the client tasks (`client_app.c`) and the touch input task
 ## Firmware architecture
 
 For contributors: the firmware is a plain **ESP-IDF v6 / FreeRTOS** application
-— no custom scheduler, no bare-metal loops. The ESP32-C6 is single-core, so
-FreeRTOS time-slices all tasks on one RISC-V hart; "parallel" below means
-concurrent, not simultaneous.
+— no custom scheduler, no bare-metal loops. On the ESP32-C6 (single-core)
+FreeRTOS time-slices all tasks on one RISC-V hart, so "parallel" below means
+concurrent, not simultaneous. **On the dual-core S3 it can mean genuinely
+simultaneous**, which matters for the LVGL lock: the discipline below was always
+required, but on the C6 a violation could only ever interleave, whereas on the
+S3 it can race in parallel. If something looks racy during bring-up, set
+`CONFIG_FREERTOS_UNICORE=y` temporarily to reproduce C6 semantics and bisect.
 
 ### Source layout (`main/`)
 
@@ -269,15 +356,46 @@ queued audio.
 
 ### Memory budget
 
-512KB SRAM, **no PSRAM** — every buffer above is sized against this. Healthy
-figures: ~314KB free heap at boot, ~205KB after renderer-up. When adding code,
-prefer static buffers with explicit sizes over heap growth, and check
+**ESP32-C6 — 512KB SRAM, no PSRAM.** Every buffer above is sized against this.
+Healthy figures: ~314KB free heap at boot, ~205KB after renderer-up. When adding
+code, prefer static buffers with explicit sizes over heap growth, and check
 `uxTaskGetStackHighWaterMark()` before raising a task stack. A silent reboot
 with no panic output is usually a task stack overflow.
 
+**ESP32-S3-BOX-3 — 512KB SRAM + 16MB octal PSRAM.** Far more headroom: ~16.9MB
+free heap at boot, ~16.7MB with the captive portal up. `CONFIG_SPIRAM_USE_MALLOC`
+routes large `malloc()`s to PSRAM, so LVGL (which is on `LV_STDLIB_CLIB`), the
+viewfinder frame buffer in `src/views/view_render.c` and the tcp-lite parser all
+benefit with no code change, while `CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=16384`
+keeps small hot allocations in fast internal SRAM.
+
+**Keep LVGL draw buffers out of PSRAM.** `board.c` allocates them
+`MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL` on purpose: esp_lcd's SPI DMA wants
+cache-line-aligned memory with an explicit writeback, and a PSRAM draw buffer
+shows up as 64-byte-periodic stale stripes or tearing that reads like a panel
+fault. Spend PSRAM on frame data instead.
+
+## Infrared (ESP32-S3-BOX-3, not yet implemented)
+
+IR needs the separate **ESP32-S3-BOX-3-SENSOR** dock; the main unit has no
+emitter or receiver. Two things make this more than a driver exercise:
+
+1. **GPIO44 (IR CTRL) is UART0 RX by default.** Claiming it means moving the
+   console to USB Serial/JTAG or giving it up.
+2. **ubo-core's `090-infrared` service is Linux-only.** It sends via `ir-ctl`
+   (LIRC) and receives through the privileged system manager — neither is
+   reachable from the board. The ESP32 would instead act as an IR transceiver
+   *peer*: RMT TX on GPIO39, RMT RX on GPIO38, dispatching
+   `InfraredHandleReceivedCodeAction` upstream and consuming
+   `InfraredSendCodeEvent` downstream. That requires adding both to the
+   **curated** proto (`ubo_lvgl/client/proto/ubo_client.proto`) with oneof tags
+   matched exactly to the running core's `ubo_bindings`, then regenerating
+   nanopb — the same trap that produced the stale-tag bug in the original C6
+   port.
+
 ## Status
 
-All phases complete and verified on-device:
+### Waveshare ESP32-C6-Touch-AMOLED-1.8 — complete, verified on-device
 
 - **P0 — first light:** board bring-up + color-band test pattern over QSPI. ✅
 - **P1 — renderer:** responsive 368×448 layout (`scale = h/240`). ✅
@@ -287,3 +405,19 @@ All phases complete and verified on-device:
 - **P5 — resilience:** reconnect/backoff, disconnect overlay, blanking. ✅
 - **P6 — provisioning:** WiFi captive portal (SoftAP + DNS + scan form) + optional
   ubo-core endpoint fields, NVS-persisted, BOOT-hold (~8s) reset. ✅
+
+### Espressif ESP32-S3-BOX-3 — bring-up in progress
+
+- **M0 — boots:** octal PSRAM up (16.9MB free heap), reaches `app_main`. ✅
+- **M1 — display:** ILI9341 320×240, correct orientation and colors. ✅
+- **M2 — renderer:** 320×240 layout (`scale` = 1.0, identical to the Pi
+  reference with wider menu bars). ✅
+- **M3 — peripherals detected:** GT911 at 0x5D, ES8311 + ES7210 (MIC1+MIC2). ✅
+- **M4 — provisioning:** captive portal comes up. ✅
+- **M5 — touch input:** tap/swipe → L1/L2/L3, axis orientation. ⏳
+- **M6 — live UI over tcp-lite.** ⏳
+- **M7 — audio:** chime playback + push-to-talk capture. ⏳ Exercise
+  speaker → mic → speaker three times in a row: this SoC generation defers an
+  RX disable that would otherwise stop TX, a path the C6 never hits, and the
+  symptom is "audio works once, then silence".
+- **M8 — full-res viewfinder** (`CONFIG_UBO_FRAME_STREAM_FULLRES`). ⏳

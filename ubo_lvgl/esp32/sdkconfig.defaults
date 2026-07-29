@@ -1,6 +1,8 @@
-# Defaults for the ESP32-C6-Touch-AMOLED-1.8.
-# NOTE: the ESP32-C6 has 512KB SRAM and NO PSRAM — do not enable CONFIG_SPIRAM.
-CONFIG_IDF_TARGET="esp32c6"
+# Target-neutral defaults, shared by every supported board.
+# Per-chip settings live in sdkconfig.defaults.<target>, which ESP-IDF appends
+# automatically for each entry of SDKCONFIG_DEFAULTS. CONFIG_IDF_TARGET is
+# deliberately NOT pinned here — run `idf.py set-target esp32c6` (Waveshare C6
+# AMOLED) or `idf.py set-target esp32s3` (ESP32-S3-BOX-3) first.
 
 # 16MB flash, QIO.
 CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
@@ -8,8 +10,6 @@ CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 
-# 160MHz, perf optimization.
-CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_160=y
 CONFIG_COMPILER_OPTIMIZATION_PERF=y
 
 # 1kHz tick gives LVGL smooth ~ms timing.

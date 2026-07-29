@@ -1,4 +1,7 @@
-# ESP-IDF project for the Waveshare ESP32-C6-Touch-AMOLED-1.8.
+# ESP-IDF project for the supported ESP32 boards (Waveshare
+# ESP32-C6-Touch-AMOLED-1.8 and Espressif ESP32-S3-BOX-3). Pick one with
+# `idf.py set-target esp32c6` / `esp32s3`; main/CMakeLists.txt selects the board
+# sources and driver components off IDF_TARGET.
 # Additive: the desktop (SDL) and Raspberry Pi (ST7789) GUI builds are untouched;
 # this tree is only consumed by `idf.py`.
 cmake_minimum_required(VERSION 3.16)
@@ -19,4 +22,7 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 idf_build_set_property(COMPILE_OPTIONS
     "-DLV_CONF_PATH=\"${CMAKE_CURRENT_LIST_DIR}/../lv_conf.h\"" APPEND)
 
-project(ubo_lvgl_esp32c6)
+# IDF_TARGET is resolved by __target_init() when project.cmake is included
+# above, so it is already set here. This keeps the C6 artifact name exactly as
+# it was (ubo_lvgl_esp32c6.bin) while giving the S3 its own.
+project(ubo_lvgl_${IDF_TARGET})

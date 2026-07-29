@@ -87,6 +87,14 @@ bool ubo_net_connect(const char *ssid, const char *pass, uint32_t timeout_ms) {
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wc));
     ESP_ERROR_CHECK(esp_wifi_start());
+    /* Disable modem power-save. The default (WIFI_PS_MIN_MODEM) sleeps the
+     * radio between DTIM beacons, which adds tens of milliseconds to the
+     * round-trip time. With lwIP's small TCP receive window that directly caps
+     * throughput (window / RTT), and the 48kHz TTS stream needs 96 KB/s
+     * sustained — measured ingest collapsed to a fraction of that over WiFi
+     * while PPP-over-USB, which has no such latency, played cleanly. The board
+     * is mains/USB powered, so the extra current is not a concern. */
+    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
     ESP_LOGI(TAG, "connecting to SSID '%s' (timeout %ums)", ssid,
              (unsigned)timeout_ms);
 
@@ -189,7 +197,7 @@ void ubo_net_core_save(const char *host, const char *port) {
         return;
     }
     const char *hv = (host && host[0]) ? host : "0.0.0.0";
-    const char *pv = (port && port[0]) ? port : "50052";
+    const char *pv = (port && port[0]) ? port : UBO_DEFAULT_PORT;
     ESP_ERROR_CHECK(nvs_set_str(h, "host", hv));
     ESP_ERROR_CHECK(nvs_set_str(h, "port", pv));
     ESP_ERROR_CHECK(nvs_commit(h));
@@ -197,21 +205,40 @@ void ubo_net_core_save(const char *host, const char *port) {
     ESP_LOGI(TAG, "core endpoint saved: %s:%s", hv, pv);
 }
 
-bool ubo_net_core_url(char *out, size_t out_sz) {
+/* Read the provisioned host/port out of NVS. Returns false when no host has been
+ * provisioned; `port` falls back to default_port when unset. Shared by the two
+ * renderings below so the captive portal drives either transport. */
+static bool core_host_port(char *host, size_t host_sz, char *port,
+                           size_t port_sz, const char *default_port) {
     nvs_handle_t h;
     if (nvs_open(NVS_NS, NVS_READONLY, &h) != ESP_OK) {
         return false;
     }
-    char host[UBO_HOST_MAXLEN] = {0}, port[UBO_PORT_MAXLEN] = {0};
-    size_t hl = sizeof(host), pl = sizeof(port);
+    size_t hl = host_sz, pl = port_sz;
     esp_err_t rh = nvs_get_str(h, "host", host, &hl);
     if (nvs_get_str(h, "port", port, &pl) != ESP_OK || port[0] == '\0') {
-        strcpy(port, "50052");
+        snprintf(port, port_sz, "%s", default_port);
     }
     nvs_close(h);
-    if (rh != ESP_OK || host[0] == '\0') {
+    return rh == ESP_OK && host[0] != '\0';
+}
+
+bool ubo_net_core_url(char *out, size_t out_sz) {
+    char host[UBO_HOST_MAXLEN] = {0}, port[UBO_PORT_MAXLEN] = {0};
+    if (!core_host_port(host, sizeof(host), port, sizeof(port),
+                        UBO_DEFAULT_GRPC_WEB_PORT)) {
         return false;
     }
     snprintf(out, out_sz, "http://%s:%s/grpc", host, port);
+    return true;
+}
+
+bool ubo_net_core_addr(char *out, size_t out_sz) {
+    char host[UBO_HOST_MAXLEN] = {0}, port[UBO_PORT_MAXLEN] = {0};
+    if (!core_host_port(host, sizeof(host), port, sizeof(port),
+                        UBO_DEFAULT_MCU_PORT)) {
+        return false;
+    }
+    snprintf(out, out_sz, "%s:%s", host, port);
     return true;
 }

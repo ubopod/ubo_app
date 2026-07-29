@@ -251,11 +251,11 @@ int ubo_lvgl_init(const ubo_lvgl_config *cfg)
         case UBO_BACKEND_BUFFER:
             disp = ubo_backend_buffer_create(w, h);
             break;
-        case UBO_BACKEND_SH8601:
-#ifdef UBO_WITH_SH8601
-            disp = ubo_backend_sh8601_create(w, h);
+        case UBO_BACKEND_ESP_LCD:
+#ifdef UBO_WITH_ESP_LCD
+            disp = ubo_backend_esp_lcd_create(w, h);
 #else
-            LV_LOG_ERROR("SH8601 backend not compiled in");
+            LV_LOG_ERROR("esp_lcd backend not compiled in");
 #endif
             break;
     }

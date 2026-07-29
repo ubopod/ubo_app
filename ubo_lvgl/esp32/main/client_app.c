@@ -152,6 +152,7 @@ static void on_event(void *user, const ubo_client_Event *ev) {
         return;
     }
     switch (ev->which_event) {
+#ifndef CONFIG_UBO_FRAME_STREAM_FULLRES
     case ubo_client_Event_frame_stream_chunk_event_tag: {
         const ubo_client_FrameStreamChunkEvent *e =
             ev->event.frame_stream_chunk_event;
@@ -176,6 +177,28 @@ static void on_event(void *user, const ubo_client_Event *ev) {
         }
         break;
     }
+#else
+    /* Only one of these two cases is ever compiled — see the event list. */
+    case ubo_client_Event_frame_stream_data_event_tag: {
+        const ubo_client_FrameStreamDataEvent *e =
+            ev->event.frame_stream_data_event;
+        if (!e || !e->stream_id || !e->data) {
+            break;
+        }
+        bool active;
+        xSemaphoreTake(fs.mtx, portMAX_DELAY);
+        active =
+            fs.active_stream[0] && strcmp(fs.active_stream, e->stream_id) == 0;
+        xSemaphoreGive(fs.mtx);
+        if (!active) {
+            break;
+        }
+        const int32_t w = e->width ? (int32_t)*e->width : 0;
+        const int32_t h = e->height ? (int32_t)*e->height : 0;
+        ubo_lvgl_update_frame(e->data->bytes, e->data->size, w, h);
+        break;
+    }
+#endif
     case ubo_client_Event_audio_play_audio_sample_event_tag: {
         const ubo_client_AudioPlayAudioSampleEvent *e =
             ev->event.audio_play_audio_sample_event;
@@ -189,7 +212,7 @@ static void on_event(void *user, const ubo_client_Event *ev) {
          * order (id/index reordering is a deliberate follow-up). */
         const ubo_client_AudioPlayAudioSequenceEvent *e =
             ev->event.audio_play_audio_sequence_event;
-        ESP_LOGI(TAG, "rx AudioPlayAudioSequenceEvent: sample=%s id=%s",
+        ESP_LOGD(TAG, "rx AudioPlayAudioSequenceEvent: sample=%s id=%s",
                  (e && e->sample) ? "yes" : "no", (e && e->id) ? e->id : "?");
         if (e && e->sample) {
             play_sample(e->sample, e->volume ? *e->volume : 1.0f);
@@ -221,10 +244,21 @@ static void event_task(void *arg) {
      * every view/status tick, so it doesn't flood the shared subscription queue
      * during a chat reply. Ignored in on_event (default case). */
     ubo_client_StackChangedEvent sce = ubo_client_StackChangedEvent_init_zero;
-    /* Low-res frame chunks only — the full-res FrameStreamDataEvent (~173KB
-     * at 240x240 RGB888) cannot decode within this board's free heap. */
+    /* Exactly ONE frame path, never both: the chunked and full-res renderers
+     * share s_frame_buf in src/views/view_render.c, and ubo_render_update_frame
+     * deliberately resets s_chunk_w/h so the chunked path re-inits "if it takes
+     * over". Subscribing to both makes every full frame invalidate the chunk
+     * geometry, so the next chunk zeroes the buffer and repaints one band —
+     * which looks like a frozen/garbled image. The desktop client subscribes to
+     * full-res only; MCU builds default to chunked, which is what ubo-core
+     * streams for the viewfinder. */
+#ifdef CONFIG_UBO_FRAME_STREAM_FULLRES
+    ubo_client_FrameStreamDataEvent fsde =
+        ubo_client_FrameStreamDataEvent_init_zero;
+#else
     ubo_client_FrameStreamChunkEvent fsce =
         ubo_client_FrameStreamChunkEvent_init_zero;
+#endif
     ubo_client_AudioStopPlaybackEvent aspe =
         ubo_client_AudioStopPlaybackEvent_init_zero;
     ubo_client_Event evs[7];
@@ -239,8 +273,13 @@ static void event_task(void *arg) {
     evs[3].event.audio_play_audio_sequence_event = &apsq;
     evs[4].which_event = ubo_client_Event_stack_changed_event_tag;
     evs[4].event.stack_changed_event = &sce;
+#ifdef CONFIG_UBO_FRAME_STREAM_FULLRES
+    evs[5].which_event = ubo_client_Event_frame_stream_data_event_tag;
+    evs[5].event.frame_stream_data_event = &fsde;
+#else
     evs[5].which_event = ubo_client_Event_frame_stream_chunk_event_tag;
     evs[5].event.frame_stream_chunk_event = &fsce;
+#endif
     evs[6].which_event = ubo_client_Event_audio_stop_playback_event_tag;
     evs[6].event.audio_stop_playback_event = &aspe;
 

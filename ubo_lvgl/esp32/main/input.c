@@ -12,11 +12,14 @@
 
 static const char *TAG = "ubo_input";
 
-#define BOOT_GPIO 9       /* ESP32-C6 BOOT button (active low) */
-#define TOUCH_INT_GPIO 15 /* FT3168 INT: low while a touch is present */
-#define POLL_MS 20        /* ~50 Hz */
-#define TAP_MAX_MOVE 25 /* px: below this a press/release is a tap */
-#define SWIPE_MIN 50    /* px: minimum travel for a swipe */
+/* Pins and gesture thresholds come from the selected board's board_pins.h (via
+ * board.h). The touch INT pin is owned by board_touch_init(); the driver is
+ * polled here, not interrupt-driven. */
+#define BOOT_GPIO BOARD_BOOT_GPIO /* BOOT button (active low) */
+#define MUTE_GPIO BOARD_MUTE_GPIO /* mute button/state line, or -1 if absent */
+#define POLL_MS 20                /* ~50 Hz */
+#define TAP_MAX_MOVE BOARD_TAP_MAX_MOVE /* px: below this a press/release is a tap */
+#define SWIPE_MIN BOARD_SWIPE_MIN       /* px: minimum travel for a swipe */
 #define RELEASE_DEBOUNCE 2 /* empty reads (≈40ms) before a touch counts as ended */
 #ifndef CONFIG_UBO_TALK_HOLD_MS
 #define CONFIG_UBO_TALK_HOLD_MS 350
@@ -42,6 +45,22 @@ static void input_task(void *arg) {
         .pull_up_en = GPIO_PULLUP_ENABLE,
     };
     gpio_config(&boot);
+
+#if MUTE_GPIO >= 0
+    const gpio_config_t mute = {
+        .pin_bit_mask = 1ULL << MUTE_GPIO,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+    };
+    gpio_config(&mute);
+    /* Seed from the pin's ACTUAL level, not from false. On the BOX-3 this is a
+     * logic-gate output reporting mute *state*, and it can legitimately idle
+     * low — seeding false would read that as a fresh press on the first poll
+     * and silently mute the microphone at every boot. */
+    bool mute_pressed_prev = gpio_get_level(MUTE_GPIO) == 0;
+    ESP_LOGI(TAG, "mute line (GPIO%d) idles %s", MUTE_GPIO,
+             mute_pressed_prev ? "low/asserted" : "high/released");
+#endif
 
     bool down = false;
     bool vol_mode = false; /* this touch started on the volume bar */
@@ -159,6 +178,18 @@ static void input_task(void *arg) {
             boot_reset_fired = false;
         }
         boot_pressed_prev = boot_pressed;
+
+#if MUTE_GPIO >= 0
+        /* Mute button -> "M" -> AudioToggleMuteStatusAction(INPUT) (keymap.c).
+         * On the ESP32-S3-BOX-3 this pin is a logic-gate output reflecting mute
+         * *state* rather than a plain momentary contact, so act on the
+         * transition into the asserted level, not on the level itself. */
+        const bool mute_pressed = gpio_get_level(MUTE_GPIO) == 0;
+        if (mute_pressed && !mute_pressed_prev) {
+            ubo_client_enqueue_key("M");
+        }
+        mute_pressed_prev = mute_pressed;
+#endif
 
         vTaskDelay(pdMS_TO_TICKS(POLL_MS));
     }

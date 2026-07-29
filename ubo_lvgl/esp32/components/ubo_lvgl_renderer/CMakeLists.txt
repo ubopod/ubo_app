@@ -1,5 +1,5 @@
 # ESP-IDF component wrapper for the shared C renderer (ubo_lvgl/src + include).
-# Compiles the platform-neutral renderer + the SH8601 display backend; excludes
+# Compiles the platform-neutral renderer + the esp_lcd display backend; excludes
 # the SDL / ST7789 / sim / snapshot-main desktop-only sources. The desktop
 # CMake build is untouched.
 set(UBO_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../..")
@@ -9,7 +9,7 @@ set(UBO_INC "${UBO_ROOT}/include")
 idf_component_register(
     SRCS
         "${UBO_SRC}/ubo_lvgl.c"
-        "${UBO_SRC}/display/backend_sh8601.c"
+        "${UBO_SRC}/display/backend_esp_lcd.c"
         "${UBO_SRC}/display/backend_buffer.c"
         "${UBO_SRC}/fonts/fonts_runtime.c"
         "${UBO_SRC}/fonts/ubo_icon_18.c"
@@ -35,7 +35,10 @@ idf_component_register(
         esp_lcd
 )
 
-# Build the SH8601 backend. Geometry/fonts are now RESPONSIVE — derived at
-# runtime from the panel size (ubo_layout_init, scale = height/240) — so no
-# per-dimension overrides are needed here; ubo_lvgl_init is called with 368x448.
-target_compile_definitions(${COMPONENT_LIB} PRIVATE UBO_WITH_SH8601=1)
+# Build the esp_lcd backend. Geometry/fonts are RESPONSIVE — derived at runtime
+# from the panel size (ubo_layout_init, scale = height/240) — so no per-dimension
+# overrides are needed here, and one component serves every board: ubo_lvgl_init
+# is called with BOARD_LCD_H_RES x BOARD_LCD_V_RES (368x448 on the C6 AMOLED,
+# 320x240 on the ESP32-S3-BOX-3). The panel-family differences live in the
+# ubo_backend_esp_lcd_cfg that board.c supplies.
+target_compile_definitions(${COMPONENT_LIB} PRIVATE UBO_WITH_ESP_LCD=1)

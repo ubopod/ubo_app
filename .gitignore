@@ -118,5 +118,6 @@ whisker.bin
 .memsearch/
 .graphify/
 graphify-out/
-# LVGL C build output
+# LVGL C build output (one dir per cmake configuration, e.g. build-grpcweb)
 ubo_lvgl/build/
+ubo_lvgl/build-*/

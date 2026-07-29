@@ -9,12 +9,18 @@
 # for the duration, then unmasked.
 #
 # Usage:  sudo ./flash.sh [<merged.bin>]
-# Default binary: build/ubo-lvgl-esp32c6-merged.bin, or pass a release image.
+# Default binary: build/ubo-lvgl-$UBO_ESP32_CHIP-merged.bin, or pass a release
+# image. Override the chip with UBO_ESP32_CHIP=esp32s3 (default esp32c6).
+#
+# This script is specifically for a board cabled to a Pi over the PPP link. For
+# a board on a normal USB port — including the ESP32-S3-BOX-3, which has no PPP
+# profile — just use `idf.py -p <port> flash`.
 set -euo pipefail
 
 UNIT=ubo-esp32-ppp
 PORT=${UBO_ESP32_PORT:-/dev/ubo-esp32}
-BIN=${1:-build/ubo-lvgl-esp32c6-merged.bin}
+CHIP=${UBO_ESP32_CHIP:-esp32c6}
+BIN=${1:-build/ubo-lvgl-$CHIP-merged.bin}
 
 if [[ ! -e $BIN ]]; then
   echo "no such image: $BIN" >&2
@@ -39,7 +45,7 @@ systemctl mask --runtime "$UNIT"
 systemctl stop "$UNIT" || true
 
 echo "==> flashing $BIN to $PORT"
-esptool --chip esp32c6 --port "$PORT" --before default-reset --after hard-reset \
+esptool --chip "$CHIP" --port "$PORT" --before default-reset --after hard-reset \
   write-flash 0x0 "$BIN"
 
 echo "==> done; $UNIT will be restarted by udev on re-enumeration"

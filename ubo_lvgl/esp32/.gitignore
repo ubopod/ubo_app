@@ -1,5 +1,9 @@
 /build/
+/build.*/
 /managed_components/
 /dependencies.lock
 /sdkconfig
 /sdkconfig.old
+# Per-target configs (idf.py -D SDKCONFIG=sdkconfig.esp32s3), but keep the
+# checked-in sdkconfig.defaults* layering.
+/sdkconfig.esp32*

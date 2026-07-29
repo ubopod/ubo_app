@@ -1,0 +1,70 @@
+# Espressif ESP32-S3-BOX-3: ESP32-S3-WROOM-1, dual-core Xtensa @240MHz,
+# 16MB quad flash, 16MB OCTAL PSRAM (AP_1v8), flash voltage 1.8V per eFuse.
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+
+# ── Octal (OPI) PSRAM ──
+# SPIRAM_MODE_QUAD is the default and will NOT boot on this hardware: it gives a
+# bootloader-stage reset loop with no app output. SPIRAM_SPEED_120M is
+# documented as experimental (needs temperature-compensated timing tuning), so
+# stay at 80M.
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_TYPE_AUTO=y
+CONFIG_SPIRAM_SPEED_80M=y
+
+# Route ordinary malloc() above the threshold to PSRAM. LVGL is on
+# LV_STDLIB_CLIB (see ubo_lvgl/lv_conf.h), so its big allocations, the
+# viewfinder frame buffer in src/views/view_render.c and the tcp-lite parser all
+# benefit with no code change.
+CONFIG_SPIRAM_USE_MALLOC=y
+#
+# ALWAYSINTERNAL is the number that bites. It forces every malloc SMALLER than
+# this into internal RAM, and internal RAM is the scarce resource here (~114KB
+# free after the renderer, vs 16MB of PSRAM). At the IDF default of 16384 the
+# client + lwIP allocations drained internal to ~8KB with a 3.4KB largest block,
+# which made the push-to-talk task fail to spawn (task stacks MUST be internal)
+# while PSRAM sat untouched. Keep only genuinely tiny/hot allocations internal.
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=2048
+# Reserve a healthy internal pool for the things that can ONLY be internal:
+# task stacks, DMA buffers, ISR-reachable data.
+CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=65536
+#
+# Keep WiFi/lwIP buffers in INTERNAL RAM. Espressif documents
+# SPIRAM_TRY_ALLOCATE_WIFI_LWIP as trading throughput for internal RAM: the RX
+# path then runs through slower external memory. Enabling it here starved the
+# 48kHz TTS stream to ~50% of real time and chopped playback, a problem the
+# PSRAM-less C6 does not have. The ALWAYSINTERNAL fix above frees far more
+# internal RAM than this ever bought, so there is no reason to pay for it.
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=n
+
+# Fail loudly rather than silently running SRAM-only if PSRAM doesn't come up.
+CONFIG_SPIRAM_IGNORE_NOTFOUND=n
+
+# 64-byte cache lines: the right default for octal PSRAM, and the alignment
+# granularity any future DMA-from-PSRAM would have to respect.
+CONFIG_ESP32S3_DATA_CACHE_64KB=y
+CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
+
+# ── TCP receive window ──
+# The IDF default is 5760 bytes with window scaling off, i.e. ~4 segments in
+# flight. TCP throughput is bounded by window/RTT, so 5760 B against a WiFi RTT
+# of a few tens of ms lands around 70-100 KB/s — right at what the 48kHz TTS
+# stream needs (96 KB/s), which is why playback starved on WiFi while
+# PPP-over-USB (RTT ~1ms, so ~5 MB/s from the same window) played cleanly.
+# 32768 gives ~420 KB/s at a 78ms RTT: ample margin without needing window
+# scaling (the no-scaling ceiling is 65535).
+CONFIG_LWIP_TCP_WND_DEFAULT=32768
+# Must be >= WND/MSS or the stack drops segments it just advertised room for:
+# 32768/1440 = 23, rounded up.
+CONFIG_LWIP_TCP_RECVMBOX_SIZE=32
+CONFIG_LWIP_TCP_SND_BUF_DEFAULT=16384
+# A bigger window means more in-flight pbufs. Let WiFi/lwIP buffers spill to
+# PSRAM so the larger window cannot exhaust internal RAM (a 48KB internal
+# allocation previously starved the WiFi driver at init and boot-looped the
+# board). Measured: toggling this made no difference to throughput.
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+
+# Deliberately NOT set: CONFIG_SPIRAM_FETCH_INSTRUCTIONS / CONFIG_SPIRAM_RODATA
+# (XIP from PSRAM). There is 16MB of flash against a 4MB app partition, so
+# moving code into PSRAM only slows execution.

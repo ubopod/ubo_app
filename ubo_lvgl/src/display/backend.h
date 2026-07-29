@@ -16,11 +16,12 @@ lv_display_t *ubo_backend_st7789_create(int32_t width, int32_t height);
 void ubo_backend_st7789_set_backlight(bool on); /* GPIO26 */
 #endif
 
-#ifdef UBO_WITH_SH8601
-/* ESP32-C6 SH8601 AMOLED (QSPI). The firmware initializes the panel hardware
- * and hands the handles to backend_sh8601 via ubo_backend_sh8601_set_panel()
- * (see backend_sh8601.h) before calling ubo_lvgl_init(). */
-lv_display_t *ubo_backend_sh8601_create(int32_t width, int32_t height);
+#ifdef UBO_WITH_ESP_LCD
+/* ESP32 panel over esp_lcd (SH8601 QSPI AMOLED / ILI9341 SPI). The firmware
+ * initializes the panel hardware and hands the handles + panel-family
+ * parameters to this backend via ubo_backend_esp_lcd_configure() (see
+ * backend_esp_lcd.h) before calling ubo_lvgl_init(). */
+lv_display_t *ubo_backend_esp_lcd_create(int32_t width, int32_t height);
 #endif
 
 /* Offscreen RGB565 framebuffer backend. Always available; used for headless

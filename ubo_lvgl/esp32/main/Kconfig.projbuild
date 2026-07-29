@@ -1,10 +1,36 @@
 menu "Ubo LVGL Client"
 
+choice UBO_BOARD
+    prompt "Target board"
+    default UBO_BOARD_WAVESHARE_C6_AMOLED if IDF_TARGET_ESP32C6
+    default UBO_BOARD_ESP_BOX_3 if IDF_TARGET_ESP32S3
+    help
+        Which physical board this firmware is built for. The board also fixes
+        the chip, so the choice is filtered by IDF_TARGET — run
+        `idf.py set-target esp32c6` or `idf.py set-target esp32s3` first and the
+        right board is selected for you.
+
+        Source-file and driver-component selection is driven off IDF_TARGET in
+        main/CMakeLists.txt, NOT off this symbol: CONFIG_* values are undefined
+        during ESP-IDF's early requirements-expansion pass, so gating REQUIRES
+        on them would silently drop components. This symbol carries board
+        tuning and asserts consistency.
+
+config UBO_BOARD_WAVESHARE_C6_AMOLED
+    bool "Waveshare ESP32-C6-Touch-AMOLED-1.8 (SH8601 368x448, FT3168, ES8311)"
+    depends on IDF_TARGET_ESP32C6
+
+config UBO_BOARD_ESP_BOX_3
+    bool "Espressif ESP32-S3-BOX-3 (ILI9341 320x240, GT911, ES8311 + ES7210)"
+    depends on IDF_TARGET_ESP32S3
+endchoice
+
 config UBO_WIFI_SSID
     string "WiFi SSID"
     default "changeme"
     help
-        SSID of the 2.4GHz WiFi network to join (the ESP32-C6 radio is 2.4GHz).
+        SSID of the 2.4GHz WiFi network to join (both supported boards are
+        2.4GHz-only).
 
 config UBO_WIFI_PASSWORD
     string "WiFi password"
@@ -42,8 +68,10 @@ config UBO_CORE_MCU_ADDR
         host:port of ubo-core's raw-TCP "tcp-lite" listener (mcu_server.py),
         e.g. <host-lan-ip>:50054. No scheme, no path — unlike
         UBO_CORE_GRPC_WEB_URL this bypasses Envoy/HTTP entirely. Only used
-        when built with -DUBO_TRANSPORT=tcp_lite; ignored otherwise. No NVS
-        captive-portal override yet (menuconfig-baked only, phase 1).
+        when built with -DUBO_TRANSPORT=tcp_lite; ignored otherwise.
+
+        This is the fallback: a host/port provisioned through the captive
+        portal is stored in NVS and takes precedence.
 
 config UBO_USB_PPP_ENABLE
     bool "Prefer PPP-over-USB (USB Serial/JTAG) when a host is attached"
@@ -97,6 +125,27 @@ config UBO_USB_CORE_MCU_ADDR
         when built with -DUBO_TRANSPORT=tcp_lite; ignored otherwise. No NVS
         override (the WiFi-side provisioning flow doesn't apply to PPP).
 
+config UBO_FRAME_STREAM_FULLRES
+    bool "Use full-resolution camera frames INSTEAD of the chunked stream"
+    depends on SPIRAM
+    default n
+    help
+        Render FrameStreamDataEvent (full-resolution, whole frame per event)
+        instead of FrameStreamChunkEvent (low-res, incremental row bands).
+
+        These are alternatives, NOT complements: both renderers share one
+        frame buffer, and the full-res path resets the chunked path's cached
+        geometry, so subscribing to both makes each full frame invalidate the
+        chunk state and the next chunk zero the buffer — the image looks
+        frozen or garbled. The desktop client uses full-res; MCU builds
+        default to chunked, which is what ubo-core streams for the viewfinder
+        and what actually animates.
+
+        Each full-res frame is ~173KB of RGB888 on the wire plus a decoded
+        copy and the RGB565 conversion — roughly half a megabyte of transient
+        allocation, hence the SPIRAM dependency. Turn this on only if you
+        specifically want still-image fidelity over viewfinder frame rate.
+
 config UBO_MIC_CHUNK_MS
     int "Push-to-talk mic chunk size (ms)"
     default 200
@@ -116,6 +165,8 @@ config UBO_TALK_HOLD_MS
 
 config UBO_AUDIO_GAIN_PERCENT
     int "Speaker software gain (%)"
+    default 300 if UBO_BOARD_WAVESHARE_C6_AMOLED
+    default 150 if UBO_BOARD_ESP_BOX_3
     default 300
     range 100 800
     help

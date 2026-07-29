@@ -50,13 +50,26 @@ bool ubo_net_creds_load(char *ssid, char *pass);
 void ubo_net_creds_save(const char *ssid, const char *pass);
 void ubo_net_creds_clear(void);
 
+/* Default ubo-core ports: Envoy's gRPC-Web listener vs the raw-TCP "tcp-lite"
+ * listener (mcu_server.py). UBO_DEFAULT_PORT is whichever this build talks. */
+#define UBO_DEFAULT_GRPC_WEB_PORT "50052"
+#define UBO_DEFAULT_MCU_PORT "50054"
+#ifdef UBO_TRANSPORT_TCP_LITE
+#define UBO_DEFAULT_PORT UBO_DEFAULT_MCU_PORT
+#else
+#define UBO_DEFAULT_PORT UBO_DEFAULT_GRPC_WEB_PORT
+#endif
+
 /* Provisioned ubo-core endpoint (namespace "ubo_wifi"). save() stores host/port
- * (empty host -> "0.0.0.0", empty port -> "50052"). url() formats the saved
- * values into `out` as "http://<host>:<port>/grpc" and returns true; it returns
- * false when no host was ever provisioned (caller falls back to the Kconfig
- * URL). Cleared together with the WiFi creds by ubo_net_creds_clear(). */
+ * (empty host -> "0.0.0.0", empty port -> UBO_DEFAULT_PORT). The two readers
+ * render the same saved pair for whichever transport is built:
+ *   url()  -> "http://<host>:<port>/grpc"  (gRPC-Web via Envoy)
+ *   addr() -> "<host>:<port>"              (raw TCP, tcp-lite)
+ * Both return false when no host was ever provisioned, so the caller falls back
+ * to the Kconfig value. Cleared with the WiFi creds by ubo_net_creds_clear(). */
 void ubo_net_core_save(const char *host, const char *port);
 bool ubo_net_core_url(char *out, size_t out_sz);
+bool ubo_net_core_addr(char *out, size_t out_sz);
 
 /* Transport preference (namespace "ubo_wifi", key "transport"). Absent => USB,
  * i.e. "prefer the USB cable when a host is attached". Set to "wifi" from the

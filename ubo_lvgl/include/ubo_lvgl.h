@@ -40,10 +40,15 @@ typedef enum {
     UBO_BACKEND_ST7789 = 1, /* Raspberry Pi ST7789 SPI panel              */
     UBO_BACKEND_BUFFER = 2, /* offscreen RGB565 framebuffer (headless,     */
                             /* for snapshot tests). See ubo_lvgl_snapshot. */
-    UBO_BACKEND_SH8601 = 3, /* ESP32-C6 SH8601 368x448 AMOLED (QSPI). The  */
-                            /* panel handle is supplied by the firmware    */
-                            /* via ubo_backend_sh8601_set_panel().         */
+    UBO_BACKEND_ESP_LCD = 3, /* ESP32 panel driven through esp_lcd (SH8601   */
+                             /* 368x448 QSPI AMOLED, ILI9341 320x240 SPI).  */
+                             /* The panel handles + panel-family parameters */
+                             /* are supplied by the firmware's board.c via  */
+                             /* ubo_backend_esp_lcd_configure().            */
 } ubo_backend_t;
+
+/* Former name of UBO_BACKEND_ESP_LCD, kept so existing callers still build. */
+#define UBO_BACKEND_SH8601 UBO_BACKEND_ESP_LCD
 
 typedef struct {
     ubo_backend_t backend;
