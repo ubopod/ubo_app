@@ -154,7 +154,6 @@ CLASS_REGISTRY: dict[str, str] = {
     'CameraStartViewfinderEvent': 'ubo_app.store.services.camera',
     'CameraState': 'ubo_app.store.services.camera',
     'CameraStopViewfinderEvent': 'ubo_app.store.services.camera',
-    'CameraType': 'ubo_app.store.services.camera',
     'ChatAction': 'ubo_app.store.services.chat',
     'ChatAddMessageAction': 'ubo_app.store.services.chat',
     'ChatAppendToMessageAction': 'ubo_app.store.services.chat',

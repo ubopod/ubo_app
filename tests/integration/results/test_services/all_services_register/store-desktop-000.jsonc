@@ -170,7 +170,6 @@
   "camera": {
     "_type": "CameraState",
     "available_cameras": [],
-    "camera_type": "default",
     "pending_remote_registrations": [],
     "queue": [],
     "selected_source_id": "local:0"

@@ -796,12 +796,6 @@ def init_service() -> Subscriptions:
         lambda state: state.camera.selected_source_id,
     )
 
-    # Register persistent storage for camera type
-    register_persistent_store(
-        'camera_type',
-        lambda state: state.camera.camera_type,
-    )
-
     from ubo_app.store.input.types import InputProvideEvent
 
     return [

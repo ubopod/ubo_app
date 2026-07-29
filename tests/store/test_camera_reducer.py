@@ -175,22 +175,27 @@ def test_resolve_non_head_filters_without_popping() -> None:
     assert result.queue == [first]
 
 
-def test_install_driver_sets_type_and_emits_event() -> None:
-    """Installing a driver records the camera type and emits an install event."""
+def test_install_driver_emits_event_and_leaves_state_untouched() -> None:
+    """Installing a driver only emits the event; focus is probed at runtime."""
+    state = CameraState(queue=[])
     result = reducer(
-        CameraState(queue=[]),
+        state,
         _g('CameraInstallDriverAction')(make='pi', model='v3', variant='autofocus'),
     )
-    assert result.state.camera_type == _g('CameraType')('autofocus')
-    assert any(
-        isinstance(e, _g('CameraInstallDriverEvent')) for e in (result.events or [])
+    assert result.state == state
+    event = next(
+        e
+        for e in (result.events or [])
+        if isinstance(e, _g('CameraInstallDriverEvent'))
     )
+    assert event.variant == 'autofocus'
 
 
-def test_restore_default_resets_type() -> None:
-    """Restoring defaults sets the DEFAULT camera type and emits an event."""
-    result = reducer(CameraState(queue=[]), _g('CameraRestoreDefaultAction')())
-    assert result.state.camera_type == _g('CameraType').DEFAULT
+def test_restore_default_emits_event_and_leaves_state_untouched() -> None:
+    """Restoring defaults only emits the event; no focus flag is persisted."""
+    state = CameraState(queue=[])
+    result = reducer(state, _g('CameraRestoreDefaultAction')())
+    assert result.state == state
     assert any(
         isinstance(e, _g('CameraRestoreDefaultEvent')) for e in (result.events or [])
     )
