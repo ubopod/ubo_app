@@ -20,6 +20,8 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from ubo_app.store.settings.types import ServiceState
 
 # =============================================================================
@@ -124,6 +126,11 @@ def _setup_third_party_settings() -> None:
     """Set up dynamic menu and action handlers for Third Party settings."""
     from ubo_app.store.core.action_registry import register_action
     from ubo_app.store.services.audio import AudioInstallDriverAction
+    from ubo_app.store.services.camera import (
+        CameraInstallDriverAction,
+        CameraRestoreDefaultAction,
+    )
+    from ubo_app.utils import IS_RPI
     from ubo_app.utils.eeprom import get_eeprom_data
 
     items: list[MenuItemData] = []
@@ -144,6 +151,48 @@ def _setup_third_party_settings() -> None:
                 label='Re/Install Audio',
                 icon='',
                 action_id='settings:third_party:install_audio',
+            ),
+        )
+
+    if IS_RPI:
+        # Camera device-tree overlays. `variant` selects which overlay the
+        # installer writes (`imx519` vs `imx519,vcm=off`) — it does not declare
+        # autofocus support, which the Picamera2 backend probes at runtime.
+        def _install_camera_driver(variant: str) -> Callable[[], None]:
+            def handler() -> None:
+                store.dispatch(
+                    CameraInstallDriverAction(
+                        make='arducam',
+                        model='imx519',
+                        variant=variant,
+                    ),
+                )
+
+            return handler
+
+        def _restore_default_camera() -> None:
+            store.dispatch(CameraRestoreDefaultAction())
+
+        for variant, key, label, icon in (
+            ('autofocus', 'camera_imx519_af', 'Arducam IMX519 AF', '󰽎'),
+            ('fixed-focus', 'camera_imx519_ff', 'Arducam IMX519 FF', '󰋱'),
+        ):
+            action_id = f'settings:third_party:{key}'
+            register_action(action_id, _install_camera_driver(variant))
+            items.append(
+                MenuItemData(key=key, label=label, icon=icon, action_id=action_id),
+            )
+
+        register_action(
+            'settings:third_party:camera_default',
+            _restore_default_camera,
+        )
+        items.append(
+            MenuItemData(
+                key='camera_default',
+                label='Default Camera',
+                icon='󰄀',
+                action_id='settings:third_party:camera_default',
             ),
         )
 
