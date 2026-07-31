@@ -81,6 +81,7 @@ async def _dispatch(stub: StoreServiceStub, action: Immutable) -> None:
 
 
 async def _collect_transcript(
+    stub: StoreServiceStub,
     action_audio: bytes,
     *,
     sample_rate: int,
@@ -97,16 +98,20 @@ async def _collect_transcript(
     Signalling is a ``threading.Event``, not ``asyncio.Event`` — the callback
     fires on the client's loop, and asyncio primitives are not safe to set
     across loops.
+
+    The request is dispatched with an AWAITED stub call, not with
+    ``UboRPCClient.dispatch``. The latter schedules the RPC on the client's own
+    loop and returns immediately, so a dispatch issued shortly before the
+    client is closed is silently dropped — the core never sees it and nothing
+    raises. That failure mode cost hours: it presented as "the assistant
+    produces no audio" when the request had simply never been sent.
     """
     import threading
 
     from ubo_bindings.client import UboRPCClient
-    from ubo_bindings.ubo.v1 import (
-        Action,
-        AssistantHandleReportEvent,
-        AssistantTranscribeAction,
-        Event,
-    )
+    from ubo_bindings.ubo.v1 import AssistantHandleReportEvent, Event
+
+    from ubo_app.store.services.assistant import AssistantTranscribeAction
 
     session_id = uuid.uuid4().hex
     parts: list[str] = []
@@ -140,14 +145,13 @@ async def _collect_transcript(
     )
     try:
         await asyncio.sleep(0.5)  # let the subscription establish
-        client.dispatch(
-            action=Action(
-                assistant_transcribe_action=AssistantTranscribeAction(
-                    audio=action_audio,
-                    session_id=session_id,
-                    sample_rate=sample_rate,
-                    num_channels=num_channels,
-                ),
+        await _dispatch(
+            stub,
+            AssistantTranscribeAction(
+                audio=action_audio,
+                session_id=session_id,
+                sample_rate=sample_rate,
+                num_channels=num_channels,
             ),
         )
         # Polling a threading.Event, deliberately: an asyncio.Event cannot be
@@ -373,7 +377,7 @@ def _similarity(expected: str, actual: str) -> tuple[float, float]:
 @pytest.mark.timeout(180)
 async def test_satellite_capture_is_intelligible(
     satellite: Satellite,
-    rpc: StoreServiceStub,  # noqa: ARG001  (ensures the core is reachable)
+    rpc: StoreServiceStub,
 ) -> None:
     """The most recent capture must transcribe close to the spoken sentence.
 
@@ -395,6 +399,7 @@ async def test_satellite_capture_is_intelligible(
     assert pcm, 'recorded session contains no audio'
 
     transcript = await _collect_transcript(
+        rpc,
         pcm,
         sample_rate=rate,
         num_channels=channels,
@@ -409,6 +414,7 @@ async def test_satellite_capture_is_intelligible(
     if reference_path.exists():
         with wave.open(str(reference_path), 'rb') as handle:
             reference_transcript = await _collect_transcript(
+                rpc,
                 handle.readframes(handle.getnframes()),
                 sample_rate=handle.getframerate(),
                 num_channels=handle.getnchannels(),
