@@ -6,6 +6,12 @@
 #include "driver/i2s_std.h"
 #include "esp_codec_dev.h"
 #include "esp_heap_caps.h"
+#include "mbedtls/base64.h"
+#ifdef CONFIG_UBO_AFE_ENABLE
+#include "esp_afe_config.h"
+#include "esp_afe_sr_iface.h"
+#include "esp_afe_sr_models.h"
+#endif
 #include "esp_codec_dev_defaults.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -13,6 +19,7 @@
 #include "freertos/semphr.h"
 #include "freertos/stream_buffer.h"
 #include "freertos/task.h"
+#include "freertos/idf_additions.h"
 
 static const char *TAG = "ubo_audio";
 
@@ -90,6 +97,20 @@ static void apply_gain(uint8_t *buf, size_t n) {
 #define MIC_TASK_STACK 4096
 #endif
 
+/* True when the front end is compiled in AND came up. AFE creation is
+ * non-fatal, so capture must still work when it didn't. */
+#ifdef CONFIG_UBO_AFE_ENABLE
+#define AFE_ACTIVE (a.afe_data != NULL)
+/* Matches esp-skainet. These two stacks live in PSRAM (see afe_setup), so they
+ * cost nothing from the internal pool — which is the binding constraint on this
+ * board and is fully spoken for by WiFi, the client and the LVGL draw buffers.
+ * PSRAM stacks are legal for these tasks because neither runs with the flash
+ * cache disabled; they only ever touch the codec, AFE and the client callback. */
+#define AFE_TASK_STACK 8192
+#else
+#define AFE_ACTIVE 0
+#endif
+
 static struct {
     /* Codec device handles, supplied by board_audio_codecs_init(). On boards
      * where one chip does both directions these alias the same IN_OUT handle;
@@ -98,6 +119,21 @@ static struct {
     esp_codec_dev_handle_t out_dev;
     esp_codec_dev_handle_t in_dev;
     float mic_gain_db;
+#ifdef CONFIG_UBO_AFE_ENABLE
+    const esp_afe_sr_iface_t *afe;
+    esp_afe_sr_data_t *afe_data;
+    int16_t *afe_feed_buf;
+    size_t afe_feed_bytes;
+    SemaphoreHandle_t afe_go_feed;  /* mic_start -> feed task */
+    SemaphoreHandle_t afe_go_fetch; /* mic_start -> fetch task */
+    SemaphoreHandle_t afe_feed_idle; /* feed task -> fetch task, before close */
+    /* Elastic buffer between capture and the network. Capture is real-time and
+     * unrepeatable; dispatch is a blocking POST with a long tail. Coupling them
+     * meant a slow POST stalled feed(), the I2S DMA overran, and 3-10% of every
+     * utterance was lost at the microphone — audible as words spliced out. */
+    StreamBufferHandle_t mic_ring;
+    size_t mic_dropped;
+#endif
     i2s_chan_handle_t tx;
     i2s_chan_handle_t rx;
     SemaphoreHandle_t lock; /* serializes dev open/close + mode transitions */
@@ -110,6 +146,13 @@ static struct {
     float want_vol;
     int64_t last_feed_us;
 
+    /* TEMP: whole-session capture recorder. Records exactly the bytes handed
+     * upstream, in PSRAM, and dumps only AFTER the session ends — dumping
+     * inline would itself stall capture and make the recording unrepresentative
+     * of what the core actually receives. */
+    uint8_t *rec_buf;
+    size_t rec_len;
+    size_t rec_cap;
     volatile bool mic_active;
     volatile bool mic_stop;
     volatile bool flush; /* discard buffered playback (AudioStopPlaybackEvent) */
@@ -121,6 +164,12 @@ static struct {
 static esp_err_t i2s_setup(void) {
     i2s_chan_config_t cc = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
     cc.auto_clear = true; /* zero the TX DMA on underrun to avoid noise */
+    /* Leave the DMA at IDF defaults. Enlarging it to 8x512 needed ~32KB of
+     * internal DMA memory for TX+RX, which is not available once a session
+     * starts: the allocation failed and the codec open path then panicked
+     * (LoadProhibited). Capture headroom now comes from the PSRAM ring and
+     * from keeping the feed task on its own core, neither of which competes
+     * for internal RAM. */
     esp_err_t err = i2s_new_channel(&cc, &a.tx, &a.rx);
     if (err != ESP_OK) {
         return err;
@@ -253,6 +302,229 @@ void ubo_audio_stop_playback(void) {
 /* ── mic capture task: 16k mono frames -> accumulate a chunk -> callback ── */
 static uint8_t s_mic_buf[MIC_BUF_BYTES];
 
+/* Hand a finished chunk to the client and reset the accumulator. */
+static void mic_emit(size_t *filled) {
+    { /* TEMP: checksum + peak per emit. Identical checksums on consecutive
+       * emits == stale buffer; varying == content is fine and the fault is
+       * downstream of here. Unthrottled: ~6/s is readable and we need every
+       * one to compare them. */
+        uint32_t sum = 0;
+        int32_t pk = 0;
+        const int16_t *s16 = (const int16_t *)s_mic_buf;
+        for (size_t i = 0; i < *filled / sizeof(int16_t); i++) {
+            sum = sum * 31u + (uint32_t)(uint16_t)s16[i];
+            const int32_t v = s16[i] < 0 ? -s16[i] : s16[i];
+            if (v > pk) { pk = v; }
+        }
+        ESP_LOGW(TAG, "emit %u B peak %ld sum %08x", (unsigned)*filled, (long)pk,
+                 (unsigned)sum);
+        /* TEMP: every ~3s dump one chunk as base64 so the host can rebuild a
+         * WAV and we can actually LISTEN to what the device is sending. */
+        /* Skip the first emits: AFE's ring is still filling and fetch returns
+         * cold-start contents, which is NOT representative of steady state.
+         * Dumping emit #1 made every earlier analysis wrong. */
+    }
+    if (a.rec_buf && a.rec_len + *filled <= a.rec_cap) {
+        memcpy(a.rec_buf + a.rec_len, s_mic_buf, *filled);
+        a.rec_len += *filled;
+    }
+    if (a.mic_cb) {
+        a.mic_cb(a.mic_user, s_mic_buf, *filled,
+                 (float)(esp_timer_get_time() / 1000000.0));
+    }
+    *filled = 0;
+}
+
+/* Release the codec once capture has finished (both AFE tasks and the plain
+ * path funnel through here so the teardown is identical). */
+/* TEMP: emit the recorded session as base64 once capture has stopped. */
+static void rec_dump(void) {
+    if (a.mic_dropped) {
+        ESP_LOGE(TAG, "capture ring overflow: %u bytes dropped",
+                 (unsigned)a.mic_dropped);
+        a.mic_dropped = 0;
+    }
+    if (!a.rec_buf || a.rec_len == 0) {
+        return;
+    }
+    ESP_LOGW(TAG, "SESBEGIN %u bytes, 16000 Hz mono s16le", (unsigned)a.rec_len);
+    static unsigned char line[1400];
+    for (size_t off = 0; off < a.rec_len; off += 1023) {
+        const size_t take = (a.rec_len - off) < 1023 ? (a.rec_len - off) : 1023;
+        size_t ol = 0;
+        if (mbedtls_base64_encode(line, sizeof(line), &ol, a.rec_buf + off,
+                                  take) == 0) {
+            ESP_LOGW(TAG, "SES %.*s", (int)ol, (const char *)line);
+        }
+        vTaskDelay(1); /* let the USB console drain; we are off the clock here */
+    }
+    ESP_LOGW(TAG, "SESEND");
+    a.rec_len = 0;
+}
+
+static void mic_release(void) {
+    rec_dump();
+    xSemaphoreTake(a.lock, portMAX_DELAY);
+    esp_codec_dev_close(a.in_dev);
+    a.mic_active = false;
+    xSemaphoreGive(a.lock);
+}
+
+#ifdef CONFIG_UBO_AFE_ENABLE
+/* ── AFE path ──
+ * Two tasks, mirroring esp-sr's own reference design: `ubo_feed` blocks on the
+ * codec and hands raw interleaved mic frames to AFE, `ubo_mic` blocks on AFE
+ * and forwards the enhanced single channel. Splitting them decouples the two
+ * blocking waits — a single task would have to finish AFE's processing latency
+ * before returning to the codec, and the capture DMA would overrun.
+ *
+ * Note we do NOT act on AFE's VAD: ubo-core owns turn detection and drives
+ * AssistantStopListeningAction. The device only ever streams what it hears. */
+static void afe_feed_task(void *arg) {
+    (void)arg;
+    const int chunk = a.afe->get_feed_chunksize(a.afe_data);
+    const int nch = a.afe->get_feed_channel_num(a.afe_data);
+    (void)chunk;
+    /* Internal RAM, allocated once at afe_setup(). esp-sr consumes this pointer
+     * in its DSP and every upstream example allocates it MALLOC_CAP_INTERNAL;
+     * a PSRAM buffer left AFE's ring permanently empty. Allocating at boot
+     * rather than here is what makes internal RAM affordable. */
+    const size_t bytes = a.afe_feed_bytes;
+    int16_t *buf = a.afe_feed_buf;
+    (void)nch;
+    size_t cap_bytes = 0;
+    int64_t cap_t0 = 0;
+    for (;;) {
+    xSemaphoreTake(a.afe_go_feed, portMAX_DELAY);
+    cap_bytes = 0;
+    cap_t0 = esp_timer_get_time();
+    while (!a.mic_stop) {
+        int rr = esp_codec_dev_read(a.in_dev, buf, (int)bytes);
+        if (rr != 0) {
+            ESP_LOGW(TAG, "codec read failed: %d", rr);
+            break;
+        }
+        cap_bytes += (size_t)bytes;
+        { /* TEMP diagnostic: is the codec actually giving us 2ch audio? */
+            static int64_t t; const int64_t now = esp_timer_get_time();
+            if (now - t > 1000000) { t = now;
+                const double el = (double)(now - cap_t0) / 1000000.0;
+                ESP_LOGW(TAG, "capture realtime: %.0f%% (%.2fs audio in %.2fs)",
+                         el > 0 ? (double)cap_bytes / 64000.0 / el * 100.0 : 0.0,
+                         (double)cap_bytes / 64000.0, el);
+                int32_t pk0 = 0, pk1 = 0;
+                for (int i = 0; i < chunk; i++) {
+                    int32_t v0 = buf[i*nch] < 0 ? -buf[i*nch] : buf[i*nch];
+                    int32_t v1 = nch > 1 ? (buf[i*nch+1] < 0 ? -buf[i*nch+1] : buf[i*nch+1]) : 0;
+                    if (v0 > pk0) { pk0 = v0; }
+                    if (v1 > pk1) { pk1 = v1; }
+                }
+                ESP_LOGW(TAG, "feed: %u B/read, mic0 peak %ld, mic1 peak %ld",
+                         (unsigned)bytes, (long)pk0, (long)pk1);
+            }
+        }
+        a.afe->feed(a.afe_data, buf);
+    }
+    a.mic_stop = true; /* unblock the fetch task if we exited on error */
+    /* Tell the fetch task we are out of esp_codec_dev_read() so it is safe to
+     * close the capture device. Without this the codec can be closed while this
+     * task is still blocked inside it. */
+    xSemaphoreGive(a.afe_feed_idle);
+    }
+}
+
+static void afe_fetch_task(void *arg) {
+    (void)arg;
+    /* Pull enhanced audio from AFE and hand it upstream in the same ~200ms
+     * chunks the plain capture path uses. The dispatch cost, not the chunk
+     * size, sets the ceiling here — see the accumulation loop below. */
+    const size_t chunk_target = (size_t)CONFIG_UBO_MIC_CHUNK_MS * MIC_BYTES_PER_MS;
+    size_t filled = 0;
+    for (;;) {
+    xSemaphoreTake(a.afe_go_fetch, portMAX_DELAY);
+    filled = 0; /* never carry a partial chunk across sessions */
+    { /* TEMP: AFE's own view of its geometry, rather than our assumption. */
+        static bool once;
+        if (!once) { once = true;
+            ESP_LOGW(TAG,
+                     "AFE geom: feed %d smp/%d ch, fetch %d smp/%d ch, "
+                     "chan %d, rate %d",
+                     a.afe->get_feed_chunksize(a.afe_data),
+                     a.afe->get_feed_channel_num(a.afe_data),
+                     a.afe->get_fetch_chunksize(a.afe_data),
+                     a.afe->get_fetch_channel_num(a.afe_data),
+                     a.afe->get_channel_num(a.afe_data),
+                     a.afe->get_samp_rate(a.afe_data));
+        }
+    }
+    while (!a.mic_stop) {
+        afe_fetch_result_t *res =
+            a.afe->fetch_with_delay(a.afe_data, pdMS_TO_TICKS(100));
+        if (!res || res->ret_value != 0 || res->data_size <= 0) {
+            continue;
+        }
+        const size_t n = (size_t)res->data_size;
+        /* Accumulate into the same ~200ms chunk the plain capture path uses.
+         * Emitting each AFE chunk on its own looks harmless (32ms of audio) but
+         * every dispatch is a full unary POST costing ~400ms, so the callback
+         * became the bottleneck: measured coverage was 3% — 1.44s of audio
+         * delivered across 47.7s of speech, the rest dropped while AFE kept
+         * producing. Upstream STT cannot transcribe a stream with 92% missing.
+         * Copy with clamping so a chunk that straddles the buffer end splits
+         * instead of wedging below the emit threshold. */
+        const uint8_t *src = (const uint8_t *)res->data;
+        size_t left = n;
+        while (left > 0) {
+            const size_t space = MIC_BUF_BYTES - filled;
+            const size_t take = left < space ? left : space;
+            memcpy(s_mic_buf + filled, src, take);
+            filled += take;
+            src += take;
+            left -= take;
+            if (filled >= chunk_target || filled == MIC_BUF_BYTES) {
+                if (a.rec_buf && a.rec_len + filled <= a.rec_cap) {
+                    memcpy(a.rec_buf + a.rec_len, s_mic_buf, filled);
+                    a.rec_len += filled;
+                }
+                /* Non-blocking by design: never make capture wait on the net. */
+                const size_t sent =
+                    xStreamBufferSend(a.mic_ring, s_mic_buf, filled, 0);
+                a.mic_dropped += filled - sent;
+                filled = 0;
+            }
+        }
+    }
+    /* Wait for the feed task to leave the codec before closing it. */
+    xSemaphoreTake(a.afe_feed_idle, pdMS_TO_TICKS(500));
+    mic_release();
+    }
+}
+#endif /* CONFIG_UBO_AFE_ENABLE */
+
+#ifdef CONFIG_UBO_AFE_ENABLE
+/* Drains the capture ring into the client. This task is allowed to block for
+ * as long as the network takes; nothing real-time is waiting behind it. */
+static void afe_send_task(void *arg) {
+    (void)arg;
+    /* PSRAM, not .bss: internal RAM is the scarce resource on this board and
+     * this buffer only ever feeds the network. */
+    uint8_t *out = heap_caps_malloc(MIC_BUF_BYTES, MALLOC_CAP_SPIRAM);
+    if (!out) {
+        ESP_LOGE(TAG, "send buffer alloc failed");
+        vTaskDelete(NULL);
+        return;
+    }
+    for (;;) {
+        const size_t n = xStreamBufferReceive(a.mic_ring, out, MIC_BUF_BYTES,
+                                              pdMS_TO_TICKS(100));
+        if (n > 0 && a.mic_cb) {
+            a.mic_cb(a.mic_user, out, n,
+                     (float)(esp_timer_get_time() / 1000000.0));
+        }
+    }
+}
+#endif
+
 static void mic_task(void *arg) {
     (void)arg;
     const size_t chunk_target = (size_t)CONFIG_UBO_MIC_CHUNK_MS * MIC_BYTES_PER_MS;
@@ -265,19 +537,147 @@ static void mic_task(void *arg) {
         }
         filled += MIC_FRAME_BYTES;
         if (filled >= chunk_target) {
-            if (a.mic_cb) {
-                a.mic_cb(a.mic_user, s_mic_buf, filled,
-                         (float)(esp_timer_get_time() / 1000000.0));
-            }
-            filled = 0;
+            mic_emit(&filled);
         }
     }
-    xSemaphoreTake(a.lock, portMAX_DELAY);
-    esp_codec_dev_close(a.in_dev);
-    a.mic_active = false;
-    xSemaphoreGive(a.lock);
+    mic_release();
     vTaskDelete(NULL);
 }
+
+#ifdef CONFIG_UBO_AFE_ENABLE
+/* Build the AFE once at init. "MM" is the two ES7210 microphone channels with
+ * no playback reference — matching what the codec actually gives us, so unlike
+ * esp-sr's own example there is no zero-padded third channel to fake one.
+ * AFE_TYPE_SR because ubo-core does the recognition; we only want a cleaner
+ * single channel out. Buffers go to PSRAM: internal RAM is the scarce resource
+ * here and AFE's are large. Returns 0 on success; a failure is non-fatal, the
+ * caller falls back to raw capture. */
+static int afe_setup(void) {
+    afe_config_t *cfg =
+        afe_config_init("MM", NULL, AFE_TYPE_SR, AFE_MODE_HIGH_PERF);
+    if (!cfg) {
+        ESP_LOGE(TAG, "afe_config_init failed");
+        return -1;
+    }
+    cfg->aec_init = false;      /* no reference channel wired; see Kconfig */
+    cfg->wakenet_init = false;  /* phase 2 */
+    cfg->vad_init = false;      /* ubo-core owns turn detection, not the device */
+    /* AGC is what stops close talking from clipping the way the fixed 30dB
+     * analog gain does. WEBRTC mode rather than WAKENET, which derives its gain
+     * from the wake-word model we do not load yet. Note afe_config_check()
+     * prioritises SE(BSS) over NS for two-microphone input, so the pipeline is
+     * BSS + AGC; that is expected, not a misconfiguration. */
+    /* AGC ON. It was disabled earlier on the theory that it caused output
+     * "pinned at a constant peak of 15402" — that turned out to be the SE(BSS)
+     * channel, which fetch was selecting regardless of AGC, so the reasoning
+     * was invalid. A recorded session measures peak -24 dBFS / rms -41.6 dBFS
+     * with no clipping, and the ES7210 is already at its maximum 37.5 dB analog
+     * gain, so the missing ~15-20 dB has to come from here. */
+    cfg->agc_init = true;
+    cfg->agc_mode = AFE_AGC_MODE_WEBRTC; /* WAKENET mode needs a model we do
+                                          * not load until phase 2 */
+    /* CRITICAL. Without this, AFE picks its output channel "by wakenet or vad"
+     * (esp_afe_config.h) — and we deliberately run with both disabled, because
+     * ubo-core owns turn detection and the wake word is phase 2. Nothing then
+     * drove the selection: trigger_channel_id came out as 2, and fetch returned
+     * raw_data channel 2, a channel with no microphone behind it. That is the
+     * entire "output is noise with a constant peak" symptom — the microphone
+     * channels (raw_data ch0/ch1) were clean speech the whole time. */
+    cfg->fixed_output_channel = true;
+    /* SE(BSS) OFF. fetch's `data` was proven byte-identical to raw_data
+     * channel 2 (500/500 samples, two independent runs), and raw_data is
+     * [mic0, mic1, SE-output] — so the noise we were streaming IS the blind
+     * source separation output, while both microphone channels were clean
+     * speech throughout. afe_config_check() prioritises SE over NS on
+     * two-microphone input, so SE has to go for NS to run at all; per
+     * esp_afe_config.h, with SE deactivated AFE "will only use the first
+     * microphone channel", which is exactly the clean signal we want. */
+    cfg->se_init = false;
+    cfg->ns_init = true;
+    cfg->memory_alloc_mode = AFE_MEMORY_ALLOC_MORE_PSRAM;
+    /* TEMP: afe_config_check() is documented to MODIFY the config on conflict.
+     * fetch reports raw_data_channels=3 while we feed 2 — print what AFE
+     * actually settled on rather than what we asked for. */
+    ESP_LOGW(TAG, "pcm_config BEFORE check: total=%d mic=%d ref=%d rate=%d",
+             cfg->pcm_config.total_ch_num, cfg->pcm_config.mic_num,
+             cfg->pcm_config.ref_num, cfg->pcm_config.sample_rate);
+    afe_config_check(cfg);
+    ESP_LOGW(TAG, "pcm_config AFTER  check: total=%d mic=%d ref=%d rate=%d "
+                  "fixed_out=%d out_playback=%d se=%d ns=%d",
+             cfg->pcm_config.total_ch_num, cfg->pcm_config.mic_num,
+             cfg->pcm_config.ref_num, cfg->pcm_config.sample_rate,
+             (int)cfg->fixed_output_channel, (int)cfg->output_playback_channel,
+             (int)cfg->se_init, (int)cfg->ns_init);
+
+    a.afe = esp_afe_handle_from_config(cfg);
+    if (a.afe) {
+        a.afe_data = a.afe->create_from_config(cfg);
+    }
+    afe_config_free(cfg);
+    if (!a.afe || !a.afe_data) {
+        ESP_LOGE(TAG, "AFE create failed; falling back to raw capture");
+        a.afe = NULL;
+        a.afe_data = NULL;
+        return -1;
+    }
+    /* Allocate the feed buffer HERE, at boot, from INTERNAL RAM. esp-sr's DSP
+     * consumes this pointer directly and every upstream example allocates it
+     * MALLOC_CAP_INTERNAL; handing it PSRAM left AFE's ringbuffer permanently
+     * empty ("Ringbuffer of AFE is empty") and fetch returning a fixed
+     * artifact. It cannot be allocated in the feed task because only ~6KB of
+     * internal RAM is free once a talk session starts. */
+    a.afe_feed_bytes = (size_t)a.afe->get_feed_chunksize(a.afe_data) *
+                       a.afe->get_feed_channel_num(a.afe_data) * sizeof(int16_t);
+    a.afe_feed_buf = heap_caps_malloc(a.afe_feed_bytes,
+                                      MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (!a.afe_feed_buf) {
+        ESP_LOGE(TAG, "AFE feed buffer (%u B internal) failed",
+                 (unsigned)a.afe_feed_bytes);
+        a.afe_data = NULL;
+        return -1;
+    }
+    a.mic_ring = xStreamBufferCreateWithCaps(256 * 1024, 1, MALLOC_CAP_SPIRAM);
+    a.afe_go_feed = xSemaphoreCreateBinary();
+    a.afe_go_fetch = xSemaphoreCreateBinary();
+    a.afe_feed_idle = xSemaphoreCreateBinary();
+    /* Create both tasks NOW and park them on their start semaphores, with their
+     * stacks in PSRAM. Creating them per-session was the actual defect behind
+     * every "AFE returns a constant" symptom: by talk time only ~3KB of
+     * internal RAM remains, xTaskCreate failed silently as far as the audio
+     * path was concerned, and fetch() went on returning the ring's stale
+     * contents. Creating them at boot from INTERNAL RAM is not an alternative
+     * — 16KB there starves the client and input tasks and the UI never
+     * starts. */
+    if (!a.mic_ring || !a.afe_go_feed || !a.afe_go_fetch || !a.afe_feed_idle ||
+        xTaskCreatePinnedToCoreWithCaps(afe_send_task, "ubo_send",
+                                        AFE_TASK_STACK, NULL, 5, NULL, 0,
+                                        MALLOC_CAP_SPIRAM) != pdPASS ||
+        xTaskCreatePinnedToCoreWithCaps(afe_fetch_task, "ubo_mic",
+                                        AFE_TASK_STACK, NULL, 6, NULL, 0,
+                                        MALLOC_CAP_SPIRAM) != pdPASS ||
+        /* Feed goes on core 1, at a higher priority, DELIBERATELY away from
+         * fetch. Both were on core 0 — which also carries WiFi and lwIP — so
+         * every blocking dispatch in the fetch task starved this one, the I2S
+         * DMA overran, and those samples were lost at the microphone rather
+         * than merely delayed. That is what "Ringbuffer of AFE is empty"
+         * (an underrun, not an overflow) was reporting, and it cost ~30% of
+         * every utterance. Capture is the one thing here that cannot be
+         * retried, so it gets the quiet core. */
+        xTaskCreatePinnedToCoreWithCaps(afe_feed_task, "ubo_feed",
+                                        AFE_TASK_STACK, NULL, 7, NULL, 1,
+                                        MALLOC_CAP_SPIRAM) != pdPASS) {
+        ESP_LOGE(TAG, "AFE task creation failed (internal free %u)",
+                 (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+        a.afe_data = NULL;
+        return -1;
+    }
+    ESP_LOGI(TAG, "AFE ready: feed %d ch x %d samples, internal free %u",
+             a.afe->get_feed_channel_num(a.afe_data),
+             a.afe->get_feed_chunksize(a.afe_data),
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+    return 0;
+}
+#endif
 
 void ubo_audio_mic_start(ubo_audio_mic_cb cb, void *user) {
     if (!a.in_dev) {
@@ -289,9 +689,12 @@ void ubo_audio_mic_start(ubo_audio_mic_cb cb, void *user) {
         return;
     }
     close_out(); /* free the codec from any playback session first */
+    /* AFE needs both microphone channels; the plain path asks for one and the
+     * i2s data interface maps that to slot 0. */
+    const uint8_t mic_channels = AFE_ACTIVE ? 2 : 1;
     esp_codec_dev_sample_info_t fs = {
         .bits_per_sample = 16,
-        .channel = 1,
+        .channel = mic_channels,
         .sample_rate = MIC_RATE,
     };
     if (esp_codec_dev_open(a.in_dev, &fs) != 0) {
@@ -299,12 +702,34 @@ void ubo_audio_mic_start(ubo_audio_mic_cb cb, void *user) {
         xSemaphoreGive(a.lock);
         return;
     }
-    esp_codec_dev_set_in_gain(a.in_dev, a.mic_gain_db);
+    /* Re-apply after open. NOTE: in 2-channel (AFE) mode the captured level
+     * comes out ~36dB lower than the mono path at the same setting — raw peaks
+     * of ~500 vs clipping at 32767 — which starves AFE's AGC and makes it
+     * amplify the noise floor instead of speech. Logged so the actual applied
+     * gain is visible rather than assumed. */
+    ESP_LOGW(TAG, "mic open: internal free %u, DMA-capable free %u",
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_DMA));
+    const int gr = esp_codec_dev_set_in_gain(a.in_dev, a.mic_gain_db);
+    ESP_LOGW(TAG, "set_in_gain(%.1f dB) rc=%d ch=%u", (double)a.mic_gain_db, gr,
+             (unsigned)mic_channels);
     a.mic_cb = cb;
     a.mic_user = user;
     a.mic_stop = false;
     a.mic_active = true;
     xSemaphoreGive(a.lock);
+#ifdef CONFIG_UBO_AFE_ENABLE
+    /* NB: a.lock was released above; the failure path re-takes it, matching the
+     * plain-capture path below. */
+    if (AFE_ACTIVE) {
+        a.afe->reset_buffer(a.afe_data); /* drop the previous session's tail */
+        /* Both tasks already exist and are parked (see afe_setup). Release the
+         * fetch task first so it is waiting on AFE before any data arrives. */
+        xSemaphoreGive(a.afe_go_fetch);
+        xSemaphoreGive(a.afe_go_feed);
+        return;
+    }
+#endif
     if (xTaskCreate(mic_task, "ubo_mic", MIC_TASK_STACK, NULL, 6, NULL) !=
         pdPASS) {
         /* Task stacks must come out of INTERNAL RAM — PSRAM does not count,
@@ -370,8 +795,18 @@ int ubo_audio_init(i2c_master_bus_handle_t i2c) {
         ESP_LOGE(TAG, "audio buffer/lock alloc failed");
         return -1;
     }
+#ifdef CONFIG_UBO_AFE_ENABLE
+    /* Non-fatal: capture falls back to the raw single channel if this fails. */
+    afe_setup();
+#endif
+
     /* Enable the speaker amplifier (board-specific: IO-expander pin or GPIO). */
     board_speaker_amp_enable(true);
+    a.rec_cap = 640 * 1024; /* ~20 s at 16 kHz mono, PSRAM */
+    a.rec_buf = heap_caps_malloc(a.rec_cap, MALLOC_CAP_SPIRAM);
+    if (!a.rec_buf) {
+        a.rec_cap = 0;
+    }
     if (xTaskCreate(play_task, "ubo_play", 4096, NULL, 5, NULL) != pdPASS) {
         ESP_LOGE(TAG, "play task creation failed");
         return -1;

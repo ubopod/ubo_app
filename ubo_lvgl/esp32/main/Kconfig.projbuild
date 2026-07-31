@@ -146,6 +146,25 @@ config UBO_FRAME_STREAM_FULLRES
         allocation, hence the SPIRAM dependency. Turn this on only if you
         specifically want still-image fidelity over viewfinder frame rate.
 
+config UBO_AFE_ENABLE
+    bool "Run push-to-talk capture through the esp-sr audio front end (AFE)"
+    depends on SPIRAM
+    default y
+    help
+        Process the microphone array through espressif/esp-sr's AFE before
+        streaming it to ubo-core: blind source separation across the two mics,
+        noise suppression and automatic gain control. This is what makes
+        far-field capture usable, and the AGC also stops close talking from
+        clipping the way a fixed analog gain does.
+
+        Requires PSRAM (AFE buffers are allocated there), so it is unavailable
+        on the PSRAM-less C6, which has a single microphone anyway.
+
+        Acoustic echo cancellation is deliberately NOT enabled: it needs a
+        playback reference channel wired into the capture stream, which this
+        board's audio path does not currently provide. Without AEC the device
+        cannot hear over its own speaker.
+
 config UBO_MIC_CHUNK_MS
     int "Push-to-talk mic chunk size (ms)"
     default 200

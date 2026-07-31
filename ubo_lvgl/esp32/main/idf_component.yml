@@ -35,6 +35,12 @@ dependencies:
   espressif/esp_lcd_touch_gt911:
     version: "^1.1.0"
     rules: [{ if: "target == esp32s3" }]
+  # Speech front-end (AFE): 2-mic noise suppression / AGC on the push-to-talk
+  # capture path, and later the WakeNet wake-word model. Needs PSRAM, so it is
+  # S3-only — the C6 has 512KB SRAM and no PSRAM.
+  espressif/esp-sr:
+    version: "^2.0.0"
+    rules: [{ if: "target == esp32s3" }]
 
   # (dns_server for the captive portal is vendored in-tree under
   #  esp32/components/dns_server/ — it is not a registry component.)

@@ -10,7 +10,9 @@
 # still exists for board tuning and is asserted for consistency below.
 if(IDF_TARGET STREQUAL "esp32s3")
     set(BOARD_DIR "boards/esp_box_3")
-    set(BOARD_REQUIRES esp_lcd_ili9341 esp_lcd_touch_gt911 esp_driver_ledc)
+    # esp-sr: AFE speech front end for the two-mic array (Kconfig-gated on
+    # SPIRAM at runtime; the component is S3-only via idf_component.yml rules).
+    set(BOARD_REQUIRES esp_lcd_ili9341 esp_lcd_touch_gt911 esp_driver_ledc esp-sr)
 elseif(IDF_TARGET STREQUAL "esp32c6")
     set(BOARD_DIR "boards/waveshare_c6_amoled")
     set(BOARD_REQUIRES esp_lcd_sh8601 esp_lcd_touch_ft5x06 esp_io_expander_tca9554)
@@ -49,6 +51,7 @@ idf_component_register(
         esp_http_server
         dns_server
         nvs_flash
+        mbedtls
         ${BOARD_REQUIRES}
 )
 

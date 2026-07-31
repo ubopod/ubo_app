@@ -21,9 +21,14 @@
 #define BOARD_LCD_H_RES 320
 #define BOARD_LCD_V_RES 240
 /* Partial LVGL draw buffer height = V_RES / this, double-buffered:
- * 320*60*2 = 38,400 B each, ~77KB total out of internal DMA-capable SRAM.
- * Deliberately NOT in PSRAM — see the buf_caps note in backend_esp_lcd.h. */
-#define BOARD_LCD_BUF_DIVISOR 4
+ * 320*30*2 = 19,200 B each, ~38KB total out of internal DMA-capable SRAM.
+ * Deliberately NOT in PSRAM — see the buf_caps note in backend_esp_lcd.h.
+ *
+ * 1/8 rather than 1/4: internal RAM is the binding constraint on this board and
+ * esp-sr's AFE wants ~28KB of it. Smaller partial buffers just mean more flush
+ * calls, which 320x240 over 40MHz SPI absorbs easily; running out of internal
+ * RAM instead stops the client and input tasks from starting at all. */
+#define BOARD_LCD_BUF_DIVISOR 8
 /* No flush-window alignment constraint on this panel (unlike the SH8601). */
 #define BOARD_LCD_ALIGN_PX 1
 
@@ -50,7 +55,7 @@
 #define BOARD_I2S_WS_GPIO 45
 #define BOARD_I2S_DOUT_GPIO 15 /* I2S -> ES8311 DAC -> speaker */
 #define BOARD_I2S_DIN_GPIO 16  /* ES7210 ADC (mics) -> I2S */
-#define BOARD_MIC_GAIN_DB 30.0f
+#define BOARD_MIC_GAIN_DB 37.5f
 
 /* ── Infrared (PHASE 2, and only present on the ESP32-S3-BOX-3-SENSOR dock,
  * routed through the PCIe connector — NOT on the main unit) ──
