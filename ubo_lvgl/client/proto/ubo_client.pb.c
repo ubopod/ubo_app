@@ -81,6 +81,9 @@ PB_BIND(ubo_client_AudioStopPlaybackEvent, ubo_client_AudioStopPlaybackEvent, AU
 PB_BIND(ubo_client_StackChangedEvent, ubo_client_StackChangedEvent, AUTO)
 
 
+PB_BIND(ubo_client_AssistantRequestMicStreamEvent, ubo_client_AssistantRequestMicStreamEvent, AUTO)
+
+
 PB_BIND(ubo_client_Event, ubo_client_Event, 2)
 
 

@@ -1131,6 +1131,24 @@ class AssistantEvent(BaseEvent):
     """Base class for assistant events."""
 
 
+class AssistantRequestMicStreamEvent(AssistantEvent):
+    """Ask a remote client to start or stop streaming its microphone.
+
+    Satellite microphones are device-initiated: the ESP32 starts its own
+    capture when its button is held and dispatches the listening action itself.
+    That means a session opened by anything *other* than the device — the web
+    UI, a test harness, a wake word heard on the pod — leaves the satellite
+    silent, and the session records nothing.
+
+    This event closes that gap. It is addressed to one ``audio_source`` so only
+    the intended device responds, and clients must NOT echo a listening action
+    back when they act on it: the session is already open.
+    """
+
+    audio_source: str
+    is_active: bool
+
+
 class AssistantStopTalkingEvent(AssistantEvent):
     """Event fired when the assistant should stop talking right now.
 

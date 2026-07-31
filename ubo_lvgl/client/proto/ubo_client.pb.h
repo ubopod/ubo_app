@@ -201,10 +201,31 @@ typedef struct _ubo_client_StackChangedEvent {
     char dummy_field;
 } ubo_client_StackChangedEvent;
 
+/* Core -> device request to start/stop streaming this device's microphone.
+ Satellite capture is otherwise device-initiated (button held), so a session
+ opened by anything else — the web UI, a wake word heard on the pod, the HIL
+ test harness — would leave the device silent and record nothing.
+
+ `audio_source` addresses exactly one device; ignore the event when it does
+ not equal this client's own id. Do NOT dispatch AssistantStartListeningAction
+ in response: the session that sent this is already open, and echoing it back
+ would loop. */
+typedef struct _ubo_client_AssistantRequestMicStreamEvent {
+    char *audio_source;
+    bool *is_active;
+} ubo_client_AssistantRequestMicStreamEvent;
+
+/* WARNING: these tags are assigned by the server's alphabetical proto
+ generator, so inserting ANY new event upstream renumbers the ones after it.
+ They were last re-synced when AssistantRequestMicStreamEvent was added (it
+ took tag 19 and pushed every tag below it up by one). Re-verify against
+ ubo_app/rpc/proto/ubo/v1/ubo.proto after any `poe proto` that adds an event,
+ or the client silently decodes the wrong message type. */
 typedef struct _ubo_client_Event {
     pb_size_t which_event;
     union _ubo_client_Event_event {
         struct _ubo_client_ApplicationScrollEvent *application_scroll_event;
+        struct _ubo_client_AssistantRequestMicStreamEvent *assistant_request_mic_stream_event;
         struct _ubo_client_AudioPlayAudioSampleEvent *audio_play_audio_sample_event;
         struct _ubo_client_AudioPlayAudioSequenceEvent *audio_play_audio_sequence_event;
         struct _ubo_client_AudioStopPlaybackEvent *audio_stop_playback_event;
@@ -524,6 +545,7 @@ extern "C" {
 
 
 
+
 /* Initializer values for message structs */
 #define ubo_client_Any_init_default              {NULL, NULL}
 #define ubo_client_BoolValue_init_default        {NULL}
@@ -550,6 +572,7 @@ extern "C" {
 #define ubo_client_AudioPlayAudioSequenceEvent_init_default {NULL, NULL, NULL, NULL}
 #define ubo_client_AudioStopPlaybackEvent_init_default {0}
 #define ubo_client_StackChangedEvent_init_default {0}
+#define ubo_client_AssistantRequestMicStreamEvent_init_default {NULL, NULL}
 #define ubo_client_Event_init_default            {0, {NULL}}
 #define ubo_client_BasicType_init_default        {0, {NULL}}
 #define ubo_client_MenuItemData_init_default     {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
@@ -606,6 +629,7 @@ extern "C" {
 #define ubo_client_AudioPlayAudioSequenceEvent_init_zero {NULL, NULL, NULL, NULL}
 #define ubo_client_AudioStopPlaybackEvent_init_zero {0}
 #define ubo_client_StackChangedEvent_init_zero   {0}
+#define ubo_client_AssistantRequestMicStreamEvent_init_zero {NULL, NULL}
 #define ubo_client_Event_init_zero               {0, {NULL}}
 #define ubo_client_BasicType_init_zero           {0, {NULL}}
 #define ubo_client_MenuItemData_init_zero        {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
@@ -686,14 +710,17 @@ extern "C" {
 #define ubo_client_AudioPlayAudioSequenceEvent_sample_tag 3
 #define ubo_client_AudioPlayAudioSequenceEvent_id_tag 4
 #define ubo_client_AudioPlayAudioSequenceEvent_index_tag 5
+#define ubo_client_AssistantRequestMicStreamEvent_audio_source_tag 2
+#define ubo_client_AssistantRequestMicStreamEvent_is_active_tag 3
 #define ubo_client_Event_application_scroll_event_tag 1
-#define ubo_client_Event_audio_play_audio_sample_event_tag 25
-#define ubo_client_Event_audio_play_audio_sequence_event_tag 26
-#define ubo_client_Event_audio_stop_playback_event_tag 30
-#define ubo_client_Event_frame_stream_chunk_event_tag 86
-#define ubo_client_Event_frame_stream_data_event_tag 87
-#define ubo_client_Event_menu_choose_by_index_event_tag 108
-#define ubo_client_Event_stack_changed_event_tag 134
+#define ubo_client_Event_assistant_request_mic_stream_event_tag 19
+#define ubo_client_Event_audio_play_audio_sample_event_tag 26
+#define ubo_client_Event_audio_play_audio_sequence_event_tag 27
+#define ubo_client_Event_audio_stop_playback_event_tag 31
+#define ubo_client_Event_frame_stream_chunk_event_tag 87
+#define ubo_client_Event_frame_stream_data_event_tag 88
+#define ubo_client_Event_menu_choose_by_index_event_tag 109
+#define ubo_client_Event_stack_changed_event_tag 135
 #define ubo_client_BasicType_bool_value_tag      1
 #define ubo_client_BasicType_bytes_value_tag     2
 #define ubo_client_BasicType_float_value_tag     3
@@ -978,18 +1005,26 @@ X(a, POINTER,  SINGULAR, INT64,    index,             5)
 #define ubo_client_StackChangedEvent_CALLBACK NULL
 #define ubo_client_StackChangedEvent_DEFAULT NULL
 
+#define ubo_client_AssistantRequestMicStreamEvent_FIELDLIST(X, a) \
+X(a, POINTER,  SINGULAR, STRING,   audio_source,      2) \
+X(a, POINTER,  SINGULAR, BOOL,     is_active,         3)
+#define ubo_client_AssistantRequestMicStreamEvent_CALLBACK NULL
+#define ubo_client_AssistantRequestMicStreamEvent_DEFAULT NULL
+
 #define ubo_client_Event_FIELDLIST(X, a) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,application_scroll_event,event.application_scroll_event),   1) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sample_event,event.audio_play_audio_sample_event),  25) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sequence_event,event.audio_play_audio_sequence_event),  26) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_stop_playback_event,event.audio_stop_playback_event),  30) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_chunk_event,event.frame_stream_chunk_event),  86) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_data_event,event.frame_stream_data_event),  87) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,menu_choose_by_index_event,event.menu_choose_by_index_event), 108) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,stack_changed_event,event.stack_changed_event), 134)
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,assistant_request_mic_stream_event,event.assistant_request_mic_stream_event),  19) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sample_event,event.audio_play_audio_sample_event),  26) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sequence_event,event.audio_play_audio_sequence_event),  27) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_stop_playback_event,event.audio_stop_playback_event),  31) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_chunk_event,event.frame_stream_chunk_event),  87) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_data_event,event.frame_stream_data_event),  88) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,menu_choose_by_index_event,event.menu_choose_by_index_event), 109) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,stack_changed_event,event.stack_changed_event), 135)
 #define ubo_client_Event_CALLBACK NULL
 #define ubo_client_Event_DEFAULT NULL
 #define ubo_client_Event_event_application_scroll_event_MSGTYPE ubo_client_ApplicationScrollEvent
+#define ubo_client_Event_event_assistant_request_mic_stream_event_MSGTYPE ubo_client_AssistantRequestMicStreamEvent
 #define ubo_client_Event_event_audio_play_audio_sample_event_MSGTYPE ubo_client_AudioPlayAudioSampleEvent
 #define ubo_client_Event_event_audio_play_audio_sequence_event_MSGTYPE ubo_client_AudioPlayAudioSequenceEvent
 #define ubo_client_Event_event_audio_stop_playback_event_MSGTYPE ubo_client_AudioStopPlaybackEvent
@@ -1288,6 +1323,7 @@ extern const pb_msgdesc_t ubo_client_AudioPlayAudioSampleEvent_msg;
 extern const pb_msgdesc_t ubo_client_AudioPlayAudioSequenceEvent_msg;
 extern const pb_msgdesc_t ubo_client_AudioStopPlaybackEvent_msg;
 extern const pb_msgdesc_t ubo_client_StackChangedEvent_msg;
+extern const pb_msgdesc_t ubo_client_AssistantRequestMicStreamEvent_msg;
 extern const pb_msgdesc_t ubo_client_Event_msg;
 extern const pb_msgdesc_t ubo_client_BasicType_msg;
 extern const pb_msgdesc_t ubo_client_MenuItemData_msg;
@@ -1346,6 +1382,7 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 #define ubo_client_AudioPlayAudioSequenceEvent_fields &ubo_client_AudioPlayAudioSequenceEvent_msg
 #define ubo_client_AudioStopPlaybackEvent_fields &ubo_client_AudioStopPlaybackEvent_msg
 #define ubo_client_StackChangedEvent_fields &ubo_client_StackChangedEvent_msg
+#define ubo_client_AssistantRequestMicStreamEvent_fields &ubo_client_AssistantRequestMicStreamEvent_msg
 #define ubo_client_Event_fields &ubo_client_Event_msg
 #define ubo_client_BasicType_fields &ubo_client_BasicType_msg
 #define ubo_client_MenuItemData_fields &ubo_client_MenuItemData_msg
@@ -1396,6 +1433,7 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 /* ubo_client_FrameStreamChunkEvent_size depends on runtime parameters */
 /* ubo_client_AudioPlayAudioSampleEvent_size depends on runtime parameters */
 /* ubo_client_AudioPlayAudioSequenceEvent_size depends on runtime parameters */
+/* ubo_client_AssistantRequestMicStreamEvent_size depends on runtime parameters */
 /* ubo_client_Event_size depends on runtime parameters */
 /* ubo_client_BasicType_size depends on runtime parameters */
 /* ubo_client_MenuItemData_size depends on runtime parameters */

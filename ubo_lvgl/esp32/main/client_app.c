@@ -78,8 +78,11 @@ static void mic_drain(void) {
     mic.ready = -1;
     xSemaphoreGive(mic.mtx);
     if (idx >= 0) {
-        ubo_keymap_report_sample(st.rpc, &mic.pp[idx].arr, mic.ts[idx],
-                                 s_audio_source);
+        /* TEMP: does the chunk reach the wire, and does the dispatch succeed? */
+        const int rc = ubo_keymap_report_sample(st.rpc, &mic.pp[idx].arr,
+                                                mic.ts[idx], s_audio_source);
+        ESP_LOGW(TAG, "report_sample %u B rc=%d src=%s",
+                 (unsigned)mic.pp[idx].arr.size, rc, s_audio_source);
     }
 }
 
@@ -100,7 +103,13 @@ static void play_sample(const ubo_client_AudioSample *s, float volume) {
 
 /* talk_start/stop set a command the dispatch worker acts on, so all RPC stays on
  * one task and start->samples->stop ordering is preserved. */
-static volatile int s_talk_cmd; /* 0 none, 1 start, 2 stop */
+/* 0 none, 1 start (device-initiated), 2 stop (device-initiated),
+ * 3 start (core-initiated), 4 stop (core-initiated).
+ *
+ * The core-initiated variants drive the microphone WITHOUT dispatching a
+ * listening action back: the session that asked for the stream is already
+ * open, so echoing it would loop. */
+static volatile int s_talk_cmd;
 
 /* ── active frame stream (camera viewfinder / video playback) ──
  * The store task writes the id after each view render; the event task reads it
@@ -223,6 +232,22 @@ static void on_event(void *user, const ubo_client_Event *ev) {
         /* Flush buffered speaker audio (e.g. video playback stopped). */
         ubo_audio_stop_playback();
         break;
+    case ubo_client_Event_assistant_request_mic_stream_event_tag: {
+        /* The core opened (or closed) a listening session bound to this
+         * device. Without this, satellite capture only ever starts from the
+         * local button, so a session started by the web UI, by a wake word
+         * heard on the pod, or by the test harness records silence. */
+        const ubo_client_AssistantRequestMicStreamEvent *e =
+            ev->event.assistant_request_mic_stream_event;
+        if (!e || !e->audio_source || !s_audio_source[0] ||
+            strcmp(e->audio_source, s_audio_source) != 0) {
+            break; /* addressed to a different device */
+        }
+        ESP_LOGI(TAG, "core requested mic stream: %s",
+                 e->is_active ? "start" : "stop");
+        s_talk_cmd = e->is_active ? 3 : 4;
+        break;
+    }
     default:
         break;
     }
@@ -261,7 +286,9 @@ static void event_task(void *arg) {
 #endif
     ubo_client_AudioStopPlaybackEvent aspe =
         ubo_client_AudioStopPlaybackEvent_init_zero;
-    ubo_client_Event evs[7];
+    ubo_client_AssistantRequestMicStreamEvent arms =
+        ubo_client_AssistantRequestMicStreamEvent_init_zero;
+    ubo_client_Event evs[8];
     memset(evs, 0, sizeof(evs));
     evs[0].which_event = ubo_client_Event_application_scroll_event_tag;
     evs[0].event.application_scroll_event = &ase;
@@ -282,12 +309,14 @@ static void event_task(void *arg) {
 #endif
     evs[6].which_event = ubo_client_Event_audio_stop_playback_event_tag;
     evs[6].event.audio_stop_playback_event = &aspe;
+    evs[7].which_event = ubo_client_Event_assistant_request_mic_stream_event_tag;
+    evs[7].event.assistant_request_mic_stream_event = &arms;
 
     ubo_client_backoff bo;
     ubo_client_backoff_init(&bo);
     while (!st.stop) {
         time_t start = time(NULL);
-        ubo_rpc_subscribe_event(st.rpc, evs, 7, on_event, NULL, &st.stop);
+        ubo_rpc_subscribe_event(st.rpc, evs, 8, on_event, NULL, &st.stop);
         if (st.stop) {
             break;
         }
@@ -316,6 +345,11 @@ static void dispatch_task(void *arg) {
             if (tc == 1) {
                 ubo_keymap_assistant_listen(st.rpc, true, s_audio_source);
                 ubo_audio_mic_start(mic_cb, NULL);
+            } else if (tc == 3) {
+                ubo_audio_mic_start(mic_cb, NULL); /* session already open */
+            } else if (tc == 4) {
+                ubo_audio_mic_stop();
+                mic_drain(); /* flush the trailing chunk before we go quiet */
             } else {
                 ubo_audio_mic_stop();
                 mic_drain(); /* flush a trailing chunk before the stop action */

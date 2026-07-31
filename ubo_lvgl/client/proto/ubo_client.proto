@@ -193,16 +193,37 @@ message AudioStopPlaybackEvent {}
 // empty message makes nanopb skip it on decode.
 message StackChangedEvent {}
 
+// Core -> device request to start/stop streaming this device's microphone.
+// Satellite capture is otherwise device-initiated (button held), so a session
+// opened by anything else — the web UI, a wake word heard on the pod, the HIL
+// test harness — would leave the device silent and record nothing.
+//
+// `audio_source` addresses exactly one device; ignore the event when it does
+// not equal this client's own id. Do NOT dispatch AssistantStartListeningAction
+// in response: the session that sent this is already open, and echoing it back
+// would loop.
+message AssistantRequestMicStreamEvent {
+  string audio_source = 2;
+  bool is_active = 3;
+}
+
+// WARNING: these tags are assigned by the server's alphabetical proto
+// generator, so inserting ANY new event upstream renumbers the ones after it.
+// They were last re-synced when AssistantRequestMicStreamEvent was added (it
+// took tag 19 and pushed every tag below it up by one). Re-verify against
+// ubo_app/rpc/proto/ubo/v1/ubo.proto after any `poe proto` that adds an event,
+// or the client silently decodes the wrong message type.
 message Event {
   oneof event {
     ApplicationScrollEvent application_scroll_event = 1;
-    AudioPlayAudioSampleEvent audio_play_audio_sample_event = 25;
-    AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 26;
-    AudioStopPlaybackEvent audio_stop_playback_event = 30;
-    FrameStreamChunkEvent frame_stream_chunk_event = 86;
-    FrameStreamDataEvent frame_stream_data_event = 87;
-    MenuChooseByIndexEvent menu_choose_by_index_event = 108;
-    StackChangedEvent stack_changed_event = 134;
+    AssistantRequestMicStreamEvent assistant_request_mic_stream_event = 19;
+    AudioPlayAudioSampleEvent audio_play_audio_sample_event = 26;
+    AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 27;
+    AudioStopPlaybackEvent audio_stop_playback_event = 31;
+    FrameStreamChunkEvent frame_stream_chunk_event = 87;
+    FrameStreamDataEvent frame_stream_data_event = 88;
+    MenuChooseByIndexEvent menu_choose_by_index_event = 109;
+    StackChangedEvent stack_changed_event = 135;
   }
 }
 

@@ -56,6 +56,7 @@ from ubo_app.store.services.assistant import (
     AssistantRemoveGenericLLMProviderAction,
     AssistantRemoveMoonshineDownloadedModelAction,
     AssistantReportAction,
+    AssistantRequestMicStreamEvent,
     AssistantRunPipelineAction,
     AssistantRunPipelineEvent,
     AssistantSelectGenericLLMProviderAction,
@@ -645,6 +646,17 @@ def reducer(
                     active_audio_source=action.audio_source,
                 ),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],
+                # Tell the satellite to start streaming. Harmless when the
+                # device initiated the session itself — it is already
+                # capturing, and the event is idempotent.
+                events=[
+                    AssistantRequestMicStreamEvent(
+                        audio_source=action.audio_source,
+                        is_active=True,
+                    ),
+                ]
+                if action.audio_source
+                else [],
             )
 
         case AssistantStopListeningAction():
@@ -661,6 +673,16 @@ def reducer(
                     last_stop_reason=action.reason,
                 ),
                 actions=[RgbRingBlankAction()],
+                # Addressed with the source being torn down, read before the
+                # state clears it.
+                events=[
+                    AssistantRequestMicStreamEvent(
+                        audio_source=state.active_audio_source,
+                        is_active=False,
+                    ),
+                ]
+                if state.active_audio_source
+                else [],
             )
 
         case AssistantStopTalkingAction(phrase=phrase, detector=detector):
@@ -709,6 +731,14 @@ def reducer(
                         last_stop_reason=stop_reason,
                     ),
                     actions=[RgbRingBlankAction()],
+                    events=[
+                        AssistantRequestMicStreamEvent(
+                            audio_source=state.active_audio_source,
+                            is_active=False,
+                        ),
+                    ]
+                    if state.active_audio_source
+                    else [],
                 )
             # Not listening, start it (with mute check)
             if state.is_microphone_mute:
@@ -735,6 +765,17 @@ def reducer(
                     active_audio_source=action.audio_source,
                 ),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],
+                # Tell the satellite to start streaming. Harmless when the
+                # device initiated the session itself — it is already
+                # capturing, and the event is idempotent.
+                events=[
+                    AssistantRequestMicStreamEvent(
+                        audio_source=action.audio_source,
+                        is_active=True,
+                    ),
+                ]
+                if action.audio_source
+                else [],
             )
 
         case AssistantTranscribeAction():
