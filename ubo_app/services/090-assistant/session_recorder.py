@@ -57,6 +57,12 @@ _MIC_WIDTH = 2
 
 _SLUG_CHARS = re.compile(r'[^a-z0-9]+')
 
+# Satellites buffer audio and dispatch it asynchronously, so the last second or
+# two of a session is typically still in flight when listening stops. Writing
+# immediately on the falling edge discards it and reports the loss as a capture
+# defect. Keep accepting matching audio for this long before writing.
+_DRAIN_SECONDS = 3.0
+
 
 def _slugify(value: str) -> str:
     """Filesystem-safe slug for an audio-source id."""
@@ -100,6 +106,8 @@ class _Session:
 
     audio_source: str
     started_at: datetime
+    closing_at: datetime | None = None
+    first_arrival_wall: datetime | None = None
     mic_chunks: list[bytes] = field(default_factory=list)
     arrivals: list[float] = field(default_factory=list)
     reference_chunks: list[bytes] = field(default_factory=list)
@@ -122,6 +130,11 @@ class AssistantSessionRecorder:
 
     # -- ingest ---------------------------------------------------------
 
+    def mark_closing(self) -> None:
+        """Record when listening stopped, before the drain window begins."""
+        if self._session is not None:
+            self._session.closing_at = datetime.now(tz=UTC)
+
     def start(self, audio_source: str) -> None:
         """Begin accumulating for a new session."""
         self._session = _Session(
@@ -136,6 +149,8 @@ class AssistantSessionRecorder:
             return
         session.mic_chunks.append(event.sample_speech_recognition)
         session.arrivals.append(event.timestamp)
+        if session.first_arrival_wall is None:
+            session.first_arrival_wall = datetime.now(tz=UTC)
 
     def add_reference(
         self,
@@ -166,12 +181,29 @@ class AssistantSessionRecorder:
     @staticmethod
     def write(session: _Session, stop_reason: str) -> Path | None:
         """Write mic/reference WAVs and the metadata sidecar. Blocking."""
-        stopped_at = datetime.now(tz=UTC)
+        # Measured when listening stopped, not when this ran: a drain window
+        # runs in between so audio still in flight is not counted as missing.
+        stopped_at = session.closing_at or datetime.now(tz=UTC)
         stamp = session.started_at.strftime('%Y-%m-%dT%H%M%S')
         directory = SESSIONS_DIR / f'{stamp}-{_slugify(session.audio_source)}'
 
         mic_pcm = b''.join(session.mic_chunks)
         wall_duration = (stopped_at - session.started_at).total_seconds()
+        # Coverage over the STREAMING window, not the whole session. A
+        # core-initiated session opens before the device has been told to start
+        # capturing, and that startup latency is not lost audio — counting it
+        # as loss made healthy runs read as ~90%. It is reported separately.
+        # Measured in core wall-clock from the first chunk that arrived to the
+        # moment listening stopped. Using the device's own inter-chunk
+        # timestamps instead is biased: N chunks span only N-1 intervals, so a
+        # perfectly healthy stream computes as >100%.
+        first_wall = session.first_arrival_wall
+        startup_latency = (
+            (first_wall - session.started_at).total_seconds() if first_wall else 0.0
+        )
+        stream_span = (
+            (stopped_at - first_wall).total_seconds() if first_wall else wall_duration
+        )
         audio_seconds = len(mic_pcm) / (_MIC_RATE * _MIC_CHANNELS * _MIC_WIDTH)
         gaps_ms = [
             (later - earlier) * 1000
@@ -211,9 +243,11 @@ class AssistantSessionRecorder:
                     # Delivered audio vs. elapsed wall time. Anything well under
                     # 100% means samples were lost, not merely delayed — the
                     # failure mode that sounds like words spliced out.
-                    'coverage_pct': round(audio_seconds / wall_duration * 100, 1)
-                    if wall_duration > 0
+                    'coverage_pct': round(audio_seconds / stream_span * 100, 1)
+                    if stream_span > 0
                     else 0.0,
+                    'stream_span_s': round(stream_span, 3),
+                    'startup_latency_s': round(startup_latency, 3),
                     'sample_rate': _MIC_RATE,
                     'channels': _MIC_CHANNELS,
                     'gap_ms': {
@@ -251,6 +285,7 @@ class AssistantSessionRecorder:
 
 
 _recorder = AssistantSessionRecorder()
+_finalize_task: asyncio.Task[None] | None = None
 
 
 def _handle_mic_sample(event: AudioReportSampleEvent) -> None:
@@ -273,6 +308,14 @@ async def _write_session(session: _Session, stop_reason: str) -> None:
     )
 
 
+async def _finalize_after_drain(stop_reason: str) -> None:
+    """Wait for in-flight audio, then close the session and write it."""
+    await asyncio.sleep(_DRAIN_SECONDS)
+    session = _recorder.stop(stop_reason)
+    if session is not None and session.mic_chunks:
+        await _write_session(session, stop_reason)
+
+
 def setup_session_recorder() -> None:
     """Subscribe the recorder and drive it from the listening state."""
     store.subscribe_event(AudioReportSampleEvent, _handle_mic_sample)
@@ -290,14 +333,23 @@ def setup_session_recorder() -> None:
     def _track_listening(data: tuple[bool, bool, str] | None) -> None:
         if data is None:
             return
+        global _finalize_task  # noqa: PLW0603
         enabled, is_listening, audio_source = data
         if enabled and is_listening:
+            # A new session during the drain window supersedes it.
+            if _finalize_task is not None and not _finalize_task.done():
+                _finalize_task.cancel()
+                _finalize_task = None
+                _recorder.stop('superseded')
             # Rising edge — or a session already running when the flag came on,
             # which is recorded from that point rather than skipped.
             if not _recorder.is_active:
                 _recorder.start(audio_source)
             return
+        if not _recorder.is_active or (
+            _finalize_task is not None and not _finalize_task.done()
+        ):
+            return
         stop_reason = 'listening_ended' if not is_listening else 'debug_disabled'
-        session = _recorder.stop(stop_reason)
-        if session is not None and session.mic_chunks:
-            create_task(_write_session(session, stop_reason))
+        _recorder.mark_closing()
+        _finalize_task = create_task(_finalize_after_drain(stop_reason))

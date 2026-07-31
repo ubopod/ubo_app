@@ -1,0 +1,28 @@
+{
+  "audio_source": "esp32:b43a45f3932c",
+  "stop_reason": "listening_ended",
+  "started_at": "2026-07-31T04:34:02.410986+00:00",
+  "stopped_at": "2026-07-31T04:34:17.452477+00:00",
+  "wall_duration_s": 15.041,
+  "mic": {
+    "chunks": 69,
+    "bytes": 471040,
+    "audio_s": 14.72,
+    "coverage_pct": 97.9,
+    "sample_rate": 16000,
+    "channels": 1,
+    "gap_ms": {
+      "p50": 194.9,
+      "p90": 268.8,
+      "max": 270.8
+    },
+    "peak_dbfs": -0.0,
+    "rms_dbfs": -29.4,
+    "clipped_samples": 30
+  },
+  "reference": {
+    "bytes": 621990,
+    "sample_rate": 48000,
+    "channels": 1
+  }
+}

@@ -107,20 +107,23 @@ def test_coverage_pct_detects_missing_audio(
 ) -> None:
     """Lost samples leave a splice, not silence — coverage is what catches it."""
     mod = _load_recorder(monkeypatch, tmp_path)
+    from datetime import UTC, datetime, timedelta
 
-    # Two seconds of wall time, but only ~1s of audio delivered: the sender
+    # Two seconds of streaming, but only ~1s of audio delivered: the sender
     # dropped half. The recording still sounds like continuous speech.
     recorder = mod.AssistantSessionRecorder()
     recorder.start('esp32:aabbccddeeff')
     session = recorder._session  # noqa: SLF001
     assert session is not None
-    from datetime import UTC, datetime, timedelta
-
-    session.started_at = datetime.now(tz=UTC) - timedelta(seconds=2)
+    now = datetime.now(tz=UTC)
+    session.started_at = now - timedelta(seconds=3)
     for index in range(5):
         recorder.add_mic(
             _FakeMicEvent(_silence(0.2), 1.0 + index * 0.4, 'esp32:aabbccddeeff'),
         )
+    # Streaming began 1s after the session opened and ran for 2s.
+    session.first_arrival_wall = now - timedelta(seconds=2)
+    recorder.mark_closing()
     stopped = recorder.stop('listening_ended')
     assert stopped is not None
 
@@ -129,28 +132,39 @@ def test_coverage_pct_detects_missing_audio(
     metadata = json.loads((directory / 'session.json').read_text())
 
     assert metadata['mic']['audio_s'] == 1.0
+    # 1s of audio across a 2s streaming window.
     assert 45 <= metadata['mic']['coverage_pct'] <= 55
     # Chunks arrived every 400ms carrying only 200ms of audio each.
     assert metadata['mic']['gap_ms']['p50'] > 300
+    # The 1s before streaming started is reported separately, not as loss.
+    assert 0.5 <= metadata['mic']['startup_latency_s'] <= 1.5
 
 
 def test_full_coverage_session_reports_100_percent(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """A healthy session must not trip the coverage check."""
+    """A healthy session must not trip the coverage check.
+
+    Includes startup latency, which a core-initiated session always has: the
+    device is told to start only after the session opens. Counting that as loss
+    made healthy runs read as ~90%.
+    """
     mod = _load_recorder(monkeypatch, tmp_path)
+    from datetime import UTC, datetime, timedelta
+
     recorder = mod.AssistantSessionRecorder()
     recorder.start('esp32:aabbccddeeff')
     session = recorder._session  # noqa: SLF001
     assert session is not None
-    from datetime import UTC, datetime, timedelta
-
-    session.started_at = datetime.now(tz=UTC) - timedelta(seconds=1)
+    now = datetime.now(tz=UTC)
+    session.started_at = now - timedelta(seconds=3)
     for index in range(5):
         recorder.add_mic(
             _FakeMicEvent(_silence(0.2), 1.0 + index * 0.2, 'esp32:aabbccddeeff'),
         )
+    session.first_arrival_wall = now - timedelta(seconds=1)
+    recorder.mark_closing()
     stopped = recorder.stop('listening_ended')
     assert stopped is not None
 

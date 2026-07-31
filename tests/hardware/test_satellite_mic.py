@@ -295,7 +295,9 @@ async def test_satellite_captures_played_sentence(
         rpc,
         AssistantStopListeningAction(reason=ExternalStopReason()),
     )
-    await asyncio.sleep(2.0)
+    # The recorder holds a drain window open for in-flight audio before it
+    # writes; wait past it.
+    await asyncio.sleep(6.0)
 
     directory = _newest_session_dir(started_at)
     assert directory is not None, (
