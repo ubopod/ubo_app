@@ -107,6 +107,17 @@ static void apply_gain(uint8_t *buf, size_t n) {
  * PSRAM stacks are legal for these tasks because neither runs with the flash
  * cache disabled; they only ever touch the codec, AFE and the client callback. */
 #define AFE_TASK_STACK 8192
+
+/* Two microphones plus a zero-filled playback reference.
+ *
+ * The board has no reference wired, so "MM" looks correct — but Espressif's own
+ * far-field demo for this hardware (esp-box factory_demo app_sr.c) reads two
+ * channels off the ES7210 and then EXPANDS them to three, zeroing the third,
+ * before feeding AFE. Feeding two channels while AFE reported
+ * raw_data_channels=3 meant it was reading a channel we never supplied, which
+ * is consistent with SE(BSS) emitting noise. */
+#define AFE_INPUT_FORMAT "MM"
+#define AFE_MIC_CHANNELS 2
 #else
 #define AFE_ACTIVE 0
 #endif
@@ -124,6 +135,8 @@ static struct {
     esp_afe_sr_data_t *afe_data;
     int16_t *afe_feed_buf;
     size_t afe_feed_bytes;
+    int16_t *afe_mic_buf;   /* codec side: AFE_MIC_CHANNELS interleaved */
+    size_t afe_mic_bytes;
     SemaphoreHandle_t afe_go_feed;  /* mic_start -> feed task */
     SemaphoreHandle_t afe_go_fetch; /* mic_start -> fetch task */
     SemaphoreHandle_t afe_feed_idle; /* feed task -> fetch task, before close */
@@ -384,14 +397,14 @@ static void afe_feed_task(void *arg) {
     (void)arg;
     const int chunk = a.afe->get_feed_chunksize(a.afe_data);
     const int nch = a.afe->get_feed_channel_num(a.afe_data);
-    (void)chunk;
     /* Internal RAM, allocated once at afe_setup(). esp-sr consumes this pointer
      * in its DSP and every upstream example allocates it MALLOC_CAP_INTERNAL;
      * a PSRAM buffer left AFE's ring permanently empty. Allocating at boot
      * rather than here is what makes internal RAM affordable. */
     const size_t bytes = a.afe_feed_bytes;
     int16_t *buf = a.afe_feed_buf;
-    (void)nch;
+    int16_t *mic = a.afe_mic_buf;
+    const size_t mic_bytes = a.afe_mic_bytes;
     size_t cap_bytes = 0;
     int64_t cap_t0 = 0;
     for (;;) {
@@ -399,19 +412,29 @@ static void afe_feed_task(void *arg) {
     cap_bytes = 0;
     cap_t0 = esp_timer_get_time();
     while (!a.mic_stop) {
-        int rr = esp_codec_dev_read(a.in_dev, buf, (int)bytes);
+        int rr = esp_codec_dev_read(a.in_dev, mic, (int)mic_bytes);
         if (rr != 0) {
             ESP_LOGW(TAG, "codec read failed: %d", rr);
             break;
         }
-        cap_bytes += (size_t)bytes;
+        cap_bytes += mic_bytes;
+        /* Interleave the microphones into AFE's wider frame, zeroing every
+         * channel the codec does not supply (the playback reference). Walking
+         * backwards is not needed here because source and destination are
+         * different buffers. */
+        for (int i = 0; i < chunk; i++) {
+            for (int c = 0; c < nch; c++) {
+                buf[i * nch + c] =
+                    (c < AFE_MIC_CHANNELS) ? mic[i * AFE_MIC_CHANNELS + c] : 0;
+            }
+        }
         { /* TEMP diagnostic: is the codec actually giving us 2ch audio? */
             static int64_t t; const int64_t now = esp_timer_get_time();
             if (now - t > 1000000) { t = now;
                 const double el = (double)(now - cap_t0) / 1000000.0;
                 ESP_LOGW(TAG, "capture realtime: %.0f%% (%.2fs audio in %.2fs)",
-                         el > 0 ? (double)cap_bytes / 64000.0 / el * 100.0 : 0.0,
-                         (double)cap_bytes / 64000.0, el);
+                         el > 0 ? (double)cap_bytes / (double)(MIC_RATE * AFE_MIC_CHANNELS * 2) / el * 100.0 : 0.0,
+                         (double)cap_bytes / (double)(MIC_RATE * AFE_MIC_CHANNELS * 2), el);
                 int32_t pk0 = 0, pk1 = 0;
                 for (int i = 0; i < chunk; i++) {
                     int32_t v0 = buf[i*nch] < 0 ? -buf[i*nch] : buf[i*nch];
@@ -554,14 +577,22 @@ static void mic_task(void *arg) {
  * caller falls back to raw capture. */
 static int afe_setup(void) {
     afe_config_t *cfg =
-        afe_config_init("MM", NULL, AFE_TYPE_VC, AFE_MODE_HIGH_PERF);
+        afe_config_init(AFE_INPUT_FORMAT, NULL, AFE_TYPE_VC, AFE_MODE_HIGH_PERF);
     if (!cfg) {
         ESP_LOGE(TAG, "afe_config_init failed");
         return -1;
     }
     cfg->aec_init = false;      /* no reference channel wired; see Kconfig */
     cfg->wakenet_init = false;  /* phase 2 */
-    cfg->vad_init = false;      /* ubo-core owns turn detection, not the device */
+    /* VAD is enabled for CHANNEL SELECTION, not for turn detection — ubo-core
+     * still owns that and we ignore vad_state entirely. With SE(BSS) running,
+     * something has to pick which separated source is the speaker:
+     * esp_afe_config.h says the output channel is chosen "by wakenet or vad",
+     * and with both off the selection stuck on a suppressed source, which AGC
+     * then amplified into full-scale noise. That was the entire "BSS outputs a
+     * constant" symptom. */
+    cfg->vad_init = true;
+    cfg->vad_enable_channel_trigger = true;
     /* AGC is what stops close talking from clipping the way the fixed 30dB
      * analog gain does. WEBRTC mode rather than WAKENET, which derives its gain
      * from the wake-word model we do not load yet. Note afe_config_check()
@@ -583,7 +614,9 @@ static int afe_setup(void) {
      * raw_data channel 2, a channel with no microphone behind it. That is the
      * entire "output is noise with a constant peak" symptom — the microphone
      * channels (raw_data ch0/ch1) were clean speech the whole time. */
-    cfg->fixed_output_channel = true;
+    /* Must be false, or the output is pinned to a raw microphone channel and
+     * the BSS result is discarded — i.e. no far-field processing at all. */
+    cfg->fixed_output_channel = false;
     /* SE(BSS) OFF. fetch's `data` was proven byte-identical to raw_data
      * channel 2 (500/500 samples, two independent runs), and raw_data is
      * [mic0, mic1, SE-output] — so the noise we were streaming IS the blind
@@ -592,7 +625,14 @@ static int afe_setup(void) {
      * two-microphone input, so SE has to go for NS to run at all; per
      * esp_afe_config.h, with SE deactivated AFE "will only use the first
      * microphone channel", which is exactly the clean signal we want. */
-    cfg->se_init = true;
+    /* SE(BSS) is the far-field algorithm: it separates the talker from the
+     * rest of the room across the two microphones. It requires AFE_TYPE_SR —
+     * AFE_TYPE_VC "only support single microphone channel", and for a single
+     * channel the library deactivates SE outright. */
+    cfg->se_init = false;
+    /* NS off: the library warns it "may reduce the accuracy of speech
+     * recognition", and config_check prioritises SE over NS for two-mic input
+     * anyway. */
     cfg->ns_init = true;
     cfg->memory_alloc_mode = AFE_MEMORY_ALLOC_MORE_PSRAM;
     /* TEMP: afe_config_check() is documented to MODIFY the config on conflict.
@@ -626,6 +666,16 @@ static int afe_setup(void) {
      * empty ("Ringbuffer of AFE is empty") and fetch returning a fixed
      * artifact. It cannot be allocated in the feed task because only ~6KB of
      * internal RAM is free once a talk session starts. */
+    a.afe_mic_bytes = (size_t)a.afe->get_feed_chunksize(a.afe_data) *
+                      AFE_MIC_CHANNELS * sizeof(int16_t);
+    a.afe_mic_buf =
+        heap_caps_malloc(a.afe_mic_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (!a.afe_mic_buf) {
+        ESP_LOGE(TAG, "AFE mic buffer (%u B internal) failed",
+                 (unsigned)a.afe_mic_bytes);
+        a.afe_data = NULL;
+        return -1;
+    }
     a.afe_feed_bytes = (size_t)a.afe->get_feed_chunksize(a.afe_data) *
                        a.afe->get_feed_channel_num(a.afe_data) * sizeof(int16_t);
     a.afe_feed_buf = heap_caps_malloc(a.afe_feed_bytes,
