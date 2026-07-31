@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from tests.hardware.audio_metrics import compare_audio, load_wav_mono_16k
+from tests.hardware.conftest import GRPC_HOST, GRPC_PORT
 
 if TYPE_CHECKING:
     from immutable import Immutable
@@ -75,56 +76,85 @@ async def _dispatch(stub: StoreServiceStub, action: Immutable) -> None:
 
 
 async def _collect_transcript(
-    stub: StoreServiceStub,
-    action: Immutable,
+    action_audio: bytes,
     *,
-    session_id: str,
-    timeout_seconds: float = 60.0,
+    sample_rate: int,
+    num_channels: int,
+    timeout_seconds: float = 90.0,
 ) -> str:
-    """Dispatch a transcription request and gather its text frames.
+    """Transcribe audio with the pod's own STT and return the text.
 
-    Subscribes before dispatching so a fast reply cannot be missed, and keys on
-    ``session_id`` so a concurrent assistant session's frames are not mistaken
-    for ours. Frame handling mirrors ``_SessionCollector`` in
-    tools/test_tts_stt_roundtrip.py.
+    Uses ``UboRPCClient`` rather than the raw stub: it owns its event loop and
+    hands back a real unsubscribe callable. Driving a streaming subscription
+    directly from the test's loop left the stream open at teardown and hung the
+    run until the shell timeout killed it, before pytest could report anything.
+
+    Signalling is a ``threading.Event``, not ``asyncio.Event`` — the callback
+    fires on the client's loop, and asyncio primitives are not safe to set
+    across loops.
     """
-    from ubo_bindings.store.v1 import SubscribeEventRequest
-    from ubo_bindings.ubo.v1 import AssistantHandleReportEvent, Event
+    import threading
 
+    from ubo_bindings.client import UboRPCClient
+    from ubo_bindings.ubo.v1 import (
+        Action,
+        AssistantHandleReportEvent,
+        AssistantTranscribeAction,
+        Event,
+    )
+
+    session_id = uuid.uuid4().hex
     parts: list[str] = []
-    done = asyncio.Event()
+    done = threading.Event()
 
-    async def listen() -> None:
-        async for response in stub.subscribe_event(
-            SubscribeEventRequest(
-                events=[Event(assistant_handle_report_event=AssistantHandleReportEvent())],
-            ),
-        ):
-            report = response.event.assistant_handle_report_event
-            data = report.data
-            group = getattr(data, '_group_current', {})
-            field_name = next(iter(group.values()), None)
-            if field_name == 'assistance_text_frame':
-                frame = data.assistance_text_frame
-                if frame.session_id and frame.session_id != session_id:
-                    continue
-                if frame.text:
-                    parts.append(frame.text)
-                if frame.is_last_frame:
-                    done.set()
-                    return
-            elif field_name == 'assistance_error_frame':
+    def on_report(event: Event) -> None:
+        report = event.assistant_handle_report_event
+        if not report:
+            return
+        # session_id lives on the inner Assistance*Frame, not on the oneof
+        # wrapper — keying on the wrapper silently matches nothing.
+        group = getattr(report.data, '_group_current', {})
+        field_name = next(iter(group.values()), None)
+        if field_name is None:
+            return
+        inner = getattr(report.data, field_name)
+        if getattr(inner, 'session_id', '') != session_id:
+            return
+        if field_name == 'assistance_text_frame':
+            if inner.text:
+                parts.append(inner.text)
+            if inner.is_last_frame:
                 done.set()
-                return
+        elif field_name == 'assistance_error_frame':
+            done.set()
 
-    listener = asyncio.ensure_future(listen())
+    client = UboRPCClient(GRPC_HOST, GRPC_PORT)
+    unsubscribe = client.subscribe_event(
+        event_type=Event(assistant_handle_report_event=AssistantHandleReportEvent()),
+        callback=on_report,
+    )
     try:
-        await asyncio.sleep(0.2)  # let the subscription establish
-        await _dispatch(stub, action)
-        with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(done.wait(), timeout=timeout_seconds)
+        await asyncio.sleep(0.5)  # let the subscription establish
+        client.dispatch(
+            action=Action(
+                assistant_transcribe_action=AssistantTranscribeAction(
+                    audio=action_audio,
+                    session_id=session_id,
+                    sample_rate=sample_rate,
+                    num_channels=num_channels,
+                ),
+            ),
+        )
+        # Polling a threading.Event, deliberately: an asyncio.Event cannot be
+        # set safely from the client's own loop (see the docstring).
+        deadline = asyncio.get_running_loop().time() + timeout_seconds
+        while not done.is_set() and asyncio.get_running_loop().time() < deadline:  # noqa: ASYNC110
+            await asyncio.sleep(0.25)
     finally:
-        listener.cancel()
+        with contextlib.suppress(Exception):
+            unsubscribe()
+        with contextlib.suppress(Exception):
+            client.close()
     return ''.join(parts)
 
 
@@ -332,7 +362,7 @@ def _similarity(expected: str, actual: str) -> tuple[float, float]:
 @pytest.mark.timeout(180)
 async def test_satellite_capture_is_intelligible(
     satellite: Satellite,
-    rpc: StoreServiceStub,
+    rpc: StoreServiceStub,  # noqa: ARG001  (ensures the core is reachable)
 ) -> None:
     """The most recent capture must transcribe close to the spoken sentence.
 
@@ -342,8 +372,6 @@ async def test_satellite_capture_is_intelligible(
     this measures the recognizer the assistant actually uses.
     """
     import wave
-
-    from ubo_app.store.services.assistant import AssistantTranscribeAction
 
     directory = _newest_session_dir(0)
     if directory is None:
@@ -355,16 +383,10 @@ async def test_satellite_capture_is_intelligible(
         channels = handle.getnchannels()
     assert pcm, 'recorded session contains no audio'
 
-    session_id = uuid.uuid4().hex
     transcript = await _collect_transcript(
-        rpc,
-        AssistantTranscribeAction(
-            audio=pcm,
-            session_id=session_id,
-            sample_rate=rate,
-            num_channels=channels,
-        ),
-        session_id=session_id,
+        pcm,
+        sample_rate=rate,
+        num_channels=channels,
     )
 
     print(f'\nsatellite: {satellite.audio_source}')  # noqa: T201
