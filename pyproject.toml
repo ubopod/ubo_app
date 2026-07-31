@@ -233,6 +233,11 @@ build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install -
 "device:test:run" = "poe test-on-device --run"
 "device:test:results" = "poe test-on-device --results"
 "device:test:complete" = "poe test-on-device --deps --copy --run --results"
+# Hardware-in-the-loop audio tests. Runs against the RUNNING ubo-app (unlike
+# device:test, which stops it), because the point is to measure the deployed
+# system with a real satellite listening over the air.
+"device:test:hil" = "poe test-hil --copy --run --results"
+"device:test:hil:run" = "poe test-hil --run"
 
 [tool.poe.tasks.test-on-device]
 args = [
@@ -244,6 +249,17 @@ args = [
   { name = "pytest-args", type = "string", default = "" },
 ]
 cmd = "scripts/test_on_device.sh"
+
+[tool.poe.tasks.test-hil]
+args = [
+  { name = "copy", type = "boolean" },
+  { name = "run", type = "boolean" },
+  { name = "results", type = "boolean" },
+  { name = "index", type = "integer", default = '1' },
+  { name = "pytest-args", type = "string", default = "tests/hardware -v -s" },
+  { name = "satellite-port", type = "string", default = "/dev/ttyACM0" },
+]
+cmd = "scripts/test_hil.sh"
 
 [tool.poe.tasks.deploy-to-device]
 args = [

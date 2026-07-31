@@ -1,0 +1,28 @@
+{
+  "audio_source": "",
+  "stop_reason": "listening_ended",
+  "started_at": "2026-07-31T03:01:34.741827+00:00",
+  "stopped_at": "2026-07-31T03:01:46.712942+00:00",
+  "wall_duration_s": 11.971,
+  "mic": {
+    "chunks": 239,
+    "bytes": 382400,
+    "audio_s": 11.95,
+    "coverage_pct": 99.8,
+    "sample_rate": 16000,
+    "channels": 1,
+    "gap_ms": {
+      "p50": 50.0,
+      "p90": 50.1,
+      "max": 60.5
+    },
+    "peak_dbfs": -0.9,
+    "rms_dbfs": -17.4,
+    "clipped_samples": 0
+  },
+  "reference": {
+    "bytes": 0,
+    "sample_rate": null,
+    "channels": null
+  }
+}
