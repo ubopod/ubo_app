@@ -84,7 +84,7 @@ if [ "$run" == "True" ]; then
   run_on_pod "cd /home/ubo/test-runner && \
     UBO_RUN_HIL=1 \
     UBO_SATELLITE_PORT=$satellite_port \
-    uv run --no-sync pytest $pytest_args 2>&1 || true"
+    uv run --no-sync pytest $pytest_args 2>&1 | tail -120 || true"
 fi
 
 if [ "$results" == "True" ]; then

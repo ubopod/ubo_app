@@ -554,7 +554,7 @@ static void mic_task(void *arg) {
  * caller falls back to raw capture. */
 static int afe_setup(void) {
     afe_config_t *cfg =
-        afe_config_init("MM", NULL, AFE_TYPE_SR, AFE_MODE_HIGH_PERF);
+        afe_config_init("MM", NULL, AFE_TYPE_VC, AFE_MODE_HIGH_PERF);
     if (!cfg) {
         ESP_LOGE(TAG, "afe_config_init failed");
         return -1;
@@ -592,7 +592,7 @@ static int afe_setup(void) {
      * two-microphone input, so SE has to go for NS to run at all; per
      * esp_afe_config.h, with SE deactivated AFE "will only use the first
      * microphone channel", which is exactly the clean signal we want. */
-    cfg->se_init = false;
+    cfg->se_init = true;
     cfg->ns_init = true;
     cfg->memory_alloc_mode = AFE_MEMORY_ALLOC_MORE_PSRAM;
     /* TEMP: afe_config_check() is documented to MODIFY the config on conflict.
