@@ -51,6 +51,11 @@ SESSIONS_DIR = Path.home() / '.local/share/ubo/assistant_sessions'
 # Loose acceptance gates — see module docstring.
 MIN_COVERAGE_PCT = 90.0
 TEST_OUTPUT_VOLUME = 0.7
+TALK_WINDOW_SECONDS = 24.0
+# How much worse the captured transcript may score than the same STT engine on
+# the reference audio. Absolute similarity conflates capture quality with TTS
+# pronunciation and STT quirks; the delta isolates what the air path cost.
+MAX_SIMILARITY_DROP = 0.20
 MIN_ENVELOPE_CORRELATION = 0.35
 MIN_SIMILARITY = 0.5
 MIN_KEYWORD_COVERAGE = 0.5
@@ -279,7 +284,11 @@ async def test_satellite_captures_played_sentence(
             tts_provider=AssistantTTSName.PIPER,
         ),
     )
-    await asyncio.sleep(14.0)
+    # Piper has to synthesize before anything plays, and the sentence itself
+    # runs ~8s. Stopping at 14s clipped the final word. Generous tail: the extra
+    # silence costs nothing (loss is gated on coverage, and the envelope
+    # comparison only spans the reference's length).
+    await asyncio.sleep(TALK_WINDOW_SECONDS)
 
     # 5. Close the session; the recorder writes on the falling edge.
     await _dispatch(
@@ -389,9 +398,24 @@ async def test_satellite_capture_is_intelligible(
         num_channels=channels,
     )
 
-    print(f'\nsatellite: {satellite.audio_source}')  # noqa: T201
+    # Control: the same STT engine on the audio that was PLAYED. Anything it
+    # drops here (TTS pronunciation, engine quirks) is not the microphone's
+    # fault, and scoring the capture against the literal sentence would blame
+    # the air path for it.
+    reference_transcript = ''
+    reference_path = directory / 'reference.wav'
+    if reference_path.exists():
+        with wave.open(str(reference_path), 'rb') as handle:
+            reference_transcript = await _collect_transcript(
+                handle.readframes(handle.getnframes()),
+                sample_rate=handle.getframerate(),
+                num_channels=handle.getnchannels(),
+            )
+
+    print(f'\nsatellite:  {satellite.audio_source}')  # noqa: T201
     print(f'expected:   {SENTENCE}')  # noqa: T201
-    print(f'transcript: {transcript}')  # noqa: T201
+    print(f'reference:  {reference_transcript}')  # noqa: T201
+    print(f'captured:   {transcript}')  # noqa: T201
 
     assert transcript.strip(), (
         'STT returned nothing for the captured audio — it is either silent, '
@@ -399,7 +423,7 @@ async def test_satellite_capture_is_intelligible(
     )
 
     ratio, coverage = _similarity(SENTENCE, transcript)
-    print(f'similarity: ratio={ratio:.2f} keyword_coverage={coverage:.2f}')  # noqa: T201
+    print(f'captured vs sentence: ratio={ratio:.2f} coverage={coverage:.2f}')  # noqa: T201
 
     assert ratio >= MIN_SIMILARITY, (
         f'transcript diverges from what was played (ratio {ratio:.2f} < '
@@ -409,3 +433,19 @@ async def test_satellite_capture_is_intelligible(
         f"only {coverage:.0%} of the sentence's distinctive words survived "
         f'(< {MIN_KEYWORD_COVERAGE:.0%}); words are being lost, not misheard'
     )
+
+    if reference_transcript:
+        reference_ratio, _ = _similarity(SENTENCE, reference_transcript)
+        print(  # noqa: T201
+            f'reference vs sentence: ratio={reference_ratio:.2f} '
+            f'-> air-path cost {reference_ratio - ratio:+.2f}',
+        )
+        # The delta, not the absolute score, is what the microphone path cost:
+        # anything the same engine also drops on the played audio is a TTS or
+        # STT trait, and blaming the air path for it would be wrong.
+        assert ratio >= reference_ratio - MAX_SIMILARITY_DROP, (
+            f'capture lost {reference_ratio - ratio:.2f} of transcription '
+            f'accuracy versus the same engine on the played audio '
+            f'({ratio:.2f} vs {reference_ratio:.2f}) — that gap is what the '
+            f'microphone path cost, and it is too large'
+        )
