@@ -25,6 +25,7 @@ from engines_registry import (
     first_configured_engine,
     is_engine_configured,
 )
+from session_recorder import setup_session_recorder
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
 from ubo_app.constants import SECRETS_PATH
@@ -3548,6 +3549,9 @@ async def init_service() -> None:
     _register_assistant_path_matchers()
 
     store.subscribe_event(AssistantRunPipelineEvent, _remember_playback_choice)
+    setup_session_recorder()
+
+
     store.subscribe_event(AssistantHandleReportEvent, _communicate)
     store.subscribe_event(
         AssistantGenericLLMProviderRemovedEvent,

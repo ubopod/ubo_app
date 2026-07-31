@@ -35,6 +35,7 @@ from ubo_app.store.settings.types import (
     SettingsState,
     SettingsStopServiceAction,
     SettingsStopServiceEvent,
+    SettingsToggleAssistantDebugAction,
     SettingsToggleBetaVersionsAction,
     SettingsToggleGrpcRemoteAccessAction,
     SettingsTogglePdbSignalAction,
@@ -94,6 +95,12 @@ def reducer(
             return replace(
                 state,
                 visual_debug=not state.visual_debug,
+            )
+
+        case SettingsToggleAssistantDebugAction():
+            return replace(
+                state,
+                assistant_debug=not state.assistant_debug,
             )
 
         case SettingsToggleBetaVersionsAction():

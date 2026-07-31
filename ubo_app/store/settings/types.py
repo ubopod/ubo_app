@@ -43,6 +43,10 @@ class SettingsToggleGrpcRemoteAccessAction(SettingsAction):
     """Toggle gRPC remote (LAN) access action."""
 
 
+class SettingsToggleAssistantDebugAction(SettingsAction):
+    """Toggle assistant debug session recording action."""
+
+
 class SettingsSetServicesAction(SettingsAction):
     """Start service action."""
 
@@ -164,5 +168,18 @@ class SettingsState(Immutable):
             default=False,
         ),
     )
+    assistant_debug: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            'settings:assistant_debug',
+            default=False,
+        ),
+    )
+    """Record each assistant listening session's audio to disk for diagnosis.
+
+    Writes the received microphone stream, the audio played during the session
+    and a metadata sidecar under ``DATA_PATH / 'assistant_sessions'``. Off by
+    default: sessions are written unconditionally while enabled, so this
+    accumulates files.
+    """
     services: dict[str, ServiceState] = field(default_factory=dict)
     services_status: ServicesStatus = ServicesStatus.LOADING
