@@ -296,6 +296,7 @@ async def _fake_create_subprocess_exec(  # noqa: C901
         'rpi-connect',
         'route',
         'tailscale',
+        'weston',
     ):
         expected = True
 

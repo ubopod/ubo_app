@@ -107,6 +107,7 @@ if TYPE_CHECKING:
         KeypadReportContextAction,
         KeypadState,
     )
+    from ubo_app.store.services.kiosk import KioskAction, KioskEvent, KioskState
     from ubo_app.store.services.lightdm import LightDMAction, LightDMState
     from ubo_app.store.services.localization import (
         LocalizationAction,
@@ -177,6 +178,7 @@ UboAction: TypeAlias = Union[
     'IpAction',
     'KeypadAction',
     'KeypadReportContextAction',
+    'KioskAction',
     'LightDMAction',
     'LocalizationAction',
     'McpAction',
@@ -209,6 +211,7 @@ UboEvent: TypeAlias = Union[
     'FileSystemEvent',
     'InfraredEvent',
     'IpEvent',
+    'KioskEvent',
     'LocalizationEvent',
     'McpEvent',
     'MqttEvent',
@@ -241,6 +244,7 @@ class RootState(BaseCombineReducerState):
     infrared: InfraredState
     ip: IpState
     keypad: KeypadState
+    kiosk: KioskState
     lightdm: LightDMState
     localization: LocalizationState
     mcp: McpState

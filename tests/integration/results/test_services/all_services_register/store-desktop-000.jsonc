@@ -382,6 +382,35 @@
     "is_on_chat": false,
     "is_on_notification": false
   },
+  "kiosk": {
+    "_type": "KioskState",
+    "connected_ports": [],
+    "dashboards": [
+      {
+        "_type": "KioskDashboard",
+        "id": "ubo-webui",
+        "name": "Ubo WebUI",
+        "url": "http://localhost:4321"
+      }
+    ],
+    "is_active": true,
+    "is_enabled": false,
+    "is_installed": false,
+    "is_installing": false,
+    "port_selections": {
+      "_type": "KioskPortSelections",
+      "hdmi_a_1": {
+        "_type": "KioskPortSelection",
+        "dashboard_id": "ubo-webui",
+        "role": "browser"
+      },
+      "hdmi_a_2": {
+        "_type": "KioskPortSelection",
+        "dashboard_id": null,
+        "role": "terminal"
+      }
+    }
+  },
   "lightdm": {
     "_type": "LightDMState",
     "is_active": true,
@@ -1140,6 +1169,16 @@
         "is_active": true,
         "is_enabled": true,
         "label": "Keypad",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
+      "kiosk": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "kiosk",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "Browser Kiosk",
         "log_level": 20,
         "should_auto_restart": false
       },

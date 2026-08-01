@@ -10,7 +10,7 @@ from ubo_app.logger import get_logger
 def service_handler(service: str, command: str) -> str | None:
     """Interact with system services."""
     logger = get_logger('system-manager')
-    if service in ('ssh', 'lightdm'):
+    if service in ('ssh', 'lightdm', 'ubo-kiosk'):
         try:
             if command == 'start':
                 subprocess.run(  # noqa: S603
@@ -20,6 +20,11 @@ def service_handler(service: str, command: str) -> str | None:
             elif command == 'stop':
                 subprocess.run(  # noqa: S603
                     ['/usr/bin/env', 'systemctl', 'stop', service],
+                    check=True,
+                )
+            elif command == 'restart':
+                subprocess.run(  # noqa: S603
+                    ['/usr/bin/env', 'systemctl', 'restart', service],
                     check=True,
                 )
             elif command == 'enable':

@@ -31,6 +31,7 @@ class Service(TypedDict):
 SERVICES: list[Service] = [
     Service(name='ubo-system', scope='system', enabled=True),
     Service(name='ubo-hotspot', scope='system', enabled=False),
+    Service(name='ubo-kiosk', scope='system', enabled=False),
     Service(name='ubo-app', scope='user', enabled=True),
 ]
 

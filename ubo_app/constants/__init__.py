@@ -122,6 +122,7 @@ CORE_SERVICE_IDS = [
     'ip',
     'keyboard',
     'keypad',
+    'kiosk',
     'lightdm',
     'mcp',
     'mqtt',

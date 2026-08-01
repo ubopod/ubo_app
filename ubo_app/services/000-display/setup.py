@@ -11,8 +11,10 @@ if TYPE_CHECKING:
 
 from ubo_app.logger import logger
 from ubo_app.store.core.types import (
+    MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    UpdateDynamicMenuAction,
 )
 from ubo_app.store.core.view_registry import register_path_menu_matcher
 from ubo_app.store.main import store
@@ -127,7 +129,38 @@ def handle_unblank_event(_: DisplayUnblankEvent) -> None:
     _unblank_event.set()
 
 
+DISPLAY_MAIN_MENU_ID = 'display:main'
 DISPLAY_TIMEOUT_MENU_ID = 'display:timeout'
+
+
+def build_display_main_menu() -> None:
+    """Build the Display root menu (Screen Timeout + HDMI).
+
+    Both items are static navigation entries. The HDMI item pushes the 'hdmi'
+    nav key, which the kiosk service's path matcher resolves to its own menu —
+    this service never reads kiosk state.
+    """
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=DISPLAY_MAIN_MENU_ID,
+            title='Display',
+            items=(
+                MenuItemData(
+                    key='timeout',
+                    label='Screen Timeout',
+                    icon='󰍹',
+                    action_id='menu:select:timeout',
+                ),
+                MenuItemData(
+                    key='hdmi',
+                    label='HDMI',
+                    icon='󰍺',
+                    action_id='menu:select:hdmi',
+                ),
+            ),
+            placeholder='',
+        ),
+    )
 
 
 def _register_display_action_handlers() -> None:
@@ -176,12 +209,13 @@ def init_service() -> Subscriptions:
 
     # Register path matcher for display settings navigation
     def _display_path_matcher(path: tuple[str, ...]) -> str | None:
-        # Match: ('main', 'settings', <category>, '000-display:')
-        if (
-            len(path) == 4  # noqa: PLR2004
-            and path[3] == 'display:'
-        ):
-            return DISPLAY_TIMEOUT_MENU_ID
+        # Match: ('main', 'settings', <category>, 'display:'[, 'timeout'])
+        # The nested 'hdmi' key is owned by the kiosk service's matcher.
+        if len(path) >= 4 and path[3] == 'display:':  # noqa: PLR2004
+            if len(path) == 4:  # noqa: PLR2004
+                return DISPLAY_MAIN_MENU_ID
+            if len(path) == 5 and path[4] == 'timeout':  # noqa: PLR2004
+                return DISPLAY_TIMEOUT_MENU_ID
         return None
 
     unregister_settings = register_path_menu_matcher(
@@ -204,6 +238,9 @@ def init_service() -> Subscriptions:
             icon='󰍹',
         ),
     )
+
+    # Build the Display root menu (Screen Timeout + HDMI)
+    build_display_main_menu()
 
     # Initialize activity tracking
     store.dispatch(DisplayUpdateActivityAction())
