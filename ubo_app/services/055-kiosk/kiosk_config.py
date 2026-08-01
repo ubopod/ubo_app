@@ -26,6 +26,27 @@ FOOT_APP_ID = 'ubo-kiosk-terminal'
 CHROMIUM_APP_ID_PREFIX = 'ubo-kiosk-browser'
 CHROMIUM_BIN = 'chromium-browser'
 
+# --no-sandbox: weston (and everything it launches) runs as root — this weston
+# build has no libseat support — and Chromium refuses to start as root with its
+# sandbox enabled. The remaining flags suppress the crash-restore / first-run /
+# translate UI that would otherwise arm after this launcher's unclean restarts
+# and silently hold keyboard focus, starving the page of key events.
+CHROMIUM_KIOSK_FLAGS = (
+    '--ozone-platform=wayland --no-sandbox --no-first-run '
+    '--no-default-browser-check --disable-session-crashed-bubble '
+    '--hide-crash-restore-bubble --disable-features=Translate'
+)
+
+# Clear the "did not exit cleanly" markers in a profile before each launch so
+# the crash-restore bubble never arms (belt-and-braces with the flags above).
+# Operates on the ``$prefs`` shell variable set in the launch loop.
+_PREFS_RESET_SED = (
+    'sed -i '
+    "'s/\"exited_cleanly\":false/\"exited_cleanly\":true/;"
+    "s/\"exit_type\":\"[^\"]*\"/\"exit_type\":\"Normal\"/' "
+    '"$prefs"'
+)
+
 KIOSK_CONFIG_DIR = Path(f'/home/{USERNAME}/.config/ubo-kiosk')
 WESTON_INI_PATH = KIOSK_CONFIG_DIR / 'weston.ini'
 CLIENTS_SCRIPT_PATH = KIOSK_CONFIG_DIR / 'kiosk-clients.sh'
@@ -128,17 +149,17 @@ def generate_clients_script(
 
     for field_name, selection in browser_ports:
         url = _resolve_url(selection.dashboard_id, dashboards)
-        # --no-sandbox: weston (and everything it launches) runs as root, since
-        # this weston build has no libseat support; Chromium refuses to start as
-        # root with its sandbox enabled.
+        profile_dir = _browser_profile_dir(field_name)
         chromium_cmd = (
-            f'{CHROMIUM_BIN} --ozone-platform=wayland --no-sandbox '
-            f'--user-data-dir={_browser_profile_dir(field_name)} '
+            f'{CHROMIUM_BIN} {CHROMIUM_KIOSK_FLAGS} '
+            f'--user-data-dir={profile_dir} '
             f'--class={_browser_app_id(field_name)} --kiosk "{url}"'
         )
         lines += [
             '(',
             '    while true; do',
+            f'        prefs="{profile_dir}/Default/Preferences"',
+            f'        [ -f "$prefs" ] && {_PREFS_RESET_SED}',
             f'        {chromium_cmd}',
             '        sleep 2',
             '    done',

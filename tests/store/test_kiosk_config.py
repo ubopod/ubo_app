@@ -131,6 +131,11 @@ def test_clients_script_browser_and_terminal() -> None:
     assert f'--class={CHROMIUM_APP_ID_PREFIX}-hdmi_a_1' in script
     assert 'localhost:4321' in script
     assert script.rstrip().endswith('wait')
+    # Kiosk hardening: suppress the focus-stealing crash-restore/first-run UI,
+    # and clear the crash markers before each (unclean-restart-prone) launch.
+    assert '--disable-session-crashed-bubble' in script
+    assert '--no-first-run' in script
+    assert 'exited_cleanly' in script
 
 
 def test_clients_script_two_browsers_use_distinct_urls() -> None:
