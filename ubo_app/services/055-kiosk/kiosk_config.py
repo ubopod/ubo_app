@@ -22,7 +22,7 @@ from ubo_app.store.services.kiosk import (
 # foot honours ``--app-id``; Chromium's Wayland app-id is set from ``--class``.
 # NOTE: confirm Chromium's app-id honours ``--class`` on the validated device
 # recipe; adjust ``CHROMIUM_APP_ID_PREFIX`` / ``CHROMIUM_BIN`` if it differs.
-FOOT_APP_ID = 'ubo-kiosk-terminal'
+FOOT_APP_ID_PREFIX = 'ubo-kiosk-terminal'
 CHROMIUM_APP_ID_PREFIX = 'ubo-kiosk-browser'
 CHROMIUM_BIN = 'chromium-browser'
 
@@ -56,6 +56,10 @@ _OUTPUTS: tuple[tuple[str, str], ...] = (
     ('hdmi_a_1', 'HDMI-A-1'),
     ('hdmi_a_2', 'HDMI-A-2'),
 )
+
+
+def _terminal_app_id(field_name: str) -> str:
+    return f'{FOOT_APP_ID_PREFIX}-{field_name}'
 
 
 def _browser_app_id(field_name: str) -> str:
@@ -103,7 +107,7 @@ def generate_weston_ini(
         elif selection.role == KioskPortRole.BROWSER:
             lines.append(f'app-ids={_browser_app_id(field_name)}')
         elif selection.role == KioskPortRole.TERMINAL:
-            lines.append(f'app-ids={FOOT_APP_ID}')
+            lines.append(f'app-ids={_terminal_app_id(field_name)}')
         lines.append('')
 
     lines += [
@@ -122,29 +126,29 @@ def generate_clients_script(
     """Generate the launcher script that starts foot and/or Chromium.
 
     Weston restarts the autolaunch target if it exits (``watch=true``), so the
-    script keeps a foreground process alive: it backgrounds the terminal and one
-    self-restarting Chromium loop per browser output, then ``wait``s on them
-    (or idles when there are no clients at all).
+    script keeps a foreground process alive: it backgrounds one foot terminal
+    per terminal output and one self-restarting Chromium loop per browser
+    output, then ``wait``s on them (or idles when there are no clients at all).
     """
-    selections = (
+    terminal_ports = [
+        field_name
+        for field_name, _output_name in _OUTPUTS
+        if getattr(port_selections, field_name).role == KioskPortRole.TERMINAL
+    ]
+    browser_ports = [
         (field_name, getattr(port_selections, field_name))
         for field_name, _output_name in _OUTPUTS
-    )
-    browser_ports = [
-        (field_name, selection)
-        for field_name, selection in selections
-        if selection.role == KioskPortRole.BROWSER
+        if getattr(port_selections, field_name).role == KioskPortRole.BROWSER
     ]
-    has_terminal = any(
-        getattr(port_selections, field_name).role == KioskPortRole.TERMINAL
-        for field_name, _output_name in _OUTPUTS
-    )
-
-    foot_cmd = f'foot --app-id={FOOT_APP_ID} -- login -f {USERNAME}'
 
     lines: list[str] = ['#!/bin/bash', 'set -u', '']
 
-    if has_terminal:
+    # One foot per terminal output, each pinned to its output by a distinct
+    # app-id — a single shared instance would only ever show on one screen.
+    for field_name in terminal_ports:
+        foot_cmd = (
+            f'foot --app-id={_terminal_app_id(field_name)} -- login -f {USERNAME}'
+        )
         lines += [f'{foot_cmd} &', '']
 
     for field_name, selection in browser_ports:
@@ -167,7 +171,7 @@ def generate_clients_script(
             '',
         ]
 
-    if has_terminal or browser_ports:
+    if terminal_ports or browser_ports:
         lines.append('wait')
     else:
         lines.append('sleep infinity')

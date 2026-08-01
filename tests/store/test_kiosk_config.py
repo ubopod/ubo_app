@@ -47,7 +47,7 @@ def _import_config() -> tuple[str, str, GenerateConfig, GenerateConfig]:
 
     from kiosk_config import (  # type: ignore[import-not-found]
         CHROMIUM_APP_ID_PREFIX,
-        FOOT_APP_ID,
+        FOOT_APP_ID_PREFIX,
         generate_clients_script,
         generate_weston_ini,
     )
@@ -57,7 +57,7 @@ def _import_config() -> tuple[str, str, GenerateConfig, GenerateConfig]:
 
     return (
         CHROMIUM_APP_ID_PREFIX,
-        FOOT_APP_ID,
+        FOOT_APP_ID_PREFIX,
         generate_clients_script,
         generate_weston_ini,
     )
@@ -65,7 +65,7 @@ def _import_config() -> tuple[str, str, GenerateConfig, GenerateConfig]:
 
 (
     CHROMIUM_APP_ID_PREFIX,
-    FOOT_APP_ID,
+    FOOT_APP_ID_PREFIX,
     generate_clients_script,
     generate_weston_ini,
 ) = _import_config()
@@ -100,7 +100,7 @@ def test_weston_ini_default_selections_pin_apps_to_outputs() -> None:
     assert 'name=HDMI-A-1' in ini
     assert f'app-ids={CHROMIUM_APP_ID_PREFIX}-hdmi_a_1' in ini
     assert 'name=HDMI-A-2' in ini
-    assert f'app-ids={FOOT_APP_ID}' in ini
+    assert f'app-ids={FOOT_APP_ID_PREFIX}-hdmi_a_2' in ini
     assert '[autolaunch]' in ini
     assert 'mode=off' not in ini
 
@@ -118,7 +118,7 @@ def test_weston_ini_off_selection_sets_mode_off() -> None:
 
     assert 'mode=off' in ini
     assert f'app-ids={CHROMIUM_APP_ID_PREFIX}-hdmi_a_1' in ini
-    assert f'app-ids={FOOT_APP_ID}' not in ini
+    assert f'app-ids={FOOT_APP_ID_PREFIX}' not in ini
 
 
 def test_clients_script_browser_and_terminal() -> None:
@@ -126,7 +126,7 @@ def test_clients_script_browser_and_terminal() -> None:
     script = generate_clients_script(KioskPortSelections(), _DEFAULT_DASHBOARDS)
 
     assert script.startswith('#!/bin/bash')
-    assert f'--app-id={FOOT_APP_ID}' in script
+    assert f'--app-id={FOOT_APP_ID_PREFIX}-hdmi_a_2' in script
     assert 'while true; do' in script
     assert f'--class={CHROMIUM_APP_ID_PREFIX}-hdmi_a_1' in script
     assert 'localhost:4321' in script
@@ -162,14 +162,27 @@ def test_clients_script_two_browsers_use_distinct_urls() -> None:
     assert 'chromium-hdmi_a_2' in script
 
 
-def test_clients_script_terminal_only_waits() -> None:
-    """Only terminal ports → foot runs and the script waits on it."""
+def test_clients_script_two_terminals_use_distinct_app_ids() -> None:
+    """Both ports on terminal → one foot per output with distinct app-ids.
+
+    A single shared foot instance would only ever show on one screen, leaving
+    the other blank; each output needs its own pinned surface.
+    """
     script = generate_clients_script(
         _selections(KioskPortRole.TERMINAL, KioskPortRole.TERMINAL),
         _DEFAULT_DASHBOARDS,
     )
+    ini = generate_weston_ini(
+        _selections(KioskPortRole.TERMINAL, KioskPortRole.TERMINAL),
+        _DEFAULT_DASHBOARDS,
+    )
 
-    assert f'--app-id={FOOT_APP_ID}' in script
+    assert f'--app-id={FOOT_APP_ID_PREFIX}-hdmi_a_1' in script
+    assert f'--app-id={FOOT_APP_ID_PREFIX}-hdmi_a_2' in script
+    assert script.count('foot ') == 2
+    # Each output pins its own foot surface.
+    assert f'app-ids={FOOT_APP_ID_PREFIX}-hdmi_a_1' in ini
+    assert f'app-ids={FOOT_APP_ID_PREFIX}-hdmi_a_2' in ini
     assert 'while true; do' not in script
     assert script.rstrip().endswith('wait')
 
