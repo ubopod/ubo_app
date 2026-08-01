@@ -1110,6 +1110,12 @@ class AssistantRunPipelineAction(AssistantAction):
     enable_tools: bool = False
 
 
+class AssistantCancelRequestAction(AssistantAction):
+    """Cancel a one-shot pipeline when its remote client disconnects."""
+
+    session_id: str
+
+
 class AssistantEvent(BaseEvent):
     """Base class for assistant events."""
 
@@ -1301,6 +1307,12 @@ class AssistantRunPipelineEvent(AssistantEvent):
     piper_voice_id: str = ''
     kokoro_voice_id: str = ''
     tts_voice_id: str = ''
+
+
+class AssistantCancelRequestEvent(AssistantEvent):
+    """Tell the assistant subprocess to stop one in-flight request pipeline."""
+
+    session_id: str
 
 
 class AssistantState(Immutable):

@@ -46,6 +46,7 @@ dependencies = [
   "ubo-app-raw-bindings",
   "ubo-gui==0.13.17",
   "vosk==0.3.44",
+  "wyoming[zeroconf]==1.10.0",
   "openwakeword==0.6.0",
   # Speex noise suppression for OpenWakeWord — native, Linux-only (manylinux
   # aarch64/x86_64 wheels). Marked so it's skipped on non-Linux dev (e.g. macOS);
@@ -390,6 +391,10 @@ extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/090-web-ui"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-wyoming"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]

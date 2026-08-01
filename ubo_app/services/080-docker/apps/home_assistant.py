@@ -147,8 +147,10 @@ def zigbee_adapter_went_missing() -> bool:
     before ever completing Zigbee setup.
     """
     enabled, adapter_by_id = _zigbee_intent()
-    return enabled and bool(adapter_by_id) and (
-        adapter_by_id not in detect_serial_adapters()
+    return (
+        enabled
+        and bool(adapter_by_id)
+        and (adapter_by_id not in detect_serial_adapters())
     )
 
 
@@ -333,8 +335,7 @@ def _write_home_assistant_compose(
     mosquitto_path = HOME_ASSISTANT_DATA_PATH / 'mosquitto'
     timezone = _detect_timezone()
     devices_block = (
-        '    devices:\n'
-        f'      - {zigbee_device}:{ZIGBEE_CONTAINER_DEVICE}\n'
+        f'    devices:\n      - {zigbee_device}:{ZIGBEE_CONTAINER_DEVICE}\n'
         if zigbee_device
         else ''
     )
@@ -346,6 +347,8 @@ def _write_home_assistant_compose(
         '    restart: unless-stopped\n'
         '    environment:\n'
         f'      - TZ={timezone}\n'
+        '    extra_hosts:\n'
+        '      - host.docker.internal:host-gateway\n'
         '    volumes:\n'
         f'      - {config_path}:/config\n'
         '      - /etc/localtime:/etc/localtime:ro\n'
@@ -399,7 +402,12 @@ def _write_home_assistant_metadata(composition_path: Path) -> None:
             'LAN discovery (host network) puts Home Assistant on this '
             "device's network stack so mDNS/SSDP discovery finds your "
             'devices — the only mode that works over Wi-Fi. Home Assistant '
-            'stays on port 8123 either way.'
+            'stays on port 8123 either way.\n\n'
+            "To use this Home Assistant installation with the Pod's Wyoming "
+            "voice services, enable Home Assistant in the Pod's Assistant "
+            'settings and select the Docker-only connection policy. Configure '
+            'the Wyoming integrations with host.docker.internal on ports 10700 '
+            '(satellite) and 10600 (ASR, TTS, and conversation).'
         ),
         'compose_id': HOME_ASSISTANT_COMPOSITION_ID,
     }

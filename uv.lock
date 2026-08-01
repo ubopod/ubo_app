@@ -1314,6 +1314,15 @@ wheels = [
 ]
 
 [[package]]
+name = "ifaddr"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/ac/fb4c578f4a3256561548cd825646680edcadb9440f3f68add95ade1eb791/ifaddr-0.2.0.tar.gz", hash = "sha256:cc0cbfcaabf765d44595825fb96a99bb12c79716b73b44330ea38ee2b0c4aed4", size = 10485 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9c/1f/19ebc343cc71a7ffa78f17018535adc5cbdd87afb31d7c34874680148b32/ifaddr-0.2.0-py3-none-any.whl", hash = "sha256:085e0305cfe6f16ab12d72e2024030f5d52674afad6911bb1eee207177b8a748", size = 12314 },
+]
+
+[[package]]
 name = "iniconfig"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2833,6 +2842,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app"
+version = "2.0.1.dev260712103102101535"
 source = { editable = "." }
 dependencies = [
     { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
@@ -2897,6 +2907,7 @@ dependencies = [
     { name = "ubo-app-raw-bindings" },
     { name = "ubo-gui" },
     { name = "vosk" },
+    { name = "wyoming", extra = ["zeroconf"] },
 ]
 
 [package.optional-dependencies]
@@ -2994,6 +3005,7 @@ requires-dist = [
     { name = "ubo-app-raw-bindings", editable = "ubo_app/rpc" },
     { name = "ubo-gui", specifier = "==0.13.17" },
     { name = "vosk", specifier = "==0.3.44" },
+    { name = "wyoming", extras = ["zeroconf"], specifier = "==1.10.0" },
 ]
 provides-extras = ["test-investigation"]
 
@@ -3022,6 +3034,7 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
+version = "2.0.1.dev260712103102101535"
 source = { editable = "ubo_app/rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },
@@ -3150,6 +3163,20 @@ wheels = [
 ]
 
 [[package]]
+name = "wyoming"
+version = "1.10.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/ae/f676bf8c5cda90283978e7569c96df0b96295c68b1e1b65e3249a67996a7/wyoming-1.10.0.tar.gz", hash = "sha256:50f2aa61d95131a379482d096975a822d61a5d7d2bad1b74d05b38fce9ce2d05", size = 41871 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/c9/0b9b2eca91e240bb3390472306fb8e2aa45d491dd5a2de1bc765e041177c/wyoming-1.10.0-py3-none-any.whl", hash = "sha256:83b23ab9fb7e0a9ad92387e62497728949603b97a25f4e61706c222d2b2c63d1", size = 42277 },
+]
+
+[package.optional-dependencies]
+zeroconf = [
+    { name = "zeroconf" },
+]
+
+[[package]]
 name = "yarl"
 version = "1.20.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3178,4 +3205,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/50/4f/62faab3b479dfdcb741fe9e3f0323e2a7d5cd1ab2edc73221d57ad4834b2/yarl-1.20.1-cp311-cp311-win32.whl", hash = "sha256:597f40615b8d25812f14562699e287f0dcc035d25eb74da72cae043bb884d773", size = 81485, upload-time = "2025-06-10T00:43:41.038Z" },
     { url = "https://files.pythonhosted.org/packages/f0/09/d9c7942f8f05c32ec72cd5c8e041c8b29b5807328b68b4801ff2511d4d5e/yarl-1.20.1-cp311-cp311-win_amd64.whl", hash = "sha256:26ef53a9e726e61e9cd1cda6b478f17e350fb5800b4bd1cd9fe81c4d91cfeb2e", size = 86686, upload-time = "2025-06-10T00:43:42.692Z" },
     { url = "https://files.pythonhosted.org/packages/b4/2d/2345fce04cfd4bee161bf1e7d9cdc702e3e16109021035dbb24db654a622/yarl-1.20.1-py3-none-any.whl", hash = "sha256:83b8eb083fe4683c6115795d9fc1cfaf2cbbefb19b3a1cb68f6527460f483a77", size = 46542, upload-time = "2025-06-10T00:46:07.521Z" },
+]
+
+[[package]]
+name = "zeroconf"
+version = "0.88.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ifaddr" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b0/12/f7b493ac07f231d1cd57d2c04e0f03d69249bfd1c4a9caff29ab3bb5e873/zeroconf-0.88.0.tar.gz", hash = "sha256:9512aeeef9e4726f9566c9512b783970952e6a1a7904c0854b8ad3b9817fec6d", size = 150009 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/8a/86e49acd5223e14f84eadb69acce0f00d48f49f666ccd240a8976d14e6d2/zeroconf-0.88.0-cp311-cp311-macosx_11_0_x86_64.whl", hash = "sha256:789049ccd636836a81005fe514f5f289342052e9c7586bd549c44a148ac4bc0a", size = 1451165 },
+    { url = "https://files.pythonhosted.org/packages/09/3d/3d0fc3c406a85fdba2371aa37c3669009a60561df4937b6eea5afb80c168/zeroconf-0.88.0-cp311-cp311-manylinux_2_17_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2014_i686.whl", hash = "sha256:408563bbbaa03f04304352bf7488ded8da16ba95d20d086bb6faff5f0353efb8", size = 3686288 },
+    { url = "https://files.pythonhosted.org/packages/b1/51/ec4471f898139052439d1aaab2a0bcb285a5f01ff69e9d3f85b08f217c45/zeroconf-0.88.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e769d06ad77961f46a8fa9c06958b37bb5000cbe876d9f677c6288578c09d87c", size = 3744573 },
+    { url = "https://files.pythonhosted.org/packages/f7/93/4725e4b94239043d6b73a5eb50a74ff8e877760803dfba4518b6eb107ac4/zeroconf-0.88.0-cp311-cp311-musllinux_1_1_i686.whl", hash = "sha256:07fc90e6a4d05bab41fa617a5f081ed73d2d9bc350512fd8612c9cee83ee2bd8", size = 3826646 },
+    { url = "https://files.pythonhosted.org/packages/ec/48/1b5522733038407390723bc66b2db86155a553c7d9e2b623b79c68721bc8/zeroconf-0.88.0-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:5aaffdb3c44b84ac75fe9f0cca8a6f354cd882bfb594337dc5ffc20f5557bed1", size = 3789293 },
+    { url = "https://files.pythonhosted.org/packages/88/54/bb0168dd577ee999d04d6fec83cb4d060012c8650ab0889947e8f7ed6150/zeroconf-0.88.0-cp311-cp311-win32.whl", hash = "sha256:e0f583aea67a076c535a9d2a3f3690d280822b7fc0d1721b23228c5fe637d6d9", size = 1380050 },
+    { url = "https://files.pythonhosted.org/packages/8c/2a/ae6f2b73d089a5b848534c657d82d4943d600c4701a47ff84d09a706d24f/zeroconf-0.88.0-cp311-cp311-win_amd64.whl", hash = "sha256:6cd582688be1f3bcdde0f9b28f50833a65b7de005bf6388fe003a59f2943f800", size = 1380052 },
 ]

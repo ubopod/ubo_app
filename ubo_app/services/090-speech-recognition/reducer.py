@@ -61,6 +61,7 @@ from ubo_app.store.services.speech_recognition import (
     set_model_status,
     trigger_by_id,
 )
+from ubo_app.store.services.wyoming import WyomingSatelliteWakeAction
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -170,7 +171,9 @@ def _apply_wake_mode(
     Action`) and Infrared-bound triggers (`SpeechRecognitionTriggerModeAction`):
     INTENTS arms the command listener (blue ring) when idle; QUICK_CHAT/
     CONVERSATION start the assistant when idle; STOP_TALKING stops it talking —
-    or, while the command listener is armed, dismisses that window instead.
+    or, while the command listener is armed, dismisses that window instead;
+    HOME_ASSISTANT hands the utterance to the Wyoming satellite instead of the
+    on-device assistant.
 
     ``enforce_mode_gate`` makes the per-mode ``enabled_wake_modes`` switches
     authoritative here in the (pure) reducer: the audio-detection path enforces
@@ -181,6 +184,19 @@ def _apply_wake_mode(
     The EnginesManager's trigger-dropping for a disabled mode is then just an
     optimization, not the sole enforcement.
     """
+    # Equality, not identity: a mode that has round-tripped through persistence
+    # or the RPC layer compares equal to the canonical member without being it
+    # (the same trap that made `connection_policy` bind the wrong interface).
+    if mode == WakeMode.HOME_ASSISTANT:
+        # A separate destination, not a local assistant mode: leave `status`
+        # (and therefore any in-flight local session) untouched, and stay out of
+        # the `assistant_enabled` gate below.
+        return CompleteReducerResult(
+            state=state,
+            actions=[
+                WyomingSatelliteWakeAction(phrase=phrase, detector=detector),
+            ],
+        )
     if (
         mode is not WakeMode.STOP_TALKING
         and enforce_mode_gate

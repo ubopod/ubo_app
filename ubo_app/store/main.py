@@ -143,6 +143,11 @@ if TYPE_CHECKING:
     from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
     from ubo_app.store.services.web_ui import WebUIAction, WebUIState
     from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
+    from ubo_app.store.services.wyoming import (
+        WyomingAction,
+        WyomingEvent,
+        WyomingState,
+    )
     from ubo_app.store.settings.types import SettingsState
     from ubo_app.store.status_icons.types import StatusIconsAction, StatusIconsState
     from ubo_app.store.update_manager.types import (
@@ -189,6 +194,7 @@ UboAction: TypeAlias = Union[
     'VSCodeAction',
     'WebUIAction',
     'WiFiAction',
+    'WyomingAction',
 ]
 UboEvent: TypeAlias = Union[
     # Core Events
@@ -211,6 +217,7 @@ UboEvent: TypeAlias = Union[
     'SpeechRecognitionEvent',
     'UsersEvent',
     'WiFiEvent',
+    'WyomingEvent',
 ]
 
 if threading.current_thread() is not threading.main_thread():
@@ -251,6 +258,7 @@ class RootState(BaseCombineReducerState):
     vscode: VSCodeState
     web_ui: WebUIState
     wifi: WiFiState
+    wyoming: WyomingState
 
 
 root_reducer, root_reducer_id = combine_reducers(
@@ -532,7 +540,6 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
                 # Process ALL pending events before continuing with actions
                 if len(self._events) > 0:
                     self._run_event_handlers()
-
 
 
 CALL_EVENT_KWARGS_KEY = '__ubo_autorun_call_event'

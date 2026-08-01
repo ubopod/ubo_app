@@ -19,6 +19,7 @@ from ubo_app.constants.assistant import (
     ASSISTANT_CONVERSATION_WAKE_WORD,
     ASSISTANT_QUICK_CHAT_WAKE_PHRASE,
     ASSISTANT_STOP_TALKING_PHRASE,
+    HOME_ASSISTANT_WAKE_PHRASE,
     INTENTS_WAKE_WORD,
 )
 from ubo_app.utils.persistent_store import read_from_persistent_store
@@ -37,6 +38,10 @@ class WakeMode(StrEnum):
     QUICK_CHAT = 'quick_chat'
     CONVERSATION = 'conversation'
     STOP_TALKING = 'stop_talking'
+    # Hands the utterance to Home Assistant over the Wyoming satellite rather than
+    # the on-device assistant. Deliberately outside the ``assistant_enabled`` gate:
+    # it is a separate destination, not a mode of the local assistant.
+    HOME_ASSISTANT = 'home_assistant'
 
 
 class WakeWordEngineName(StrEnum):
@@ -432,6 +437,7 @@ _MODE_ORDER: tuple[WakeMode, ...] = (
     WakeMode.QUICK_CHAT,
     WakeMode.CONVERSATION,
     WakeMode.STOP_TALKING,
+    WakeMode.HOME_ASSISTANT,
 )
 
 
@@ -444,6 +450,7 @@ _DEFAULT_MODE_PHRASES: dict[WakeMode, tuple[str, ...]] = {
     WakeMode.QUICK_CHAT: (ASSISTANT_QUICK_CHAT_WAKE_PHRASE,),
     WakeMode.CONVERSATION: (ASSISTANT_CONVERSATION_WAKE_WORD,),
     WakeMode.STOP_TALKING: (ASSISTANT_STOP_TALKING_PHRASE,),
+    WakeMode.HOME_ASSISTANT: (HOME_ASSISTANT_WAKE_PHRASE,),
 }
 
 # (mode, phrases) entries — the source for seeding/migrating Vosk triggers.
@@ -478,6 +485,8 @@ def _legacy_slot_entries() -> list[_SlotEntry]:
             'speech_recognition:stop_talking_phrase',
             default=ASSISTANT_STOP_TALKING_PHRASE,
         ),
+        # Postdates the Phase-1 layout, so it has no legacy key to read.
+        WakeMode.HOME_ASSISTANT: HOME_ASSISTANT_WAKE_PHRASE,
     }
     return [(mode, (legacy_phrase[mode],)) for mode in _MODE_ORDER]
 

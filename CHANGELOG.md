@@ -6,6 +6,14 @@ history and may still collect terse maintainer-oriented entries during a release
 cycle.
 
 ## Upcoming
+- feat(wyoming): add secured Home Assistant Wyoming satellite and assistant-engine
+  integration
+- feat(wyoming,speech-recognition): detect the Home Assistant wake word on-device
+  via the new `Home Assistant` wake mode (Wake Up → Phrases) and ask Home
+  Assistant for an ASR-stage pipeline run, so it needs no wake-word engine of its
+  own — the openWakeWord add-on is unavailable on container installs — and the
+  microphone is only streamed for the duration of a command instead of
+  continuously; the LED ring is green for the duration of that command
 - feat(speech-recognition): match configured voice shortcuts during a QUICK_CHAT
   assistant session — a matched command runs its bound action and ends the session
   instead of being answered by the LLM (stage 1, local Vosk, offline)

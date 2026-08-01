@@ -21,6 +21,7 @@ import importlib
 import importlib.util
 import sys
 from dataclasses import replace
+from enum import StrEnum
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
@@ -80,6 +81,9 @@ def _load(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         AssistantStartListeningAction=assistant_module.AssistantStartListeningAction,
         AssistantStopTalkingAction=assistant_module.AssistantStopTalkingAction,
         WakePhraseTriggerSource=assistant_module.WakePhraseTriggerSource,
+        WyomingSatelliteWakeAction=importlib.import_module(
+            'ubo_app.store.services.wyoming',
+        ).WyomingSatelliteWakeAction,
     )
 
 
@@ -152,6 +156,15 @@ def _stops(ns: SimpleNamespace, result: CompleteReducerResult) -> list:
         a
         for a in cast('list[BaseAction]', result.actions or [])
         if isinstance(a, ns.AssistantStopTalkingAction)
+    ]
+
+
+def _wyoming_wakes(ns: SimpleNamespace, result: CompleteReducerResult) -> list:
+    """Return the WyomingSatelliteWakeAction actions in a reducer result."""
+    return [
+        a
+        for a in cast('list[BaseAction]', result.actions or [])
+        if isinstance(a, ns.WyomingSatelliteWakeAction)
     ]
 
 
@@ -409,6 +422,139 @@ def test_ir_trigger_mode_ignores_mode_gate(
     )
 
     assert len(_starts(ns, result)) == 1
+
+
+# ---------- home assistant (wyoming) mode ----------
+
+
+def test_home_assistant_trigger_hands_off_to_the_satellite(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The Home Assistant mode routes to Wyoming, not the on-device assistant."""
+    ns = _load(monkeypatch)
+    trig = _trigger(
+        ns,
+        id='ha1',
+        mode=ns.WakeMode.HOME_ASSISTANT,
+        value='hey home assistant',
+    )
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
+    )
+
+    result = _detect(ns, state, ns.Engine.VOSK, 'ha1', phrase='hey home assistant')
+
+    wakes = _wyoming_wakes(ns, result)
+    assert len(wakes) == 1
+    assert cast('Any', wakes[0]).phrase == 'hey home assistant'
+    assert cast('Any', wakes[0]).detector == ns.Engine.VOSK.value
+    assert not _starts(ns, result)
+    assert result.state.status is ns.Status.IDLE
+
+
+def test_home_assistant_trigger_ignores_the_assistant_switch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Home Assistant is a separate destination, not a local assistant mode.
+
+    Turning the on-device assistant off must not also silence the Home Assistant
+    wake word.
+    """
+    ns = _load(monkeypatch)
+    trig = _trigger(
+        ns,
+        id='ha1',
+        mode=ns.WakeMode.HOME_ASSISTANT,
+        value='hey home assistant',
+    )
+    state = replace(
+        _state(
+            ns,
+            ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
+        ),
+        assistant_enabled=False,
+    )
+
+    result = _detect(ns, state, ns.Engine.VOSK, 'ha1', phrase='hey home assistant')
+
+    assert len(_wyoming_wakes(ns, result)) == 1
+
+
+def test_home_assistant_trigger_leaves_an_armed_session_alone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Handing off to Home Assistant must not disarm local stage-1 matching."""
+    ns = _load(monkeypatch)
+    trig = _trigger(
+        ns,
+        id='ha1',
+        mode=ns.WakeMode.HOME_ASSISTANT,
+        value='hey home assistant',
+    )
+    state = replace(
+        _state(
+            ns,
+            ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
+        ),
+        status=ns.Status.ASSISTANT_WAITING,
+    )
+
+    result = _detect(ns, state, ns.Engine.VOSK, 'ha1', phrase='hey home assistant')
+
+    assert len(_wyoming_wakes(ns, result)) == 1
+    assert result.state.status is ns.Status.ASSISTANT_WAITING
+
+
+def test_home_assistant_mode_is_matched_by_value_not_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A mode that is equal-but-not-identical must still route to Wyoming.
+
+    A trigger's mode can reach the reducer as a distinct enum object — rebuilt by
+    the RPC layer or by a reloaded module — and an ``is`` check would silently
+    drop the wake instead. Same trap that made ``connection_policy`` bind the
+    wrong interface.
+    """
+    ns = _load(monkeypatch)
+
+    class _ForeignWakeMode(StrEnum):
+        HOME_ASSISTANT = 'home_assistant'
+
+    trig = _trigger(
+        ns,
+        id='ha1',
+        mode=_ForeignWakeMode.HOME_ASSISTANT,
+        value='hey home assistant',
+    )
+    assert cast('Any', trig).mode is not ns.WakeMode.HOME_ASSISTANT
+    assert cast('Any', trig).mode == ns.WakeMode.HOME_ASSISTANT
+    state = _state(
+        ns,
+        ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
+    )
+
+    result = _detect(ns, state, ns.Engine.VOSK, 'ha1', phrase='hey home assistant')
+
+    assert len(_wyoming_wakes(ns, result)) == 1
+
+
+def test_home_assistant_mode_is_seeded_on_a_fresh_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A fresh install ships a Vosk phrase for the Home Assistant mode."""
+    monkeypatch.setattr(
+        'ubo_app.utils.persistent_store.read_from_persistent_store',
+        lambda _key, **kwargs: kwargs.get('default'),
+    )
+    ns = _load(monkeypatch)
+    init = cast('type[BaseAction]', ns.reducer.__globals__['InitAction'])
+    state = cast('SpeechRecognitionState', ns.reducer(None, init()))
+
+    vosk = ns.engine_config(state, ns.Engine.VOSK)
+    assert vosk is not None
+    modes = [trigger.mode for trigger in vosk.triggers]
+    assert ns.WakeMode.HOME_ASSISTANT in modes
 
 
 # ---------- engine / trigger config ----------

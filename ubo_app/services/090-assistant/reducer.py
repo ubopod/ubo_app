@@ -21,6 +21,8 @@ from ubo_app.store.services.assistant import (
     AssistantAddElevenLabsVoiceAction,
     AssistantAddGenericLLMProviderAction,
     AssistantAddMoonshineDownloadedModelAction,
+    AssistantCancelRequestAction,
+    AssistantCancelRequestEvent,
     AssistantCompleteAction,
     AssistantDeleteElevenLabsVoiceAction,
     AssistantDeleteKokoroAction,
@@ -799,6 +801,12 @@ def reducer(
                         enable_tools=action.enable_tools,
                     ),
                 ],
+            )
+
+        case AssistantCancelRequestAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[AssistantCancelRequestEvent(session_id=action.session_id)],
             )
 
         case _:

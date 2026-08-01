@@ -25,6 +25,12 @@ ASSISTANT_STOP_TALKING_PHRASE = os.environ.get(
     'UBO_ASSISTANT_STOP_TALKING_PHRASE',
     'okay enough',
 )
+# Hands the utterance to Home Assistant's voice pipeline over Wyoming instead of
+# the on-device assistant — see ``WakeMode.HOME_ASSISTANT``.
+HOME_ASSISTANT_WAKE_PHRASE = os.environ.get(
+    'UBO_HOME_ASSISTANT_WAKE_PHRASE',
+    'hey home assistant',
+)
 ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS: float = float(
     os.environ.get('UBO_ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS', '2.0'),
 )

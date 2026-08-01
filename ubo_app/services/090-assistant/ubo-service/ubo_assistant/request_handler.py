@@ -42,6 +42,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
 )
 from pipecat.services.stt_service import SegmentedSTTService
 from ubo_bindings.ubo.v1 import (
+    AssistantCancelRequestEvent,
     AssistantPipelineStage,
     AssistantRunPipelineEvent,
     Event,
@@ -178,6 +179,7 @@ _IDLE_TIMEOUT_FRAMES: dict[str, tuple[type[Frame], ...]] = {
 def setup_request_handler(client: UboRPCClient) -> None:
     """Subscribe to ``AssistantRunPipelineEvent`` and handle parametrized requests."""
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT_REQUESTS)
+    requests: dict[str, asyncio.Task[None]] = {}
 
     def _on_event(event: Event) -> None:
         run_event = event.assistant_run_pipeline_event
@@ -188,11 +190,29 @@ def setup_request_handler(client: UboRPCClient) -> None:
             async with semaphore:
                 await _run_request(client, run_event)
 
-        client.event_loop.create_task(_guarded())
+        request = client.event_loop.create_task(_guarded())
+        requests[run_event.session_id] = request
+
+        def _forget_request(_task: asyncio.Task[None]) -> None:
+            requests.pop(run_event.session_id, None)
+
+        request.add_done_callback(_forget_request)
+
+    def _on_cancel(event: Event) -> None:
+        cancel_event = event.assistant_cancel_request_event
+        if cancel_event is None:
+            return
+        request = requests.pop(cancel_event.session_id, None)
+        if request is not None:
+            request.cancel()
 
     client.subscribe_event(
         event_type=Event(assistant_run_pipeline_event=AssistantRunPipelineEvent()),
         callback=_on_event,
+    )
+    client.subscribe_event(
+        event_type=Event(assistant_cancel_request_event=AssistantCancelRequestEvent()),
+        callback=_on_cancel,
     )
     logger.info('Assistant request handler registered')
 

@@ -153,6 +153,24 @@ def test_synthesize_explicit_provider_overrides_selection(
     assert event.tts_provider == a.AssistantTTSName.VENICE
 
 
+def test_cancel_request_emits_the_matching_session_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A disconnected Wyoming client can cancel only its own request."""
+    from redux import CompleteReducerResult
+
+    ns = _load(monkeypatch)
+    result = ns.reducer(
+        _initial_state(ns),
+        ns.assistant.AssistantCancelRequestAction(session_id='cancel-me'),
+    )
+
+    assert isinstance(result, CompleteReducerResult)
+    assert result.events == [
+        ns.assistant.AssistantCancelRequestEvent(session_id='cancel-me'),
+    ]
+
+
 def test_complete_resolves_llm_and_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

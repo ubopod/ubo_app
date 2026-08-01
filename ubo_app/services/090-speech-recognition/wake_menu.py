@@ -117,13 +117,18 @@ _WAKE_MODE_META: dict[WakeMode, tuple[str, str]] = {
     WakeMode.QUICK_CHAT: ('Short Chat', 'Starts a short chat.'),
     WakeMode.CONVERSATION: ('Conversation', 'Starts a long conversation.'),
     WakeMode.STOP_TALKING: ('Silence', 'Stops the assistant talking.'),
+    WakeMode.HOME_ASSISTANT: (
+        'Home Assistant',
+        'Asks Home Assistant instead of the on-device assistant.',
+    ),
 }
-# All four modes are grouped under "Phrases" (including Silence = STOP_TALKING).
+# All modes are grouped under "Phrases" (including Silence = STOP_TALKING).
 _PHRASE_MODES: tuple[WakeMode, ...] = (
     WakeMode.INTENTS,
     WakeMode.QUICK_CHAT,
     WakeMode.CONVERSATION,
     WakeMode.STOP_TALKING,
+    WakeMode.HOME_ASSISTANT,
 )
 _END_PHRASES_LABEL = 'Conversation End'
 

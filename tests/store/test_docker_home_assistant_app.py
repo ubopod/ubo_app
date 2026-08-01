@@ -122,6 +122,8 @@ async def test_prepare_renders_compose_on_ubo_net(
     assert 'restart: unless-stopped' in compose
     assert '- 8123:8123' in compose
     assert 'TZ=' in compose
+    assert 'extra_hosts:' in compose
+    assert '- host.docker.internal:host-gateway' in compose
     # No blanket privilege escalation in the device-only posture.
     assert 'privileged' not in compose
     # The bundled MQTT broker rides the same external bus (containers reach it
@@ -430,7 +432,10 @@ def test_compose_stays_on_bridge_when_host_network_disabled(
     )
     compose = (composition_path / 'docker-compose.yml').read_text()
     assert 'network_mode' not in compose
-    assert 'extra_hosts' not in compose
+    # The host.docker.internal shim (for Wyoming) is unconditional; the
+    # mosquitto-loopback shim is host-network-only.
+    assert '- host.docker.internal:host-gateway' in compose
+    assert '- "mosquitto:127.0.0.1"' not in compose
     assert '- 8123:8123' in compose
     assert f'      - {ha.UBO_NET}\n' in compose
 

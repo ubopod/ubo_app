@@ -69,11 +69,13 @@ SPEECH_WAKE_INTENTS = 'speech:wake-intents'
 SPEECH_WAKE_QUICK_CHAT = 'speech:wake-quick-chat'
 SPEECH_WAKE_CONVERSATION = 'speech:wake-conversation'
 SPEECH_WAKE_SILENCE = 'speech:wake-silence'
+SPEECH_WAKE_HOME_ASSISTANT = 'speech:wake-home-assistant'
 MODE_BINDABLE_KEY: dict[WakeMode, str] = {
     WakeMode.INTENTS: SPEECH_WAKE_INTENTS,
     WakeMode.QUICK_CHAT: SPEECH_WAKE_QUICK_CHAT,
     WakeMode.CONVERSATION: SPEECH_WAKE_CONVERSATION,
     WakeMode.STOP_TALKING: SPEECH_WAKE_SILENCE,
+    WakeMode.HOME_ASSISTANT: SPEECH_WAKE_HOME_ASSISTANT,
 }
 # Labels for the per-mode wake actions (shown in the Infrared "Add Keys" Action
 # dropdown and the voice-command Action dropdown).
@@ -82,6 +84,7 @@ _MODE_BINDABLE_LABEL: dict[WakeMode, str] = {
     WakeMode.QUICK_CHAT: 'Wake: Short Chat',
     WakeMode.CONVERSATION: 'Wake: Conversation',
     WakeMode.STOP_TALKING: 'Wake: Silence',
+    WakeMode.HOME_ASSISTANT: 'Wake: Home Assistant',
 }
 SPEECH_WIFI_CAMERA = 'speech:wifi-camera'
 SPEECH_WIFI_WEB = 'speech:wifi-web'
