@@ -44,6 +44,9 @@ MAX_UTTERANCE_SECONDS = 30.0
 
 UBO_NET_NAME = 'ubo_net'
 
+# The Assistant settings entry is a container for satellite protocols, so that
+# further ones can be added beside Wyoming without moving anything.
+SATELLITES_MENU_ID = 'wyoming:satellites'
 WYOMING_MENU_ID = 'wyoming:main'
 STATUS_ICON_ID = 'wyoming:state'
 SECURITY_WARNING_ID = 'wyoming:network-warning'

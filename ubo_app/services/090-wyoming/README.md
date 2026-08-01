@@ -11,7 +11,7 @@ by default and the service defaults to loopback-only binding. Do not expose eith
 port through a router, reverse proxy, or VPN without an additional authenticated
 transport.
 
-Choose one connection policy from **Settings → Assistant → Home Assistant**:
+Choose one connection policy from **Settings → Assistant → Satellites → Wyoming**:
 
 - **Docker-only** permits only the subnet Docker actually assigned to the shared
   `ubo_net` bridge, resolved from the daemon each time the listeners are
@@ -31,7 +31,8 @@ instead and are never advertised to the LAN.
 
 ## Home Assistant configuration
 
-1. Enable the desired listener(s) in the Home Assistant settings menu on the Pod.
+1. Enable the desired listener(s) under **Settings → Assistant → Satellites →
+   Wyoming** on the Pod.
 2. For the bundled Home Assistant container, select **Docker-only** and use
    `host.docker.internal`. For a separate installation, use **Allowlist** and
    enter its source IP address before enabling a listener.

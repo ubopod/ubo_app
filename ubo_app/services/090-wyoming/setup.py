@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from assistant_bridge import AssistantBridge
 from constants import (
+    SATELLITES_MENU_ID,
     SECURITY_WARNING_ID,
     STATUS_ICON_ID,
     WYOMING_ENGINES_LISTEN_PORT,
@@ -29,12 +30,10 @@ from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPushMenuAction,
     UpdateDynamicMenuAction,
 )
-from ubo_app.store.core.view_registry import (
-    create_settings_path_matcher,
-    register_path_menu_matcher,
-)
+from ubo_app.store.core.view_registry import register_path_menu_matcher
 from ubo_app.store.input.types import (
     InputFieldDescription,
     InputFieldType,
@@ -352,12 +351,19 @@ async def _edit_allowed_peers() -> None:
 def _register_actions() -> list[str]:
     """Register every dynamic-menu action exactly once."""
     action_ids = [
+        'wyoming:goto:*',
         'wyoming:toggle-satellite',
         'wyoming:toggle-engines',
         'wyoming:choose-policy',
         'wyoming:edit-allowed-peers',
         'wyoming:toggle-zeroconf',
     ]
+
+    def _goto(action_id: str) -> None:
+        # The dynamic-menu id is carried verbatim after the prefix.
+        store.dispatch(
+            StackPushMenuAction(menu_key=action_id.removeprefix('wyoming:goto:')),
+        )
 
     @store.with_state(lambda state: state.wyoming)
     def _toggle_satellite(state: WyomingState) -> None:
@@ -377,6 +383,7 @@ def _register_actions() -> list[str]:
             WyomingSetZeroconfEnabledAction(enabled=not state.is_zeroconf_enabled),
         )
 
+    register_action('wyoming:goto:*', _goto, allow_reregister=True)
     register_action(
         'wyoming:toggle-satellite',
         _toggle_satellite,
@@ -403,6 +410,46 @@ def _register_actions() -> list[str]:
         allow_reregister=True,
     )
     return action_ids
+
+
+def _dispatch_satellites_menu() -> None:
+    """Publish the container listing every supported satellite protocol.
+
+    Static, so it is dispatched once at startup rather than from the state
+    autorun. A second protocol becomes one more row here plus its own menu.
+    """
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=SATELLITES_MENU_ID,
+            title='Satellites',
+            heading='Satellites',
+            sub_heading='Voice satellite protocols.',
+            items=(
+                MenuItemData(
+                    key='wyoming',
+                    label='Wyoming',
+                    icon='󰟐',
+                    action_id=f'wyoming:goto:{WYOMING_MENU_ID}',
+                ),
+            ),
+            placeholder='',
+        ),
+    )
+
+
+def _settings_path_matcher(path: tuple[str, ...]) -> str | None:
+    """Resolve a settings path to one of this service's dynamic menus.
+
+    The entry point is now a container, so the first level is the satellite list
+    and anything deeper was pushed by explicit ``menu_key`` — for which the
+    dynamic-menu id always equals the trailing path segment.
+    """
+    settings_depth = 4
+    if len(path) >= settings_depth and path[3] == 'wyoming:':
+        if len(path) == settings_depth:
+            return SATELLITES_MENU_ID
+        return path[-1]
+    return None
 
 
 def _menu_items(state: WyomingState) -> tuple[MenuItemData, ...]:
@@ -462,8 +509,9 @@ async def init_service() -> Subscriptions:
     action_ids = _register_actions()
     unregister_path_matcher = register_path_menu_matcher(
         'wyoming:settings',
-        create_settings_path_matcher('wyoming:', WYOMING_MENU_ID),
+        _settings_path_matcher,
     )
+    _dispatch_satellites_menu()
 
     @store.autorun(lambda state: state.wyoming)
     async def _reconcile(state: WyomingState) -> None:
@@ -474,7 +522,7 @@ async def init_service() -> Subscriptions:
         store.dispatch(
             UpdateDynamicMenuAction(
                 menu_id=WYOMING_MENU_ID,
-                title='Home Assistant',
+                title='Wyoming',
                 heading=f'Satellite: {state.satellite_status.value}',
                 sub_heading=(
                     f'Satellite {WYOMING_SATELLITE_LISTEN_PORT} · '
@@ -510,8 +558,8 @@ async def init_service() -> Subscriptions:
         RegisterSettingAppAction(
             category=SettingsCategory.ASSISTANT,
             priority=5,
-            label='Home Assistant',
-            icon='󰟐',
+            label='Satellites',
+            icon='󰤈',
         ),
     )
 

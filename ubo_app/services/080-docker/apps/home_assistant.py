@@ -404,10 +404,11 @@ def _write_home_assistant_metadata(composition_path: Path) -> None:
             'devices — the only mode that works over Wi-Fi. Home Assistant '
             'stays on port 8123 either way.\n\n'
             "To use this Home Assistant installation with the Pod's Wyoming "
-            "voice services, enable Home Assistant in the Pod's Assistant "
-            'settings and select the Docker-only connection policy. Configure '
-            'the Wyoming integrations with host.docker.internal on ports 10700 '
-            '(satellite) and 10600 (ASR, TTS, and conversation).'
+            'voice services, open Settings → Assistant → Satellites → Wyoming '
+            'on the Pod, enable the listeners and select the Docker-only '
+            'connection policy. Configure the Wyoming integrations with '
+            'host.docker.internal on ports 10700 (satellite) and 10600 (ASR, '
+            'TTS, and conversation).'
         ),
         'compose_id': HOME_ASSISTANT_COMPOSITION_ID,
     }
