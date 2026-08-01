@@ -237,6 +237,14 @@ async def _add_dashboard() -> None:
         )
 
 
+def _start_add_dashboard() -> None:
+    # Return None (not the create_task Task): the menu framework treats a
+    # non-None action result plus the item's key as "push a submenu keyed by
+    # the item", which would navigate into an empty ``kiosk:dashboards:add``
+    # view ('Nothing here yet') instead of staying on the dashboards list.
+    create_task(_add_dashboard())
+
+
 def _make_delete_handler(dashboard_id: str) -> Callable[[], None]:
     def _handler() -> None:
         store.dispatch(
@@ -258,7 +266,7 @@ def _register_kiosk_action_handlers() -> None:
     register_action('kiosk:disable', disable_kiosk_service, allow_reregister=True)
     register_action(
         'kiosk:dashboard:add',
-        lambda: create_task(_add_dashboard()),
+        _start_add_dashboard,
         allow_reregister=True,
     )
 
