@@ -12,7 +12,44 @@ import {
   Event,
   StackChangedEvent,
   ViewChangedEvent,
+  WebUIInputCommand,
+  WebUIInputEvent,
 } from "../bindings/ubo/v1/ubo_pb";
+
+// Maps a navigation command delivered over gRPC (e.g. from a bound IR remote
+// key) to the DOM key the web UI's existing keyboard handlers already
+// understand. Back → Backspace (goBack) and Home → Escape (goHome) are handled
+// by useKeyboardNavigation; the arrows and Enter are handled by TileGrid.
+const NAVIGATION_KEYS: Partial<Record<WebUIInputCommand, string>> = {
+  [WebUIInputCommand.WEB_UI_INPUT_COMMAND_UP]: "ArrowUp",
+  [WebUIInputCommand.WEB_UI_INPUT_COMMAND_DOWN]: "ArrowDown",
+  [WebUIInputCommand.WEB_UI_INPUT_COMMAND_LEFT]: "ArrowLeft",
+  [WebUIInputCommand.WEB_UI_INPUT_COMMAND_RIGHT]: "ArrowRight",
+  [WebUIInputCommand.WEB_UI_INPUT_COMMAND_SELECT]: "Enter",
+  [WebUIInputCommand.WEB_UI_INPUT_COMMAND_BACK]: "Backspace",
+  [WebUIInputCommand.WEB_UI_INPUT_COMMAND_HOME]: "Escape",
+};
+
+function synthesizeNavigationKey(command: WebUIInputCommand): void {
+  const key = NAVIGATION_KEYS[command];
+  if (!key) return;
+
+  // Dispatch on the focused tile when it lives inside the grid (so the event
+  // bubbles to TileGrid's onKeyDown), otherwise on the grid itself, otherwise
+  // on <body> so window-level handlers (Back/Home) still fire.
+  const grid = document.querySelector<HTMLElement>("[data-tile-grid]");
+  const active = document.activeElement;
+  const target =
+    grid && active instanceof HTMLElement && grid.contains(active)
+      ? active
+      : (grid ?? document.body);
+
+  for (const type of ["keydown", "keyup"] as const) {
+    target.dispatchEvent(
+      new KeyboardEvent(type, { key, bubbles: true, cancelable: true }),
+    );
+  }
+}
 
 function decodeDoubleValue(bytes: Uint8Array): number {
   // DoubleValue protobuf: field 1 (tag 0x09 = field 1, wire type 1 = 64-bit)
@@ -82,6 +119,9 @@ export class StateManager {
     const stackEvent = new Event();
     stackEvent.setStackChangedEvent(new StackChangedEvent());
     request.addEvents(stackEvent);
+    const inputEvent = new Event();
+    inputEvent.setWebUiInputEvent(new WebUIInputEvent());
+    request.addEvents(inputEvent);
 
     const stream = this.store.subscribeEvent(request);
     this.viewStackStream = stream;
@@ -111,6 +151,12 @@ export class StateManager {
         this.update({
           stack: stackChangedEvent.toObject().stackList,
         });
+        return;
+      }
+
+      const webUiInputEvent = evt.getWebUiInputEvent();
+      if (webUiInputEvent) {
+        synthesizeNavigationKey(webUiInputEvent.getCommand());
       }
     });
   }

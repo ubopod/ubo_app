@@ -20,6 +20,7 @@ from ubo_app.constants import (
 )
 from ubo_app.logger import logger
 from ubo_app.rpc.object_to_message import build_message
+from ubo_app.store.core.bindable_actions import register_bindable_action
 from ubo_app.store.core.callback_registry import register_auto_callback
 from ubo_app.store.core.types import (
     OpenRenderAction,
@@ -52,6 +53,8 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.store.services.web_ui import (
     WebUIInitializeEvent,
+    WebUIInputAction,
+    WebUIInputCommand,
     WebUIState,
 )
 from ubo_app.store.services.wifi import WiFiStartHotspotAction
@@ -289,8 +292,33 @@ async def initialize(event: WebUIInitializeEvent) -> None:
     )
 
 
+def _register_navigation_bindable_actions() -> None:
+    """Expose tile-grid navigation for binding (e.g. to IR remote keys).
+
+    Each factory produces a ``WebUIInputAction``; the reducer turns it into a
+    ``WebUIInputEvent`` that the browser converts to a synthetic key press, so
+    an IR button drives the same navigation a physical keyboard would.
+    """
+    for key, label, command in (
+        ('web-ui:nav:up', 'Web UI: Up', WebUIInputCommand.UP),
+        ('web-ui:nav:down', 'Web UI: Down', WebUIInputCommand.DOWN),
+        ('web-ui:nav:left', 'Web UI: Left', WebUIInputCommand.LEFT),
+        ('web-ui:nav:right', 'Web UI: Right', WebUIInputCommand.RIGHT),
+        ('web-ui:nav:select', 'Web UI: Select', WebUIInputCommand.SELECT),
+        ('web-ui:nav:back', 'Web UI: Back', WebUIInputCommand.BACK),
+        ('web-ui:nav:home', 'Web UI: Home', WebUIInputCommand.HOME),
+    ):
+        register_bindable_action(
+            key,
+            label,
+            lambda _ctx, command=command: WebUIInputAction(command=command),
+            allow_reregister=True,
+        )
+
+
 async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
     """Initialize the web-ui service."""
+    _register_navigation_bindable_actions()
     _ = []
     app = Quart(
         'ubo-app',

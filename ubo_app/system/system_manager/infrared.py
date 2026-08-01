@@ -4,6 +4,7 @@ import asyncio
 import functools
 import queue
 import re
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from threading import Thread
@@ -11,6 +12,14 @@ from threading import Thread
 from ubo_app.logger import get_logger
 
 logger = get_logger('system-manager')
+
+# A single remote-button press often emits more than one NEC frame (the protocol
+# repeats every ~110ms while the button is physically down). ir-keytable flags
+# the protocol's own repeat frames as 'repeat' (dropped above), but some remotes
+# retransmit the full scancode as a fresh key-down instead. Collapse identical
+# codes seen within this window so one press yields one code; holding a button
+# still re-emits at roughly this cadence.
+IR_DEBOUNCE_SECONDS = 0.3
 
 
 class InfraredManager:
@@ -22,6 +31,8 @@ class InfraredManager:
         self.event_loop_thread: Thread | None = None
         self.ir_code_queue = queue.Queue(1)
         self.stop_event = asyncio.Event()
+        # Last monotonic time each 'protocol:scancode' was emitted, for debounce.
+        self._last_seen: dict[str, float] = {}
 
     def handle_command(self, command: str) -> Iterator[str] | str | None:
         """Handle infrared commands."""
@@ -127,12 +138,23 @@ class InfraredManager:
                 continue
 
             protocol, scancode = match.group(1), match.group(2)
+            code_str = f'{protocol}:{scancode}'
+
+            # Debounce duplicate frames from a single press (see IR_DEBOUNCE_SECONDS).
+            now = time.monotonic()
+            last_seen = self._last_seen.get(code_str)
+            if last_seen is not None and now - last_seen < IR_DEBOUNCE_SECONDS:
+                logger.debug(
+                    'Debounced duplicate IR code',
+                    extra={'protocol': protocol, 'scancode': scancode},
+                )
+                continue
+            self._last_seen[code_str] = now
 
             logger.info(
                 'IR code received',
                 extra={'protocol': protocol, 'scancode': scancode},
             )
-            code_str = f'{protocol}:{scancode}'
             # Put the code in the queue
             self.ir_code_queue.put(code_str)
 

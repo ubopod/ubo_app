@@ -18,7 +18,9 @@ from typing import TYPE_CHECKING
 from kiosk_config import write_kiosk_config
 
 from ubo_app.colors import DANGER_COLOR
+from ubo_app.store.core.bindable_actions import register_bindable_action
 from ubo_app.store.core.types import (
+    ExecuteMenuActionAction,
     MenuItemData,
     StackPopAction,
     UpdateDynamicMenuAction,
@@ -284,6 +286,24 @@ def _register_kiosk_action_handlers() -> None:
         register_action(
             f'kiosk:rotate:{field_name}',
             lambda port=field_name: _rotate_port(port),
+            allow_reregister=True,
+        )
+
+
+def _register_kiosk_bindable_actions() -> None:
+    """Expose per-port dashboard rotation for binding (e.g. to IR remote keys).
+
+    Reuses the existing ``kiosk:rotate:<port>`` menu handler via
+    ``ExecuteMenuActionAction`` so a bound IR button rotates that port's
+    dashboard.
+    """
+    for field_name, _path_key, _drm_name, label in PORTS:
+        register_bindable_action(
+            f'kiosk:rotate:{field_name}',
+            f'Kiosk: Rotate {label}',
+            lambda _ctx, field_name=field_name: ExecuteMenuActionAction(
+                action_id=f'kiosk:rotate:{field_name}',
+            ),
             allow_reregister=True,
         )
 
@@ -556,6 +576,7 @@ def init_service() -> None:
     from ubo_app.store.core.view_registry import register_path_menu_matcher
 
     _register_kiosk_action_handlers()
+    _register_kiosk_bindable_actions()
 
     def _kiosk_path_matcher(path: tuple[str, ...]) -> str | None:
         # Nested under Display:
