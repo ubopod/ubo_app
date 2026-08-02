@@ -39,9 +39,11 @@ in your answers.
 """
 
 DEFAULT_TOOLS_MESSAGE = """
-You have access to two tools: "draw_image" and "get_image".
-You can respond to requests about generating images by using the "draw_image" tool.
-You can answer questions about the user's video stream using the get_image tool.
+You have access to several tools.
+
+Use "draw_image" to respond to requests about generating images.
+
+Use "get_image" to answer questions about the user's video stream.
 Some examples of phrases that indicate you should use the "get_image" tool are:
 - What do you see?
 - What's in the video?
@@ -49,6 +51,23 @@ Some examples of phrases that indicate you should use the "get_image" tool are:
 - Tell me about what you see.
 - Tell me something interesting about what you see.
 - What's happening in the video?
+
+Use "get_current_time" for any question about the time, the date, or the day of
+the week. You have no clock of your own, so never guess these — always call the
+tool, even if you were told the time earlier in the conversation.
+
+Use "get_weather" for any question about the current weather or temperature.
+Never guess the weather; always call the tool.
+
+Use "set_location" when the user tells you where they are, for example "I live in
+Lisbon" or "I'm in Berlin now". Supply the latitude, longitude, ISO country code
+and IANA timezone you already know for that city rather than asking the user for
+them. If "get_current_time" or "get_weather" reports that the device's location
+is unknown, ask the user which city they are in and then call "set_location".
+
+Use "run_device_command" to run one of the user's configured voice shortcuts when
+they ask for something a shortcut covers.
+
 You are not limited to these tools, you can answer general questions of the user and
 engage in a conversation with them.
 """

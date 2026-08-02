@@ -23,9 +23,11 @@ MAX_EXPECTED_LISTENERS = 600
 # subscriptions (MqttPublishEvent / MqttAnnounceRequestedEvent) — the seam other
 # services publish through, since they cannot import the bridge — plus the
 # sensors service's SensorsScanEvent handler, which runs the bus scan off the
-# reducer. These are intentional subscriptions, not leaks; the guard still
-# catches runaway growth.
-MAX_EXPECTED_EVENT_HANDLERS = 108
+# reducer. Bumped again by 5 for the localization service's location-reset,
+# weather-refresh and three speak-{time,date,weather} handlers, which run the
+# network fetch and the TTS dispatch off the reducer. These are intentional
+# subscriptions, not leaks; the guard still catches runaway growth.
+MAX_EXPECTED_EVENT_HANDLERS = 113
 
 
 @pytest.mark.timeout(500)

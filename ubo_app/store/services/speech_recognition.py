@@ -6,9 +6,13 @@ import json
 import math
 from dataclasses import field
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 from ubo_app.constants.assistant import (
     ASSISTANT_CONVERSATION_END_PHRASES,
@@ -103,12 +107,22 @@ class WakeTriggerRemoveAction(SpeechRecognitionAction):
 class SpeechRecognitionSetAssistantEnabledAction(SpeechRecognitionAction):
     """Turn the assistant (QUICK_CHAT/CONVERSATION) wake modes on or off.
 
-    Backs the "Assistant: Turn On/Off" voice command — sets the single
-    ``assistant_enabled`` flag. When off, the manager stops streaming
-    QUICK_CHAT/CONVERSATION triggers; the command interface (INTENTS) and
-    STOP_TALKING are unaffected.
+    Backs the "Assistant: Turn On/Off" voice command — toggles the QUICK_CHAT and
+    CONVERSATION entries of ``enabled_wake_modes`` together. When off, the manager
+    stops streaming those triggers; INTENTS and STOP_TALKING are unaffected.
     """
 
+    enabled: bool
+
+
+class SpeechRecognitionSetWakeModeEnabledAction(SpeechRecognitionAction):
+    """Arm or disarm a single wake mode (shortcut / short chat / conversation).
+
+    Backs the per-mode switches in Settings ▸ Assistant ▸ Wake Up. ``STOP_TALKING``
+    has no switch and is ignored by the reducer.
+    """
+
+    mode: WakeMode
     enabled: bool
 
 
@@ -370,8 +384,8 @@ class WakeWordTrigger(Immutable):
     - Picovoice:    the keyword / ``.ppn`` id (future).
 
     Triggers are add/remove only — there is no per-trigger enable flag; a trigger's
-    presence means it is active (subject to the engine's enable + the global
-    ``assistant_enabled`` for QUICK_CHAT/CONVERSATION).
+    presence means it is active (subject to the engine's enable + its mode being in
+    ``enabled_wake_modes``).
 
     ``sensitivity`` (0.0-1.0, default 0.5) is how readily the trigger fires — higher
     is more sensitive. It only applies to confidence-scored engines (OpenWakeWord),
@@ -419,6 +433,12 @@ _MODE_ORDER: tuple[WakeMode, ...] = (
     WakeMode.CONVERSATION,
     WakeMode.STOP_TALKING,
 )
+
+
+def order_wake_modes(modes: Iterable[WakeMode]) -> tuple[WakeMode, ...]:
+    """Return *modes* deduplicated in canonical :data:`_MODE_ORDER` order."""
+    present = set(modes)
+    return tuple(mode for mode in _MODE_ORDER if mode in present)
 _DEFAULT_MODE_PHRASES: dict[WakeMode, tuple[str, ...]] = {
     WakeMode.INTENTS: (INTENTS_WAKE_WORD,),
     WakeMode.QUICK_CHAT: (ASSISTANT_QUICK_CHAT_WAKE_PHRASE,),
@@ -439,8 +459,7 @@ def _legacy_slot_entries() -> list[_SlotEntry]:
 
     Phase 1 stored four single-phrase keys. When neither ``wake_engines`` nor
     ``wake_slots`` is present we read those so a branch user doesn't lose their
-    phrases on upgrade (their assistant on/off is migrated separately into
-    ``assistant_enabled``). The legacy keys then go stale.
+    phrases on upgrade. The legacy keys then go stale.
     """
     legacy_phrase = {
         WakeMode.INTENTS: read_from_persistent_store(
@@ -535,12 +554,9 @@ def _migrate_from_wake_slots() -> tuple[WakeWordEngineConfig, ...]:
     parsed = _parse_wake_slots()
     if parsed is None:  # present but malformed
         return _default_engine_configs()
-    # The new model has no per-trigger/per-mode enable (only the global
-    # ``assistant_enabled`` gate, derived below), so a disabled slot can't be
-    # represented other than by absence. Migrate only the slots the user had
-    # enabled — "disabled" maps to "removed" under the add/remove model. This
-    # avoids re-activating a mode (e.g. Quick Chat off, Conversation on) that the
-    # single gate would otherwise turn back on.
+    # This blob migrates only the phrases (trigger set); the per-mode arm/disarm
+    # now lives in ``enabled_wake_modes`` (fresh-defaults on). A slot the user had
+    # disabled here maps to "removed" — its phrase isn't carried over.
     entries: list[_SlotEntry] = [
         (mode, phrases) for mode, phrases, enabled in parsed if enabled
     ]
@@ -567,38 +583,24 @@ def _config_from_json(entry: dict) -> WakeWordEngineConfig:
     )
 
 
-def _load_assistant_enabled() -> bool:
-    """Whether QUICK_CHAT/CONVERSATION wake modes are active.
+def _load_enabled_wake_modes() -> tuple[WakeMode, ...]:
+    """Which wake modes are armed. Fresh installs get every mode on.
 
-    Resolution order so an upgrading user keeps their prior choice and a fresh
-    install defaults on:
-    1. the new ``assistant_enabled`` key;
-    2. the legacy ``is_assistant_active`` key (set by the "Assistant On/Off" voice
-       command);
-    3. derived from the old ``wake_slots`` — on iff the Quick Chat or Conversation
-       slot was enabled (so a user who turned the assistant off stays off);
-    4. ``True`` for a truly fresh install.
+    Persisted as a JSON list of mode values under ``enabled_wake_modes``. Legacy
+    assistant on/off keys are deliberately ignored — a device that had the
+    assistant off comes back with everything on (product decision). Unknown values
+    are dropped and ``STOP_TALKING`` (no switch) is always armed.
     """
-    stored = read_from_persistent_store(
-        'speech_recognition:assistant_enabled',
+    stored: object = read_from_persistent_store(
+        'speech_recognition:enabled_wake_modes',
         default=None,
     )
-    if stored is not None:
-        return bool(stored)
-    legacy = read_from_persistent_store(
-        'speech_recognition:is_assistant_active',
-        default=None,
-    )
-    if legacy is not None:
-        return bool(legacy)
-    parsed = _parse_wake_slots()
-    if parsed is not None:
-        return any(
-            enabled
-            for mode, _phrases, enabled in parsed
-            if mode in (WakeMode.QUICK_CHAT, WakeMode.CONVERSATION)
-        )
-    return True
+    if not isinstance(stored, list):
+        return _MODE_ORDER
+    by_value = {mode.value: mode for mode in _MODE_ORDER}
+    enabled = {by_value[value] for value in stored if value in by_value}
+    enabled.add(WakeMode.STOP_TALKING)
+    return order_wake_modes(enabled)
 
 
 def _load_wake_engines() -> tuple[WakeWordEngineConfig, ...]:
@@ -632,9 +634,12 @@ class SpeechRecognitionState(Immutable):
     wake_engines: tuple[WakeWordEngineConfig, ...] = field(
         default_factory=_load_wake_engines,
     )
-    # Master switch for the assistant (QUICK_CHAT/CONVERSATION) wake modes, set by
-    # the "Assistant On/Off" voice command. INTENTS/STOP_TALKING are unaffected.
-    assistant_enabled: bool = field(default_factory=_load_assistant_enabled)
+    # Wake modes currently armed. A mode absent here has its wake triggers dropped
+    # (EnginesManager) and any stray detection swallowed (reducer). STOP_TALKING is
+    # always armed and has no switch; fresh installs default to every mode on.
+    enabled_wake_modes: tuple[WakeMode, ...] = field(
+        default_factory=_load_enabled_wake_modes,
+    )
     # OpenWakeWord model stems available on disk (downloaded defaults + uploaded
     # customs). Derived from disk by the service at startup; not persisted.
     openwakeword_models: tuple[str, ...] = field(default_factory=tuple)
@@ -660,6 +665,10 @@ class SpeechRecognitionState(Immutable):
     wake_word_models_status: tuple[WakeWordModelStatusEntry, ...] = field(
         default_factory=tuple,
     )
+    # Ids of the default commands that have already been offered to this device.
+    # Lets a release add new defaults to an existing install without resurrecting
+    # defaults the user deliberately deleted. See ``commands.load_or_seed_commands``.
+    seeded_default_ids: tuple[str, ...] = field(default_factory=tuple)
 
 
 def engine_config(

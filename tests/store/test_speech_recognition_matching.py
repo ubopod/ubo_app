@@ -132,6 +132,92 @@ class TestStopTalkingTriggers:
         assert matching.stop_talking_triggers([config]) == {}
 
 
+class TestTimeDateWeatherShortcuts:
+    """The stage-1 shortcuts answer without ever reaching the LLM.
+
+    These assert against the *real* ``DEFAULT_COMMANDS`` entries, so a phrasing
+    regression in the shipped patterns fails here rather than on a device.
+    """
+
+    @pytest.fixture
+    def defaults(self, monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
+        """Load the real shipped ``DEFAULT_COMMANDS``, keyed by id."""
+        monkeypatch.syspath_prepend(SERVICE_PATH.as_posix())
+        spec = importlib.util.spec_from_file_location(
+            'speech_recognition_commands_for_matching',
+            SERVICE_PATH / 'commands.py',
+        )
+        assert spec is not None
+        assert spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        return SimpleNamespace(
+            by_id={command.id: command for command in module.DEFAULT_COMMANDS},
+        )
+
+    @pytest.mark.parametrize(
+        ('utterance', 'expected_id'),
+        [
+            ('what time is it', 'default:speak-time'),
+            ('what time is it right now', 'default:speak-time'),
+            ('whats the time', 'default:speak-time'),
+            ('tell me the time', 'default:speak-time'),
+            ('what day is it', 'default:speak-date'),
+            ('what day is it today', 'default:speak-date'),
+            ('whats the date', 'default:speak-date'),
+            ('whats todays date', 'default:speak-date'),
+            ('whats the weather', 'default:speak-weather'),
+            ('whats the weather like today', 'default:speak-weather'),
+            ('hows the weather', 'default:speak-weather'),
+            ('tell me the weather', 'default:speak-weather'),
+        ],
+    )
+    def test_utterance_matches_its_shortcut(
+        self,
+        matching: SimpleNamespace,
+        defaults: SimpleNamespace,
+        utterance: str,
+        expected_id: str,
+    ) -> None:
+        """Each natural phrasing resolves to the intent that answers it."""
+        intents = list(defaults.by_id.values())
+        action = matching.match_recognition(utterance, intents, {})
+        assert isinstance(action, matching.IntentDetection)
+        assert action.intent.id == expected_id
+
+    def test_shortcuts_are_bound_to_the_localization_actions(
+        self,
+        defaults: SimpleNamespace,
+    ) -> None:
+        """The shortcuts fire the localization service's spoken answers."""
+        assert defaults.by_id['default:speak-time'].action_keys == [
+            'localization:speak-time',
+        ]
+        assert defaults.by_id['default:speak-date'].action_keys == [
+            'localization:speak-date',
+        ]
+        assert defaults.by_id['default:speak-weather'].action_keys == [
+            'localization:speak-weather',
+        ]
+
+    def test_an_unmatched_phrasing_falls_through_to_the_assistant(
+        self,
+        matching: SimpleNamespace,
+        defaults: SimpleNamespace,
+    ) -> None:
+        """A near-miss is not force-matched — it goes to the LLM instead."""
+        intents = list(defaults.by_id.values())
+        assert (
+            matching.match_recognition(
+                'could you possibly tell me what the time is',
+                intents,
+                {},
+            )
+            is None
+        )
+
+
 class TestMatchRecognition:
     """Routing a recognition back to a command or a stop."""
 

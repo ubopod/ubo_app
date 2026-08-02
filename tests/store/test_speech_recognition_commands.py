@@ -138,8 +138,8 @@ class TestDefaultCommands:
     """The migrated built-in commands."""
 
     def test_default_command_count(self, speech: SimpleNamespace) -> None:
-        """The full built-in set is seeded (23 commands)."""
-        assert len(speech.commands.DEFAULT_COMMANDS) == 23
+        """The full built-in set is seeded (23 originals + time/date/weather)."""
+        assert len(speech.commands.DEFAULT_COMMANDS) == 26
 
     def test_button_three_selects_index_two(
         self,
@@ -287,7 +287,12 @@ class TestShortcutActions:
 
 
 class TestPersistenceSeeding:
-    """Absent-vs-empty handling for the persisted command list."""
+    """Which defaults a device is offered, and when.
+
+    Seeding on "key absent" alone would starve upgraded devices of defaults added
+    by later releases; merging every missing default each boot would resurrect the
+    ones the user deleted. So we track the ids already *offered* to this device.
+    """
 
     def test_absent_key_seeds_defaults(
         self,
@@ -295,23 +300,94 @@ class TestPersistenceSeeding:
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """An absent persistent key seeds the default commands."""
+        """A fresh install gets the full default set."""
         _patch_store(monkeypatch, tmp_path / 'missing.json')
-        loaded = speech.commands.load_or_seed_commands()
-        assert len(loaded) == 23
+        loaded, seeded = speech.commands.load_or_seed_commands()
+        assert len(loaded) == 26
+        assert len(seeded) == 26
 
-    def test_stored_empty_list_stays_empty(
+    def test_stored_empty_list_gains_only_unseen_defaults(
         self,
         speech: SimpleNamespace,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """A stored empty list stays empty (user removed everything)."""
+        """An upgraded device that deleted everything gets only the new defaults.
+
+        The pre-tracking defaults were already offered once and deliberately
+        removed, so they stay gone; the time/date/weather commands are new and
+        have never been offered, so they arrive.
+        """
         path = tmp_path / 'state.json'
         path.write_text(json.dumps({'speech_recognition:commands': '[]'}))
         _patch_store(monkeypatch, path)
-        loaded = speech.commands.load_or_seed_commands()
+
+        loaded, seeded = speech.commands.load_or_seed_commands()
+
+        assert [command.id for command in loaded] == [
+            'default:speak-time',
+            'default:speak-date',
+            'default:speak-weather',
+        ]
+        assert len(seeded) == 26
+
+    def test_seeded_defaults_are_not_resurrected(
+        self,
+        speech: SimpleNamespace,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Once a default has been offered, deleting it makes it stay deleted."""
+        path = tmp_path / 'state.json'
+        path.write_text(
+            json.dumps(
+                {
+                    'speech_recognition:commands': '[]',
+                    'speech_recognition:seeded_default_ids': [
+                        command.id for command in speech.commands.DEFAULT_COMMANDS
+                    ],
+                },
+            ),
+        )
+        _patch_store(monkeypatch, path)
+
+        loaded, _seeded = speech.commands.load_or_seed_commands()
+
         assert loaded == []
+
+    def test_existing_commands_are_preserved_alongside_new_defaults(
+        self,
+        speech: SimpleNamespace,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """An upgrade keeps the user's commands and appends the unseen defaults."""
+        path = tmp_path / 'state.json'
+        path.write_text(
+            json.dumps(
+                {
+                    'speech_recognition:commands': json.dumps(
+                        [
+                            {
+                                'id': 'custom:tv',
+                                'label': 'TV',
+                                'phrases': ['turn on the tv'],
+                                'action_keys': ['rgb:red'],
+                            },
+                        ],
+                    ),
+                },
+            ),
+        )
+        _patch_store(monkeypatch, path)
+
+        loaded, _seeded = speech.commands.load_or_seed_commands()
+
+        ids = [command.id for command in loaded]
+        assert ids[0] == 'custom:tv'
+        assert 'default:speak-weather' in ids
+        # Pre-tracking defaults the user had already removed do not come back.
+        assert 'default:lights-red' not in ids
 
     def test_round_trip_parse(self, speech: SimpleNamespace) -> None:
         """A serialized command list round-trips through the parser."""

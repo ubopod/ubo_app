@@ -46,10 +46,6 @@ _MIC_BUFFER_OUTPUT_DIR = DATA_PATH / 'wake_phrase_recordings'
 # ``status IDLE`` guard is the secondary backstop.
 _DETECTION_DEBOUNCE_SECONDS = 1.0
 
-# Wake modes gated by the global ``assistant_enabled`` switch. INTENTS (voice
-# shortcuts) and STOP_TALKING stay active regardless.
-_ASSISTANT_MODES = (WakeMode.QUICK_CHAT, WakeMode.CONVERSATION)
-
 
 
 
@@ -91,7 +87,7 @@ class EnginesManager:
         sync_wake_engines = store.autorun(
             lambda state: (
                 state.speech_recognition.wake_engines,
-                state.speech_recognition.assistant_enabled,
+                state.speech_recognition.enabled_wake_modes,
                 # Re-sync when the on-disk model pool changes so an engine whose
                 # model arrived after startup retries its (previously failed) load.
                 state.speech_recognition.openwakeword_models,
@@ -161,16 +157,20 @@ class EnginesManager:
 
     async def _sync_wake_engines(
         self,
-        data: tuple[tuple[WakeWordEngineConfig, ...], bool, tuple[str, ...]],
+        data: tuple[
+            tuple[WakeWordEngineConfig, ...],
+            tuple[WakeMode, ...],
+            tuple[str, ...],
+        ],
     ) -> None:
         """Push each enabled engine its active triggers; stop the rest.
 
         Engines and triggers are user-editable and arrive from state, so any edit
-        re-pushes the active trigger set live and (dis)engages the engine. When the
-        global ``assistant_enabled`` switch is off, QUICK_CHAT/CONVERSATION triggers
-        are dropped (voice shortcuts and Silence stay active).
+        re-pushes the active trigger set live and (dis)engages the engine. A trigger
+        whose mode is switched off in ``enabled_wake_modes`` is dropped; STOP_TALKING
+        (Silence) has no switch and always rides along.
         """
-        configs, assistant_enabled, _openwakeword_models = data
+        configs, enabled_wake_modes, _openwakeword_models = data
         enabled: set[WakeWordEngineName] = set()
         index: dict[WakeWordEngineName, dict[str, tuple[str, WakeMode]]] = {}
         for config in configs:
@@ -181,7 +181,8 @@ class EnginesManager:
             active = [
                 trigger
                 for trigger in config.triggers
-                if assistant_enabled or trigger.mode not in _ASSISTANT_MODES
+                if trigger.mode is WakeMode.STOP_TALKING
+                or trigger.mode in enabled_wake_modes
             ]
             if config.enabled and active:
                 enabled.add(config.engine)

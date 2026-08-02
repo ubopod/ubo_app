@@ -48,12 +48,19 @@ if TYPE_CHECKING:
 
 # Persistent-store key holding the user's voice command list.
 COMMANDS_PERSISTENT_KEY = 'speech_recognition:commands'
+# Persistent-store key holding the ids of the defaults already offered to this
+# device. See :func:`load_or_seed_commands`.
+SEEDED_IDS_PERSISTENT_KEY = 'speech_recognition:seeded_default_ids'
 
 # --- Bindable-action keys backing the default commands ----------------------
 # Registered by the assistant service: assistant:toggle/start/stop/stop-talking.
 # Registered by the infrared service (literal strings shared with that service):
 INFRARED_RECEIVE_ON = 'infrared:receive-on'
 INFRARED_RECEIVE_OFF = 'infrared:receive-off'
+# Registered by the localization service (literal strings shared with it):
+LOCALIZATION_SPEAK_TIME = 'localization:speak-time'
+LOCALIZATION_SPEAK_DATE = 'localization:speak-date'
+LOCALIZATION_SPEAK_WEATHER = 'localization:speak-weather'
 # Registered here by register_default_bindable_actions():
 SPEECH_ASSISTANT_ON = 'speech:assistant-on'
 SPEECH_ASSISTANT_OFF = 'speech:assistant-off'
@@ -130,9 +137,9 @@ def _trigger_mode(mode: WakeMode) -> Callable[[BindableActionContext], UboAction
     Used by Infrared remote keys bound to a mode via the wake-phrase editor; the
     device name flows through as the trigger phrase for the assistant source.
 
-    Note: this path deliberately ignores the global ``assistant_enabled`` switch.
-    Unlike audio wake words (which the engines manager stops feeding when the
-    switch is off), an explicit IR binding is treated as an intentional override —
+    Note: this path deliberately ignores the mode's ``enabled_wake_modes`` switch.
+    Unlike audio wake words (which the engines manager stops feeding when the mode
+    is switched off), an explicit IR binding is treated as an intentional override —
     it always fires the mode. Keep this in sync with ``reducer._apply_wake_mode``.
     """
     return lambda ctx: SpeechRecognitionTriggerModeAction(
@@ -415,7 +422,70 @@ DEFAULT_COMMANDS: list[SpeechRecognitionIntent] = [
         ],
         action_keys=[INFRARED_RECEIVE_OFF],
     ),
+    SpeechRecognitionIntent(
+        id='default:speak-time',
+        label='Say the Time',
+        phrases=[
+            'What time is it (right now)',
+            '[Whats, What is] the time',
+            'Tell me the time',
+        ],
+        action_keys=[LOCALIZATION_SPEAK_TIME],
+    ),
+    SpeechRecognitionIntent(
+        id='default:speak-date',
+        label='Say the Date',
+        phrases=[
+            'What day is it (today)',
+            '[Whats, What is] the date (today)',
+            '[Whats, What is] todays date',
+            'Tell me the date',
+        ],
+        action_keys=[LOCALIZATION_SPEAK_DATE],
+    ),
+    SpeechRecognitionIntent(
+        id='default:speak-weather',
+        label='Say the Weather',
+        phrases=[
+            '[Whats, What is] the weather (like) (today)',
+            '[Hows, How is] the weather (today)',
+            'Tell me the weather',
+        ],
+        action_keys=[LOCALIZATION_SPEAK_WEATHER],
+    ),
 ]
+
+# The defaults that shipped before seeded-id tracking existed. On a device that
+# already has a persisted command list but no seeded-ids key, these are treated
+# as "already offered" — so a default the user deleted back then stays deleted,
+# while genuinely new defaults still arrive.
+_PRE_TRACKING_DEFAULT_IDS = frozenset(
+    {
+        'default:assistant-on',
+        'default:assistant-off',
+        'default:wifi-camera',
+        'default:wifi-web',
+        'default:light-strip-toggle',
+        'default:lights-on',
+        'default:lights-off',
+        'default:lights-red',
+        'default:lights-green',
+        'default:lights-blue',
+        'default:lights-white',
+        'default:lights-rainbow',
+        'default:volume-up',
+        'default:volume-down',
+        'default:button-one',
+        'default:button-two',
+        'default:button-three',
+        'default:go-back',
+        'default:go-home',
+        'default:scroll-up',
+        'default:scroll-down',
+        'default:ir-receive-on',
+        'default:ir-receive-off',
+    },
+)
 
 
 def parse_persisted_commands(value: object) -> list[SpeechRecognitionIntent]:
@@ -434,14 +504,55 @@ def parse_persisted_commands(value: object) -> list[SpeechRecognitionIntent]:
     ]
 
 
-def load_or_seed_commands() -> list[SpeechRecognitionIntent]:
-    """Load persisted commands, seeding the defaults only on first run.
+def parse_seeded_ids(value: object) -> tuple[str, ...]:
+    """Deserialize the persisted list of already-seeded default command ids."""
+    raw = json.loads(value) if isinstance(value, str) else value
+    if not isinstance(raw, list):
+        return ()
+    return tuple(str(item) for item in raw)
 
-    Absent key (never initialised) -> seed :data:`DEFAULT_COMMANDS`. A stored
-    empty list (the user removed every command) stays empty.
+
+def load_or_seed_commands() -> tuple[list[SpeechRecognitionIntent], tuple[str, ...]]:
+    """Load persisted commands, adding any default the device hasn't been offered.
+
+    Returns the command list and the ids of every default now accounted for.
+
+    Seeding by "is the key absent?" alone would mean a device that upgrades never
+    receives defaults added by a later release. Merging every missing default on
+    each boot would instead resurrect the ones the user deliberately deleted. So
+    we track which defaults this device has *been offered*, and only ever add the
+    ones it hasn't seen:
+
+    - No stored commands (fresh install) -> seed all defaults.
+    - Stored commands, no seeded-ids key (upgrade from before this tracking) ->
+      treat the pre-tracking defaults as offered, append only newer defaults.
+    - Both stored -> append only defaults in neither the seeded set nor the list.
     """
     loaded = read_from_persistent_store(
         COMMANDS_PERSISTENT_KEY,
         mapper=parse_persisted_commands,
     )
-    return list(DEFAULT_COMMANDS) if loaded is None else loaded
+    all_default_ids = tuple(command.id for command in DEFAULT_COMMANDS)
+
+    if loaded is None:
+        return list(DEFAULT_COMMANDS), all_default_ids
+
+    seeded = read_from_persistent_store(
+        SEEDED_IDS_PERSISTENT_KEY,
+        mapper=parse_seeded_ids,
+        default=None,
+    )
+    already_offered = (
+        set(_PRE_TRACKING_DEFAULT_IDS) if seeded is None else set(seeded)
+    )
+    present = {command.id for command in loaded}
+
+    commands = [
+        *loaded,
+        *(
+            command
+            for command in DEFAULT_COMMANDS
+            if command.id not in already_offered and command.id not in present
+        ),
+    ]
+    return commands, tuple(already_offered | set(all_default_ids))

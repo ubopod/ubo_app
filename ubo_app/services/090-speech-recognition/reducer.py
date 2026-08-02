@@ -37,6 +37,7 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionSetAssistantEnabledAction,
     SpeechRecognitionSetAssistantListeningAction,
     SpeechRecognitionSetConversationEndPhrasesAction,
+    SpeechRecognitionSetWakeModeEnabledAction,
     SpeechRecognitionState,
     SpeechRecognitionStatus,
     SpeechRecognitionTriggerModeAction,
@@ -56,6 +57,7 @@ from ubo_app.store.services.speech_recognition import (
     WakeWordTrigger,
     clamp_sensitivity,
     model_status,
+    order_wake_modes,
     set_model_status,
     trigger_by_id,
 )
@@ -154,7 +156,7 @@ def _apply_wake_mode(
     phrase: str,
     detector: str,
     *,
-    enforce_assistant_gate: bool = True,
+    enforce_mode_gate: bool = True,
 ) -> CompleteReducerResult[
     SpeechRecognitionState,
     UboAction,
@@ -170,15 +172,22 @@ def _apply_wake_mode(
     CONVERSATION start the assistant when idle; STOP_TALKING stops it talking —
     or, while the command listener is armed, dismisses that window instead.
 
-    ``enforce_assistant_gate`` makes the master ``assistant_enabled`` switch
-    authoritative here in the (pure) reducer for QUICK_CHAT/CONVERSATION: the
-    audio-detection path enforces it (a direct, e.g. remote-dispatched, detection
-    can't start the assistant while it's off), while the Infrared-bound path
-    passes ``False`` so an explicit remote-key binding stays an intentional
-    override (mirrors ``commands.py:_trigger_mode``). The EnginesManager's
-    trigger-dropping when the switch is off is now just an optimization, not the
-    sole enforcement.
+    ``enforce_mode_gate`` makes the per-mode ``enabled_wake_modes`` switches
+    authoritative here in the (pure) reducer: the audio-detection path enforces
+    them (a direct, e.g. remote-dispatched, detection of a disabled mode is
+    swallowed), while the Infrared-bound path passes ``False`` so an explicit
+    remote-key binding stays an intentional override (mirrors
+    ``commands.py:_trigger_mode``). STOP_TALKING has no switch and is never gated.
+    The EnginesManager's trigger-dropping for a disabled mode is then just an
+    optimization, not the sole enforcement.
     """
+    if (
+        mode is not WakeMode.STOP_TALKING
+        and enforce_mode_gate
+        and mode not in state.enabled_wake_modes
+    ):
+        # This mode's switch is off — swallow the wake without acting on it.
+        return CompleteReducerResult(state=_idle(state), actions=[])
     if (
         mode is WakeMode.INTENTS
         and state.status is SpeechRecognitionStatus.IDLE
@@ -187,13 +196,6 @@ def _apply_wake_mode(
             state=replace(state, status=SpeechRecognitionStatus.INTENTS_WAITING),
             actions=[RgbRingSetAllAction(color=(0, 0, 255))],
         )
-    if (
-        mode in _ASSISTANT_MODES
-        and enforce_assistant_gate
-        and not state.assistant_enabled
-    ):
-        # Assistant master switch is off — swallow the wake without starting it.
-        return CompleteReducerResult(state=_idle(state), actions=[])
     if (
         mode in _ASSISTANT_MODES
         and state.status is SpeechRecognitionStatus.IDLE
@@ -245,8 +247,12 @@ def reducer(
 ]:
     if state is None:
         if isinstance(action, InitAction):
+            intents, seeded_default_ids = load_or_seed_commands()
             return _with_commands_catalog(
-                SpeechRecognitionState(intents=load_or_seed_commands()),
+                SpeechRecognitionState(
+                    intents=intents,
+                    seeded_default_ids=seeded_default_ids,
+                ),
             )
 
         raise InitializationActionError(action)
@@ -297,7 +303,23 @@ def reducer(
             )
 
         case SpeechRecognitionSetAssistantEnabledAction(enabled=enabled):
-            return replace(state, assistant_enabled=enabled)
+            modes = set(state.enabled_wake_modes)
+            if enabled:
+                modes |= {WakeMode.QUICK_CHAT, WakeMode.CONVERSATION}
+            else:
+                modes -= {WakeMode.QUICK_CHAT, WakeMode.CONVERSATION}
+            return replace(state, enabled_wake_modes=order_wake_modes(modes))
+
+        case SpeechRecognitionSetWakeModeEnabledAction(mode=mode, enabled=enabled):
+            if mode is WakeMode.STOP_TALKING:
+                # Silence has no switch; ignore a stray toggle defensively.
+                return state
+            modes = set(state.enabled_wake_modes)
+            if enabled:
+                modes.add(mode)
+            else:
+                modes.discard(mode)
+            return replace(state, enabled_wake_modes=order_wake_modes(modes))
 
         # --- voice commands (intents) --------------------------------------
 
@@ -402,13 +424,13 @@ def reducer(
             detector=detector,
         ):
             # Infrared-bound override: an explicit remote key fires the mode even
-            # when the assistant master switch is off (see commands.py:_trigger_mode).
+            # when that mode's switch is off (see commands.py:_trigger_mode).
             return _apply_wake_mode(
                 state,
                 mode,
                 phrase,
                 detector,
-                enforce_assistant_gate=False,
+                enforce_mode_gate=False,
             )
 
         case SpeechRecognitionSetConversationEndPhrasesAction(phrases=phrases):

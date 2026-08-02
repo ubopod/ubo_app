@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from commands import (
     COMMANDS_PERSISTENT_KEY,
+    SEEDED_IDS_PERSISTENT_KEY,
     register_default_bindable_actions,
     register_shortcut_actions,
 )
@@ -498,8 +499,10 @@ def _register_persistence() -> None:
         ),
     )
     register_persistent_store(
-        'speech_recognition:assistant_enabled',
-        lambda state: state.speech_recognition.assistant_enabled,
+        'speech_recognition:enabled_wake_modes',
+        lambda state: [
+            mode.value for mode in state.speech_recognition.enabled_wake_modes
+        ],
     )
     register_persistent_store(
         'speech_recognition:conversation_end_phrases',
@@ -518,6 +521,10 @@ def _register_persistence() -> None:
                 for command in state.speech_recognition.intents
             ],
         ),
+    )
+    register_persistent_store(
+        SEEDED_IDS_PERSISTENT_KEY,
+        lambda state: list(state.speech_recognition.seeded_default_ids),
     )
 
 
@@ -674,6 +681,7 @@ def init_service() -> Subscriptions:
     @store.autorun(
         lambda state: (
             state.speech_recognition.wake_engines,
+            state.speech_recognition.enabled_wake_modes,
             state.speech_recognition.openwakeword_models,
             state.speech_recognition.wake_word_models_status,
             state.infrared.registered_devices,
@@ -682,18 +690,26 @@ def init_service() -> Subscriptions:
     def wake_menu_items(
         data: tuple[
             tuple[WakeWordEngineConfig, ...],
+            tuple[WakeMode, ...],
             tuple[str, ...],
             tuple[WakeWordModelStatusEntry, ...],
             list[InfraredDevice],
         ],
     ) -> None:
         """Rebuild the mode-first wake-up menu tree from speech + infrared state."""
-        wake_engines, openwakeword_models, status_entries, ir_devices = data
+        (
+            wake_engines,
+            enabled_wake_modes,
+            openwakeword_models,
+            status_entries,
+            ir_devices,
+        ) = data
         # The serializable state carries a tuple of (engine, status) records;
         # collapse it to a dict for the menu builders' per-engine lookups.
         models_status = {entry.engine: entry.status for entry in status_entries}
         dispatch_wake_menus(
             wake_engines,
+            enabled_wake_modes,
             openwakeword_models,
             models_status,
             list(ir_devices),

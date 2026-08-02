@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from betterproto.lib.google.protobuf import StringValue
     from pipecat.services.mcp_service import MCPClient
     from ubo_bindings.client import UboRPCClient
+    from ubo_bindings.ubo.v1 import LocationInfo, WeatherCondition
 
     from ubo_assistant.tools import CombinedTools, DeviceCommand
 
@@ -109,6 +110,11 @@ class UboSwitchMixin(Generic[T]):
         self._autoruns_started = False
         self._enabled_mcp_servers: set[str] = set()
         self._device_commands: list[DeviceCommand] = []
+        # Latest localization state, kept fresh by an autorun. There is no
+        # one-shot store read over gRPC, so the time/weather tools answer from
+        # this cache.
+        self._location: LocationInfo | None = None
+        self._weather: WeatherCondition | None = None
         self._gateway_token: str | None = None
         self._mcp_clients: list[MCPClient] = []
         self._mcp_tools_update_lock = asyncio.Lock()
@@ -237,6 +243,32 @@ class UboSwitchMixin(Generic[T]):
             logger.info('Service is LLMSwitcher, subscribing to MCP state changes')
             self._setup_mcp_autorun()
             self._setup_device_commands_autorun()
+            self._setup_localization_autorun()
+
+    def _setup_localization_autorun(self) -> None:
+        """Track the device's location and cached weather for the native tools.
+
+        Unlike ``run_device_command``, the time/weather/location tools are always
+        registered (they degrade gracefully when the location is unknown), so a
+        change here only refreshes the cache — no tool re-registration needed.
+        """
+
+        @self.client.autorun([
+            'state.localization.location',
+            'state.localization.weather',
+        ])
+        def handle_localization_change(data: list) -> None:
+            # ``None`` on the server is encoded as ``google.protobuf.Empty`` and
+            # unpacks back to ``None`` here, so an unset location arrives as-is.
+            self._location = data[0] if len(data) > 0 else None
+            self._weather = data[1] if len(data) > 1 else None
+            logger.debug(
+                'Localization state changed via autorun',
+                extra={
+                    'has_location': self._location is not None,
+                    'has_weather': self._weather is not None,
+                },
+            )
 
     def _setup_mcp_autorun(self) -> None:
         """Set up autorun subscription for MCP server state changes."""

@@ -61,6 +61,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionSetConversationEndPhrasesAction,
+    SpeechRecognitionSetWakeModeEnabledAction,
     SpeechRecognitionState,
     WakeEngineSetEnabledAction,
     WakeMode,
@@ -794,6 +795,7 @@ def _oww_config(
 
 def dispatch_wake_menus(
     wake_engines: tuple[WakeWordEngineConfig, ...],
+    enabled_wake_modes: tuple[WakeMode, ...],
     openwakeword_models: tuple[str, ...],
     models_status: dict[WakeWordEngineName, WakeWordModelStatus],
     ir_devices: list[InfraredDevice],
@@ -802,7 +804,7 @@ def dispatch_wake_menus(
     _dispatch_wake_up_menu()
     _dispatch_phrases_menu()
     for mode in _WAKE_MODE_META:
-        _dispatch_mode_menu(mode, wake_engines, ir_devices)
+        _dispatch_mode_menu(mode, wake_engines, enabled_wake_modes, ir_devices)
     _dispatch_engines_menu(wake_engines)
     config = _oww_config(wake_engines)
     if config is not None:
@@ -866,11 +868,26 @@ def _dispatch_phrases_menu() -> None:
 def _dispatch_mode_menu(
     mode: WakeMode,
     wake_engines: tuple[WakeWordEngineConfig, ...],
+    enabled_wake_modes: tuple[WakeMode, ...],
     ir_devices: list[InfraredDevice],
 ) -> None:
-    """Headed list of every trigger for *mode* across all sources + an Add row."""
+    """Headed list of every trigger for *mode* across all sources + an Add row.
+
+    Shortcut / Short Chat / Conversation lead with an Enable/Disable switch;
+    Silence (STOP_TALKING) has no switch and is always armed.
+    """
     title, description = _WAKE_MODE_META[mode]
+    is_enabled = mode is WakeMode.STOP_TALKING or mode in enabled_wake_modes
     rows: list[MenuItemData] = []
+    if mode is not WakeMode.STOP_TALKING:
+        rows.append(
+            _build_toggle_item(
+                key='mode-enabled',
+                label=f'{"Disable" if is_enabled else "Enable"} {title}',
+                is_active=is_enabled,
+                action_id=f'speech-recognition:toggle-mode:{mode.value}',
+            ),
+        )
     for config in wake_engines:
         rows.extend(
             MenuItemData(
@@ -921,7 +938,7 @@ def _dispatch_mode_menu(
             menu_id=_menu_mode(mode),
             title=title,
             heading=title,
-            sub_heading=description,
+            sub_heading=description if is_enabled else f'{description}  (off)',
             items=tuple(rows),
             placeholder='Nothing yet — tap Add.',
         ),
@@ -1092,6 +1109,13 @@ def register_wake_handlers(  # noqa: C901, PLR0915
                 engine=engine,
                 enabled=not (config.enabled if config else False),
             ),
+        )
+
+    def _toggle_mode(action_id: str) -> None:
+        mode = WakeMode(action_id.removeprefix('speech-recognition:toggle-mode:'))
+        is_on = mode in _read_speech_recognition_state().enabled_wake_modes
+        store.dispatch(
+            SpeechRecognitionSetWakeModeEnabledAction(mode=mode, enabled=not is_on),
         )
 
     def _add_trigger(action_id: str) -> None:
@@ -1310,6 +1334,7 @@ def register_wake_handlers(  # noqa: C901, PLR0915
     action_handlers = (
         ('speech-recognition:goto:*', _goto),
         ('speech-recognition:toggle-engine:*', _toggle_engine),
+        ('speech-recognition:toggle-mode:*', _toggle_mode),
         ('speech-recognition:add-trigger:*', _add_trigger),
         ('speech-recognition:open-trigger:*', _open_trigger),
         ('speech-recognition:edit-trigger:*', _edit_trigger),

@@ -47,7 +47,7 @@ Slice: `state.speech_recognition` —
 | ------------------------- | --------------------------------------- | ------------------------------------------------------------- |
 | `intents`                 | `list[SpeechRecognitionIntent]`         | Voice commands: phrases → bindable `action_keys`. Seeded from `DEFAULT_COMMANDS` on first run; persisted. |
 | `wake_engines`            | `tuple[WakeWordEngineConfig, ...]`      | Per-engine `enabled` flag + its `WakeWordTrigger`s. Persisted; migrated from legacy keys. |
-| `assistant_enabled`       | `bool`                                  | Master switch for QUICK_CHAT/CONVERSATION wake modes (INTENTS/STOP_TALKING unaffected). Persisted. |
+| `enabled_wake_modes`      | `tuple[WakeMode, ...]`                  | Which wake modes are armed. Per-mode switches for Shortcut/Short Chat/Conversation; STOP_TALKING is always armed (no switch). Fresh installs default to all on. Persisted. |
 | `openwakeword_models`     | `tuple[str, ...]`                       | OpenWakeWord model stems on disk (downloaded + uploaded). Derived from disk at startup; **not** persisted. |
 | `conversation_end_phrases`| `tuple[str, ...]`                       | End-of-turn phrases consumed assistant-side. Persisted.       |
 | `status`                  | `SpeechRecognitionStatus`               | `IDLE` / `INTENTS_WAITING` (standalone command window, 10 s) / `ASSISTANT_WAITING` (stage-1 matching armed alongside a quick-chat session). |
@@ -69,7 +69,8 @@ filesystem, action resolution) is done in `setup.py` event handlers.
 | ------------------------------------------------- | -------------------------------------------------------------- |
 | `WakeEngineSetEnabledAction`                      | Flip an engine's `enabled` flag.                               |
 | `WakeTriggerAddAction` / `WakeTriggerRemoveAction`| Add/remove a trigger (sensitivity clamped to `[0,1]`).        |
-| `SpeechRecognitionSetAssistantEnabledAction`      | Set `assistant_enabled`.                                       |
+| `SpeechRecognitionSetAssistantEnabledAction`      | Arm/disarm QUICK_CHAT + CONVERSATION together (backs the voice command). |
+| `SpeechRecognitionSetWakeModeEnabledAction`       | Arm/disarm a single wake mode (backs the per-mode switches).  |
 | `SpeechRecognitionAdd/Update/RemoveCommandAction` | Edit the `intents` command list.                              |
 | `SpeechRecognitionSetConversationEndPhrasesAction`| Replace `conversation_end_phrases`.                           |
 | `SpeechRecognitionReportWakeWordDetectionAction`  | Resolve `(engine, trigger_id)` → mode → `_apply_wake_mode` (see below). |
@@ -86,7 +87,7 @@ filesystem, action resolution) is done in `setup.py` event handlers.
 `_apply_wake_mode` (`reducer.py`) is the single mode→effect map, shared by audio detections and
 Infrared-bound triggers: `INTENTS` arms the command listener (blue ring) when idle;
 `QUICK_CHAT`/`CONVERSATION` dispatch `AssistantStartListeningAction` when idle (subject to the
-`assistant_enabled` gate on the audio path); `STOP_TALKING` dispatches `AssistantStopTalkingAction`,
+mode's `enabled_wake_modes` gate on the audio path); `STOP_TALKING` dispatches `AssistantStopTalkingAction`,
 or — while the command window is armed — simply dismisses it. A wake detected *during* a quick-chat
 session leaves `ASSISTANT_WAITING` intact: OpenWakeWord is not grammar-constrained and can still fire
 there, and dropping to `IDLE` would disarm stage-1 for the rest of the session (the arming autorun
@@ -126,7 +127,7 @@ audio, so Vosk could never hear such a session — hence the `assistant_session_
 
 `init_service()` (`setup.py:661`) is the runtime hub and returns a `Subscriptions` list for teardown:
 
-1. **Persistence** — `_register_persistence()` registers `wake_engines`, `assistant_enabled`,
+1. **Persistence** — `_register_persistence()` registers `wake_engines`, `enabled_wake_modes`,
    `conversation_end_phrases`, and the commands key.
 2. **Bindable actions** — `register_default_bindable_actions()` + `register_shortcut_actions()`
    (`commands.py`) populate the catalog voice commands and Infrared bindings resolve against.
@@ -228,9 +229,9 @@ conversation-end phrase. The model is Vosk's single loaded instance, surfaced vi
   `SPEECH_RECOGNITION_FRAME_RATE` (`ubo_app.constants`).
 - Model locations: OpenWakeWord `DATA_PATH/openwakeword/models`; Vosk models via the assistant's
   `vosk_catalog` (`model_path_for`).
-- Persistent keys: `speech_recognition:wake_engines`, `:assistant_enabled`,
+- Persistent keys: `speech_recognition:wake_engines`, `:enabled_wake_modes`,
   `:conversation_end_phrases`, `:commands` (plus legacy `:wake_slots` / Phase-1 keys read once on
-  migration).
+  migration; the legacy `:assistant_enabled` key is intentionally ignored).
 - No env vars or secrets owned here.
 
 ## Testing & Development Notes

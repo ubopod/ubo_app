@@ -122,7 +122,73 @@ def create_ubo_standard_tools(
         required=['source', 'prompt'],
     )
 
-    standard_tools = [draw_image_function, get_image_function]
+    get_current_time_function = FunctionSchema(
+        name='get_current_time',
+        description='Get the current local time, date and timezone at the '
+        "device's location. Always use this instead of guessing the time or "
+        'date — the model has no clock.',
+        properties={},
+        required=[],
+    )
+
+    get_weather_function = FunctionSchema(
+        name='get_weather',
+        description="Get the current weather conditions at the device's "
+        'location. Always use this instead of guessing the weather.',
+        properties={},
+        required=[],
+    )
+
+    set_location_function = FunctionSchema(
+        name='set_location',
+        description='Set the location of the device, when the user tells you '
+        'where they are (e.g. "I live in Lisbon"). Supply the coordinates and '
+        'IANA timezone you know for that city — do not ask the user for them.',
+        properties={
+            'city': {
+                'type': 'string',
+                'description': 'The city name, e.g. "Lisbon".',
+            },
+            'country': {
+                'type': 'string',
+                'description': 'The country name, e.g. "Portugal".',
+            },
+            'country_code': {
+                'type': 'string',
+                'description': 'The ISO 3166-1 alpha-2 country code, e.g. "PT". '
+                'Determines whether temperatures are spoken in Celsius or '
+                'Fahrenheit.',
+            },
+            'latitude': {
+                'type': 'number',
+                'description': 'Latitude in decimal degrees, e.g. 38.7223.',
+            },
+            'longitude': {
+                'type': 'number',
+                'description': 'Longitude in decimal degrees, e.g. -9.1393.',
+            },
+            'timezone': {
+                'type': 'string',
+                'description': 'IANA timezone name, e.g. "Europe/Lisbon".',
+            },
+        },
+        required=[
+            'city',
+            'country',
+            'country_code',
+            'latitude',
+            'longitude',
+            'timezone',
+        ],
+    )
+
+    standard_tools = [
+        draw_image_function,
+        get_image_function,
+        get_current_time_function,
+        get_weather_function,
+        set_location_function,
+    ]
     if device_commands:
         standard_tools.append(_create_run_device_command_function(device_commands))
 

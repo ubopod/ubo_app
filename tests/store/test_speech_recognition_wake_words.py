@@ -6,8 +6,9 @@ conversation → ``AssistantStartListeningAction`` (carrying a
 ``WakePhraseTriggerSource``), the silence phrase → ``AssistantStopTalkingAction``,
 and intents → ``INTENTS_WAITING``. ``SpeechRecognitionTriggerModeAction`` (used by
 Infrared-bound remote keys) routes through the same map. The reducer also owns the
-engine toggle + trigger add/remove handlers, the ``assistant_enabled`` switch, the
-OWW model lifecycle handlers, and the ``wake_slots`` → ``wake_engines`` migration.
+engine toggle + trigger add/remove handlers, the per-mode ``enabled_wake_modes``
+switches, the OWW model lifecycle handlers, and the ``wake_slots`` →
+``wake_engines`` migration.
 
 Loads the service reducer via ``importlib.util.spec_from_file_location`` for the
 same reason ``test_assistant_listening_metadata.py`` does — integration tests
@@ -72,6 +73,7 @@ def _load(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         WakeTriggerAddAction=sr.WakeTriggerAddAction,
         WakeTriggerRemoveAction=sr.WakeTriggerRemoveAction,
         SetAssistantEnabled=sr.SpeechRecognitionSetAssistantEnabledAction,
+        SetWakeModeEnabled=sr.SpeechRecognitionSetWakeModeEnabledAction,
         WakeWordDeleteModelAction=sr.WakeWordDeleteModelAction,
         WakeWordDeleteModelEvent=sr.WakeWordDeleteModelEvent,
         WakeWordSetAvailableModelsAction=sr.WakeWordSetAvailableModelsAction,
@@ -95,9 +97,9 @@ def _trigger(
 def _state(ns: SimpleNamespace, *configs: object) -> SpeechRecognitionState:
     """Build an init state with the given engine configs.
 
-    ``assistant_enabled`` is forced on so detection tests don't depend on the
-    ambient persistent store (its default factory reads disk); the gate tests
-    flip it off explicitly via ``replace``.
+    Every wake mode is forced on so detection tests don't depend on the ambient
+    persistent store (its default factory reads disk); the gate tests drop a mode
+    explicitly via ``replace``.
     """
     init = cast(
         'type[BaseAction]',
@@ -106,7 +108,11 @@ def _state(ns: SimpleNamespace, *configs: object) -> SpeechRecognitionState:
     base = cast('SpeechRecognitionState', ns.reducer(None, init()))
     return cast(
         'SpeechRecognitionState',
-        replace(base, wake_engines=tuple(configs), assistant_enabled=True),
+        replace(
+            base,
+            wake_engines=tuple(configs),
+            enabled_wake_modes=tuple(ns.WakeMode),
+        ),
     )
 
 
@@ -352,16 +358,16 @@ def test_trigger_mode_action_routes_each_mode(
     assert intents.state.status is ns.Status.INTENTS_WAITING
 
 
-# ---------- assistant_enabled gate ----------
+# ---------- per-mode enable gate ----------
 
 
-def test_audio_detection_gated_by_assistant_enabled(
+def test_audio_detection_gated_by_wake_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """An off assistant switch swallows an audio assistant-mode detection.
+    """A disabled wake mode swallows an audio detection of that mode.
 
-    The reducer enforces the ``assistant_enabled`` gate itself, not just the
-    EnginesManager.
+    The reducer enforces the per-mode ``enabled_wake_modes`` gate itself, not just
+    the EnginesManager.
     """
     ns = _load(monkeypatch)
     trig = _trigger(ns, id='c1', mode=ns.WakeMode.CONVERSATION, value='hey ubo')
@@ -370,7 +376,7 @@ def test_audio_detection_gated_by_assistant_enabled(
             ns,
             ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
         ),
-        assistant_enabled=False,
+        enabled_wake_modes=(ns.WakeMode.INTENTS, ns.WakeMode.STOP_TALKING),
     )
 
     result = _detect(ns, state, ns.Engine.VOSK, 'c1', phrase='hey ubo')
@@ -379,16 +385,19 @@ def test_audio_detection_gated_by_assistant_enabled(
     assert result.state.status is ns.Status.IDLE
 
 
-def test_ir_trigger_mode_ignores_assistant_enabled(
+def test_ir_trigger_mode_ignores_mode_gate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The Infrared-bound mode trigger overrides the off master switch.
+    """The Infrared-bound mode trigger overrides an off mode switch.
 
-    An explicit remote-key binding still starts the assistant when the switch is
-    off (mirrors commands.py:_trigger_mode).
+    An explicit remote-key binding still starts the assistant when the mode is
+    switched off (mirrors commands.py:_trigger_mode).
     """
     ns = _load(monkeypatch)
-    state = replace(_state(ns), assistant_enabled=False)
+    state = replace(
+        _state(ns),
+        enabled_wake_modes=(ns.WakeMode.INTENTS, ns.WakeMode.STOP_TALKING),
+    )
 
     result = ns.reducer(
         state,
@@ -484,18 +493,63 @@ def test_add_trigger_carries_sensitivity(
     assert ns.trigger_by_id(state, ns.Engine.OPENWAKEWORD, 't2').sensitivity == 0.5
 
 
-def test_set_assistant_enabled_sets_flag(
+def test_set_assistant_enabled_toggles_both_assistant_modes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """SetAssistantEnabled flips the single assistant_enabled boolean."""
+    """SetAssistantEnabled adds/removes QUICK_CHAT + CONVERSATION together."""
     ns = _load(monkeypatch)
     state = _state(ns)
 
     off = ns.reducer(state, ns.SetAssistantEnabled(enabled=False))
-    assert off.assistant_enabled is False
+    assert ns.WakeMode.QUICK_CHAT not in off.enabled_wake_modes
+    assert ns.WakeMode.CONVERSATION not in off.enabled_wake_modes
+    # INTENTS and STOP_TALKING are untouched.
+    assert ns.WakeMode.INTENTS in off.enabled_wake_modes
+    assert ns.WakeMode.STOP_TALKING in off.enabled_wake_modes
 
     on = ns.reducer(off, ns.SetAssistantEnabled(enabled=True))
-    assert on.assistant_enabled is True
+    assert ns.WakeMode.QUICK_CHAT in on.enabled_wake_modes
+    assert ns.WakeMode.CONVERSATION in on.enabled_wake_modes
+
+
+def test_set_wake_mode_enabled_toggles_one_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SetWakeModeEnabled arms/disarms a single mode, in canonical order."""
+    ns = _load(monkeypatch)
+    state = _state(ns)
+
+    off = ns.reducer(
+        state,
+        ns.SetWakeModeEnabled(mode=ns.WakeMode.CONVERSATION, enabled=False),
+    )
+    assert ns.WakeMode.CONVERSATION not in off.enabled_wake_modes
+    # Others survive; order stays canonical (no CONVERSATION between QC and STOP).
+    assert off.enabled_wake_modes == (
+        ns.WakeMode.INTENTS,
+        ns.WakeMode.QUICK_CHAT,
+        ns.WakeMode.STOP_TALKING,
+    )
+
+    on = ns.reducer(
+        off,
+        ns.SetWakeModeEnabled(mode=ns.WakeMode.CONVERSATION, enabled=True),
+    )
+    assert on.enabled_wake_modes == tuple(ns.WakeMode)
+
+
+def test_set_wake_mode_enabled_ignores_stop_talking(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """STOP_TALKING has no switch — a stray toggle is a no-op."""
+    ns = _load(monkeypatch)
+    state = _state(ns)
+
+    result = ns.reducer(
+        state,
+        ns.SetWakeModeEnabled(mode=ns.WakeMode.STOP_TALKING, enabled=False),
+    )
+    assert ns.WakeMode.STOP_TALKING in result.enabled_wake_modes
 
 
 # ---------- OWW model lifecycle ----------
@@ -702,8 +756,6 @@ def test_migration_only_enabled_slots(monkeypatch: pytest.MonkeyPatch) -> None:
     assert {trigger.value for trigger in vosk.triggers} == {'ubo'}
     assert by_name[ns.Engine.OPENWAKEWORD].triggers == ()
     assert not hasattr(vosk.triggers[0], 'enabled')
-    # The assistant the user had off must NOT be re-enabled by migration.
-    assert ns.sr._load_assistant_enabled() is False  # noqa: SLF001
 
 
 def test_migration_mixed_assistant_modes(
@@ -731,8 +783,6 @@ def test_migration_mixed_assistant_modes(
     values = {trigger.value for trigger in vosk.triggers}
     assert values == {'ubo', "let's chat"}  # disabled Quick Chat phrase dropped
     assert 'hey ubo' not in values
-    # The gate is on (Conversation was enabled), but no Quick Chat trigger exists.
-    assert ns.sr._load_assistant_enabled() is True  # noqa: SLF001
 
 
 def test_migration_enabled_assistant_keeps_stop(
@@ -758,16 +808,61 @@ def test_migration_enabled_assistant_keeps_stop(
         if config.engine is ns.Engine.VOSK
     )
     assert 'enough' in {trigger.value for trigger in vosk.triggers}
-    assert ns.sr._load_assistant_enabled() is True  # noqa: SLF001
 
 
-def test_assistant_enabled_defaults_true_for_fresh_install(
+# ---------- enabled_wake_modes loader ----------
+
+
+def _patch_persistent(
+    monkeypatch: pytest.MonkeyPatch,
+    ns: SimpleNamespace,
+    values: dict[str, object],
+) -> None:
+    """Make the persistent store return *values* by key, None otherwise."""
+
+    def _fake_read(key: str, **_: object) -> object:
+        return values.get(key)
+
+    monkeypatch.setattr(ns.sr, 'read_from_persistent_store', _fake_read)
+
+
+def test_enabled_wake_modes_defaults_all_on_for_fresh_install(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """No persisted keys at all → assistant on by default."""
+    """No persisted key → every mode on."""
     ns = _load(monkeypatch)
-    _patch_wake_slots(monkeypatch, ns, None)
-    assert ns.sr._load_assistant_enabled() is True  # noqa: SLF001
+    _patch_persistent(monkeypatch, ns, {})
+    assert ns.sr._load_enabled_wake_modes() == tuple(ns.WakeMode)  # noqa: SLF001
+
+
+def test_enabled_wake_modes_ignores_legacy_assistant_off(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A legacy assistant-off key is ignored — the device comes back all-on."""
+    ns = _load(monkeypatch)
+    _patch_persistent(
+        monkeypatch,
+        ns,
+        {'speech_recognition:assistant_enabled': False},
+    )
+    assert ns.sr._load_enabled_wake_modes() == tuple(ns.WakeMode)  # noqa: SLF001
+
+
+def test_enabled_wake_modes_round_trips_persisted_subset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A persisted subset loads back in canonical order; STOP always rides along."""
+    ns = _load(monkeypatch)
+    _patch_persistent(
+        monkeypatch,
+        ns,
+        {'speech_recognition:enabled_wake_modes': ['intents', 'garbage']},
+    )
+    # Unknown values dropped; STOP_TALKING forced on even when absent.
+    assert ns.sr._load_enabled_wake_modes() == (  # noqa: SLF001
+        ns.WakeMode.INTENTS,
+        ns.WakeMode.STOP_TALKING,
+    )
 
 
 # ---------- model download idempotency ----------
