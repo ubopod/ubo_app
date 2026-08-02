@@ -21,8 +21,6 @@ from wyoming.error import Error
 from wyoming.handle import NotHandled
 from wyoming.tts import Synthesize
 
-from ubo_app.store.services.wyoming import WyomingConnectionPolicy
-
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
@@ -78,7 +76,7 @@ async def _serve_failing_engines() -> tuple[Any, int]:
     server = EnginesServer(
         host='127.0.0.1',
         port=0,
-        access=PeerAccess(policy=WyomingConnectionPolicy.LOCAL_ONLY),
+        access=PeerAccess(),
         bridge=_FailingBridge(),
     )
     await server.start()

@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from ubo_app.store.services.wyoming import WyomingConnectionPolicy, WyomingState
+from ubo_app.store.services.wyoming import (
+    WyomingAccessPolicy,
+    WyomingAccessPolicyKind,
+    WyomingState,
+)
 
 SERVICE_DIR = (
     Path(__file__).resolve().parents[2] / 'ubo_app' / 'services' / '090-wyoming'
@@ -21,8 +25,7 @@ def _docker_state() -> WyomingState:
     return WyomingState(
         is_satellite_enabled=True,
         is_engines_enabled=False,
-        connection_policy=WyomingConnectionPolicy.DOCKER_HOME_ASSISTANT,
-        allowed_peers=(),
+        access_policies=(WyomingAccessPolicy(kind=WyomingAccessPolicyKind.DOCKER),),
         is_zeroconf_enabled=False,
     )
 

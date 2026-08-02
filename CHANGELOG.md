@@ -14,6 +14,10 @@ cycle.
   own — the openWakeWord add-on is unavailable on container installs — and the
   microphone is only streamed for the duration of a command instead of
   continuously; the LED ring is green for the duration of that command
+- feat(wyoming): access policies combine — a Docker bridge and explicit IP/CIDR
+  sources can be permitted at once, each added and withdrawn on its own from
+  `Add Policy`. No policies means loopback-only, replacing the former
+  `local-only` choice; existing configuration migrates automatically
 - refactor(wyoming): the satellite, engines, and discovery rows are checkboxes —
   marked is enabled — matching the WiFi hotspot toggle, and their labels drop the
   redundant `: On`/`: Off` suffix so they fit the LCD (`ASR/TTS/LLM Engines` is

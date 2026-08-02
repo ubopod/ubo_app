@@ -8,19 +8,20 @@ from typing import TYPE_CHECKING
 from redux import CompleteReducerResult, InitAction, InitializationActionError
 
 from ubo_app.store.services.wyoming import (
+    WyomingAccessPolicy,
     WyomingAction,
+    WyomingAddAccessPolicyAction,
     WyomingEvent,
+    WyomingRemoveAccessPolicyAction,
     WyomingReportEnginesStatusAction,
     WyomingReportSatelliteStatusAction,
     WyomingSatelliteWakeAction,
     WyomingSatelliteWakeEvent,
-    WyomingSetAllowedPeersAction,
-    WyomingSetConnectionPolicyAction,
     WyomingSetEnginesEnabledAction,
     WyomingSetSatelliteEnabledAction,
     WyomingSetZeroconfEnabledAction,
     WyomingState,
-    normalize_allowed_peers,
+    normalize_access_policies,
 )
 
 if TYPE_CHECKING:
@@ -42,10 +43,25 @@ def reducer(
             return replace(state, is_satellite_enabled=enabled)
         case WyomingSetEnginesEnabledAction(enabled=enabled):
             return replace(state, is_engines_enabled=enabled)
-        case WyomingSetConnectionPolicyAction(policy=policy):
-            return replace(state, connection_policy=policy)
-        case WyomingSetAllowedPeersAction(peers=peers):
-            return replace(state, allowed_peers=normalize_allowed_peers(peers))
+        case WyomingAddAccessPolicyAction(kind=kind, value=value):
+            return replace(
+                state,
+                access_policies=normalize_access_policies(
+                    [
+                        *state.access_policies,
+                        WyomingAccessPolicy(kind=kind, value=value),
+                    ],
+                ),
+            )
+        case WyomingRemoveAccessPolicyAction(kind=kind, value=value):
+            return replace(
+                state,
+                access_policies=tuple(
+                    policy
+                    for policy in state.access_policies
+                    if (policy.kind, policy.value) != (kind, value)
+                ),
+            )
         case WyomingSetZeroconfEnabledAction(enabled=enabled):
             return replace(state, is_zeroconf_enabled=enabled)
         case WyomingSatelliteWakeAction(phrase=phrase, detector=detector):

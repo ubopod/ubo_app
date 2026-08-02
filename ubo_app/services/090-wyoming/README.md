@@ -11,31 +11,38 @@ by default and the service defaults to loopback-only binding. Do not expose eith
 port through a router, reverse proxy, or VPN without an additional authenticated
 transport.
 
-Choose one connection policy from **Settings → Assistant → Satellites → Wyoming**:
+Add one or more access policies from **Settings → Assistant → Satellites →
+Wyoming**. Policies **combine**: a peer is admitted if it matches any of them, so
+a Docker bridge and explicit LAN addresses can be permitted at the same time, and
+each can be withdrawn on its own.
 
-- **Docker-only** permits only the subnet Docker actually assigned to the shared
-  `ubo_net` bridge, resolved from the daemon each time the listeners are
+- **Docker bridge** permits only the subnet Docker actually assigned to the
+  shared `ubo_net` bridge, resolved from the daemon each time the listeners are
   reconciled. The private ranges Docker draws from are ordinary RFC1918 space, so
   trusting the range rather than the live subnet would authorize every host on a
-  LAN that happens to be numbered inside it. If the bridge cannot be resolved, no
-  listener is opened. The bundled Home Assistant composition maps
-  `host.docker.internal` to the Pod host.
-- **Allowlist** requires one or more Home Assistant IP addresses or CIDR ranges.
-  It does not start either listener until the list has at least one valid entry.
-- **Local-only** binds to `127.0.0.1`; it is appropriate only for a same-host
-  client or an authenticated local proxy.
+  LAN that happens to be numbered inside it. If the bridge cannot be resolved it
+  contributes nothing — and if it is the only policy, no listener is opened. The
+  bundled Home Assistant composition maps `host.docker.internal` to the Pod host.
+- **IP address or CIDR** permits exactly what it names. Host names are rejected:
+  they resolve at an unpredictable moment to an address nobody reviewed.
 
-Allowlist listeners can be announced with mDNS/Zeroconf, which may be disabled
-from the same settings menu. Docker-only clients use the host-gateway hostname
-instead and are never advertised to the LAN.
+**With no policies the listeners bind `127.0.0.1`** and nothing off-device can
+reach them. That is the default, and it is what "local only" means here — it is
+not a policy you add but the absence of any, so removing the last policy returns
+the device to it.
+
+Adding a policy is what opens the port to the LAN, so it raises a sticky warning.
+Listeners can be announced with mDNS/Zeroconf whenever at least one policy
+exists; the toggle is in the same menu. Docker clients reach the Pod through the
+host-gateway hostname and do not need the advertisement.
 
 ## Home Assistant configuration
 
 1. Enable the desired listener(s) under **Settings → Assistant → Satellites →
    Wyoming** on the Pod.
-2. For the bundled Home Assistant container, select **Docker-only** and use
-   `host.docker.internal`. For a separate installation, use **Allowlist** and
-   enter its source IP address before enabling a listener.
+2. Add the matching access policy. For the bundled Home Assistant container add
+   **Docker bridge** and use `host.docker.internal`; for a separate installation
+   add its source **IP address or CIDR**. Both can be present at once.
 3. Add the integrations in Home Assistant:
    - Wyoming satellite: `host.docker.internal:10700`
    - Wyoming ASR, TTS, and conversation: `host.docker.internal:10600`

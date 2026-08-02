@@ -17,7 +17,9 @@ from pathlib import Path
 
 import pytest
 
-from ubo_app.store.services.wyoming import WyomingConnectionPolicy, WyomingState
+from ubo_app.store.services.wyoming import (
+    WyomingState,
+)
 
 SERVICE_DIR = (
     Path(__file__).resolve().parents[2] / 'ubo_app' / 'services' / '090-wyoming'
@@ -31,8 +33,7 @@ def _state(*, engines: bool) -> WyomingState:
     return WyomingState(
         is_satellite_enabled=True,
         is_engines_enabled=engines,
-        connection_policy=WyomingConnectionPolicy.LOCAL_ONLY,
-        allowed_peers=(),
+        access_policies=(),
         is_zeroconf_enabled=False,
     )
 

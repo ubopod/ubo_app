@@ -9,13 +9,24 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from ubo_app.store.services.wyoming import WyomingConnectionPolicy, WyomingState
+from ubo_app.store.services.wyoming import (
+    WyomingAccessPolicy,
+    WyomingAccessPolicyKind,
+    WyomingState,
+)
 
 SERVICE_DIR = (
     Path(__file__).resolve().parents[2] / 'ubo_app' / 'services' / '090-wyoming'
 )
 if str(SERVICE_DIR) not in sys.path:
     sys.path.insert(0, str(SERVICE_DIR))
+
+_POLICIES = (
+    WyomingAccessPolicy(
+        kind=WyomingAccessPolicyKind.NETWORK,
+        value='192.168.1.20',
+    ),
+)
 
 CHECKED = '\U000f0c52'
 UNCHECKED = '\U000f0131'
@@ -38,8 +49,7 @@ def test_a_checked_box_means_enabled() -> None:
         is_satellite_enabled=True,
         is_engines_enabled=True,
         is_zeroconf_enabled=True,
-        connection_policy=WyomingConnectionPolicy.ALLOWLIST,
-        allowed_peers=('192.168.1.20',),
+        access_policies=_POLICIES,
     )
 
     for key in ('wyoming:satellite', 'wyoming:engines', 'wyoming:zeroconf'):
@@ -52,8 +62,7 @@ def test_a_blank_box_means_disabled() -> None:
         is_satellite_enabled=False,
         is_engines_enabled=False,
         is_zeroconf_enabled=False,
-        connection_policy=WyomingConnectionPolicy.ALLOWLIST,
-        allowed_peers=('192.168.1.20',),
+        access_policies=_POLICIES,
     )
 
     for key in ('wyoming:satellite', 'wyoming:engines', 'wyoming:zeroconf'):
@@ -66,8 +75,7 @@ def test_toggle_labels_do_not_repeat_the_state() -> None:
         is_satellite_enabled=True,
         is_engines_enabled=False,
         is_zeroconf_enabled=True,
-        connection_policy=WyomingConnectionPolicy.ALLOWLIST,
-        allowed_peers=('192.168.1.20',),
+        access_policies=_POLICIES,
     )
 
     for key in ('wyoming:satellite', 'wyoming:engines', 'wyoming:zeroconf'):
@@ -82,8 +90,7 @@ def test_labels_fit_the_screen() -> None:
         is_satellite_enabled=True,
         is_engines_enabled=True,
         is_zeroconf_enabled=True,
-        connection_policy=WyomingConnectionPolicy.ALLOWLIST,
-        allowed_peers=('192.168.1.20',),
+        access_policies=_POLICIES,
     )
 
     for key in ('wyoming:satellite', 'wyoming:engines', 'wyoming:zeroconf'):

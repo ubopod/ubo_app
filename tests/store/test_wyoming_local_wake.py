@@ -21,8 +21,6 @@ from wyoming.satellite import RunSatellite
 from wyoming.vad import VoiceStopped
 from wyoming.wake import Detection
 
-from ubo_app.store.services.wyoming import WyomingConnectionPolicy
-
 SERVICE_DIR = (
     Path(__file__).resolve().parents[2] / 'ubo_app' / 'services' / '090-wyoming'
 )
@@ -86,7 +84,7 @@ async def test_microphone_stays_local_until_a_wake_word_fires() -> None:
     server = SatelliteServer(
         host='127.0.0.1',
         port=0,
-        access=PeerAccess(policy=WyomingConnectionPolicy.LOCAL_ONLY),
+        access=PeerAccess(),
     )
     await server.start()
     port = server._server._server.sockets[0].getsockname()[1]  # noqa: SLF001
@@ -113,7 +111,7 @@ async def test_wake_requests_a_pipeline_that_skips_home_assistant_wake_word() ->
     server = SatelliteServer(
         host='127.0.0.1',
         port=0,
-        access=PeerAccess(policy=WyomingConnectionPolicy.LOCAL_ONLY),
+        access=PeerAccess(),
     )
     await server.start()
     port = server._server._server.sockets[0].getsockname()[1]  # noqa: SLF001
@@ -172,7 +170,7 @@ async def test_end_of_command_releases_the_microphone(terminator: object) -> Non
     server = SatelliteServer(
         host='127.0.0.1',
         port=0,
-        access=PeerAccess(policy=WyomingConnectionPolicy.LOCAL_ONLY),
+        access=PeerAccess(),
     )
     await server.start()
     port = server._server._server.sockets[0].getsockname()[1]  # noqa: SLF001
@@ -215,7 +213,7 @@ async def test_the_ring_shows_when_home_assistant_is_listening(
     server = SatelliteServer(
         host='127.0.0.1',
         port=0,
-        access=PeerAccess(policy=WyomingConnectionPolicy.LOCAL_ONLY),
+        access=PeerAccess(),
     )
     await server.start()
     port = server._server._server.sockets[0].getsockname()[1]  # noqa: SLF001

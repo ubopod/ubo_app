@@ -6,44 +6,56 @@ from ipaddress import IPv4Address, IPv6Address, ip_address, ip_network
 
 from immutable import Immutable
 
-from ubo_app.store.services.wyoming import WyomingConnectionPolicy
+from ubo_app.store.services.wyoming import (
+    WyomingAccessPolicy,
+    WyomingAccessPolicyKind,
+)
 
 
-def _authorized_networks(
-    policy: WyomingConnectionPolicy,
-    allowed_peers: tuple[str, ...],
+def authorized_networks(
+    policies: tuple[WyomingAccessPolicy, ...],
     docker_networks: tuple[str, ...],
 ) -> tuple[str, ...]:
-    """Return the only networks a policy may admit besides loopback."""
-    if policy == WyomingConnectionPolicy.DOCKER_HOME_ASSISTANT:
-        return docker_networks
-    if policy == WyomingConnectionPolicy.ALLOWLIST:
-        return allowed_peers
-    return ()
+    """Return every network the configured policies admit, besides loopback.
+
+    Policies are a union: each one contributes its networks and a peer needs to
+    match only one of them, which is what lets a Docker bridge and explicit LAN
+    addresses be permitted at the same time.
+    """
+    networks: list[str] = []
+    for policy in policies:
+        if policy.kind == WyomingAccessPolicyKind.DOCKER:
+            networks.extend(docker_networks)
+        elif policy.kind == WyomingAccessPolicyKind.NETWORK and policy.value:
+            networks.append(policy.value)
+    return tuple(networks)
 
 
 def remote_listener_is_configured(
-    policy: WyomingConnectionPolicy,
-    allowed_peers: tuple[str, ...],
+    policies: tuple[WyomingAccessPolicy, ...],
     docker_networks: tuple[str, ...] = (),
 ) -> bool:
     """Return whether a non-local listener has a permitted source set.
 
-    A Docker policy whose bridge could not be resolved has no permitted source,
-    so it must not open a listener on all interfaces.
+    A Docker policy whose bridge could not be resolved contributes no networks,
+    so a device configured only that way must not open a listener on all
+    interfaces until the daemon can be read.
     """
-    return bool(_authorized_networks(policy, allowed_peers, docker_networks))
+    return bool(authorized_networks(policies, docker_networks))
 
 
-def listener_host(policy: WyomingConnectionPolicy) -> str:
-    """Return the narrowest bind address compatible with a policy."""
-    return '127.0.0.1' if policy == WyomingConnectionPolicy.LOCAL_ONLY else '0.0.0.0'  # noqa: S104
+def listener_host(policies: tuple[WyomingAccessPolicy, ...]) -> str:
+    """Return the narrowest bind address these policies permit.
+
+    No policies means nothing off-device was ever permitted, so the listener
+    stays on loopback rather than being reachable and merely rejecting peers.
+    """
+    return '0.0.0.0' if policies else '127.0.0.1'  # noqa: S104
 
 
 def is_peer_allowed(
     peer: str,
-    policy: WyomingConnectionPolicy,
-    allowed_peers: tuple[str, ...],
+    policies: tuple[WyomingAccessPolicy, ...],
     docker_networks: tuple[str, ...] = (),
 ) -> bool:
     """Authorize an IP peer before it can request microphone audio or engines.
@@ -64,38 +76,36 @@ def is_peer_allowed(
 
     return any(
         address in ip_network(network, strict=False)
-        for network in _authorized_networks(policy, allowed_peers, docker_networks)
+        for network in authorized_networks(policies, docker_networks)
     )
 
 
 class PeerAccess(Immutable):
     """The resolved answer to who may open a Wyoming connection."""
 
-    policy: WyomingConnectionPolicy
-    allowed_peers: tuple[str, ...] = ()
+    policies: tuple[WyomingAccessPolicy, ...] = ()
     docker_networks: tuple[str, ...] = ()
 
     @property
     def host(self) -> str:
         """Return the narrowest bind address this access permits."""
-        return listener_host(self.policy)
+        return listener_host(self.policies)
 
     @property
     def is_configured(self) -> bool:
         """Return whether a listener beyond loopback has a permitted source."""
-        return self.policy == WyomingConnectionPolicy.LOCAL_ONLY or (
-            remote_listener_is_configured(
-                self.policy,
-                self.allowed_peers,
-                self.docker_networks,
-            )
+        return not self.policies or remote_listener_is_configured(
+            self.policies,
+            self.docker_networks,
+        )
+
+    @property
+    def wants_docker_networks(self) -> bool:
+        """Whether resolving the Docker bridge is needed to apply these policies."""
+        return any(
+            policy.kind == WyomingAccessPolicyKind.DOCKER for policy in self.policies
         )
 
     def allows(self, peer: str) -> bool:
         """Authorize a peer before it reaches the microphone or the engines."""
-        return is_peer_allowed(
-            peer,
-            self.policy,
-            self.allowed_peers,
-            self.docker_networks,
-        )
+        return is_peer_allowed(peer, self.policies, self.docker_networks)

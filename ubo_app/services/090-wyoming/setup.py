@@ -28,7 +28,9 @@ from ubo_app.store.core.types import (
     MenuItemData,
     RegisterSettingAppAction,
     SettingsCategory,
+    StackPopAction,
     StackPushMenuAction,
+    StackPushPromptAction,
     UpdateDynamicMenuAction,
 )
 from ubo_app.store.core.view_registry import register_path_menu_matcher
@@ -50,16 +52,18 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.wyoming import (
-    WyomingConnectionPolicy,
+    WyomingAccessPolicy,
+    WyomingAccessPolicyKind,
+    WyomingAddAccessPolicyAction,
     WyomingEnginesStatus,
+    WyomingRemoveAccessPolicyAction,
     WyomingSatelliteStatus,
     WyomingSatelliteWakeEvent,
-    WyomingSetAllowedPeersAction,
-    WyomingSetConnectionPolicyAction,
     WyomingSetEnginesEnabledAction,
     WyomingSetSatelliteEnabledAction,
     WyomingSetZeroconfEnabledAction,
     WyomingState,
+    normalize_network,
 )
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
@@ -146,8 +150,7 @@ class WyomingRuntime:
         configuration = (
             state.is_satellite_enabled,
             state.is_engines_enabled,
-            state.connection_policy,
-            state.allowed_peers,
+            state.access_policies,
             state.is_zeroconf_enabled,
         )
         async with self._lock:
@@ -170,21 +173,17 @@ class WyomingRuntime:
         self._configuration = None
         await self._stop_servers()
 
-        access = PeerAccess(
-            policy=state.connection_policy,
-            allowed_peers=state.allowed_peers,
-            docker_networks=(
-                await resolve_bridge_subnets()
-                if state.connection_policy
-                == WyomingConnectionPolicy.DOCKER_HOME_ASSISTANT
-                else ()
-            ),
-        )
+        access = PeerAccess(policies=state.access_policies)
+        if access.wants_docker_networks:
+            access = PeerAccess(
+                policies=state.access_policies,
+                docker_networks=await resolve_bridge_subnets(),
+            )
 
         if not access.is_configured:
             logger.warning(
-                'Wyoming policy %s has no permitted peers; not opening a listener',
-                state.connection_policy.value,
+                'Wyoming policies resolve to no permitted peers; '
+                'not opening a listener',
             )
             return
 
@@ -209,10 +208,7 @@ class WyomingRuntime:
             await self._stop_servers()
             return
 
-        if (
-            state.connection_policy == WyomingConnectionPolicy.ALLOWLIST
-            and state.is_zeroconf_enabled
-        ):
+        if state.access_policies and state.is_zeroconf_enabled:
             await self._zeroconf.start(
                 tuple(
                     service
@@ -276,12 +272,11 @@ def _register_persistence() -> None:
         lambda state: state.wyoming.is_engines_enabled,
     )
     register_persistent_store(
-        'wyoming:connection_policy',
-        lambda state: state.wyoming.connection_policy,
-    )
-    register_persistent_store(
-        'wyoming:allowed_peers',
-        lambda state: list(state.wyoming.allowed_peers),
+        'wyoming:access_policies',
+        lambda state: [
+            {'kind': policy.kind.value, 'value': policy.value}
+            for policy in state.wyoming.access_policies
+        ],
     )
     register_persistent_store(
         'wyoming:is_zeroconf_enabled',
@@ -308,53 +303,38 @@ def _network_warning() -> None:
     )
 
 
-async def _choose_policy() -> None:
-    """Ask for an explicit connection policy instead of exposing all LAN peers."""
+# Labels for the source picker; matched back by value when the form returns.
+_DOCKER_OPTION = 'Docker bridge'
+_NETWORK_OPTION = 'IP address or CIDR'
+
+
+async def _add_policy() -> None:
+    """Permit one more source, rather than replacing what is already permitted.
+
+    Sources combine, so adding the Docker bridge does not withdraw an address
+    that was allowed before it.
+    """
     try:
         _, result = await ubo_input(
-            prompt='Choose who may connect to Wyoming',
+            prompt='Choose a source to permit',
             descriptions=[
                 WebUIInputDescription(
                     fields=[
                         InputFieldDescription(
-                            name='policy',
-                            label='Connection policy',
+                            name='kind',
+                            label='Source',
                             type=InputFieldType.SELECT,
-                            options=[
-                                policy.value for policy in WyomingConnectionPolicy
-                            ],
+                            options=[_DOCKER_OPTION, _NETWORK_OPTION],
                             required=True,
                         ),
-                    ],
-                ),
-            ],
-        )
-    except asyncio.CancelledError:
-        return
-    if result is None:
-        return
-    try:
-        policy = WyomingConnectionPolicy(result.data.get('policy', ''))
-    except ValueError:
-        return
-    store.dispatch(WyomingSetConnectionPolicyAction(policy=policy))
-    if policy != WyomingConnectionPolicy.LOCAL_ONLY:
-        _network_warning()
-
-
-async def _edit_allowed_peers() -> None:
-    """Capture an IP/CIDR allowlist through the existing trusted input flow."""
-    try:
-        _, result = await ubo_input(
-            prompt='Enter Home Assistant IP addresses or CIDRs, comma-separated',
-            descriptions=[
-                WebUIInputDescription(
-                    fields=[
                         InputFieldDescription(
-                            name='peers',
-                            label='Allowed Home Assistant peers',
+                            name='value',
+                            label='IP address or CIDR',
+                            description=(
+                                'Only for an address source; ignored for Docker.'
+                            ),
                             type=InputFieldType.TEXT,
-                            required=True,
+                            required=False,
                         ),
                     ],
                 ),
@@ -364,9 +344,43 @@ async def _edit_allowed_peers() -> None:
         return
     if result is None:
         return
-    value = result.data.get('peers', '')
-    peers = [peer.strip() for peer in value.split(',') if peer.strip()]
-    store.dispatch(WyomingSetAllowedPeersAction(peers=peers))
+
+    if result.data.get('kind') == _DOCKER_OPTION:
+        store.dispatch(
+            WyomingAddAccessPolicyAction(kind=WyomingAccessPolicyKind.DOCKER),
+        )
+        _network_warning()
+        return
+
+    value = normalize_network(result.data.get('value', ''))
+    if value is None:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    title='Wyoming',
+                    content=(
+                        'Enter an IP address or CIDR, e.g. 192.168.1.20 or '
+                        '192.168.1.0/24. Host names are not accepted.'
+                    ),
+                    importance=Importance.LOW,
+                ),
+            ),
+        )
+        return
+    store.dispatch(
+        WyomingAddAccessPolicyAction(
+            kind=WyomingAccessPolicyKind.NETWORK,
+            value=value,
+        ),
+    )
+    _network_warning()
+
+
+def _policy_label(policy: WyomingAccessPolicy) -> str:
+    """Render a policy short enough for the LCD."""
+    if policy.kind == WyomingAccessPolicyKind.DOCKER:
+        return 'Docker bridge'
+    return policy.value
 
 
 def _register_actions() -> list[str]:
@@ -375,8 +389,10 @@ def _register_actions() -> list[str]:
         'wyoming:goto:*',
         'wyoming:toggle-satellite',
         'wyoming:toggle-engines',
-        'wyoming:choose-policy',
-        'wyoming:edit-allowed-peers',
+        'wyoming:add-policy',
+        'wyoming:remove-policy:*',
+        'wyoming:confirm-remove-policy:*',
+        'wyoming:cancel',
         'wyoming:toggle-zeroconf',
     ]
 
@@ -415,16 +431,62 @@ def _register_actions() -> list[str]:
         _toggle_engines,
         allow_reregister=True,
     )
+    def _remove_policy(action_id: str) -> None:
+        kind, _, value = action_id.removeprefix(
+            'wyoming:remove-policy:',
+        ).partition(':')
+        label = _policy_label(
+            WyomingAccessPolicy(kind=WyomingAccessPolicyKind(kind), value=value),
+        )
+        store.dispatch(
+            StackPushPromptAction(
+                title='Remove Policy',
+                prompt=f'Stop permitting {label}?',
+                icon='\U000f0a7a',
+                items=(
+                    MenuItemData(
+                        key='yes',
+                        label='Remove',
+                        icon='\U000f0a7a',
+                        action_id=f'wyoming:confirm-remove-policy:{kind}:{value}',
+                    ),
+                    MenuItemData(
+                        key='cancel',
+                        label='Cancel',
+                        icon='\U000f0156',
+                        action_id='wyoming:cancel',
+                    ),
+                ),
+            ),
+        )
+
+    def _confirm_remove_policy(action_id: str) -> None:
+        kind, _, value = action_id.removeprefix(
+            'wyoming:confirm-remove-policy:',
+        ).partition(':')
+        store.dispatch(
+            StackPopAction(),
+            WyomingRemoveAccessPolicyAction(
+                kind=WyomingAccessPolicyKind(kind),
+                value=value,
+            ),
+        )
+
+    def _cancel() -> None:
+        store.dispatch(StackPopAction())
+
     register_action(
-        'wyoming:choose-policy',
-        lambda: create_task(_choose_policy()),
+        'wyoming:add-policy',
+        lambda: create_task(_add_policy()),
         allow_reregister=True,
     )
+    register_action('wyoming:remove-policy:*', _remove_policy, allow_reregister=True)
     register_action(
-        'wyoming:edit-allowed-peers',
-        lambda: create_task(_edit_allowed_peers()),
+        'wyoming:confirm-remove-policy:*',
+        _confirm_remove_policy,
         allow_reregister=True,
     )
+    register_action('wyoming:cancel', _cancel, allow_reregister=True)
     register_action(
         'wyoming:toggle-zeroconf',
         _toggle_zeroconf,
@@ -515,26 +577,43 @@ def _menu_items(state: WyomingState) -> tuple[MenuItemData, ...]:
             enabled=state.is_engines_enabled,
             action_id='wyoming:toggle-engines',
         ),
-        MenuItemData(
-            key='wyoming:policy',
-            label=f'Connections: {state.connection_policy.value}',
-            icon='\U000f0337',
-            action_id='wyoming:choose-policy',
-        ),
     ]
-    if state.connection_policy == WyomingConnectionPolicy.ALLOWLIST:
-        items.append(
-            MenuItemData(
-                key='wyoming:allowed-peers',
-                label=(
-                    f'Peers: {", ".join(state.allowed_peers)}'
-                    if state.allowed_peers
-                    else 'Peers: none'
-                ),
-                icon='\U000f048d',
-                action_id='wyoming:edit-allowed-peers',
+    # One row per permitted source, so each can be withdrawn on its own. With
+    # none listed the listener is loopback-only, which is what the empty state
+    # says rather than leaving the section blank.
+    items.extend(
+        MenuItemData(
+            key=f'wyoming:policy:{policy.kind.value}:{policy.value}',
+            label=_policy_label(policy),
+            icon=(
+                '\U000f0868'
+                if policy.kind == WyomingAccessPolicyKind.DOCKER
+                else '\U000f048d'
+            ),
+            action_id=(
+                f'wyoming:remove-policy:{policy.kind.value}:{policy.value}'
             ),
         )
+        for policy in state.access_policies
+    )
+    if not state.access_policies:
+        items.append(
+            MenuItemData(
+                key='wyoming:no-policy',
+                label='Local only',
+                icon='\U000f0335',
+                action_id='wyoming:add-policy',
+            ),
+        )
+    items.append(
+        MenuItemData(
+            key='wyoming:add-policy',
+            label='Add Policy',
+            icon='\U000f0415',
+            action_id='wyoming:add-policy',
+        ),
+    )
+    if state.access_policies:
         items.append(
             _toggle(
                 key='wyoming:zeroconf',

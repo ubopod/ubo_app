@@ -25,12 +25,11 @@ async def test_cancelled_engine_request_does_not_wait_for_a_slot() -> None:
     )
     from security import PeerAccess  # type: ignore[reportMissingImports]
 
-    from ubo_app.store.services.wyoming import WyomingConnectionPolicy
 
     server = EnginesServer(
         host='127.0.0.1',
         port=0,
-        access=PeerAccess(policy=WyomingConnectionPolicy.LOCAL_ONLY),
+        access=PeerAccess(),
         bridge=AssistantBridge(),
     )
     server._requests = asyncio.Semaphore(0)  # noqa: SLF001
@@ -55,7 +54,6 @@ async def test_stopped_server_keeps_stopped_status_while_requests_drain(
     from security import PeerAccess  # type: ignore[reportMissingImports]
 
     from ubo_app.store.services.wyoming import (
-        WyomingConnectionPolicy,
         WyomingEnginesStatus,
     )
 
@@ -64,7 +62,7 @@ async def test_stopped_server_keeps_stopped_status_while_requests_drain(
     server = EnginesServer(
         host='127.0.0.1',
         port=0,
-        access=PeerAccess(policy=WyomingConnectionPolicy.LOCAL_ONLY),
+        access=PeerAccess(),
         bridge=AssistantBridge(),
     )
     server._active_requests = 1  # noqa: SLF001

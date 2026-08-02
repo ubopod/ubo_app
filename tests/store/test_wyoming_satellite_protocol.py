@@ -15,8 +15,6 @@ from wyoming.client import AsyncTcpClient
 from wyoming.info import Describe, Info
 from wyoming.ping import Ping, Pong
 
-from ubo_app.store.services.wyoming import WyomingConnectionPolicy
-
 SERVICE_DIR = (
     Path(__file__).resolve().parents[2] / 'ubo_app' / 'services' / '090-wyoming'
 )
@@ -60,7 +58,7 @@ async def test_satellite_describe_and_ping_round_trip() -> None:
     server = SatelliteServer(
         host='127.0.0.1',
         port=0,
-        access=PeerAccess(policy=WyomingConnectionPolicy.LOCAL_ONLY),
+        access=PeerAccess(),
     )
     await server.start()
     socket = server._server._server.sockets[0]  # noqa: SLF001
@@ -111,7 +109,7 @@ async def test_pause_stops_streaming_without_dropping_the_connection(
     server = SatelliteServer(
         host='127.0.0.1',
         port=0,
-        access=PeerAccess(policy=WyomingConnectionPolicy.LOCAL_ONLY),
+        access=PeerAccess(),
     )
     await server.start()
     socket = server._server._server.sockets[0]  # noqa: SLF001
@@ -199,7 +197,7 @@ async def test_engines_listener_answers_ping_without_starting_a_pipeline() -> No
     server = EnginesServer(
         host='127.0.0.1',
         port=0,
-        access=PeerAccess(policy=WyomingConnectionPolicy.LOCAL_ONLY),
+        access=PeerAccess(),
         bridge=AssistantBridge(),
     )
     await server.start()

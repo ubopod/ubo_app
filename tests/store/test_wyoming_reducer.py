@@ -16,15 +16,16 @@ def _import_types_and_reducer() -> tuple[tuple[Any, ...], Callable[..., Any]]:
     """Load service-local reducer code with its matching store classes."""
     modules_before = set(sys.modules)
     from ubo_app.store.services.wyoming import (
-        WyomingConnectionPolicy,
+        WyomingAccessPolicy,
+        WyomingAccessPolicyKind,
+        WyomingAddAccessPolicyAction,
         WyomingEnginesStatus,
+        WyomingRemoveAccessPolicyAction,
         WyomingReportEnginesStatusAction,
         WyomingReportSatelliteStatusAction,
         WyomingSatelliteStatus,
         WyomingSatelliteWakeAction,
         WyomingSatelliteWakeEvent,
-        WyomingSetAllowedPeersAction,
-        WyomingSetConnectionPolicyAction,
         WyomingSetEnginesEnabledAction,
         WyomingSetSatelliteEnabledAction,
         WyomingState,
@@ -42,15 +43,16 @@ def _import_types_and_reducer() -> tuple[tuple[Any, ...], Callable[..., Any]]:
         del sys.modules[module]
 
     return (
-        WyomingConnectionPolicy,
+        WyomingAccessPolicy,
+        WyomingAccessPolicyKind,
+        WyomingAddAccessPolicyAction,
         WyomingEnginesStatus,
         WyomingReportEnginesStatusAction,
         WyomingReportSatelliteStatusAction,
         WyomingSatelliteStatus,
         WyomingSatelliteWakeAction,
         WyomingSatelliteWakeEvent,
-        WyomingSetAllowedPeersAction,
-        WyomingSetConnectionPolicyAction,
+        WyomingRemoveAccessPolicyAction,
         WyomingSetEnginesEnabledAction,
         WyomingSetSatelliteEnabledAction,
         WyomingState,
@@ -59,15 +61,16 @@ def _import_types_and_reducer() -> tuple[tuple[Any, ...], Callable[..., Any]]:
 
 (
     (
-        WyomingConnectionPolicy,
+        WyomingAccessPolicy,
+        WyomingAccessPolicyKind,
+        WyomingAddAccessPolicyAction,
         WyomingEnginesStatus,
         WyomingReportEnginesStatusAction,
         WyomingReportSatelliteStatusAction,
         WyomingSatelliteStatus,
         WyomingSatelliteWakeAction,
         WyomingSatelliteWakeEvent,
-        WyomingSetAllowedPeersAction,
-        WyomingSetConnectionPolicyAction,
+        WyomingRemoveAccessPolicyAction,
         WyomingSetEnginesEnabledAction,
         WyomingSetSatelliteEnabledAction,
         WyomingState,
@@ -83,8 +86,8 @@ def test_initialization_uses_safe_local_defaults() -> None:
     assert isinstance(state, WyomingState)
     assert state.is_satellite_enabled is False
     assert state.is_engines_enabled is False
-    assert state.connection_policy is WyomingConnectionPolicy.LOCAL_ONLY
-    assert state.allowed_peers == ()
+    # No policies at all: the listener stays on loopback.
+    assert state.access_policies == ()
 
 
 def test_settings_actions_replace_immutable_state() -> None:
@@ -93,31 +96,66 @@ def test_settings_actions_replace_immutable_state() -> None:
 
     enabled = reducer(state, WyomingSetSatelliteEnabledAction(enabled=True))
     engines = reducer(enabled, WyomingSetEnginesEnabledAction(enabled=True))
-    policy = reducer(
-        engines,
-        WyomingSetConnectionPolicyAction(
-            policy=WyomingConnectionPolicy.ALLOWLIST,
-        ),
-    )
-
     assert state.is_satellite_enabled is False
     assert enabled.is_satellite_enabled is True
     assert engines.is_engines_enabled is True
-    assert policy.connection_policy is WyomingConnectionPolicy.ALLOWLIST
 
 
-def test_allowed_peers_are_normalized_and_invalid_entries_are_rejected() -> None:
-    """The persisted allowlist cannot accidentally broaden network access."""
+def test_added_policies_are_normalized_and_invalid_ones_rejected() -> None:
+    """A policy list cannot accidentally broaden network access."""
     state = reducer(None, InitAction())
 
-    updated = reducer(
-        state,
-        WyomingSetAllowedPeersAction(
-            peers=['192.168.1.20', '10.0.0.0/24', '192.168.1.20', 'bad-host'],
+    for value in ('192.168.1.20', '10.0.0.0/24', '192.168.1.20', 'bad-host'):
+        state = reducer(
+            state,
+            WyomingAddAccessPolicyAction(
+                kind=WyomingAccessPolicyKind.NETWORK,
+                value=value,
+            ),
+        )
+
+    assert state.access_policies == (
+        WyomingAccessPolicy(
+            kind=WyomingAccessPolicyKind.NETWORK,
+            value='10.0.0.0/24',
+        ),
+        WyomingAccessPolicy(
+            kind=WyomingAccessPolicyKind.NETWORK,
+            value='192.168.1.20',
         ),
     )
 
-    assert updated.allowed_peers == ('10.0.0.0/24', '192.168.1.20')
+
+def test_policies_combine_and_can_be_withdrawn_one_at_a_time() -> None:
+    """Adding a source must not replace the ones already permitted."""
+    state = reducer(None, InitAction())
+
+    state = reducer(
+        state,
+        WyomingAddAccessPolicyAction(kind=WyomingAccessPolicyKind.DOCKER),
+    )
+    state = reducer(
+        state,
+        WyomingAddAccessPolicyAction(
+            kind=WyomingAccessPolicyKind.NETWORK,
+            value='192.168.1.20',
+        ),
+    )
+
+    assert len(state.access_policies) == 2
+
+    state = reducer(
+        state,
+        WyomingRemoveAccessPolicyAction(kind=WyomingAccessPolicyKind.DOCKER),
+    )
+
+    # Withdrawing one leaves the other in place.
+    assert state.access_policies == (
+        WyomingAccessPolicy(
+            kind=WyomingAccessPolicyKind.NETWORK,
+            value='192.168.1.20',
+        ),
+    )
 
 
 def test_runtime_reports_do_not_affect_persisted_configuration() -> None:
@@ -142,7 +180,7 @@ def test_runtime_reports_do_not_affect_persisted_configuration() -> None:
     assert busy.satellite_status is WyomingSatelliteStatus.STREAMING
     assert busy.satellite_client == '192.168.1.20'
     assert busy.active_engine_requests == 2
-    assert busy.connection_policy is WyomingConnectionPolicy.LOCAL_ONLY
+    assert busy.access_policies == ()
 
 
 def test_local_wake_word_emits_an_event_without_touching_configuration() -> None:
