@@ -137,10 +137,12 @@ static void test_is_trailer(void) {
     CHECK(ubo_grpc_web_is_trailer(UBO_GRPC_WEB_TRAILER_FLAG));
 }
 
-/* A header declaring a payload beyond UBO_GRPC_WEB_MAX_FRAME poisons the
- * parser immediately (before any payload arrives) and everything after is
- * rejected, so a hostile length can't grow the buffer unboundedly. */
-static void test_oversized_frame_poisons_parser(void) {
+/* A header declaring a payload beyond UBO_GRPC_WEB_MAX_FRAME is discarded, not
+ * fatal: the payload never reaches the buffer (so a hostile length can't grow
+ * it), the parser stays usable, and the next frame still decodes. Aborting
+ * instead would tear down both the store and event streams over one oversized
+ * message. */
+static void test_oversized_frame_is_skipped(void) {
     uint32_t huge = UBO_GRPC_WEB_MAX_FRAME + 1;
     uint8_t header[UBO_GRPC_WEB_HEADER_SIZE] = {
         UBO_GRPC_WEB_DATA_FLAG,
@@ -157,10 +159,78 @@ static void test_oversized_frame_poisons_parser(void) {
     const uint8_t *pl;
     size_t pl_len;
     CHECK(!ubo_grpc_web_parser_next(&p, &flag, &pl, &pl_len));
-    CHECK(ubo_grpc_web_parser_bad(&p));
-    /* Poisoned: further feeds are refused so the buffer can't grow. */
-    uint8_t junk[16] = {0};
-    CHECK(!ubo_grpc_web_parser_feed(&p, junk, sizeof(junk)));
+    CHECK(!ubo_grpc_web_parser_bad(&p));
+    CHECK(ubo_grpc_web_parser_take_dropped(&p));
+    CHECK(!ubo_grpc_web_parser_take_dropped(&p)); /* consumed */
+
+    /* Feed the oversized payload in chunks; none of it is buffered. */
+    uint8_t chunk[4096] = {0};
+    size_t fed = 0;
+    while (fed < huge) {
+        size_t n = huge - fed < sizeof(chunk) ? huge - fed : sizeof(chunk);
+        CHECK(ubo_grpc_web_parser_feed(&p, chunk, n));
+        CHECK(!ubo_grpc_web_parser_next(&p, &flag, &pl, &pl_len));
+        fed += n;
+    }
+
+    /* Resynchronised: the frame after the oversized one decodes normally. */
+    const uint8_t body[] = "back-in-sync";
+    size_t frame_len = 0;
+    uint8_t *frame = ubo_grpc_web_encode(body, sizeof(body) - 1, &frame_len);
+    CHECK(frame != NULL);
+    CHECK(ubo_grpc_web_parser_feed(&p, frame, frame_len));
+    CHECK(ubo_grpc_web_parser_next(&p, &flag, &pl, &pl_len));
+    CHECK(flag == UBO_GRPC_WEB_DATA_FLAG);
+    CHECK(pl_len == sizeof(body) - 1);
+    CHECK(memcmp(pl, body, pl_len) == 0);
+    free(frame);
+    ubo_grpc_web_parser_free(&p);
+}
+
+/* Same stream, but fed at ragged chunk boundaries — including one chunk that
+ * straddles the oversized payload's tail and the next frame's header. The skip
+ * must end on exactly the right byte or every later frame is misparsed. */
+static void test_oversized_frame_skip_boundary(void) {
+    uint32_t huge = UBO_GRPC_WEB_MAX_FRAME + 1;
+    const uint8_t body[] = "after";
+    size_t next_len = 0;
+    uint8_t *next = ubo_grpc_web_encode(body, sizeof(body) - 1, &next_len);
+    CHECK(next != NULL);
+
+    /* A real stream: [oversized header][huge payload][next frame]. */
+    size_t blob_len = UBO_GRPC_WEB_HEADER_SIZE + huge + next_len;
+    uint8_t *blob = calloc(1, blob_len);
+    CHECK(blob != NULL);
+    blob[0] = UBO_GRPC_WEB_DATA_FLAG;
+    blob[1] = (uint8_t)((huge >> 24) & 0xFF);
+    blob[2] = (uint8_t)((huge >> 16) & 0xFF);
+    blob[3] = (uint8_t)((huge >> 8) & 0xFF);
+    blob[4] = (uint8_t)(huge & 0xFF);
+    memcpy(blob + UBO_GRPC_WEB_HEADER_SIZE + huge, next, next_len);
+
+    ubo_grpc_web_parser p;
+    ubo_grpc_web_parser_init(&p);
+    uint8_t flag;
+    const uint8_t *pl;
+    size_t pl_len;
+    bool got = false;
+    /* 1499 is coprime with the frame sizes, so boundaries land mid-header,
+     * mid-payload and across the payload/next-frame seam. */
+    for (size_t off = 0; off < blob_len; off += 1499) {
+        size_t n = blob_len - off < 1499 ? blob_len - off : 1499;
+        CHECK(ubo_grpc_web_parser_feed(&p, blob + off, n));
+        while (ubo_grpc_web_parser_next(&p, &flag, &pl, &pl_len)) {
+            CHECK(!got); /* the oversized frame is never yielded */
+            got = true;
+            CHECK(pl_len == sizeof(body) - 1);
+            CHECK(memcmp(pl, body, pl_len) == 0);
+        }
+        CHECK(!ubo_grpc_web_parser_bad(&p));
+    }
+    CHECK(got);
+    CHECK(ubo_grpc_web_parser_take_dropped(&p));
+    free(blob);
+    free(next);
     ubo_grpc_web_parser_free(&p);
 }
 
@@ -194,7 +264,8 @@ int main(void) {
     test_trailer();
     test_trailer_nonzero();
     test_is_trailer();
-    test_oversized_frame_poisons_parser();
+    test_oversized_frame_is_skipped();
+    test_oversized_frame_skip_boundary();
     test_max_frame_boundary_ok();
     if (failures) {
         printf("%d check(s) failed\n", failures);

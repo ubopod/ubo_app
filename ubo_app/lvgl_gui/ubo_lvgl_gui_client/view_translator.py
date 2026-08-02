@@ -129,34 +129,6 @@ def _props(props: object) -> list[bridge.RenderProp]:
     return out
 
 
-def _prop_bytes(props: object, key: str) -> bytes | None:
-    """Return a bytes-typed scalar prop (e.g. image_viewer's raw RGB image)."""
-    mapping = getattr(props, 'items', None) or {}
-    pv = mapping.get(key)
-    if pv is None:
-        return None
-    name, val = betterproto.which_one_of(pv, 'props_value')
-    if name != 'basic_type' or val is None:
-        return None
-    bname, bval = betterproto.which_one_of(val, 'basic_type')
-    return bval if bname == 'bytes' else None
-
-
-def _prop_int(props: object, key: str) -> int | None:
-    """Return an int-valued scalar prop (e.g. image_viewer's width/height)."""
-    mapping = getattr(props, 'items', None) or {}
-    pv = mapping.get(key)
-    if pv is None:
-        return None
-    value = _prop_value_to_str(pv)
-    if value is None:
-        return None
-    try:
-        return int(float(value))
-    except ValueError:
-        return None
-
-
 def _items(wrapper: object) -> list:
     """Unwrap a betterproto repeated-field container, dropping None entries.
 
@@ -242,8 +214,16 @@ def translate_status_bar(sb: object) -> bridge.StatusBar:
 
 
 def frame_stream_id(view: object) -> str | None:
-    """Return the stream_id when `view` is a live frame_stream view, else None."""
-    if isinstance(view, RenderViewData) and view.kind == 'frame_stream':
+    """Return the stream_id when `view` gets its pixels from a frame stream.
+
+    `image_viewer` used to ship the picture inline as a bytes prop, which put a
+    multi-megabyte payload on the store stream; it now takes the same path as
+    `frame_stream` and carries only width/height in props.
+    """
+    if isinstance(view, RenderViewData) and view.kind in {
+        'frame_stream',
+        'image_viewer',
+    }:
         return view.stream_id or None
     return None
 
@@ -328,10 +308,3 @@ def render_view(renderer: Renderer, view: object) -> None:
                 stream_id=view.stream_id or None,
             ),
         )
-        # image_viewer ships its image inline (a bytes prop); push it now.
-        if view.kind == 'image_viewer':
-            image = _prop_bytes(view.props, 'image')
-            width = _prop_int(view.props, 'width')
-            height = _prop_int(view.props, 'height')
-            if image and width and height:
-                renderer.update_frame(image, width, height)

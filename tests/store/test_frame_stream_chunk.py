@@ -106,6 +106,26 @@ def test_throttle_per_stream() -> None:
     assert low_res_chunk_events('b', frame, 240, 240)
 
 
+def test_force_bypasses_throttle() -> None:
+    """A still is never throttled: a dropped one is lost, not merely delayed."""
+    frame = _solid_frame(240, 240, (0, 0, 0))
+    assert low_res_chunk_events('a', frame, 240, 240, force=True)
+    assert low_res_chunk_events('a', frame, 240, 240, force=True)
+
+
+def test_forget_stream_prunes_throttle_state() -> None:
+    """Closing a stream drops its entry so the map can't grow unboundedly."""
+    frame = _solid_frame(240, 240, (0, 0, 0))
+    assert low_res_chunk_events('a', frame, 240, 240)
+    assert 'a' in frame_stream._last_dispatch_times  # noqa: SLF001
+
+    frame_stream.forget_stream('a')
+
+    assert 'a' not in frame_stream._last_dispatch_times  # noqa: SLF001
+    # No longer throttled, since there is no record of the last dispatch.
+    assert low_res_chunk_events('a', frame, 240, 240)
+
+
 def test_invalid_input_returns_no_events() -> None:
     """Empty or malformed frames yield no events."""
     assert low_res_chunk_events('s', b'', 240, 240) == []

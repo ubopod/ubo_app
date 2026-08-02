@@ -11,7 +11,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { SubscribeEventResponse } from "../bindings/store/v1/store_pb";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
@@ -40,17 +40,6 @@ function propString(data: RenderViewData.AsObject, key: string): string {
 function propNumber(data: RenderViewData.AsObject, key: string): number {
   const value = propEntry(data, key)?.[1].basicType;
   return value?.int64 ?? value?.pb_float ?? 0;
-}
-
-function bytesToRgb(bytes: Uint8Array | string | undefined): Uint8Array | null {
-  if (!bytes) return null;
-  if (bytes instanceof Uint8Array) return bytes;
-  const binary = atob(bytes);
-  const arr = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    arr[i] = binary.charCodeAt(i);
-  }
-  return arr;
 }
 
 function propStringList(data: RenderViewData.AsObject, key: string): string[] {
@@ -202,46 +191,66 @@ const ZOOM_FACTOR = 1.3;
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 20;
 
-function ImageViewer({ data }: { data: RenderViewData.AsObject }) {
+function ImageViewer({ data, store }: RenderViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState<number | null>(null);
   const fittedRef = useRef(false);
-  // Memoise on the raw (stable) bytes value so the decode + redraw effect
-  // only fires when the image actually changes — not on every re-render
-  // (bytesToRgb decodes base64 into a fresh array each call). This is what
-  // lets an in-place image_viewer update (same stack item, new picture)
-  // repaint the canvas instead of showing the first image forever.
-  const rawImage = propEntry(data, "image")?.[1].basicType?.bytes;
-  const rgb = useMemo(() => bytesToRgb(rawImage), [rawImage]);
+  // Props carry only the geometry. The pixels arrive as frame-stream events,
+  // exactly like the camera viewfinder below: an image inline in props put a
+  // multi-megabyte payload on the store stream, which every client — including
+  // the MCU ones that cannot hold it — had to swallow.
   const width = propNumber(data, "width");
   const height = propNumber(data, "height");
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !rgb || width === 0 || height === 0) return;
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const rgba = new Uint8ClampedArray(width * height * 4);
-    for (let i = 0, j = 0; i < rgb.length; i += 3, j += 4) {
-      rgba[j] = rgb[i];
-      rgba[j + 1] = rgb[i + 1];
-      rgba[j + 2] = rgb[i + 2];
-      rgba[j + 3] = 255;
-    }
-    ctx.putImageData(new ImageData(rgba, width, height), 0, 0);
-    // Fit to screen once (on the first painted frame), then preserve the
-    // user's chosen zoom across subsequent in-place image updates.
-    if (!fittedRef.current) {
-      fittedRef.current = true;
-      const container = containerRef.current;
-      if (container) {
-        setZoom(Math.min(container.clientWidth / width, (window.innerHeight * 0.7) / height));
-      }
-    }
-  }, [rgb, width, height]);
+    const unsubscribe = subscribeToEvents(
+      store,
+      [(event: Event) => event.setFrameStreamDataEvent(new FrameStreamDataEvent())],
+      (response: SubscribeEventResponse) => {
+        const frameEvent = response.getEvent()?.getFrameStreamDataEvent();
+        if (!frameEvent || frameEvent.getStreamId() !== data.streamId) return;
+        const rgb = frameEvent.getData_asU8();
+        const frameWidth = frameEvent.getWidth();
+        const frameHeight = frameEvent.getHeight();
+        if (rgb.length === 0 || frameWidth === 0 || frameHeight === 0) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        canvas.width = frameWidth;
+        canvas.height = frameHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const rgba = new Uint8ClampedArray(frameWidth * frameHeight * 4);
+        for (let i = 0, j = 0; i < rgb.length; i += 3, j += 4) {
+          rgba[j] = rgb[i];
+          rgba[j + 1] = rgb[i + 1];
+          rgba[j + 2] = rgb[i + 2];
+          rgba[j + 3] = 255;
+        }
+        ctx.putImageData(new ImageData(rgba, frameWidth, frameHeight), 0, 0);
+        // Fit to screen once (on the first painted frame), then preserve the
+        // user's chosen zoom across subsequent in-place image updates — a
+        // still is re-emitted a few times so a late subscriber can't miss it.
+        if (!fittedRef.current) {
+          fittedRef.current = true;
+          const container = containerRef.current;
+          if (container) {
+            setZoom(
+              Math.min(
+                container.clientWidth / frameWidth,
+                (window.innerHeight * 0.7) / frameHeight,
+              ),
+            );
+          }
+        }
+      },
+    );
+    const unregister = registerPageStream(unsubscribe);
+    return () => {
+      unregister();
+      unsubscribe();
+    };
+  }, [data.streamId, store]);
 
   const zoomIn = useCallback(() => {
     setZoom((z) => Math.min((z ?? 1) * ZOOM_FACTOR, MAX_ZOOM));
@@ -375,7 +384,7 @@ export function RenderView({ data, store }: RenderViewProps) {
     case "text_viewer":
       return <TextViewer data={data} />;
     case "image_viewer":
-      return <ImageViewer data={data} />;
+      return <ImageViewer data={data} store={store} />;
     case "frame_stream":
       return <FrameStream data={data} store={store} />;
     default:

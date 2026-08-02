@@ -204,6 +204,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.frame_stream import register_still
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
@@ -215,6 +216,10 @@ from ubo_app.utils.persistent_store import register_persistent_store
 
 # Spoken when the user picks a TTS voice, so they immediately hear it.
 VOICE_PREVIEW_TEXT = 'This is a new voice.'
+
+# A single slot: a new generated picture replaces the previous one in place
+# (`push_render` is idempotent by `stream_id`).
+ASSISTANT_IMAGE_STREAM_ID = 'assistant:image'
 
 
 def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
@@ -331,15 +336,22 @@ def _communicate(event: AssistantHandleReportEvent) -> None:
                 )
 
         case AssistanceImageFrame() as image:
+            # The picture travels as frame-stream events, not inline in props:
+            # view data is broadcast to every client, so an image in props sent
+            # a multi-megabyte payload down the store stream, which on the
+            # ESP32 exceeded UBO_GRPC_WEB_MAX_FRAME and knocked the satellite
+            # off the air. Props carry only the geometry.
+            register_still(
+                ASSISTANT_IMAGE_STREAM_ID,
+                image.image,
+                image.width,
+                image.height,
+            )
             store.dispatch(
                 OpenRenderAction(
                     kind='image_viewer',
-                    stream_id='assistant:image',
-                    props={
-                        'image': image.image,
-                        'width': image.width,
-                        'height': image.height,
-                    },
+                    stream_id=ASSISTANT_IMAGE_STREAM_ID,
+                    props={'width': image.width, 'height': image.height},
                 ),
             )
 

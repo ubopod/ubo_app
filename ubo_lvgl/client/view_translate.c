@@ -304,19 +304,6 @@ static char *prop_value_to_str(arena *a,
     return NULL;
 }
 
-static const ubo_client_RenderViewData_PropsValue *
-prop_find(const ubo_client_RenderViewData_PropsDict *props, const char *key) {
-    if (!props) {
-        return NULL;
-    }
-    for (size_t i = 0; i < props->items_count; i++) {
-        if (props->items[i].key && strcmp(props->items[i].key, key) == 0) {
-            return props->items[i].value;
-        }
-    }
-    return NULL;
-}
-
 /* ── view builders ── */
 static const char *type_name(const char *type_url) {
     const char *dot = type_url ? strrchr(type_url, '.') : NULL;
@@ -566,29 +553,15 @@ static void render_render(arena *a, const uint8_t *value, size_t len,
         }
         ubo_lvgl_render_render(&v);
 
-        /* image_viewer ships its image inline (a bytes prop); push it now. */
-        if (strcmp(v.kind, "image_viewer") == 0) {
-            const ubo_client_RenderViewData_PropsValue *img =
-                prop_find(m.props, "image");
-            char *ws = prop_value_to_str(a, prop_find(m.props, "width"));
-            char *hs = prop_value_to_str(a, prop_find(m.props, "height"));
-            if (img &&
-                img->which_props_value ==
-                    ubo_client_RenderViewData_PropsValue_basic_type_tag &&
-                img->props_value.basic_type &&
-                img->props_value.basic_type->which_basic_type ==
-                    ubo_client_BasicType_bytes_value_tag &&
-                img->props_value.basic_type->basic_type.bytes_value && ws && hs) {
-                pb_bytes_array_t *bytes =
-                    img->props_value.basic_type->basic_type.bytes_value;
-                int w = atoi(ws), h = atoi(hs);
-                if (w > 0 && h > 0) {
-                    ubo_lvgl_update_frame(bytes->bytes, bytes->size, w, h);
-                }
-            }
-        }
-        if (out_stream_id && strcmp(v.kind, "frame_stream") == 0 && m.stream_id &&
-            m.stream_id[0]) {
+        /* Both kinds get their pixels from the frame stream: image_viewer used
+         * to ship the picture inline as a bytes prop, which pushed a multi-
+         * megabyte payload down the store stream and blew past the frame cap.
+         * Props now carry only width/height, and this is the gate that lets the
+         * event task recognise the stream the view is waiting for. */
+        if (out_stream_id &&
+            (strcmp(v.kind, "frame_stream") == 0 ||
+             strcmp(v.kind, "image_viewer") == 0) &&
+            m.stream_id && m.stream_id[0]) {
             *out_stream_id = strdup(m.stream_id);
         }
     } else {

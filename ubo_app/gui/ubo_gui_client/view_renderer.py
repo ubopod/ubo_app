@@ -780,10 +780,15 @@ class ViewRenderer:
         if stack_depth is not None:
             self._last_stack_depth = stack_depth
 
-        if kind == 'frame_stream' and stream_id:
+        # `image_viewer` takes the same path as `frame_stream`: the picture used
+        # to arrive inline as a bytes prop, which put a multi-megabyte payload
+        # on the store stream that every client had to swallow. Props now carry
+        # only width/height and the pixels come as frame-stream events.
+        if kind in {'frame_stream', 'image_viewer'} and stream_id:
             from ubo_gui_client.widgets.frame_stream import FrameStreamRenderPage
+            from ubo_gui_client.widgets.image_viewer import RawImageViewer
 
-            if isinstance(widget, FrameStreamRenderPage):
+            if isinstance(widget, FrameStreamRenderPage | RawImageViewer):
                 # Reaching here means the widget was rebuilt rather than updated
                 # in place, so a subscription kept for a same-stream update is
                 # now feeding a discarded widget. Idempotent, and the only path

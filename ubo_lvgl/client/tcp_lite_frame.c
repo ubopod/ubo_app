@@ -42,13 +42,16 @@ void ubo_tcp_lite_parser_init(ubo_tcp_lite_parser *p) {
     p->len = 0;
     p->pos = 0;
     p->cap = 0;
+    p->skip = 0;
+    p->dropped = false;
     p->bad = false;
 }
 
 void ubo_tcp_lite_parser_free(ubo_tcp_lite_parser *p) {
     free(p->buf);
     p->buf = NULL;
-    p->len = p->pos = p->cap = 0;
+    p->len = p->pos = p->cap = p->skip = 0;
+    p->dropped = false;
     p->bad = false;
 }
 
@@ -56,10 +59,24 @@ bool ubo_tcp_lite_parser_bad(const ubo_tcp_lite_parser *p) {
     return p->bad;
 }
 
+bool ubo_tcp_lite_parser_take_dropped(ubo_tcp_lite_parser *p) {
+    bool dropped = p->dropped;
+    p->dropped = false;
+    return dropped;
+}
+
 bool ubo_tcp_lite_parser_feed(ubo_tcp_lite_parser *p, const uint8_t *data,
                               size_t len) {
     if (p->bad) {
         return false;
+    }
+    /* Swallow the tail of an oversized frame before it can reach the buffer.
+     * When skipping, everything buffered has already been consumed. */
+    if (p->skip) {
+        size_t n = p->skip < len ? p->skip : len;
+        p->skip -= n;
+        data += n;
+        len -= n;
     }
     /* Reclaim already-consumed bytes from the front first. */
     if (p->pos > 0) {
@@ -94,60 +111,66 @@ bool ubo_tcp_lite_parser_feed(ubo_tcp_lite_parser *p, const uint8_t *data,
 
 bool ubo_tcp_lite_parser_next(ubo_tcp_lite_parser *p, uint8_t *message_type,
                               const uint8_t **payload, size_t *payload_len) {
-    if (p->bad) {
-        return false;
-    }
-    size_t avail = p->len - p->pos;
-    if (avail < 1) {
-        return false; /* need at least the message-type byte */
-    }
-    const uint8_t *h = p->buf + p->pos;
-    /* Decode the length varint, which may still be arriving byte-by-byte. */
-    size_t plen = 0;
-    unsigned shift = 0;
-    size_t vbytes = 0;
-    bool complete = false;
-    while (vbytes < UBO_TCP_LITE_MAX_VARINT_BYTES) {
-        if (1 + vbytes >= avail) {
-            return false; /* varint not fully buffered yet — wait for more */
+    while (!p->bad && p->skip == 0) {
+        size_t avail = p->len - p->pos;
+        if (avail < 1) {
+            return false; /* need at least the message-type byte */
         }
-        uint8_t byte = h[1 + vbytes];
-        size_t chunk = (size_t)(byte & 0x7Fu);
-        if ((chunk << shift) >> shift != chunk) {
-            /* Shifting would drop bits (size_t too narrow for this varint,
-             * e.g. a 32-bit target) — poison rather than silently truncate
-             * the declared length. */
+        const uint8_t *h = p->buf + p->pos;
+        /* Decode the length varint, which may still be arriving byte-by-byte. */
+        size_t plen = 0;
+        unsigned shift = 0;
+        size_t vbytes = 0;
+        bool complete = false;
+        while (vbytes < UBO_TCP_LITE_MAX_VARINT_BYTES) {
+            if (1 + vbytes >= avail) {
+                return false; /* varint not fully buffered yet — wait for more */
+            }
+            uint8_t byte = h[1 + vbytes];
+            size_t chunk = (size_t)(byte & 0x7Fu);
+            if ((chunk << shift) >> shift != chunk) {
+                /* Shifting would drop bits (size_t too narrow for this varint,
+                 * e.g. a 32-bit target) — poison rather than silently truncate
+                 * the declared length. */
+                p->bad = true;
+                return false;
+            }
+            plen |= chunk << shift;
+            vbytes++;
+            if (!(byte & 0x80u)) {
+                complete = true;
+                break;
+            }
+            shift += 7;
+        }
+        if (!complete) {
+            /* Continuation bit still set past the byte cap: a malformed,
+             * non-terminating length header. The frame length is unknowable, so
+             * there is no way to find the next header — poison. */
             p->bad = true;
             return false;
         }
-        plen |= chunk << shift;
-        vbytes++;
-        if (!(byte & 0x80u)) {
-            complete = true;
-            break;
+        size_t header_len = 1 + vbytes;
+        if (plen > UBO_TCP_LITE_MAX_FRAME) {
+            /* Too big for this client to hold, but the frame is self-
+             * delimiting: discard exactly its payload and resynchronise on the
+             * next header rather than tearing the stream down. See the matching
+             * comment in grpc_web_frame.c. */
+            size_t body = avail - header_len;
+            size_t drop = body < plen ? body : plen;
+            p->pos += header_len + drop;
+            p->skip = plen - drop;
+            p->dropped = true;
+            continue;
         }
-        shift += 7;
+        if (avail < header_len + plen) {
+            return false; /* payload not fully buffered yet */
+        }
+        *message_type = h[0];
+        *payload = h + header_len;
+        *payload_len = plen;
+        p->pos += header_len + plen;
+        return true;
     }
-    if (!complete) {
-        /* Continuation bit still set past the byte cap: a malformed,
-         * non-terminating length header. Poison before it can grow the
-         * buffer, matching the oversized-length poison contract. */
-        p->bad = true;
-        return false;
-    }
-    if (plen > UBO_TCP_LITE_MAX_FRAME) {
-        /* Poison as soon as the length is fully parsed, before the (possibly
-         * never-arriving) payload can accumulate. */
-        p->bad = true;
-        return false;
-    }
-    size_t header_len = 1 + vbytes;
-    if (avail < header_len + plen) {
-        return false; /* payload not fully buffered yet */
-    }
-    *message_type = h[0];
-    *payload = h + header_len;
-    *payload_len = plen;
-    p->pos += header_len + plen;
-    return true;
+    return false;
 }

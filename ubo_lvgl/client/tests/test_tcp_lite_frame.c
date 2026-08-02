@@ -134,10 +134,12 @@ static void test_split_at_every_offset(void) {
     free(frame);
 }
 
-/* A declared length above the cap poisons the parser as soon as the length is
- * fully parsed — before any payload arrives — so a hostile length can't grow
- * the buffer unboundedly. */
-static void test_oversized_length_poisons_parser(void) {
+/* A declared length above the cap is discarded, not fatal: the payload never
+ * reaches the buffer, the parser stays usable, and the next frame still
+ * decodes. Aborting instead would tear down both the store and event streams
+ * over one oversized message. Fed at ragged boundaries so one chunk straddles
+ * the oversized payload's tail and the next frame's header. */
+static void test_oversized_length_is_skipped(void) {
     /* Hand-build a header: type + varint(MAX_FRAME + 1). */
     size_t huge = (size_t)UBO_TCP_LITE_MAX_FRAME + 1;
     uint8_t header[1 + UBO_TCP_LITE_MAX_VARINT_BYTES];
@@ -155,20 +157,42 @@ static void test_oversized_length_poisons_parser(void) {
         }
     }
 
+    const uint8_t body[] = "after";
+    size_t next_len = 0;
+    uint8_t *next = ubo_tcp_lite_encode(UBO_TCP_LITE_MSG_SUBSCRIBE_STORE_RESPONSE,
+                                        body, sizeof(body) - 1, &next_len);
+    CHECK(next != NULL);
+
+    /* A real stream: [oversized header][huge payload][next frame]. */
+    size_t blob_len = i + huge + next_len;
+    uint8_t *blob = calloc(1, blob_len);
+    CHECK(blob != NULL);
+    memcpy(blob, header, i);
+    memcpy(blob + i + huge, next, next_len);
+
     ubo_tcp_lite_parser p;
     ubo_tcp_lite_parser_init(&p);
-    CHECK(ubo_tcp_lite_parser_feed(&p, header, i));
-    CHECK(!ubo_tcp_lite_parser_bad(&p));
     uint8_t type;
     const uint8_t *pl;
     size_t pl_len;
-    CHECK(!ubo_tcp_lite_parser_next(&p, &type, &pl, &pl_len));
-    CHECK(ubo_tcp_lite_parser_bad(&p));
-    /* Poisoned: further feeds/nexts are safe no-ops. */
-    uint8_t junk[16] = {0};
-    CHECK(!ubo_tcp_lite_parser_feed(&p, junk, sizeof(junk)));
-    CHECK(!ubo_tcp_lite_parser_next(&p, &type, &pl, &pl_len));
-    CHECK(ubo_tcp_lite_parser_bad(&p));
+    bool got = false;
+    for (size_t off = 0; off < blob_len; off += 1499) {
+        size_t n = blob_len - off < 1499 ? blob_len - off : 1499;
+        CHECK(ubo_tcp_lite_parser_feed(&p, blob + off, n));
+        while (ubo_tcp_lite_parser_next(&p, &type, &pl, &pl_len)) {
+            CHECK(!got); /* the oversized frame is never yielded */
+            got = true;
+            CHECK(type == UBO_TCP_LITE_MSG_SUBSCRIBE_STORE_RESPONSE);
+            CHECK(pl_len == sizeof(body) - 1);
+            CHECK(memcmp(pl, body, pl_len) == 0);
+        }
+        CHECK(!ubo_tcp_lite_parser_bad(&p));
+    }
+    CHECK(got);
+    CHECK(ubo_tcp_lite_parser_take_dropped(&p));
+    CHECK(!ubo_tcp_lite_parser_take_dropped(&p)); /* consumed */
+    free(blob);
+    free(next);
     ubo_tcp_lite_parser_free(&p);
 }
 
@@ -287,7 +311,7 @@ int main(void) {
     test_encode_roundtrip_all_types();
     test_multiple_frames();
     test_split_at_every_offset();
-    test_oversized_length_poisons_parser();
+    test_oversized_length_is_skipped();
     test_malformed_varint_poisons_parser();
     test_malformed_varint_poisons_across_feeds();
     test_split_at_every_offset_three_byte_varint();

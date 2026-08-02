@@ -40,8 +40,12 @@ class ScrollControl(StrEnum):
 class RawImageViewer(UboPageWidget):
     """Kivy widget for displaying raw image."""
 
-    def _get_texture(self) -> None:
+    def _get_texture(self) -> Texture | None:
         """Update the image when the image property changes."""
+        # The picture arrives over the frame stream, so the widget is built
+        # empty and stays that way until the first frame lands.
+        if not self.image or self.width <= 0 or self.height <= 0:
+            return None
         texture = Texture.create(
             size=(self.width, self.height),
             colorfmt='rgb',
@@ -61,6 +65,16 @@ class RawImageViewer(UboPageWidget):
     image: bytes = ObjectProperty()
     texture: Texture = AliasProperty(getter=_get_texture, bind=['image'])
 
+    def update_frame(self, data: bytes, width: int, height: int) -> None:
+        """Display a frame-stream image (the `FrameStreamRenderPage` contract).
+
+        `image` is assigned last: `texture` is an `AliasProperty` bound to it,
+        so that assignment is what rebuilds the texture — at the new geometry.
+        """
+        self.width = width
+        self.height = height
+        self.image = data
+
     def on_texture(self, instance: RawImageViewer, texture: Texture) -> None:
         """Reset position based on the size of the new texture."""
         _ = instance, texture
@@ -78,6 +92,10 @@ class RawImageViewer(UboPageWidget):
 
     @mainthread_if_needed
     def _center(self, _: float = 0) -> None:
+        if not self.ids.scrollable_widget.width or (
+            not self.ids.scrollable_widget.height
+        ):
+            return  # no frame yet
         zoom_factor = min(
             self.ids.container.width / self.ids.scrollable_widget.width,
             self.ids.container.height / self.ids.scrollable_widget.height,

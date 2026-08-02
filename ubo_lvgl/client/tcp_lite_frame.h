@@ -33,9 +33,10 @@
 
 /* Upper bound on a single frame's wire-declared payload length. Same cap and
  * rationale as UBO_GRPC_WEB_MAX_FRAME: the largest legitimate payload is a
- * camera frame (~172KB); anything past 1 MiB is a corrupt or hostile length
- * header. Without this cap a bogus varint length would make the parser buffer
- * grow until the heap is exhausted (fatal on the 512KB-SRAM ESP32-C6). */
+ * camera frame (~172KB); anything past 1 MiB is more than this client can hold.
+ * Without this cap a bogus varint length would make the parser buffer grow
+ * until the heap is exhausted (fatal on the 512KB-SRAM ESP32-C6). A frame past
+ * the cap is discarded, not fatal — see ubo_tcp_lite_parser_take_dropped. */
 #define UBO_TCP_LITE_MAX_FRAME (1u << 20)
 
 /* Maximum number of bytes a length varint may occupy. 5 bytes carries the full
@@ -53,10 +54,12 @@ uint8_t *ubo_tcp_lite_encode(uint8_t message_type, const uint8_t *payload,
  * stays valid until the next _feed() call (which may compact the buffer). */
 typedef struct {
     uint8_t *buf;
-    size_t len; /* bytes currently buffered */
-    size_t pos; /* read offset of the next unparsed frame */
-    size_t cap; /* allocated capacity */
-    bool bad;   /* poisoned: oversized length or malformed varint */
+    size_t len;   /* bytes currently buffered */
+    size_t pos;   /* read offset of the next unparsed frame */
+    size_t cap;   /* allocated capacity */
+    size_t skip;  /* payload bytes of an oversized frame still to be discarded */
+    bool dropped; /* an oversized frame was discarded since the last _take_ */
+    bool bad;     /* poisoned: malformed varint, so framing is unrecoverable */
 } ubo_tcp_lite_parser;
 
 void ubo_tcp_lite_parser_init(ubo_tcp_lite_parser *p);
@@ -67,12 +70,17 @@ void ubo_tcp_lite_parser_free(ubo_tcp_lite_parser *p);
 bool ubo_tcp_lite_parser_feed(ubo_tcp_lite_parser *p, const uint8_t *data,
                               size_t len);
 
-/* True once a frame header declared a payload larger than
- * UBO_TCP_LITE_MAX_FRAME, or its length varint failed to terminate within
- * UBO_TCP_LITE_MAX_VARINT_BYTES. The parser yields nothing further; the stream
- * is unrecoverable and should be dropped (the reconnect loop starts a fresh
- * one). */
+/* True once a length varint failed to terminate within
+ * UBO_TCP_LITE_MAX_VARINT_BYTES (or overflowed size_t). The declared length is
+ * then unknown, so the parser cannot tell where the next header starts: it
+ * yields nothing further and the stream should be dropped (the reconnect loop
+ * starts a fresh one). An oversized-but-well-formed length does NOT poison the
+ * parser: it is skipped instead. */
 bool ubo_tcp_lite_parser_bad(const ubo_tcp_lite_parser *p);
+
+/* Consume the "an oversized frame was discarded" flag, for a caller that wants
+ * to log it. One message is lost; the stream stays usable. */
+bool ubo_tcp_lite_parser_take_dropped(ubo_tcp_lite_parser *p);
 
 /* Pop the next complete frame. Returns true and sets *message_type / *payload /
  * *payload_len when a frame is available; false when more bytes are needed. */

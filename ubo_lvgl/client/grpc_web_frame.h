@@ -22,10 +22,11 @@
 #define UBO_GRPC_WEB_HEADER_SIZE 5u
 
 /* Upper bound on a single frame's wire-declared payload length. The largest
- * legitimate payload is a camera frame (~172KB); anything past 1 MiB is a
- * corrupt or hostile length header. Without this cap a bogus 4-byte length
- * would make the parser buffer grow until the heap is exhausted (fatal on the
- * 512KB-SRAM ESP32-C6). */
+ * legitimate payload is a camera frame (~172KB); anything past 1 MiB is more
+ * than this client can hold. Without this cap a bogus 4-byte length would make
+ * the parser buffer grow until the heap is exhausted (fatal on the 512KB-SRAM
+ * ESP32-C6). A frame past the cap is discarded, not fatal — see
+ * ubo_grpc_web_parser_take_dropped. */
 #define UBO_GRPC_WEB_MAX_FRAME (1u << 20)
 
 /* Wrap a serialized protobuf message in a single gRPC-Web data frame.
@@ -47,10 +48,12 @@ long ubo_grpc_web_parse_trailer(const uint8_t *payload, size_t len, char *msg,
  * stays valid until the next _feed() call (which may compact the buffer). */
 typedef struct {
     uint8_t *buf;
-    size_t len; /* bytes currently buffered */
-    size_t pos; /* read offset of the next unparsed frame */
-    size_t cap; /* allocated capacity */
-    bool bad;   /* poisoned: a frame exceeded UBO_GRPC_WEB_MAX_FRAME */
+    size_t len;   /* bytes currently buffered */
+    size_t pos;   /* read offset of the next unparsed frame */
+    size_t cap;   /* allocated capacity */
+    size_t skip;  /* payload bytes of an oversized frame still to be discarded */
+    bool dropped; /* an oversized frame was discarded since the last _take_ */
+    bool bad;     /* poisoned: framing is unrecoverable */
 } ubo_grpc_web_parser;
 
 void ubo_grpc_web_parser_init(ubo_grpc_web_parser *p);
@@ -61,10 +64,15 @@ void ubo_grpc_web_parser_free(ubo_grpc_web_parser *p);
 bool ubo_grpc_web_parser_feed(ubo_grpc_web_parser *p, const uint8_t *data,
                               size_t len);
 
-/* True once a frame header declared a payload larger than
- * UBO_GRPC_WEB_MAX_FRAME. The parser yields nothing further; the stream is
- * unrecoverable and should be dropped (the reconnect loop starts a fresh one). */
+/* True once framing is unrecoverable — the parser lost track of where the next
+ * header starts. The parser yields nothing further and the stream should be
+ * dropped (the reconnect loop starts a fresh one). An oversized frame does NOT
+ * poison the parser: its length is known, so it is skipped instead. */
 bool ubo_grpc_web_parser_bad(const ubo_grpc_web_parser *p);
+
+/* Consume the "an oversized frame was discarded" flag, for a caller that wants
+ * to log it. One message is lost; the stream stays usable. */
+bool ubo_grpc_web_parser_take_dropped(ubo_grpc_web_parser *p);
 
 /* Pop the next complete frame. Returns true and sets *flag / *payload /
  * *payload_len when a frame is available; false when more bytes are needed. */

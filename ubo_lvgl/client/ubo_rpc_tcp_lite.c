@@ -183,6 +183,10 @@ static bool store_chunk(void *user, const uint8_t *data, size_t len) {
         }
         pb_release(ubo_client_SubscribeStoreResponse_fields, &resp);
     }
+    if (ubo_tcp_lite_parser_take_dropped(&st->parser)) {
+        /* One state update lost; the next one resyncs the whole view. */
+        UBO_CLIENT_LOGW("store stream: oversized tcp-lite frame; discarded");
+    }
     if (ubo_tcp_lite_parser_bad(&st->parser)) {
         UBO_CLIENT_LOGW("store stream: bad tcp-lite frame; aborting");
         return false;
@@ -257,6 +261,11 @@ static bool event_chunk(void *user, const uint8_t *data, size_t len) {
                 PB_GET_ERROR(&is), (unsigned)pl_len);
         }
         pb_release(ubo_client_SubscribeEventResponse_fields, &resp);
+    }
+    if (ubo_tcp_lite_parser_take_dropped(&st->parser)) {
+        /* One event lost — better than dropping the stream and with it every
+         * subsequent event. */
+        UBO_CLIENT_LOGW("event stream: oversized tcp-lite frame; discarded");
     }
     if (ubo_tcp_lite_parser_bad(&st->parser)) {
         UBO_CLIENT_LOGW("event stream: bad tcp-lite frame; aborting");

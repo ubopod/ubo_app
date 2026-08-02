@@ -13,7 +13,7 @@
       Image:
         id: scrollable_widget
         texture: root.texture
-        width: self.texture.width
-        height: self.texture.height
+        width: self.texture.width if self.texture else 0
+        height: self.texture.height if self.texture else 0
         allow_stretch: True
         keep_ratio: True

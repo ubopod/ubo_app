@@ -16,6 +16,12 @@ from ubo_app.logger import logger
 from ubo_app.rpc.message_to_object import get_class, rebuild_object, reduce_group
 from ubo_app.rpc.object_to_message import GRPCSerializable, build_message
 from ubo_app.store.core.types import (
+    FrameStreamChunkEvent as CoreFrameStreamChunkEvent,
+)
+from ubo_app.store.core.types import (
+    FrameStreamDataEvent as CoreFrameStreamDataEvent,
+)
+from ubo_app.store.core.types import (
     StackChangedEvent as CoreStackChangedEvent,
 )
 from ubo_app.store.core.types import (
@@ -30,6 +36,7 @@ from ubo_app.store.services.assistant import (
     AssistantVoiceChangedEvent,
 )
 from ubo_app.utils.error_handlers import report_service_error
+from ubo_app.utils.frame_stream import open_still_events
 
 from ubo_bindings.store.v1 import (
     DispatchActionRequest,
@@ -175,6 +182,14 @@ def _send_initial_state(  # noqa: C901
 
         _send_initial_stack()
 
+    if event_class in (CoreFrameStreamDataEvent, CoreFrameStreamChunkEvent):
+        # A still has no next frame, so a client that subscribes while a
+        # picture is displayed -- a fresh connection, or a satellite that just
+        # rebooted -- would otherwise render the view with no pixels.
+        for event in open_still_events():
+            if isinstance(event, event_class):
+                queue_event(event)
+
     if event_class is AssistantModelChangedEvent:
         # Replay the persisted per-LLM model selections so a freshly-subscribed
         # client (e.g. the assistant subprocess on startup) doesn't have to
@@ -236,7 +251,6 @@ def _make_queue_event(
     loop: AbstractEventLoop,
 ) -> Callable[[UboEvent], None]:
     """Create a thread-safe callback that puts events into an async queue."""
-
     def queue_event(event: UboEvent) -> None:
         def _put() -> None:
             try:

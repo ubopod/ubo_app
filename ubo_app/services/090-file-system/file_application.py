@@ -44,6 +44,7 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.color import escape_markup
 from ubo_app.utils.error_handlers import report_service_error
 from ubo_app.utils.file_system import human_readable_size
+from ubo_app.utils.frame_stream import register_still
 from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
@@ -53,6 +54,10 @@ if TYPE_CHECKING:
 
 FILE_VIEWER_SIZE_LIMIT = 2**11  # 2 KiB
 IMAGE_VIEWER_MAX_DIMENSION = 1024
+
+# A single slot: only one picture can be on screen at a time, and opening
+# another replaces it in place (`push_render` is idempotent by `stream_id`).
+FILE_SYSTEM_IMAGE_STREAM_ID = 'file-system:image'
 
 
 @dataclass
@@ -146,6 +151,43 @@ def _get_file_content(path: Path) -> str:
                 '[color=#666][/color]',
             )
         )
+
+
+def _open_image(path: Path) -> None:
+    """Open the image viewer and push the picture over the frame stream."""
+    from PIL import Image
+
+    try:
+        with Image.open(path) as image:
+            image_rgb = image.convert('RGB')
+            if max(image_rgb.size) > IMAGE_VIEWER_MAX_DIMENSION:
+                image_rgb.thumbnail(
+                    (IMAGE_VIEWER_MAX_DIMENSION, IMAGE_VIEWER_MAX_DIMENSION),
+                )
+            width, height = image_rgb.size
+            image_bytes = image_rgb.tobytes()
+    except (OSError, ValueError):
+        # Only the header was checked when the notification was built; a
+        # truncated or unsupported file fails here instead.
+        store.dispatch(
+            OpenRenderAction(
+                kind='text_viewer',
+                props={'text': '[i][Image preview is unavailable.][/i]'},
+            ),
+        )
+        return
+
+    # The pixels travel as frame-stream events, not inline in props: view data
+    # is broadcast to every client, so an image in props sent a multi-megabyte
+    # payload down the store stream and knocked the MCU clients off the air.
+    register_still(FILE_SYSTEM_IMAGE_STREAM_ID, image_bytes, width, height)
+    store.dispatch(
+        OpenRenderAction(
+            kind='image_viewer',
+            stream_id=FILE_SYSTEM_IMAGE_STREAM_ID,
+            props={'width': width, 'height': height},
+        ),
+    )
 
 
 def _open_video(path: Path) -> None:
@@ -448,28 +490,11 @@ def _show_file(path: Path) -> None:
             from PIL import Image
 
             try:
-                with Image.open(path) as image:
-                    image_rgb = image.convert('RGB')
-                    if max(image_rgb.size) > IMAGE_VIEWER_MAX_DIMENSION:
-                        image_rgb.thumbnail(
-                            (IMAGE_VIEWER_MAX_DIMENSION, IMAGE_VIEWER_MAX_DIMENSION),
-                        )
-                    width, height = image_rgb.size
-                    image_bytes = image_rgb.tobytes()
-                    view_action = NotificationDispatchItem(
-                        key='view',
-                        label='Open Image',
-                        icon='󰋩',
-                        store_action=OpenRenderAction(
-                            kind='image_viewer',
-                            props={
-                                'image': image_bytes,
-                                'width': width,
-                                'height': height,
-                            },
-                        ),
-                        close_notification=False,
-                    )
+                # Header only — `Image.open` is lazy, so browsing a directory
+                # doesn't decode every picture in it. The pixels are decoded in
+                # `_open_image`, when the user actually asks to see them.
+                with Image.open(path):
+                    pass
             except (OSError, ValueError):
                 view_action = NotificationDispatchItem(
                     key='view',
@@ -481,6 +506,14 @@ def _show_file(path: Path) -> None:
                             'text': '[i][Image preview is unavailable.][/i]',
                         },
                     ),
+                    close_notification=False,
+                )
+            else:
+                view_action = create_notification_action(
+                    key='view',
+                    label='Open Image',
+                    icon='󰋩',
+                    action=functools.partial(_open_image, path),
                     close_notification=False,
                 )
         case str(type_) if type_.startswith('audio/'):
