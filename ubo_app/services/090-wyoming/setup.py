@@ -327,8 +327,11 @@ async def _add_policy() -> None:
                             options=[_DOCKER_OPTION, _NETWORK_OPTION],
                             required=True,
                         ),
+                        # Not ``value``: the web dashboard pops that key out of
+                        # the result to use as the form's overall value, so a
+                        # field named it never reaches ``result.data``.
                         InputFieldDescription(
-                            name='value',
+                            name='address',
                             label='IP address or CIDR',
                             description=(
                                 'Only for an address source; ignored for Docker.'
@@ -352,7 +355,7 @@ async def _add_policy() -> None:
         _network_warning()
         return
 
-    value = normalize_network(result.data.get('value', ''))
+    value = normalize_network(result.data.get('address', ''))
     if value is None:
         store.dispatch(
             NotificationsAddAction(
