@@ -133,6 +133,13 @@ class WyomingRuntime:
         self._engines: EnginesServer | None = None
         self._zeroconf = _ZeroconfRegistry()
         self._configuration: tuple[object, ...] | None = None
+        # Starting a listener dispatches a status action, and this runtime's
+        # autorun observes the slice that status lives in — so a reconcile
+        # re-triggers itself before it has recorded what it applied. Without
+        # serializing, the two passes overlap on the same fixed ports and the
+        # loser dies with EADDRINUSE, leaving the runtime with no listeners
+        # while the winner's socket stays bound and answering.
+        self._lock = asyncio.Lock()
 
     async def reconcile(self, state: WyomingState) -> None:
         """Restart listeners only when their bind, policy, or enablement changes."""
@@ -143,9 +150,19 @@ class WyomingRuntime:
             state.allowed_peers,
             state.is_zeroconf_enabled,
         )
+        async with self._lock:
+            await self._reconcile(state, configuration)
+
+    async def _reconcile(
+        self,
+        state: WyomingState,
+        configuration: tuple[object, ...],
+    ) -> None:
         # This autorun observes the whole slice, so it also fires on every
         # satellite and engine status report. Compare before resolving anything
-        # to keep those transitions off the Docker daemon.
+        # to keep those transitions off the Docker daemon. Inside the lock, so a
+        # pass that queued behind the one which applied this very configuration
+        # short-circuits instead of pointlessly restarting the listeners.
         if configuration == self._configuration:
             return
         # Recorded only once the listeners are actually up, so a failed attempt

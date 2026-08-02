@@ -14,6 +14,12 @@ cycle.
   own — the openWakeWord add-on is unavailable on container installs — and the
   microphone is only streamed for the duration of a command instead of
   continuously; the LED ring is green for the duration of that command
+- fix(wyoming): serialize listener reconciliation — starting a listener dispatches
+  a status action that re-triggers the reconcile autorun, so two passes overlapped
+  on the same fixed ports and the loser died with `EADDRINUSE`, dropping both
+  listeners while the winner's socket stayed bound. Toggling the engines on took
+  the satellite down ("Satellite: stopped") while Home Assistant stayed connected
+  to a listener that no longer forwarded anything
 - fix(audio,wyoming): the microphone status icon is owned solely by the audio
   service — Wyoming registered a second one with the same glyph, and since only
   the four highest-priority icons are rendered, the real (lowest-priority)
