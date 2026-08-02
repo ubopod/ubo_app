@@ -68,3 +68,24 @@ CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
 # Deliberately NOT set: CONFIG_SPIRAM_FETCH_INSTRUCTIONS / CONFIG_SPIRAM_RODATA
 # (XIP from PSRAM). There is 16MB of flash against a 4MB app partition, so
 # moving code into PSRAM only slows execution.
+
+# ── WakeNet wake-word model ──
+# Which model esp-sr packs into srmodels.bin (-> the `model` partition, see
+# partitions.csv). These SR_WN_* symbols are independent bools, not a choice:
+# esp-sr's "Load Multiple Wake Words" menu will happily pack several. We pack
+# exactly ONE, so CONFIG_UBO_WAKE_MODEL can stay empty and esp_srmodel_filter()
+# picks it automatically.
+#
+# "Jarvis": neutral branding, no trademark entanglement, and no collision with
+# an Echo in the room the way `CONFIG_SR_WN_WN9_ALEXA` would have.
+# Model info: wakenet9l_tts1h8_Jarvis_3_0.627_0.632 (292KB), so the built-in
+# thresholds are 0.627 @ 90% and 0.632 @ 95%.
+#
+# Vendored alternatives, same size, swap one line: CONFIG_SR_WN_WN9_COMPUTER_TTS
+# ("computer" -- a common English word, expect more false accepts),
+# CONFIG_SR_WN_WN9_HEYWILLOW_TTS ("Hey, Willow"), CONFIG_SR_WN_WN9_HIESP
+# ("Hi, ESP" -- human-recorded rather than TTS-trained, so the strongest model
+# in the set, but it is Espressif's own placeholder branding).
+# A bespoke "Hey Ubo" would be wn9_customword, via Espressif's paid training
+# service.
+CONFIG_SR_WN_WN9_JARVIS_TTS=y

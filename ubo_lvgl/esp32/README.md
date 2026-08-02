@@ -284,7 +284,7 @@ S3 it can race in parallel. If something looks racy during bring-up, set
 | `board.c` | I2C bus, SH8601 QSPI panel, FT3168 touch, TCA9554 IO-expander (LCD reset, speaker amp) |
 | `client_app.c` | The gRPC-Web client: store/event stream tasks, dispatch worker, push-to-talk mic handoff |
 | `input.c` | Touch + BOOT button polling, gesture classification → Ubo keys |
-| `audio.c` | ES8311 codec over I2S: playback ring + task, mic capture task |
+| `audio.c` | ES8311 codec over I2S: playback ring + task, mic capture task, esp-sr AFE + WakeNet wake word, and the codec arbitration between them |
 | `net.c` | WiFi STA join, NVS persistence of creds + core endpoint + transport preference |
 | `usb_ppp.c` | PPP/IP over USB Serial/JTAG: USJ driver, esp_netif PPP glue, RX pump, link state (`.ppp` profile only) |
 | `provisioning.c` | Captive portal: SoftAP + DNS catch-all + HTTP setup form |
@@ -374,6 +374,91 @@ keeps small hot allocations in fast internal SRAM.
 cache-line-aligned memory with an explicit writeback, and a PSRAM draw buffer
 shows up as 64-byte-periodic stale stripes or tearing that reads like a panel
 fault. Spend PSRAM on frame data instead.
+
+## Wake word (ESP32-S3-BOX-3 only)
+
+`CONFIG_UBO_WAKE_ENABLE` runs espressif/esp-sr's **WakeNet** inside the existing
+AFE, so the device starts an assistant turn on a spoken phrase instead of only
+on a BOOT-button hold. Default **"Jarvis"** (`CONFIG_SR_WN_WN9_JARVIS_TTS`);
+`wn9_computer_tts`, `wn9_heywillow_tts` and `wn9_hiesp` are vendored
+alternatives, one line apart.
+
+It is S3-only for the same reason the AFE is: the C6 has no PSRAM and one
+microphone.
+
+**The pod cannot do this for us.** ubo-core's own wake engines
+(`090-speech-recognition`, vosk + openWakeWord) drop every audio sample carrying
+an `audio_source`, so a satellite's microphone never reaches them. Detection has
+to run here.
+
+### What it changes
+
+- **Capture becomes always-on.** The microphone is open whenever the speaker is
+  idle. `audio.c` gains a three-state codec arbitration — `IDLE_WAKE`
+  (listening, output discarded) / `STREAMING` (a session, output sent to the
+  core) / `PLAYING` (speaker owns the codec) — because the two directions
+  cannot both be open: one I2S port, one bit clock, and `esp_codec_dev` rejects
+  a paired open at a different sample rate (16kHz capture vs 48kHz TTS).
+  `play_task` owns every transition.
+- **No barge-in.** The microphone is physically closed while the speaker plays,
+  which is also why no echo cancellation is needed to stop the device waking
+  itself. It stays deaf for `CONFIG_UBO_WAKE_COOLDOWN_MS` (800ms) after the
+  output closes, covering speaker decay and room reverb. Interrupt with BOOT.
+- **`PLAY_IDLE_CLOSE_US` drops 2s → 800ms**, so the device is not deaf for two
+  seconds after every reply.
+- **`ubo_mic` moves to core 1.** WakeNet inference runs inside
+  `fetch_with_delay()`, not `feed()`, so it is continuous — and core 0 carries
+  WiFi and lwIP.
+- **The mute switch closes the microphone**, rather than the core refusing each
+  session and answering with a notification and a failure chime. Muting mid-turn
+  ends the turn rather than pausing it, and `ubo_audio_mic_start` refuses while
+  muted, so nothing local or remote can reopen the mic through an engaged
+  switch. Tracks the hardware pin only; a mute applied from the web UI is not
+  yet mirrored.
+- **Listening is armed only once a client is connected** (`ubo_audio_wake_bind`,
+  at the end of `ubo_client_start`). A board sitting in its captive portal never
+  opens the microphone — which also matters because the input task that reads
+  the mute switch does not exist on that path.
+- **A 120 s local watchdog ends a session the core never closed.** Only the core
+  ends a wake turn, so a start action that never lands would otherwise leave the
+  mic open and every playback chunk refused until reboot.
+- **A `model` partition (512KB at `0x410000`) holds `srmodels.bin`.** See the
+  flashing warning in `AFE-FAR-FIELD.md` — the partition table and the model
+  image must be written in the same operation, and never at `0x0`.
+
+### Wiring to the core
+
+On detection the capture task promotes itself to `STREAMING` **before** telling
+the core, so the words after the wake phrase are already buffering while the
+dispatch is in flight. It then dispatches `AssistantStartListeningAction`
+carrying a `WakePhraseTriggerSource(phrase, detector="wakenet", mode)`.
+
+That trigger source is **not optional metadata**. ubo-core resolves a
+turn-completion policy from it; with no `source` it matches none and publishes an
+inert policy — no silence stop, no phrase stop. Push-to-talk survives that
+because releasing BOOT sends the stop, but a wake-word turn has no release and
+would stream until reboot. `CONFIG_UBO_WAKE_MODE` picks the slot
+(QUICK_CHAT by default: one short turn, ended by ~2s of silence. CONVERSATION
+is the alternative — it tolerates long pauses and ends on an end-of-turn phrase
+like "i am done talking" — but it holds the microphone far longer per wake,
+which on this board also means the speaker cannot have the codec for that
+whole time).
+
+Turn-end is still entirely the core's: it sends
+`AssistantRequestMicStreamEvent(is_active=false)`, exactly as for any other
+session.
+
+### Checking it works
+
+Boot log should show `wake word: model=wn9_jarvis_tts phrase="Jarvis"`, then
+esp-sr's `wakenet is activated, disable WebRTC AGC.`, then a pipeline line from
+`print_pipeline()` containing `WakeNet(wn9_jarvis_tts,...)`. Each detection logs
+`WAKE: "Jarvis" word=1 ...`.
+
+If no model resolves, `afe_config_check()` clears `wakenet_init` and the device
+falls back to the exact push-to-talk-only pipeline — so a missing or unflashed
+`model` partition degrades quietly rather than breaking capture. `pcm_config
+AFTER check: ... wakenet=0` in the boot log is the tell.
 
 ## Infrared (ESP32-S3-BOX-3, not yet implemented)
 

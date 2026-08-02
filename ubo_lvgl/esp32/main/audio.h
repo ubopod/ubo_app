@@ -1,15 +1,26 @@
 /**
  * @file audio.h
- * Speaker playback + push-to-talk microphone capture for the ESP32-C6 board's
- * onboard ES8311 codec. The codec control lives on the shared I2C bus; a single
- * full-duplex I2S channel pair carries PCM. Playback and mic capture are mutually
- * exclusive (PTT), so one esp_codec_dev handle is opened/closed per session.
+ * Speaker playback + microphone capture for the board's onboard codec (ES8311
+ * on the C6; ES8311 DAC + ES7210 mic ADC on the S3-BOX-3). Codec control lives
+ * on the shared I2C bus; a single full-duplex I2S channel pair carries PCM.
+ *
+ * Playback and capture are mutually exclusive, and not by choice: they share
+ * one I2S port and therefore one bit clock, and esp_codec_dev refuses to open
+ * the paired device at a different sample rate. So one esp_codec_dev handle is
+ * open at a time and the two take turns.
+ *
+ * With CONFIG_UBO_WAKE_ENABLE the microphone is additionally held open whenever
+ * the speaker is idle, so esp-sr's WakeNet can listen for the wake word — see
+ * ubo_audio_wake_bind(). Playback then takes the codec back from the wake
+ * listener rather than being refused, and there is no barge-in: the device is
+ * deaf while it talks.
  *
  * ESP32-only: nothing here is compiled into the desktop/Pi renderer.
  */
 #ifndef UBO_AUDIO_H
 #define UBO_AUDIO_H
 
+#include <stdbool.h>
 #include <stddef.h> /* size_t */
 #include <stdint.h>
 
@@ -25,7 +36,8 @@ int ubo_audio_init(i2c_master_bus_handle_t i2c);
 
 /* Speaker: queue `len` bytes of raw PCM for playback at (rate, channels, width)
  * where width is BYTES per sample (16-bit => 2). `volume` is 0..1. Non-blocking
- * (bounded ring; brief block if full). Dropped while the mic is active. */
+ * (bounded ring; brief block if full). Dropped while a talk session is
+ * streaming; merely listening for the wake word yields the codec instead. */
 void ubo_audio_play(const uint8_t *pcm, size_t len, int rate, int channels,
                     int width, float volume);
 
@@ -41,6 +53,25 @@ typedef void (*ubo_audio_mic_cb)(void *user, const uint8_t *pcm, size_t len,
                                  float timestamp);
 void ubo_audio_mic_start(ubo_audio_mic_cb cb, void *user);
 void ubo_audio_mic_stop(void);
+
+/* Wake word (CONFIG_UBO_WAKE_ENABLE; a no-op otherwise). Registers `cb`, called
+ * from the capture task the moment WakeNet matches, with the phrase the loaded
+ * model listens for ("Jarvis"). `mic_cb`/`mic_user` are the callbacks a session
+ * started this way will stream through, registered here rather than at wake
+ * time so no audio is delivered to a NULL callback in between.
+ *
+ * By the time `cb` runs, capture has ALREADY been promoted to a streaming
+ * session — the audio is buffering, and `cb` only has to tell the core. It must
+ * not block: it runs on the capture task. */
+typedef void (*ubo_audio_wake_cb)(void *user, const char *phrase);
+void ubo_audio_wake_bind(ubo_audio_wake_cb cb, void *user,
+                         ubo_audio_mic_cb mic_cb, void *mic_user);
+
+/* Hardware mute. While muted the microphone is CLOSED, not merely ignored —
+ * an always-on wake word that kept capturing through a mute switch would be
+ * exactly the thing the switch exists to prevent. Idempotent; safe to call
+ * every poll. Unmuting re-arms listening within one playback cycle (~50ms). */
+void ubo_audio_wake_set_muted(bool muted);
 
 #ifdef __cplusplus
 }

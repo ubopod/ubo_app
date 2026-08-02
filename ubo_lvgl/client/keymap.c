@@ -98,6 +98,36 @@ int ubo_keymap_assistant_listen(ubo_rpc *rpc, bool start,
     return ubo_rpc_dispatch(rpc, &act);
 }
 
+int ubo_keymap_assistant_listen_wake(ubo_rpc *rpc, const char *audio_source,
+                                     const char *phrase, const char *detector,
+                                     int mode) {
+    /* Every field is a heap-pointer in nanopb's global FT_POINTER mode, so the
+     * whole tree is stack locals pointed at each other; nothing is copied and
+     * nothing outlives this synchronous dispatch. */
+    ubo_client_WakeMode wm = (ubo_client_WakeMode)mode;
+    ubo_client_WakePhraseTriggerSource wp =
+        ubo_client_WakePhraseTriggerSource_init_zero;
+    wp.phrase = (char *)phrase;
+    wp.detector = (char *)detector;
+    wp.mode = &wm;
+
+    ubo_client_AssistantTriggerSourceUnion src =
+        ubo_client_AssistantTriggerSourceUnion_init_zero;
+    src.which_assistant_trigger_source_union =
+        ubo_client_AssistantTriggerSourceUnion_wake_phrase_trigger_source_tag;
+    src.assistant_trigger_source_union.wake_phrase_trigger_source = &wp;
+
+    ubo_client_AssistantStartListeningAction a =
+        ubo_client_AssistantStartListeningAction_init_zero;
+    a.source = &src;
+    a.audio_source = (char *)audio_source;
+
+    ubo_client_Action act = ubo_client_Action_init_zero;
+    act.which_action = ubo_client_Action_assistant_start_listening_action_tag;
+    act.action.assistant_start_listening_action = &a;
+    return ubo_rpc_dispatch(rpc, &act);
+}
+
 int ubo_keymap_report_sample(ubo_rpc *rpc, const pb_bytes_array_t *bytes,
                              float timestamp, const char *audio_source) {
     float ts = timestamp;

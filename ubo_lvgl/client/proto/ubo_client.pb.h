@@ -28,6 +28,26 @@ typedef enum _ubo_client_AudioDevice {
     ubo_client_AudioDevice_AUDIO_DEVICE_OUTPUT = 2
 } ubo_client_AudioDevice;
 
+/* How a listening session was triggered. ubo-core resolves a turn-completion
+ policy from this (silence timeout, end-of-turn phrases, push-to-talk), so it
+ is NOT optional metadata for a wake word: with no `source` the core matches
+ no policy at all and publishes an inert one — no silence stop, no phrase
+ stop. Push-to-talk survives that because releasing BOOT sends the stop; a
+ wake-word turn has no release and would stream forever.
+
+ `detector` is free text naming the engine ("wakenet" for on-device WakeNet,
+ vs "vosk"/"openwakeword" for the ones running on the pod). `mode` is the
+ WakeMode slot, which is what the core's default policies actually match on —
+ keying on the slot rather than the literal phrase means changing the wake
+ word never orphans a policy. */
+typedef enum _ubo_client_WakeMode {
+    ubo_client_WakeMode_WAKE_MODE_UNSPECIFIED = 0,
+    ubo_client_WakeMode_WAKE_MODE_INTENTS = 1,
+    ubo_client_WakeMode_WAKE_MODE_QUICK_CHAT = 2,
+    ubo_client_WakeMode_WAKE_MODE_CONVERSATION = 3,
+    ubo_client_WakeMode_WAKE_MODE_STOP_TALKING = 4
+} ubo_client_WakeMode;
+
 /* Struct definitions */
 /* ── google well-known types (minimal, wire-compatible) ──────────────────────
  SubscribeStoreResponse.results carries google.protobuf.Any; is_blanked is a
@@ -102,12 +122,36 @@ typedef struct _ubo_client_AudioSample {
     int64_t *width;
 } ubo_client_AudioSample;
 
-/* Push-to-talk: start/stop a microphone listening session. `audio_source` tags
- which mic feeds the session so the core binds the session to this client and
- ignores every other mic (empty = on-device system mic). It must equal the
- `audio_source` sent with each AudioReportSampleAction. The `source`/`reason`
- metadata fields are intentionally omitted — we never set them. */
+typedef struct _ubo_client_WakePhraseTriggerSource {
+    char *phrase;
+    char *detector;
+    ubo_client_WakeMode *mode;
+} ubo_client_WakePhraseTriggerSource;
+
+/* WARNING: tag 5 is the ALPHABETICAL position of `wake_phrase_trigger_source`
+ among the union's members upstream (desktop=1, grpc=2, infrared=3,
+ keypad=4, wake_phrase=5) — the same generator that numbers the Action and
+ Event oneofs. Adding any new *TriggerSource to ubo-core renumbers this.
+ Covered by lvgl-maintenance's sync_tags.sh.
+
+ Only the one member we send is curated; the others decode as unknown fields. */
+typedef struct _ubo_client_AssistantTriggerSourceUnion {
+    pb_size_t which_assistant_trigger_source_union;
+    union _ubo_client_AssistantTriggerSourceUnion_assistant_trigger_source_union {
+        struct _ubo_client_WakePhraseTriggerSource *wake_phrase_trigger_source;
+    } assistant_trigger_source_union;
+} ubo_client_AssistantTriggerSourceUnion;
+
+/* Push-to-talk / wake word: start a microphone listening session.
+ `audio_source` tags which mic feeds the session so the core binds the session
+ to this client and ignores every other mic (empty = on-device system mic). It
+ must equal the `audio_source` sent with each AudioReportSampleAction.
+
+ `source` is left unset for a button-driven session (the core logs a warning
+ and falls back to defaults, which is fine because the button release ends the
+ turn) and set for a wake word — see AssistantTriggerSourceUnion above. */
 typedef struct _ubo_client_AssistantStartListeningAction {
+    struct _ubo_client_AssistantTriggerSourceUnion *source;
     char *audio_source;
 } ubo_client_AssistantStartListeningAction;
 
@@ -482,6 +526,10 @@ extern "C" {
 #define _ubo_client_AudioDevice_MAX ubo_client_AudioDevice_AUDIO_DEVICE_OUTPUT
 #define _ubo_client_AudioDevice_ARRAYSIZE ((ubo_client_AudioDevice)(ubo_client_AudioDevice_AUDIO_DEVICE_OUTPUT+1))
 
+#define _ubo_client_WakeMode_MIN ubo_client_WakeMode_WAKE_MODE_UNSPECIFIED
+#define _ubo_client_WakeMode_MAX ubo_client_WakeMode_WAKE_MODE_STOP_TALKING
+#define _ubo_client_WakeMode_ARRAYSIZE ((ubo_client_WakeMode)(ubo_client_WakeMode_WAKE_MODE_STOP_TALKING+1))
+
 
 
 
@@ -499,6 +547,9 @@ extern "C" {
 #define ubo_client_AudioToggleMuteStatusAction_device_ENUMTYPE ubo_client_AudioDevice
 
 #define ubo_client_AudioSetVolumeAction_device_ENUMTYPE ubo_client_AudioDevice
+
+
+#define ubo_client_WakePhraseTriggerSource_mode_ENUMTYPE ubo_client_WakeMode
 
 
 
@@ -560,7 +611,9 @@ extern "C" {
 #define ubo_client_AudioToggleMuteStatusAction_init_default {NULL}
 #define ubo_client_AudioSetVolumeAction_init_default {NULL, NULL}
 #define ubo_client_AudioSample_init_default      {NULL, NULL, NULL, NULL}
-#define ubo_client_AssistantStartListeningAction_init_default {NULL}
+#define ubo_client_WakePhraseTriggerSource_init_default {NULL, NULL, NULL}
+#define ubo_client_AssistantTriggerSourceUnion_init_default {0, {NULL}}
+#define ubo_client_AssistantStartListeningAction_init_default {NULL, NULL}
 #define ubo_client_AssistantStopListeningAction_init_default {0}
 #define ubo_client_AudioReportSampleAction_init_default {NULL, NULL, NULL}
 #define ubo_client_Action_init_default           {0, {NULL}}
@@ -617,7 +670,9 @@ extern "C" {
 #define ubo_client_AudioToggleMuteStatusAction_init_zero {NULL}
 #define ubo_client_AudioSetVolumeAction_init_zero {NULL, NULL}
 #define ubo_client_AudioSample_init_zero         {NULL, NULL, NULL, NULL}
-#define ubo_client_AssistantStartListeningAction_init_zero {NULL}
+#define ubo_client_WakePhraseTriggerSource_init_zero {NULL, NULL, NULL}
+#define ubo_client_AssistantTriggerSourceUnion_init_zero {0, {NULL}}
+#define ubo_client_AssistantStartListeningAction_init_zero {NULL, NULL}
 #define ubo_client_AssistantStopListeningAction_init_zero {0}
 #define ubo_client_AudioReportSampleAction_init_zero {NULL, NULL, NULL}
 #define ubo_client_Action_init_zero              {0, {NULL}}
@@ -682,6 +737,11 @@ extern "C" {
 #define ubo_client_AudioSample_channels_tag      3
 #define ubo_client_AudioSample_rate_tag          4
 #define ubo_client_AudioSample_width_tag         5
+#define ubo_client_WakePhraseTriggerSource_phrase_tag 2
+#define ubo_client_WakePhraseTriggerSource_detector_tag 3
+#define ubo_client_WakePhraseTriggerSource_mode_tag 4
+#define ubo_client_AssistantTriggerSourceUnion_wake_phrase_trigger_source_tag 5
+#define ubo_client_AssistantStartListeningAction_source_tag 2
 #define ubo_client_AssistantStartListeningAction_audio_source_tag 3
 #define ubo_client_AudioReportSampleAction_timestamp_tag 2
 #define ubo_client_AudioReportSampleAction_sample_speech_recognition_tag 3
@@ -917,10 +977,25 @@ X(a, POINTER,  SINGULAR, INT64,    width,             5)
 #define ubo_client_AudioSample_CALLBACK NULL
 #define ubo_client_AudioSample_DEFAULT NULL
 
+#define ubo_client_WakePhraseTriggerSource_FIELDLIST(X, a) \
+X(a, POINTER,  SINGULAR, STRING,   phrase,            2) \
+X(a, POINTER,  SINGULAR, STRING,   detector,          3) \
+X(a, POINTER,  SINGULAR, UENUM,    mode,              4)
+#define ubo_client_WakePhraseTriggerSource_CALLBACK NULL
+#define ubo_client_WakePhraseTriggerSource_DEFAULT NULL
+
+#define ubo_client_AssistantTriggerSourceUnion_FIELDLIST(X, a) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (assistant_trigger_source_union,wake_phrase_trigger_source,assistant_trigger_source_union.wake_phrase_trigger_source),   5)
+#define ubo_client_AssistantTriggerSourceUnion_CALLBACK NULL
+#define ubo_client_AssistantTriggerSourceUnion_DEFAULT NULL
+#define ubo_client_AssistantTriggerSourceUnion_assistant_trigger_source_union_wake_phrase_trigger_source_MSGTYPE ubo_client_WakePhraseTriggerSource
+
 #define ubo_client_AssistantStartListeningAction_FIELDLIST(X, a) \
+X(a, POINTER,  OPTIONAL, MESSAGE,  source,            2) \
 X(a, POINTER,  SINGULAR, STRING,   audio_source,      3)
 #define ubo_client_AssistantStartListeningAction_CALLBACK NULL
 #define ubo_client_AssistantStartListeningAction_DEFAULT NULL
+#define ubo_client_AssistantStartListeningAction_source_MSGTYPE ubo_client_AssistantTriggerSourceUnion
 
 #define ubo_client_AssistantStopListeningAction_FIELDLIST(X, a) \
 
@@ -1311,6 +1386,8 @@ extern const pb_msgdesc_t ubo_client_KeypadKeyReleaseAction_msg;
 extern const pb_msgdesc_t ubo_client_AudioToggleMuteStatusAction_msg;
 extern const pb_msgdesc_t ubo_client_AudioSetVolumeAction_msg;
 extern const pb_msgdesc_t ubo_client_AudioSample_msg;
+extern const pb_msgdesc_t ubo_client_WakePhraseTriggerSource_msg;
+extern const pb_msgdesc_t ubo_client_AssistantTriggerSourceUnion_msg;
 extern const pb_msgdesc_t ubo_client_AssistantStartListeningAction_msg;
 extern const pb_msgdesc_t ubo_client_AssistantStopListeningAction_msg;
 extern const pb_msgdesc_t ubo_client_AudioReportSampleAction_msg;
@@ -1370,6 +1447,8 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 #define ubo_client_AudioToggleMuteStatusAction_fields &ubo_client_AudioToggleMuteStatusAction_msg
 #define ubo_client_AudioSetVolumeAction_fields &ubo_client_AudioSetVolumeAction_msg
 #define ubo_client_AudioSample_fields &ubo_client_AudioSample_msg
+#define ubo_client_WakePhraseTriggerSource_fields &ubo_client_WakePhraseTriggerSource_msg
+#define ubo_client_AssistantTriggerSourceUnion_fields &ubo_client_AssistantTriggerSourceUnion_msg
 #define ubo_client_AssistantStartListeningAction_fields &ubo_client_AssistantStartListeningAction_msg
 #define ubo_client_AssistantStopListeningAction_fields &ubo_client_AssistantStopListeningAction_msg
 #define ubo_client_AudioReportSampleAction_fields &ubo_client_AudioReportSampleAction_msg
@@ -1425,6 +1504,8 @@ extern const pb_msgdesc_t ubo_client_PromptViewData_Items_msg;
 /* ubo_client_KeypadKeyPressAction_size depends on runtime parameters */
 /* ubo_client_KeypadKeyReleaseAction_size depends on runtime parameters */
 /* ubo_client_AudioSample_size depends on runtime parameters */
+/* ubo_client_WakePhraseTriggerSource_size depends on runtime parameters */
+/* ubo_client_AssistantTriggerSourceUnion_size depends on runtime parameters */
 /* ubo_client_AssistantStartListeningAction_size depends on runtime parameters */
 /* ubo_client_AudioReportSampleAction_size depends on runtime parameters */
 /* ubo_client_Action_size depends on runtime parameters */

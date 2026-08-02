@@ -101,12 +101,55 @@ message AudioSample {
   int64 width = 5;
 }
 
-// Push-to-talk: start/stop a microphone listening session. `audio_source` tags
-// which mic feeds the session so the core binds the session to this client and
-// ignores every other mic (empty = on-device system mic). It must equal the
-// `audio_source` sent with each AudioReportSampleAction. The `source`/`reason`
-// metadata fields are intentionally omitted — we never set them.
+// How a listening session was triggered. ubo-core resolves a turn-completion
+// policy from this (silence timeout, end-of-turn phrases, push-to-talk), so it
+// is NOT optional metadata for a wake word: with no `source` the core matches
+// no policy at all and publishes an inert one — no silence stop, no phrase
+// stop. Push-to-talk survives that because releasing BOOT sends the stop; a
+// wake-word turn has no release and would stream forever.
+//
+// `detector` is free text naming the engine ("wakenet" for on-device WakeNet,
+// vs "vosk"/"openwakeword" for the ones running on the pod). `mode` is the
+// WakeMode slot, which is what the core's default policies actually match on —
+// keying on the slot rather than the literal phrase means changing the wake
+// word never orphans a policy.
+enum WakeMode {
+  WAKE_MODE_UNSPECIFIED = 0;
+  WAKE_MODE_INTENTS = 1;
+  WAKE_MODE_QUICK_CHAT = 2;
+  WAKE_MODE_CONVERSATION = 3;
+  WAKE_MODE_STOP_TALKING = 4;
+}
+
+message WakePhraseTriggerSource {
+  string phrase = 2;
+  string detector = 3;
+  WakeMode mode = 4;
+}
+
+// WARNING: tag 5 is the ALPHABETICAL position of `wake_phrase_trigger_source`
+// among the union's members upstream (desktop=1, grpc=2, infrared=3,
+// keypad=4, wake_phrase=5) — the same generator that numbers the Action and
+// Event oneofs. Adding any new *TriggerSource to ubo-core renumbers this.
+// Covered by lvgl-maintenance's sync_tags.sh.
+//
+// Only the one member we send is curated; the others decode as unknown fields.
+message AssistantTriggerSourceUnion {
+  oneof assistant_trigger_source_union {
+    WakePhraseTriggerSource wake_phrase_trigger_source = 5;
+  }
+}
+
+// Push-to-talk / wake word: start a microphone listening session.
+// `audio_source` tags which mic feeds the session so the core binds the session
+// to this client and ignores every other mic (empty = on-device system mic). It
+// must equal the `audio_source` sent with each AudioReportSampleAction.
+//
+// `source` is left unset for a button-driven session (the core logs a warning
+// and falls back to defaults, which is fine because the button release ends the
+// turn) and set for a wake word — see AssistantTriggerSourceUnion above.
 message AssistantStartListeningAction {
+  AssistantTriggerSourceUnion source = 2;
   string audio_source = 3;
 }
 

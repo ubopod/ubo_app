@@ -104,12 +104,26 @@ static void play_sample(const ubo_client_AudioSample *s, float volume) {
 /* talk_start/stop set a command the dispatch worker acts on, so all RPC stays on
  * one task and start->samples->stop ordering is preserved. */
 /* 0 none, 1 start (device-initiated), 2 stop (device-initiated),
- * 3 start (core-initiated), 4 stop (core-initiated).
+ * 3 start (core-initiated), 4 stop (core-initiated),
+ * 5 start (wake word).
  *
  * The core-initiated variants drive the microphone WITHOUT dispatching a
  * listening action back: the session that asked for the stream is already
- * open, so echoing it would loop. */
+ * open, so echoing it would loop.
+ *
+ * 5 differs from 1 in what it tells the core, not in what it does locally: it
+ * carries a WakePhraseTriggerSource so the core can resolve a turn-completion
+ * policy. It has to — a button session ends when the button is released, but
+ * nothing ends a wake session except that policy. */
 static volatile int s_talk_cmd;
+
+#ifdef CONFIG_UBO_WAKE_ENABLE
+/* Phrase reported by the last wake detection. Written by the capture task, read
+ * by the dispatch worker. A pointer hand-off, not a copy: it points at a string
+ * esp-sr allocated once at boot and never frees (see `wake_phrase` in audio.c),
+ * so it stays valid for the lifetime of the process. */
+static const char *volatile s_wake_phrase;
+#endif
 
 /* ── active frame stream (camera viewfinder / video playback) ──
  * The store task writes the id after each view render; the event task reads it
@@ -251,7 +265,7 @@ static void on_event(void *user, const ubo_client_Event *ev) {
         }
         ESP_LOGI(TAG, "core requested mic stream: %s",
                  e->is_active ? "start" : "stop");
-        s_talk_cmd = e->is_active ? 3 : 4;
+        __atomic_store_n(&s_talk_cmd, e->is_active ? 3 : 4, __ATOMIC_SEQ_CST);
         break;
     }
     default:
@@ -345,12 +359,37 @@ static void dispatch_task(void *arg) {
     while (!st.stop) {
         /* Push-to-talk transitions (kept on this task so all RPC is serialized
          * and start -> samples -> stop stay ordered). */
-        const int tc = s_talk_cmd;
+        /* Atomic take-and-clear. A plain read-then-write loses a command
+         * written in between — and `on_wake` runs on the capture task, which
+         * has ALREADY committed the audio path to STREAMING by the time it
+         * posts here. Dropping that command would leave the microphone open
+         * with the core never told a turn began. */
+        const int tc = __atomic_exchange_n(&s_talk_cmd, 0, __ATOMIC_SEQ_CST);
         if (tc) {
-            s_talk_cmd = 0;
             if (tc == 1) {
                 ubo_keymap_assistant_listen(st.rpc, true, s_audio_source);
                 ubo_audio_mic_start(mic_cb, NULL);
+#ifdef CONFIG_UBO_WAKE_ENABLE
+            } else if (tc == 5) {
+                /* Capture is already streaming — the capture task promoted it
+                 * the instant WakeNet matched, so the user's first words are
+                 * buffering while this dispatch is in flight. mic_start here is
+                 * the idempotent no-op that installs nothing new; it is kept so
+                 * a failed promotion still opens the session. */
+                if (ubo_keymap_assistant_listen_wake(
+                        st.rpc, s_audio_source,
+                        s_wake_phrase ? s_wake_phrase : "", "wakenet",
+                        CONFIG_UBO_WAKE_MODE) != 0) {
+                    /* The core never heard about this turn, so it will never
+                     * end it — and only the core ends a wake session. Close it
+                     * here instead of leaving the microphone open and every
+                     * playback chunk refused until the watchdog fires. */
+                    ESP_LOGW(TAG, "wake start dispatch failed; ending session");
+                    ubo_audio_mic_stop();
+                } else {
+                    ubo_audio_mic_start(mic_cb, NULL);
+                }
+#endif
             } else if (tc == 3) {
                 ubo_audio_mic_start(mic_cb, NULL); /* session already open */
             } else if (tc == 4) {
@@ -388,12 +427,35 @@ void ubo_client_enqueue_key(const char *key) {
 }
 
 void ubo_client_talk_start(void) {
-    s_talk_cmd = 1;
+    __atomic_store_n(&s_talk_cmd, 1, __ATOMIC_SEQ_CST);
 }
 
 void ubo_client_talk_stop(void) {
-    s_talk_cmd = 2;
+    __atomic_store_n(&s_talk_cmd, 2, __ATOMIC_SEQ_CST);
 }
+
+#ifdef CONFIG_UBO_WAKE_ENABLE
+/* Runs on the capture task, so it does no work beyond handing the dispatch
+ * worker a command — every RPC stays on `ubo_disp`, which is what keeps
+ * start -> samples -> stop ordered. */
+static void on_wake(void *user, const char *phrase) {
+    (void)user;
+    s_wake_phrase = phrase;
+    /* Post only into an EMPTY slot. `s_talk_cmd` holds one command, so a plain
+     * store here could overwrite a stop the dispatcher has not consumed yet —
+     * and a stop always outranks a new wake. Losing the wake instead is
+     * self-correcting: the audio path returns to IDLE_WAKE when that stop is
+     * processed, and the user can say the word again. */
+    int expected = 0;
+    if (!__atomic_compare_exchange_n(&s_talk_cmd, &expected, 5, false,
+                                     __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)) {
+        /* Worth a line: the audio path has ALREADY committed to STREAMING, so
+         * this is the one case where a dropped command and the local state
+         * disagree — briefly, until the pending command reconciles them. */
+        ESP_LOGW(TAG, "wake dropped: talk command %d still pending", expected);
+    }
+}
+#endif
 
 void ubo_client_start(const char *web_grpc_url) {
     uint8_t mac[6];
@@ -422,5 +484,11 @@ void ubo_client_start(const char *web_grpc_url) {
         ESP_LOGE(TAG, "client task creation failed (out of memory?)");
         return;
     }
+#ifdef CONFIG_UBO_WAKE_ENABLE
+    /* Only now: `mic_cb` publishes into the ping-pong buffers that `mic_drain`
+     * empties on `ubo_disp`, so arming the wake word before the dispatch worker
+     * exists would capture audio nothing is draining. */
+    ubo_audio_wake_bind(on_wake, NULL, mic_cb, NULL);
+#endif
     ESP_LOGI(TAG, "client started -> %s", web_grpc_url);
 }

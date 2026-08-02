@@ -45,6 +45,12 @@ PB_BIND(ubo_client_AudioSetVolumeAction, ubo_client_AudioSetVolumeAction, AUTO)
 PB_BIND(ubo_client_AudioSample, ubo_client_AudioSample, AUTO)
 
 
+PB_BIND(ubo_client_WakePhraseTriggerSource, ubo_client_WakePhraseTriggerSource, AUTO)
+
+
+PB_BIND(ubo_client_AssistantTriggerSourceUnion, ubo_client_AssistantTriggerSourceUnion, AUTO)
+
+
 PB_BIND(ubo_client_AssistantStartListeningAction, ubo_client_AssistantStartListeningAction, AUTO)
 
 
@@ -175,6 +181,8 @@ PB_BIND(ubo_client_PromptViewData, ubo_client_PromptViewData, AUTO)
 
 
 PB_BIND(ubo_client_PromptViewData_Items, ubo_client_PromptViewData_Items, AUTO)
+
+
 
 
 

@@ -9,6 +9,35 @@ audio here.
 This is a reference for picking the work back up, written after a long session
 that ruled out a lot and found the likely root cause without landing it.
 
+> ## Since this was written: WakeNet landed on top of `AFE_TYPE_VC`
+>
+> The wake word (`CONFIG_UBO_WAKE_ENABLE`) does **not** depend on any of the
+> far-field work below, and does not change `afe_type`. Two things this document
+> would have led you to expect turned out to be wrong:
+>
+> - **`AFE_TYPE_VC` hosts WakeNet fine.** Nothing in `afe_config_check()` keys
+>   `wakenet_init` off `afe_type` — it only clears it when no model name
+>   resolved. VC forces `mic_num` to 1, which selects `esp_afe_sr_1mic`, and
+>   that implementation carries the full wakenet op set (`afe_init_wn`,
+>   `afe_wn_run_single_mic`, `afe_enable_wakenet`). Verified against
+>   `lib/esp32s3/libesp_audio_front_end.a`.
+> - **WakeNet runs in `fetch()`, not `feed()`.** So the continuous inference
+>   load lands on `ubo_mic`, which is why that task moves to core 1 when the
+>   wake word is enabled — core 0 carries WiFi and lwIP.
+>
+> One real change to the streamed capture path: `afe_config_check()` forces
+> `agc_mode` from `AFE_AGC_MODE_WEBRTC` to `AFE_AGC_MODE_WAKENET` whenever
+> wakenet is active ("wakenet is activated, disable WebRTC AGC."). That is the
+> first place to look if capture levels regress against the baseline below.
+> Escape hatch: `agc_init = false` plus `afe_linear_gain` to set the level by
+> hand.
+>
+> Capture is also **always-on** with a wake word, and time-shares the codec with
+> playback (one I2S port, one clock; `esp_codec_dev` refuses a paired open at a
+> different rate). There is no barge-in — which is the one thing the 4-slot TDM
+> work below would still buy, since slot 0 is a real playback reference and
+> would make AEC possible.
+
 ---
 
 ## The hardware, stated precisely
@@ -165,6 +194,20 @@ Configuration #7 is the promising one and where to resume.
   `0xFF` across the NVS region (0x9000–0xF000) and erases the Wi-Fi
   credentials, dropping the board into its captive portal. Flash the app only:
   `esptool --chip esp32s3 --port <tty> write-flash 0x10000 ubo_lvgl_esp32s3.bin`.
+- **The `model` partition and `srmodels.bin` must be written together.**
+  `srmodel_load()` reads its model count straight out of the image, so a
+  partition that exists but is blank (`0xFF`) yields `num = 0xFFFFFFFF`, a
+  failed malloc and a NULL-deref panic at boot. Upgrading a provisioned board to
+  a wake-word build means three regions and never `0x0`:
+  ```
+  esptool --chip esp32s3 -p <tty> write-flash \
+    0x8000   build.esp32s3/partition_table/partition-table.bin \
+    0x10000  build.esp32s3/ubo_lvgl_esp32s3.bin \
+    0x410000 build.esp32s3/srmodels/srmodels.bin
+  ```
+  Confirm `0x410000` with `idf.py partition-table` rather than trusting it — it
+  moves if `factory` is ever resized. (`idf.py flash` is also safe: it never
+  touches `nvs`.)
 - **`tests/setup.sh` deletes every Wi-Fi connection on a Raspberry Pi**, and
   `tests/conftest.py` runs it via an autouse fixture for *any* test. The
   hardware tests shadow that fixture; do not remove the override.
@@ -202,6 +245,11 @@ difference.
 
 `AFE_TYPE_VC`, `"MM"`, `se_init=false`, `ns_init=true`, `agc_init=true`,
 2-channel capture, `BOARD_LCD_BUF_DIVISOR 8`. This is what is committed.
+
+Turning `CONFIG_UBO_WAKE_ENABLE` off restores this exactly — `afe_setup()` then
+passes a NULL model list, `afe_config_check()` clears `wakenet_init`, AGC stays
+WEBRTC, capture goes back to session-scoped and `ubo_mic` back to core 0. That
+one switch is the A/B for every wake-word measurement.
 
 ### Open issue at time of writing
 

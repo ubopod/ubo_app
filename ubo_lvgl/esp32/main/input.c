@@ -1,5 +1,6 @@
 #include "input.h"
 
+#include "audio.h"
 #include "board.h"
 #include "client_app.h"
 #include "driver/gpio.h"
@@ -188,6 +189,18 @@ static void input_task(void *arg) {
         if (mute_pressed && !mute_pressed_prev) {
             ubo_client_enqueue_key("M");
         }
+        /* Close the microphone locally too. Without this an always-on wake word
+         * keeps listening through the mute switch: the core refuses each
+         * session and answers with a "Microphone Muted" notification and a
+         * failure chime, and that chime is playback, which is audible and
+         * pointless. The switch has to actually stop capture.
+         *
+         * Driven off the pin LEVEL, which on this board reflects mute state
+         * (see above), so it cannot drift out of step with a toggle count.
+         * Note this only tracks the hardware switch: a mute applied from the
+         * web UI is not mirrored here, which needs state.audio.is_capture_mute
+         * added to the store subscription. */
+        ubo_audio_wake_set_muted(mute_pressed);
         mute_pressed_prev = mute_pressed;
 #endif
 

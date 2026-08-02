@@ -163,7 +163,115 @@ config UBO_AFE_ENABLE
         Acoustic echo cancellation is deliberately NOT enabled: it needs a
         playback reference channel wired into the capture stream, which this
         board's audio path does not currently provide. Without AEC the device
-        cannot hear over its own speaker.
+        cannot hear over its own speaker — which is also why wake-word
+        listening (UBO_WAKE_ENABLE) has to time-share the codec with playback
+        rather than run alongside it.
+
+config UBO_WAKE_ENABLE
+    bool "Wake word: start a turn on a spoken phrase (esp-sr WakeNet)"
+    depends on UBO_AFE_ENABLE
+    default n
+    help
+        Run esp-sr's WakeNet inside the AFE so the device starts an assistant
+        turn when it hears its wake word, instead of only on a BOOT-button hold.
+
+        The pod cannot do this for us: ubo-core's wake engines drop every audio
+        sample that carries an `audio_source`, so a satellite's microphone never
+        reaches them. Detection has to happen here.
+
+        Requires a `model` partition holding srmodels.bin (see partitions.csv)
+        and one CONFIG_SR_WN_* model selected under "ESP Speech Recognition".
+        If no model is found the AFE quietly clears wakenet_init and you get the
+        push-to-talk-only pipeline back, so this is safe to leave on.
+
+        Turning this on makes capture ALWAYS-ON: the microphone is open whenever
+        the speaker is idle. Capture and playback cannot coexist (one I2S port,
+        shared bit clock — esp_codec_dev rejects opening the paired device at a
+        different rate), so the device is deaf while it is talking and for
+        UBO_WAKE_COOLDOWN_MS afterwards. There is no barge-in.
+
+config UBO_WAKE_MODEL
+    string "WakeNet model name (empty = whichever model is in the partition)"
+    depends on UBO_WAKE_ENABLE
+    default ""
+    help
+        Passed to esp_srmodel_filter() to choose among the models packed into
+        srmodels.bin. Leave EMPTY unless you have deliberately packed more than
+        one: with a single model, empty always resolves to it, whereas a name
+        that does not match anything resolves to NULL and silently disables the
+        wake word. Which model gets packed is set by CONFIG_SR_WN_* under
+        "ESP Speech Recognition" (we ship CONFIG_SR_WN_WN9_JARVIS_TTS).
+
+        The resolved model and its wake phrase are logged at boot, so you never
+        have to guess which one is live.
+
+config UBO_WAKE_AGGRESSIVE
+    bool "Bias WakeNet toward recall (DET_MODE_95 instead of DET_MODE_90)"
+    depends on UBO_WAKE_ENABLE
+    default n
+    help
+        Selects the model's 95%-recall operating point rather than its 90% one.
+        Catches more genuine utterances and produces more false wakes. For
+        wn9_jarvis_tts these are thresholds 0.632 and 0.627 respectively.
+
+        Note DET_MODE_2CH_* / _3CH_* are not usable here: AFE_TYPE_VC forces
+        mic_num to 1, so WakeNet runs single-channel.
+
+config UBO_WAKE_THRESHOLD_PCT
+    int "Override the WakeNet detection threshold (percent, 0 = model default)"
+    depends on UBO_WAKE_ENABLE
+    default 0
+    range 0 99
+    help
+        0 keeps the threshold baked into the model (0.627/0.632 for
+        wn9_jarvis_tts). Otherwise this is applied as pct/100 via
+        set_wakenet_threshold(); esp-sr only accepts 0.4..0.9999, so values
+        between 1 and 39 are rejected at build time.
+
+        Higher = stricter = fewer false wakes and more missed ones.
+
+config UBO_WAKE_COOLDOWN_MS
+    int "Deaf window after the speaker goes quiet (ms)"
+    depends on UBO_WAKE_ENABLE
+    default 800
+    range 0 5000
+    help
+        How long to wait after closing the output before re-arming the wake
+        word. Covers speaker decay and room reverb so the device does not wake
+        itself on the tail of its own reply. Not an echo canceller — the
+        microphone is physically closed while the speaker is open, so this only
+        has to cover what is still ringing in the room.
+
+choice
+    prompt "Assistant behaviour a wake word triggers"
+    depends on UBO_WAKE_ENABLE
+    default UBO_WAKE_MODE_QUICK_CHAT
+    help
+        Sent to ubo-core as WakePhraseTriggerSource.mode, which selects a
+        turn-completion policy on the core side. This matters more than it
+        looks: without a trigger source the core resolves no policy at all and
+        the turn never ends, because — unlike push-to-talk — there is no button
+        release to stop it.
+
+    config UBO_WAKE_MODE_CONVERSATION
+        bool "Conversation (long pauses tolerated, ends on an end-of-turn phrase)"
+    config UBO_WAKE_MODE_QUICK_CHAT
+        bool "Quick chat (one short turn, ends after a brief silence)"
+    config UBO_WAKE_MODE_INTENTS
+        bool "Intents (voice shortcut)"
+endchoice
+
+config UBO_WAKE_MODE
+    int
+    depends on UBO_WAKE_ENABLE
+    default 3 if UBO_WAKE_MODE_CONVERSATION
+    default 2 if UBO_WAKE_MODE_QUICK_CHAT
+    default 1 if UBO_WAKE_MODE_INTENTS
+    help
+        Numeric WakeMode sent on the wire. Must match the WakeMode enum in
+        ubo_app/rpc/proto/ubo/v1/ubo.proto (INTENTS=1, QUICK_CHAT=2,
+        CONVERSATION=3, STOP_TALKING=4). Not user-visible; set by the choice
+        above.
 
 config UBO_CPU_PROBE
     bool "Log per-task CPU usage once a second (debug)"
