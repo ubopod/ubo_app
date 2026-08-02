@@ -11,7 +11,6 @@ from assistant_bridge import AssistantBridge
 from constants import (
     SATELLITES_MENU_ID,
     SECURITY_WARNING_ID,
-    STATUS_ICON_ID,
     WYOMING_ENGINES_LISTEN_PORT,
     WYOMING_MENU_ID,
     WYOMING_SATELLITE_LISTEN_PORT,
@@ -23,7 +22,6 @@ from satellite import SatelliteServer
 from security import PeerAccess
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
-from ubo_app.colors import RUNNING_COLOR, STOPPED_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
@@ -40,7 +38,11 @@ from ubo_app.store.input.types import (
     WebUIInputDescription,
 )
 from ubo_app.store.main import store
-from ubo_app.store.services.audio import AudioPlaybackDoneEvent, AudioReportSampleEvent
+from ubo_app.store.services.audio import (
+    AudioPlaybackDoneEvent,
+    AudioReportRemoteCaptureAction,
+    AudioReportSampleEvent,
+)
 from ubo_app.store.services.notifications import (
     Importance,
     Notification,
@@ -59,7 +61,6 @@ from ubo_app.store.services.wyoming import (
     WyomingSetZeroconfEnabledAction,
     WyomingState,
 )
-from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
@@ -241,6 +242,9 @@ class WyomingRuntime:
     async def close(self) -> None:
         """Close network state during service teardown."""
         self._configuration = None
+        # The microphone icon belongs to the audio service now, so it outlives
+        # this one — release its colour rather than leaving it reading as live.
+        store.dispatch(AudioReportRemoteCaptureAction(is_active=False))
         await self._stop_servers()
 
 
@@ -546,13 +550,11 @@ async def init_service() -> Subscriptions:
             satellite_status.value not in ('stopped', 'paused')
             or engines_status.value != 'stopped'
         )
-        store.dispatch(
-            StatusIconsRegisterAction(
-                id=STATUS_ICON_ID,
-                icon='󰍬' if running else '󰍭',
-                color=RUNNING_COLOR if running else STOPPED_COLOR,
-            ),
-        )
+        # Colour the audio service's microphone icon rather than registering a
+        # second one: two icons with the same glyph competed for the four status
+        # slots, and the loser (the real microphone indicator, lowest priority)
+        # was silently dropped.
+        store.dispatch(AudioReportRemoteCaptureAction(is_active=running))
 
     store.dispatch(
         RegisterSettingAppAction(

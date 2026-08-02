@@ -48,5 +48,4 @@ UBO_NET_NAME = 'ubo_net'
 # further ones can be added beside Wyoming without moving anything.
 SATELLITES_MENU_ID = 'wyoming:satellites'
 WYOMING_MENU_ID = 'wyoming:main'
-STATUS_ICON_ID = 'wyoming:state'
 SECURITY_WARNING_ID = 'wyoming:network-warning'

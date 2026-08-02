@@ -117,6 +117,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'AudioPlayRecordingAction': 'ubo_app.store.services.audio',
     'AudioPlaybackDoneAction': 'ubo_app.store.services.audio',
     'AudioPlaybackDoneEvent': 'ubo_app.store.services.audio',
+    'AudioReportRemoteCaptureAction': 'ubo_app.store.services.audio',
     'AudioReportSampleAction': 'ubo_app.store.services.audio',
     'AudioReportSampleEvent': 'ubo_app.store.services.audio',
     'AudioSample': 'ubo_app.store.services.audio',

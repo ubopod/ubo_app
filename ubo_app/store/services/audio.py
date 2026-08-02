@@ -63,6 +63,19 @@ class AudioSetMuteStatusAction(AudioAction):
     device: AudioDevice
 
 
+class AudioReportRemoteCaptureAction(AudioAction):
+    """Report whether a remote client is set up to receive the microphone.
+
+    Dispatched by services that stream the device microphone off-device (the
+    Wyoming satellite today). It only colours the microphone status icon — the
+    audio service stays the single owner of that icon, so there is one
+    microphone indicator whose glyph always tracks the mute state and whose
+    position never depends on which other service happens to be running.
+    """
+
+    is_active: bool
+
+
 class AudioToggleMuteStatusAction(AudioAction):
     """Toggle mute status action."""
 
@@ -232,6 +245,11 @@ class AudioState(Immutable):
     is_capture_mute: bool = field(
         default=_capture_mute_default(),
     )
+
+    # Whether a remote client is receiving the microphone (e.g. the Wyoming
+    # satellite). Colours the microphone status icon; not persisted, since it
+    # describes a live connection rather than user intent.
+    is_remote_capture_active: bool = False
 
     is_recording: bool = False
     recording: AudioSample | None = None

@@ -9,6 +9,7 @@ from redux import (
     ReducerResult,
 )
 
+from ubo_app.colors import RUNNING_COLOR
 from ubo_app.store.services.audio import (
     AudioAction,
     AudioChangeVolumeAction,
@@ -25,6 +26,7 @@ from ubo_app.store.services.audio import (
     AudioPlayChimeAction,
     AudioPlayChimeEvent,
     AudioPlayRecordingAction,
+    AudioReportRemoteCaptureAction,
     AudioReportSampleAction,
     AudioReportSampleEvent,
     AudioSetMuteStatusAction,
@@ -41,6 +43,27 @@ from ubo_app.store.services.notifications import Chime
 from ubo_app.store.status_icons.types import StatusIconsRegisterAction
 
 Action = InitAction | AudioAction | StatusIconsRegisterAction
+
+
+def _microphone_icon(
+    *,
+    is_mute: bool,
+    is_remote_capture_active: bool,
+) -> StatusIconsRegisterAction:
+    """Compose the one microphone status icon from everything that affects it.
+
+    Built in a single place so the glyph always tracks the mute state and the
+    icon keeps one identity (and therefore one position) no matter which service
+    is currently receiving the microphone. A muted microphone is never coloured
+    as live: the reducer emits no sample events while muted, so nothing is
+    reaching a remote client.
+    """
+    return StatusIconsRegisterAction(
+        icon='󰍭' if is_mute else '󰍬',
+        color=RUNNING_COLOR if is_remote_capture_active and not is_mute else 'white',
+        priority=AUDIO_MIC_STATE_ICON_PRIORITY,
+        id=AUDIO_MIC_STATE_ICON_ID,
+    )
 
 
 def reducer(
@@ -99,10 +122,20 @@ def reducer(
             return CompleteReducerResult(
                 state=state(is_capture_mute=action.is_mute),
                 actions=[
-                    StatusIconsRegisterAction(
-                        icon='󰍭' if action.is_mute else '󰍬',
-                        priority=AUDIO_MIC_STATE_ICON_PRIORITY,
-                        id=AUDIO_MIC_STATE_ICON_ID,
+                    _microphone_icon(
+                        is_mute=action.is_mute,
+                        is_remote_capture_active=state.is_remote_capture_active,
+                    ),
+                ],
+            )
+
+        case AudioReportRemoteCaptureAction(is_active=is_active):
+            return CompleteReducerResult(
+                state=state(is_remote_capture_active=is_active),
+                actions=[
+                    _microphone_icon(
+                        is_mute=state.is_capture_mute,
+                        is_remote_capture_active=is_active,
                     ),
                 ],
             )

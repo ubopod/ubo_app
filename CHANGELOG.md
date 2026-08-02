@@ -14,6 +14,12 @@ cycle.
   own — the openWakeWord add-on is unavailable on container installs — and the
   microphone is only streamed for the duration of a command instead of
   continuously; the LED ring is green for the duration of that command
+- fix(audio,wyoming): the microphone status icon is owned solely by the audio
+  service — Wyoming registered a second one with the same glyph, and since only
+  the four highest-priority icons are rendered, the real (lowest-priority)
+  microphone indicator was dropped off the status bar. It now keeps one position,
+  always tracks the mute state, and turns green while a remote client is
+  receiving the microphone
 - feat(speech-recognition): match configured voice shortcuts during a QUICK_CHAT
   assistant session — a matched command runs its bound action and ends the session
   instead of being answered by the LLM (stage 1, local Vosk, offline)
