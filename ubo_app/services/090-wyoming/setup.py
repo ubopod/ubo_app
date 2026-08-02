@@ -285,15 +285,21 @@ def _register_persistence() -> None:
 
 
 def _network_warning() -> None:
-    """Keep microphone and cloud-provider risks visible when leaving loopback."""
+    """Keep the microphone risk visible once the listener leaves loopback.
+
+    Worded for a set of policies rather than a single choice: the old text said
+    only the *selected* source could connect, which stopped being true once they
+    combined.
+    """
     store.dispatch(
         NotificationsAddAction(
             notification=Notification(
                 id=SECURITY_WARNING_ID,
                 title='Home Assistant Voice Access',
                 content=(
-                    'Wyoming has no authentication. Only the selected Docker '
-                    'bridge or explicitly allowed Home Assistant addresses can connect.'
+                    'Wyoming has no authentication. Every source permitted by a '
+                    'policy can reach this microphone and speakers. Remove its '
+                    'policy to withdraw a source.'
                 ),
                 importance=Importance.HIGH,
                 display_type=NotificationDisplayType.STICKY,
