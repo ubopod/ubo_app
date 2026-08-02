@@ -23,6 +23,7 @@
 
 #include "audio.h"
 #include "board.h"
+#include "cpu_probe.h"
 #include "client_app.h"
 #include "input.h"
 #include "net.h"
@@ -136,6 +137,9 @@ void app_main(void) {
              (unsigned long)esp_get_free_heap_size(),
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
+
+    /* Started before the transport branch so it profiles either link. */
+    ubo_cpu_probe_start();
 
     /* 4. Transport. NVS + netif + event loop are shared by both; only the WiFi
      * path pays for esp_wifi_init. */

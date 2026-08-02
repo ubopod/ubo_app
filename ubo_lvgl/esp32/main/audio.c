@@ -159,16 +159,27 @@ static struct {
     float want_vol;
     int64_t last_feed_us;
 
-    /* TEMP: whole-session capture recorder. Records exactly the bytes handed
-     * upstream, in PSRAM, and dumps only AFTER the session ends — dumping
-     * inline would itself stall capture and make the recording unrepresentative
-     * of what the core actually receives. */
+#ifdef CONFIG_UBO_MIC_SESSION_RECORDER
+    /* Whole-session capture recorder (debug, see UBO_MIC_SESSION_RECORDER).
+     * Records exactly the bytes handed upstream, in PSRAM, and dumps only
+     * AFTER the session ends — dumping inline would itself stall capture and
+     * make the recording unrepresentative of what the core actually receives. */
     uint8_t *rec_buf;
     size_t rec_len;
     size_t rec_cap;
+#endif
     volatile bool mic_active;
     volatile bool mic_stop;
     volatile bool flush; /* discard buffered playback (AudioStopPlaybackEvent) */
+    /* Playback chunks discarded without ever reaching the speaker. Both drops
+     * are silent by design and sound identical from the outside (choppy
+     * speech), so they are counted separately to tell them apart. */
+    unsigned drops_ring_full; /* no room within the deadline */
+    unsigned drops_mic_active; /* refused because a talk session is open */
+    /* Mid-stream gaps: the ring ran dry while the codec was open, i.e. nobody
+     * refused audio -- it just never arrived in time. This is what CPU
+     * starvation of the feeding task sounds like, and no drop counter sees it. */
+    unsigned underruns;
     ubo_audio_mic_cb mic_cb;
     void *mic_user;
 } a;
@@ -263,6 +274,20 @@ static void play_task(void *arg) {
             continue;
         }
         if (n > 0) {
+            /* Audio resuming after a gap with the codec still open means the
+             * ring was starved mid-utterance -- measured on resume so the
+             * silence after a finished utterance is not counted. */
+            const int64_t resumed_us = esp_timer_get_time();
+            if (a.out_open && a.last_feed_us &&
+                resumed_us - a.last_feed_us > 100000) {
+                a.underruns++;
+                if (a.underruns == 1 || a.underruns % 5 == 0) {
+                    ESP_LOGW(TAG,
+                             "playback: %u underrun(s), ring starved for %lld ms",
+                             a.underruns,
+                             (long long)((resumed_us - a.last_feed_us) / 1000));
+                }
+            }
             if (!a.out_open || a.out_rate != a.want_rate ||
                 a.out_ch != a.want_ch || a.out_width != a.want_width) {
                 close_out();
@@ -283,7 +308,15 @@ static void play_task(void *arg) {
 
 void ubo_audio_play(const uint8_t *pcm, size_t len, int rate, int channels,
                     int width, float volume) {
-    if (!a.out_dev || !pcm || len == 0 || a.mic_active) {
+    if (!a.out_dev || !pcm || len == 0) {
+        return;
+    }
+    if (a.mic_active) {
+        a.drops_mic_active++;
+        if (a.drops_mic_active == 1 || a.drops_mic_active % 25 == 0) {
+            ESP_LOGW(TAG, "playback: %u chunk(s) refused, talk session open",
+                     a.drops_mic_active);
+        }
         return;
     }
     a.want_rate = rate;
@@ -298,6 +331,17 @@ void ubo_audio_play(const uint8_t *pcm, size_t len, int rate, int channels,
     const TickType_t deadline = xTaskGetTickCount() + pdMS_TO_TICKS(300);
     while (xStreamBufferSpacesAvailable(a.play_ring) < len) {
         if (xTaskGetTickCount() >= deadline) {
+            /* The ring drains at playback rate, so this fires when the core
+             * delivers an utterance faster than real time: the excess has
+             * nowhere to go and this chunk is lost, which is heard as a gap. */
+            a.drops_ring_full++;
+            if (a.drops_ring_full == 1 || a.drops_ring_full % 10 == 0) {
+                ESP_LOGW(
+                    TAG,
+                    "playback: %u chunk(s) dropped, ring full (want %u B, free %u B)",
+                    a.drops_ring_full, (unsigned)len,
+                    (unsigned)xStreamBufferSpacesAvailable(a.play_ring));
+            }
             return;
         }
         vTaskDelay(pdMS_TO_TICKS(10));
@@ -337,10 +381,12 @@ static void mic_emit(size_t *filled) {
          * cold-start contents, which is NOT representative of steady state.
          * Dumping emit #1 made every earlier analysis wrong. */
     }
+#ifdef CONFIG_UBO_MIC_SESSION_RECORDER
     if (a.rec_buf && a.rec_len + *filled <= a.rec_cap) {
         memcpy(a.rec_buf + a.rec_len, s_mic_buf, *filled);
         a.rec_len += *filled;
     }
+#endif
     if (a.mic_cb) {
         a.mic_cb(a.mic_user, s_mic_buf, *filled,
                  (float)(esp_timer_get_time() / 1000000.0));
@@ -348,15 +394,11 @@ static void mic_emit(size_t *filled) {
     *filled = 0;
 }
 
-/* Release the codec once capture has finished (both AFE tasks and the plain
- * path funnel through here so the teardown is identical). */
-/* TEMP: emit the recorded session as base64 once capture has stopped. */
+#ifdef CONFIG_UBO_MIC_SESSION_RECORDER
+/* Emit the recorded session as base64 once capture has stopped. Debug aid,
+ * off by default -- see UBO_MIC_SESSION_RECORDER in Kconfig.projbuild for what
+ * it is for and why leaving it on makes the device deaf to TTS. */
 static void rec_dump(void) {
-    if (a.mic_dropped) {
-        ESP_LOGE(TAG, "capture ring overflow: %u bytes dropped",
-                 (unsigned)a.mic_dropped);
-        a.mic_dropped = 0;
-    }
     if (!a.rec_buf || a.rec_len == 0) {
         return;
     }
@@ -374,9 +416,27 @@ static void rec_dump(void) {
     ESP_LOGW(TAG, "SESEND");
     a.rec_len = 0;
 }
+#endif /* CONFIG_UBO_MIC_SESSION_RECORDER */
 
+/* Release the codec once capture has finished (both AFE tasks and the plain
+ * path funnel through here so the teardown is identical). */
 static void mic_release(void) {
+#ifdef CONFIG_UBO_AFE_ENABLE
+    /* Reported regardless of the recorder: this is mic audio the device failed
+     * to capture, which no other counter covers. */
+    if (a.mic_dropped) {
+        ESP_LOGE(TAG, "capture ring overflow: %u bytes dropped",
+                 (unsigned)a.mic_dropped);
+        a.mic_dropped = 0;
+    }
+#endif
+#ifdef CONFIG_UBO_MIC_SESSION_RECORDER
+    /* Deliberately ahead of clearing `mic_active`: the dump describes the
+     * session that is ending, and capture must stay shut while it drains. The
+     * cost is that playback is refused meanwhile -- acceptable only because
+     * this is a debug build. */
     rec_dump();
+#endif
     xSemaphoreTake(a.lock, portMAX_DELAY);
     esp_codec_dev_close(a.in_dev);
     a.mic_active = false;
@@ -505,10 +565,12 @@ static void afe_fetch_task(void *arg) {
             src += take;
             left -= take;
             if (filled >= chunk_target || filled == MIC_BUF_BYTES) {
+#ifdef CONFIG_UBO_MIC_SESSION_RECORDER
                 if (a.rec_buf && a.rec_len + filled <= a.rec_cap) {
                     memcpy(a.rec_buf + a.rec_len, s_mic_buf, filled);
                     a.rec_len += filled;
                 }
+#endif
                 /* Non-blocking by design: never make capture wait on the net. */
                 const size_t sent =
                     xStreamBufferSend(a.mic_ring, s_mic_buf, filled, 0);
@@ -852,11 +914,13 @@ int ubo_audio_init(i2c_master_bus_handle_t i2c) {
 
     /* Enable the speaker amplifier (board-specific: IO-expander pin or GPIO). */
     board_speaker_amp_enable(true);
+#ifdef CONFIG_UBO_MIC_SESSION_RECORDER
     a.rec_cap = 640 * 1024; /* ~20 s at 16 kHz mono, PSRAM */
     a.rec_buf = heap_caps_malloc(a.rec_cap, MALLOC_CAP_SPIRAM);
     if (!a.rec_buf) {
         a.rec_cap = 0;
     }
+#endif
     if (xTaskCreate(play_task, "ubo_play", 4096, NULL, 5, NULL) != pdPASS) {
         ESP_LOGE(TAG, "play task creation failed");
         return -1;

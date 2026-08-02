@@ -165,6 +165,44 @@ config UBO_AFE_ENABLE
         board's audio path does not currently provide. Without AEC the device
         cannot hear over its own speaker.
 
+config UBO_CPU_PROBE
+    bool "Log per-task CPU usage once a second (debug)"
+    default n
+    select FREERTOS_USE_TRACE_FACILITY
+    select FREERTOS_GENERATE_RUN_TIME_STATS
+    help
+        Samples the FreeRTOS run-time counters and prints each task's share of
+        the last second. Written to answer "is rendering starving audio?" — it
+        shows, for example, that streaming assistant text puts `lvgl` and
+        `ubo_store` at ~50% each on one core while `ubo_mic` holds ~100% of the
+        other, which is the difference between a scheduling problem and a
+        protocol one.
+
+        OFF by default: the run-time counters it selects add a timer read to
+        every context switch, and a line a second is noise on a healthy device.
+
+config UBO_MIC_SESSION_RECORDER
+    bool "Dump each capture session over the console as base64 (debug)"
+    depends on SPIRAM
+    default n
+    help
+        Records every byte handed upstream during a push-to-talk session into
+        PSRAM and, once capture stops, prints it to the console as base64
+        between SESBEGIN/SESEND markers. Decode it back to a .wav to hear
+        exactly what ubo-core received, which is the only way to tell a capture
+        fault (wrong TDM slot, dead mic, AFE misconfigured) from a fault
+        further up the pipeline — it is what the far-field investigation in
+        AFE-FAR-FIELD.md was built around, and it will be wanted again.
+
+        OFF by default because it is not free: the dump runs inside
+        `mic_release`, *before* `mic_active` is cleared, and a session is
+        hundreds of KB of base64 over a serial console. `ubo_audio_play`
+        refuses every chunk while `mic_active` is set, so for as long as the
+        dump runs the device silently discards incoming TTS — which presents
+        as an assistant reply that starts several seconds in, or, for a short
+        reply, is never heard at all. Enable it only when you are debugging
+        capture, and expect playback to be deaf while it drains.
+
 config UBO_MIC_CHUNK_MS
     int "Push-to-talk mic chunk size (ms)"
     default 200

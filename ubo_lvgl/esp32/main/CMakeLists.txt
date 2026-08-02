@@ -32,6 +32,7 @@ idf_component_register(
         "input.c"
         "provisioning.c"
         "audio.c"
+        "cpu_probe.c"
         "usb_ppp.c"
     INCLUDE_DIRS "." "${BOARD_DIR}"
     REQUIRES
