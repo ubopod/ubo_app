@@ -14,6 +14,10 @@ cycle.
   own — the openWakeWord add-on is unavailable on container installs — and the
   microphone is only streamed for the duration of a command instead of
   continuously; the LED ring is green for the duration of that command
+- refactor(wyoming): the satellite, engines, and discovery rows are checkboxes —
+  marked is enabled — matching the WiFi hotspot toggle, and their labels drop the
+  redundant `: On`/`: Off` suffix so they fit the LCD (`ASR/TTS/LLM Engines` is
+  now `STT/TTS/LLM`)
 - fix(wyoming): serialize listener reconciliation — starting a listener dispatches
   a status action that re-triggers the reconcile autorun, so two passes overlapped
   on the same fixed ports and the loser died with `EADDRINUSE`, dropping both

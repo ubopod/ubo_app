@@ -473,25 +473,52 @@ def _settings_path_matcher(path: tuple[str, ...]) -> str | None:
     return None
 
 
+# Checkbox glyphs for on/off rows — marked means enabled, blank means disabled.
+# The same pair the WiFi hotspot row uses, so a toggle reads the same everywhere.
+_CHECKED = '\U000f0c52'
+_UNCHECKED = '\U000f0131'
+
+
+def _toggle(
+    *,
+    key: str,
+    label: str,
+    enabled: bool,
+    action_id: str,
+) -> MenuItemData:
+    """Build an on/off row whose checkbox carries the state.
+
+    The label stays bare — no ``: On``/``: Off`` suffix — because the checkbox
+    already says it and the LCD is narrow enough that the suffix pushes real
+    labels off the edge.
+    """
+    return MenuItemData(
+        key=key,
+        label=label,
+        icon=_CHECKED if enabled else _UNCHECKED,
+        action_id=action_id,
+    )
+
+
 def _menu_items(state: WyomingState) -> tuple[MenuItemData, ...]:
     """Build the Assistant settings menu from desired and effective state."""
     items: list[MenuItemData] = [
-        MenuItemData(
+        _toggle(
             key='wyoming:satellite',
-            label=f'Satellite: {"On" if state.is_satellite_enabled else "Off"}',
-            icon='󰍬' if state.is_satellite_enabled else '󰍭',
+            label='Satellite',
+            enabled=state.is_satellite_enabled,
             action_id='wyoming:toggle-satellite',
         ),
-        MenuItemData(
+        _toggle(
             key='wyoming:engines',
-            label=f'ASR/TTS/LLM Engines: {"On" if state.is_engines_enabled else "Off"}',
-            icon='󰊠' if state.is_engines_enabled else '󰊡',
+            label='STT/TTS/LLM',
+            enabled=state.is_engines_enabled,
             action_id='wyoming:toggle-engines',
         ),
         MenuItemData(
             key='wyoming:policy',
             label=f'Connections: {state.connection_policy.value}',
-            icon='󰌷',
+            icon='\U000f0337',
             action_id='wyoming:choose-policy',
         ),
     ]
@@ -500,23 +527,19 @@ def _menu_items(state: WyomingState) -> tuple[MenuItemData, ...]:
             MenuItemData(
                 key='wyoming:allowed-peers',
                 label=(
-                    f'Allowed HA peers: {", ".join(state.allowed_peers)}'
+                    f'Peers: {", ".join(state.allowed_peers)}'
                     if state.allowed_peers
-                    else 'Allowed HA peers: not configured'
+                    else 'Peers: none'
                 ),
-                icon='󰒍',
+                icon='\U000f048d',
                 action_id='wyoming:edit-allowed-peers',
             ),
         )
-    if state.connection_policy == WyomingConnectionPolicy.ALLOWLIST:
         items.append(
-            MenuItemData(
+            _toggle(
                 key='wyoming:zeroconf',
-                label=(
-                    'Zeroconf discovery: '
-                    f'{"On" if state.is_zeroconf_enabled else "Off"}'
-                ),
-                icon='󰖟' if state.is_zeroconf_enabled else '󰖠',
+                label='Discovery',
+                enabled=state.is_zeroconf_enabled,
                 action_id='wyoming:toggle-zeroconf',
             ),
         )
