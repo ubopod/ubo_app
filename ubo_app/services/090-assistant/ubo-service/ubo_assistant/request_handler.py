@@ -640,3 +640,12 @@ async def _run_request(  # noqa: C901, PLR0912, PLR0915
         )
         logger.info(message)
         await collector.dispatch_last_frame()
+        # After the drain, so the counts are final. `dispatched` short of
+        # `output_count` means chunks never reached core -- the audible symptom
+        # is truncated speech, and nothing else reports it.
+        delivery = (
+            f'screen-reader: reports dispatched={collector.reports_dispatched} '
+            f'failed={collector.reports_failed} of {collector.output_count} '
+            f'output frame(s) session={session_id!r}'
+        )
+        logger.info(delivery)

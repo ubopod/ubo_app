@@ -24,14 +24,10 @@ from ubo_bindings.ubo.v1 import (
     AudioSample,
 )
 
-from ubo_assistant.constants import LIVE_PIPELINE_SOURCE_ID
-
-# Cap the size of each emitted ``AudioSample``. Pipecat can hand us ~0.5 s
-# frames (~48 KB at 48 kHz/16-bit), which overflow the heap of
-# memory-constrained clients (the ESP32 LVGL client has ~50 KB free): nanopb's
-# decode ``realloc`` fails and TTS goes silent. ~8 KB (~85 ms at 48 kHz) decodes
-# comfortably everywhere; fuller clients just reassemble more, smaller chunks.
-_MAX_AUDIO_CHUNK_BYTES = 8192
+from ubo_assistant.constants import (
+    LIVE_PIPELINE_SOURCE_ID,
+    MAX_AUDIO_CHUNK_BYTES,
+)
 
 
 class UboOutputTransport(BaseOutputTransport):
@@ -130,11 +126,11 @@ class UboOutputTransport(BaseOutputTransport):
             audio = frame.audio
             # Split large frames into small, whole-sample-aligned chunks so
             # memory-constrained clients can decode each ``AudioSample`` (see
-            # ``_MAX_AUDIO_CHUNK_BYTES``). Alignment keeps a 16-bit sample from
+            # ``MAX_AUDIO_CHUNK_BYTES``). Alignment keeps a 16-bit sample from
             # being split across two chunks. ``len(audio) or 1`` preserves the
             # single-frame behavior for an (empty) keepalive frame.
             align = 2 * max(frame.num_channels, 1)
-            step = max(_MAX_AUDIO_CHUNK_BYTES // align, 1) * align
+            step = max(MAX_AUDIO_CHUNK_BYTES // align, 1) * align
             for offset in range(0, len(audio) or 1, step):
                 self._report_assistance_frame(
                     AcceptableAssistanceFrame(

@@ -251,21 +251,41 @@ def _make_queue_event(
     loop: AbstractEventLoop,
 ) -> Callable[[UboEvent], None]:
     """Create a thread-safe callback that puts events into an async queue."""
+    # Dropped-event tally for this subscription. Losing an event here is not a
+    # detail: a dropped state update leaves a client stale, and a dropped
+    # `AudioPlayAudioSequenceEvent` is a hole in the middle of spoken audio.
+    # It used to be recorded at `verbose`, which is off in practice, so the
+    # loss was invisible.
+    dropped = [0]
+
     def queue_event(event: UboEvent) -> None:
         def _put() -> None:
             try:
                 queue.put_nowait(event)
             except QueueFull:
-                logger.verbose(
-                    'Subscription event queue is full, dropping event',
-                    extra={
-                        'event': event,
-                        'queue_size': queue.qsize(),
-                    },
-                )
+                dropped[0] += 1
+                # First drop, then every 20th: enough to notice a burst without
+                # the log itself becoming the flood.
+                if dropped[0] == 1 or dropped[0] % 20 == 0:
+                    logger.warning(
+                        'Subscription event queue full, dropping event',
+                        extra={
+                            'event_type': type(event).__name__,
+                            'dropped_total': dropped[0],
+                            'queue_size': queue.qsize(),
+                        },
+                    )
 
-        with contextlib.suppress(RuntimeError):
+        try:
             loop.call_soon_threadsafe(_put)
+        except RuntimeError:
+            # The subscription's loop is already closed (client went away while
+            # the event was in flight). The event is lost; previously this was
+            # suppressed without leaving any trace at all.
+            logger.debug(
+                'Dropping event, subscription loop is closed',
+                extra={'event_type': type(event).__name__},
+            )
 
     return queue_event
 

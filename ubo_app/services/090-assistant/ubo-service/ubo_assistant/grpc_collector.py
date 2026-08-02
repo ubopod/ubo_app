@@ -28,7 +28,10 @@ from ubo_bindings.ubo.v1 import (
     AudioSample,
 )
 
-from ubo_assistant.constants import REQUEST_PIPELINE_SOURCE_ID
+from ubo_assistant.constants import (
+    MAX_AUDIO_CHUNK_BYTES,
+    REQUEST_PIPELINE_SOURCE_ID,
+)
 
 if TYPE_CHECKING:
     from pipecat.audio.resamplers.base_audio_resampler import BaseAudioResampler
@@ -99,9 +102,22 @@ class GRPCTerminalCollector(FrameProcessor):
         # response, or any SegmentedSTTService frame) — the deterministic signal
         # that a streaming STT has emitted its complete transcript.
         self.stt_finalized: asyncio.Event = asyncio.Event()
-        # Fire-and-forget dispatch tasks, tracked so the end-marker can be ordered
-        # behind the audio/text chunks (the real client dispatches concurrently).
+        # Dispatch tasks, tracked so the end-marker can be ordered behind the
+        # audio/text chunks.
         self._pending: list[asyncio.Task[object]] = []
+        # Tail of the dispatch chain. ``UboRPCClient.dispatch`` returns straight
+        # away after scheduling the RPC, so reporting chunks back-to-back put N
+        # dispatches in flight at once and core received them in whatever order
+        # they happened to land. That is audible: the ESP32 plays TTS chunks in
+        # arrival order and does not sort by ``index`` (see the note in
+        # ubo_lvgl/esp32/main/client_app.c), so speech came out reordered.
+        # Chaining each dispatch behind its predecessor makes the order total
+        # without blocking the pipeline that produces the frames.
+        self._dispatch_chain: asyncio.Task[object] | None = None
+        # Diagnostics: reports handed to the client vs dispatches that actually
+        # completed. A gap means chunks never reached core.
+        self.reports_dispatched = 0
+        self.reports_failed = 0
 
     @property
     def sent_last_frame(self) -> bool:
@@ -109,18 +125,37 @@ class GRPCTerminalCollector(FrameProcessor):
         return self._sent_last_frame
 
     def _report(self, data: AcceptableAssistanceFrame) -> None:
-        task = self._client.dispatch(
-            action=Action(
-                assistant_report_action=AssistantReportAction(
-                    source_id=REQUEST_SOURCE_ID,
-                    data=data,
+        previous = self._dispatch_chain
+
+        async def send() -> None:
+            if previous is not None:
+                try:
+                    await previous
+                except asyncio.CancelledError:
+                    raise
+                except Exception:  # noqa: BLE001, S110
+                    # Ordering only -- a predecessor's failure is reported by
+                    # _drain_pending, and must not stop this chunk being sent.
+                    pass
+            # Issued only now, so the RPC for chunk N+1 leaves after chunk N's
+            # has completed and core sees them in emission order.
+            task = self._client.dispatch(
+                action=Action(
+                    assistant_report_action=AssistantReportAction(
+                        source_id=REQUEST_SOURCE_ID,
+                        data=data,
+                    ),
                 ),
-            ),
-        )
-        # Real client returns the fire-and-forget task; the test fake returns
-        # None. Track it so the end-marker can wait for it (ordering).
-        if task is not None:
-            self._pending.append(task)
+            )
+            # Real client returns the dispatch task; the test fake returns None.
+            if task is not None:
+                await task
+            self.reports_dispatched += 1
+
+        chained = self._client.event_loop.create_task(send())
+        self._dispatch_chain = chained
+        # Tracked so the end-marker can wait for every chunk (ordering).
+        self._pending.append(chained)
 
     async def _drain_pending(self) -> None:
         """Wait for in-flight dispatches so the next one is ordered behind them."""
@@ -133,6 +168,7 @@ class GRPCTerminalCollector(FrameProcessor):
         # BaseException, so ``Exception`` skips ordinary task cancellation.
         for result in results:
             if isinstance(result, Exception):
+                self.reports_failed += 1
                 message = f'screen-reader: a report dispatch failed: {result!r}'
                 logger.warning(message)
 
@@ -177,23 +213,31 @@ class GRPCTerminalCollector(FrameProcessor):
             rate = _UBO_TARGET_SAMPLE_RATE
         self.audio_bytes += len(audio)
         self.audio_rate = rate
-        self._report(
-            AcceptableAssistanceFrame(
-                assistance_audio_frame=AssistanceAudioFrame(
-                    audio=AudioSample(
-                        data=audio,
-                        rate=rate,
-                        channels=frame.num_channels,
-                        width=_PCM_SAMPLE_WIDTH,
+        # Split exactly as ``ubo_output_transport`` does: pipecat hands us ~0.5 s
+        # frames (~48 KB at 48 kHz) and a client with ~50 KB of heap cannot
+        # decode one, so the whole chunk is lost -- and on a still-image-sized
+        # play buffer the ones that do decode overrun it. Whole-sample-aligned
+        # so a 16-bit sample is never split across two chunks.
+        align = _PCM_SAMPLE_WIDTH * max(frame.num_channels, 1)
+        step = max(MAX_AUDIO_CHUNK_BYTES // align, 1) * align
+        for offset in range(0, len(audio) or 1, step):
+            self._report(
+                AcceptableAssistanceFrame(
+                    assistance_audio_frame=AssistanceAudioFrame(
+                        audio=AudioSample(
+                            data=audio[offset : offset + step],
+                            rate=rate,
+                            channels=frame.num_channels,
+                            width=_PCM_SAMPLE_WIDTH,
+                        ),
+                        timestamp=self._client.event_loop.time(),
+                        id=self._assistance_id,
+                        index=self._index,
+                        session_id=self._session_id,
                     ),
-                    timestamp=self._client.event_loop.time(),
-                    id=self._assistance_id,
-                    index=self._index,
-                    session_id=self._session_id,
                 ),
-            ),
-        )
-        self._index += 1
+            )
+            self._index += 1
         self.output_count += 1
         self.first_output.set()
 

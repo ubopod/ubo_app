@@ -21,6 +21,18 @@ REQUEST_PIPELINE_SOURCE_ID = 'assistant_request'
 MANUAL_RELEASE_QUIET_WINDOW_SECONDS = 0.6
 MANUAL_RELEASE_MAX_WAIT_SECONDS = 2.5
 
+# Cap the size of each emitted ``AudioSample``. Pipecat can hand us ~0.5 s
+# frames (~48 KB at 48 kHz/16-bit), which overflow the heap of
+# memory-constrained clients (the ESP32 LVGL client has ~50 KB free): nanopb's
+# decode ``realloc`` fails and TTS goes silent. ~8 KB (~85 ms at 48 kHz) decodes
+# comfortably everywhere; fuller clients just reassemble more, smaller chunks.
+#
+# Shared, not per-transport: every path that emits TTS audio has to honour it.
+# It lived in ``ubo_output_transport`` alone, so the ``grpc_collector`` path
+# (screen-reader / one-shot requests) shipped whole ~48 KB frames and the
+# satellite lost most of the utterance.
+MAX_AUDIO_CHUNK_BYTES = 8192
+
 IS_RPI = Path('/etc/rpi-issue').exists()
 DATA_PATH = Path(
     os.environ.get(

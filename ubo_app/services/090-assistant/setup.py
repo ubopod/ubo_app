@@ -221,6 +221,10 @@ VOICE_PREVIEW_TEXT = 'This is a new voice.'
 # (`push_render` is idempotent by `stream_id`).
 ASSISTANT_IMAGE_STREAM_ID = 'assistant:image'
 
+# Per-utterance count of TTS audio chunks that reached core, keyed by assistance
+# id and cleared when its end-of-stream marker arrives.
+_audio_chunks_received: dict[str, int] = {}
+
 
 def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
     return {
@@ -334,6 +338,18 @@ def _communicate(event: AssistantHandleReportEvent) -> None:
                         source=audio_source,
                     ),
                 )
+                # Counts the chunks that actually crossed the RPC boundary, to
+                # bracket the assistant's own "reports dispatched" tally: a gap
+                # between the two localises lost TTS audio to the transport,
+                # a gap after this one localises it to the audio bus.
+                _audio_chunks_received[id] = _audio_chunks_received.get(id, 0) + 1
+                if is_last_frame:
+                    logger.info(
+                        'assistant: audio chunks received for %s: %d (last index %s)',
+                        id,
+                        _audio_chunks_received.pop(id, 0),
+                        index,
+                    )
 
         case AssistanceImageFrame() as image:
             # The picture travels as frame-stream events, not inline in props:
