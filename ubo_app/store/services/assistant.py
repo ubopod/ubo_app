@@ -1076,6 +1076,15 @@ class AssistantSynthesizeAction(AssistantAction):
     text: str
     session_id: str
     tts_provider: AssistantTTSName | None = None
+    play_locally: bool = True
+    """Whether the synthesized audio is also played on the device speaker.
+
+    On by default, because most callers (the screen reader, voice previews) ask
+    for synthesis precisely to hear it. A caller that only wants the audio
+    stream back — the Wyoming TTS engine hands it to Home Assistant, which plays
+    it on whichever satellite asked — sets this false, otherwise the device
+    speaks the response as well and it is heard twice.
+    """
 
 
 class AssistantCompleteAction(AssistantAction):
@@ -1108,6 +1117,8 @@ class AssistantRunPipelineAction(AssistantAction):
     llm_model: str | None = None
     system_prompt: str | None = None
     enable_tools: bool = False
+    play_locally: bool = True
+    """Whether audio this pipeline produces is played on the device speaker."""
 
 
 class AssistantCancelRequestAction(AssistantAction):
@@ -1307,6 +1318,10 @@ class AssistantRunPipelineEvent(AssistantEvent):
     piper_voice_id: str = ''
     kokoro_voice_id: str = ''
     tts_voice_id: str = ''
+    # Carried through so the service knows, at frame time, whether this
+    # session's audio belongs on the speaker — a frame only identifies its
+    # session, not the request that asked for it.
+    play_locally: bool = True
 
 
 class AssistantCancelRequestEvent(AssistantEvent):

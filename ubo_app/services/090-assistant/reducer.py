@@ -143,6 +143,7 @@ def _make_run_pipeline_event(  # noqa: PLR0913
     llm_model: str | None = None,
     system_prompt: str | None = None,
     enable_tools: bool = False,
+    play_locally: bool = True,
 ) -> AssistantRunPipelineEvent:
     """Build the canonical run-pipeline event, resolving providers/model from state."""
     resolved_llm = llm_provider if llm_provider is not None else state.selected_llm
@@ -162,6 +163,7 @@ def _make_run_pipeline_event(  # noqa: PLR0913
         else state.selected_models.get(resolved_llm, DEFAULT_MODELS[resolved_llm]),
         system_prompt=system_prompt,
         enable_tools=enable_tools,
+        play_locally=play_locally,
         # Resolve per-engine selections so the request handler doesn't fall
         # back to hardcoded module defaults (live and one-shot pipelines must
         # agree on the same Vosk model / Piper voice / Kokoro voice / cloud voice).
@@ -761,6 +763,7 @@ def reducer(
                         stages=[AssistantPipelineStage.TTS],
                         text=action.text,
                         tts_provider=action.tts_provider,
+                        play_locally=action.play_locally,
                     ),
                 ],
             )
@@ -799,6 +802,7 @@ def reducer(
                         llm_model=action.llm_model,
                         system_prompt=action.system_prompt,
                         enable_tools=action.enable_tools,
+                        play_locally=action.play_locally,
                     ),
                 ],
             )

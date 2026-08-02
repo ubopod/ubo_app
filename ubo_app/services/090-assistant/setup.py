@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
     from ubo_app.store.services.localization import LanguageCode
 
+import playback_policy
 from engines_registry import (
     IMAGE_GENERATOR_ENGINES,
     LLM_ENGINES,
@@ -164,6 +165,7 @@ from ubo_app.store.services.assistant import (
     AssistantHandleReportEvent,
     AssistantImageGeneratorName,
     AssistantLLMName,
+    AssistantRunPipelineEvent,
     AssistantSetOllamaThinkingAction,
     AssistantSetSelectedImageGeneratorAction,
     AssistantSetSelectedKokoroVoiceAction,
@@ -271,9 +273,31 @@ def _format_ram_gb(bytes_: int) -> str:
     return f'{bytes_ / (1024**3):.1f} GB'
 
 
+def _remember_playback_choice(event: AssistantRunPipelineEvent) -> None:
+    """Record a session that must not play its audio on the device speaker."""
+    playback_policy.remember(
+        event.session_id,
+        play_locally=event.play_locally,
+    )
+
+
 def _communicate(event: AssistantHandleReportEvent) -> None:
     """Communicate the assistance."""
     match event.data:
+        case AssistanceAudioFrame(
+            audio=sample,
+            index=index,
+            id=id,
+            is_last_frame=is_last_frame,
+            session_id=session_id,
+        ) if not playback_policy.should_play(
+            session_id,
+            is_last_frame=is_last_frame,
+        ):
+            # The caller wants the stream, not the speaker. Frames still reach
+            # whoever requested them; they just skip the audio bus.
+            pass
+
         case AssistanceAudioFrame(
             audio=sample,
             index=index,
@@ -3523,6 +3547,7 @@ async def init_service() -> None:
     # Register path matchers for assistant sub-pages
     _register_assistant_path_matchers()
 
+    store.subscribe_event(AssistantRunPipelineEvent, _remember_playback_choice)
     store.subscribe_event(AssistantHandleReportEvent, _communicate)
     store.subscribe_event(
         AssistantGenericLLMProviderRemovedEvent,

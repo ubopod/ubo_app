@@ -354,6 +354,9 @@ class EnginesEventHandler(AsyncEventHandler):
                     lambda session_id: AssistantSynthesizeAction(
                         text=text,
                         session_id=session_id,
+                        # Home Assistant plays this on whichever satellite asked
+                        # for it; speaking it here too is the same response twice.
+                        play_locally=False,
                     ),
                     cancelled=cancelled,
                 ):
