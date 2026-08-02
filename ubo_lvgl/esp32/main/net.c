@@ -199,15 +199,16 @@ void ubo_net_core_save(const char *host, const char *port) {
     const char *hv = (host && host[0]) ? host : "0.0.0.0";
     const char *pv = (port && port[0]) ? port : UBO_DEFAULT_PORT;
     ESP_ERROR_CHECK(nvs_set_str(h, "host", hv));
-    ESP_ERROR_CHECK(nvs_set_str(h, "port", pv));
+    ESP_ERROR_CHECK(nvs_set_str(h, UBO_NVS_PORT_KEY, pv));
     ESP_ERROR_CHECK(nvs_commit(h));
     nvs_close(h);
     ESP_LOGI(TAG, "core endpoint saved: %s:%s", hv, pv);
 }
 
 /* Read the provisioned host/port out of NVS. Returns false when no host has been
- * provisioned; `port` falls back to default_port when unset. Shared by the two
- * renderings below so the captive portal drives either transport. */
+ * provisioned; `port` falls back to default_port when this transport's port was
+ * never provisioned (see UBO_NVS_PORT_KEY). Shared by the two renderings below
+ * so the captive portal drives either transport. */
 static bool core_host_port(char *host, size_t host_sz, char *port,
                            size_t port_sz, const char *default_port) {
     nvs_handle_t h;
@@ -216,7 +217,8 @@ static bool core_host_port(char *host, size_t host_sz, char *port,
     }
     size_t hl = host_sz, pl = port_sz;
     esp_err_t rh = nvs_get_str(h, "host", host, &hl);
-    if (nvs_get_str(h, "port", port, &pl) != ESP_OK || port[0] == '\0') {
+    if (nvs_get_str(h, UBO_NVS_PORT_KEY, port, &pl) != ESP_OK ||
+        port[0] == '\0') {
         snprintf(port, port_sz, "%s", default_port);
     }
     nvs_close(h);

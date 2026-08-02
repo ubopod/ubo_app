@@ -60,9 +60,23 @@ void ubo_net_creds_clear(void);
 #define UBO_DEFAULT_PORT UBO_DEFAULT_GRPC_WEB_PORT
 #endif
 
+/* NVS key the provisioned port is stored under. Deliberately per-transport:
+ * Envoy's gRPC-Web endpoint and the raw-TCP mcu_server are different services
+ * on different ports, so a port provisioned while running one must not be
+ * inherited by the other. Sharing one key meant a board provisioned for
+ * gRPC-Web silently pointed a tcp-lite build at :50052 -- the Kconfig fallback
+ * (and its correct per-transport default) never got a look in, because the
+ * stale key counted as "provisioned". The host key is shared: same machine. */
+#ifdef UBO_TRANSPORT_TCP_LITE
+#define UBO_NVS_PORT_KEY "mcu_port"
+#else
+#define UBO_NVS_PORT_KEY "port"
+#endif
+
 /* Provisioned ubo-core endpoint (namespace "ubo_wifi"). save() stores host/port
  * (empty host -> "0.0.0.0", empty port -> UBO_DEFAULT_PORT). The two readers
- * render the same saved pair for whichever transport is built:
+ * render the saved host with this transport's port for whichever transport is
+ * built:
  *   url()  -> "http://<host>:<port>/grpc"  (gRPC-Web via Envoy)
  *   addr() -> "<host>:<port>"              (raw TCP, tcp-lite)
  * Both return false when no host was ever provisioned, so the caller falls back
