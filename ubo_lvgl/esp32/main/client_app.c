@@ -168,9 +168,15 @@ static void on_event(void *user, const ubo_client_Event *ev) {
         if (!e || !e->stream_id || !e->data) {
             break;
         }
+        /* An empty active stream means no frame view has rendered yet. Let the
+         * chunks through rather than dropping them: they ride the event stream
+         * and regularly beat the store-stream view render that arms this filter
+         * by ~70ms, and the renderer holds them until the view exists. Dropping
+         * them cost a still two thirds of its rows -- permanently, since a
+         * still has no next frame. */
         bool active;
         xSemaphoreTake(fs.mtx, portMAX_DELAY);
-        active = fs.active_stream[0] &&
+        active = !fs.active_stream[0] ||
                  strcmp(fs.active_stream, e->stream_id) == 0;
         xSemaphoreGive(fs.mtx);
         if (!active) {

@@ -128,29 +128,39 @@ def push_render(  # noqa: PLR0913
 
     Idempotent by ``stream_id``: when ``stream_id`` is non-empty and a
     ``RenderStackItem`` with the same ``stream_id`` is already on the stack,
-    that item is updated in place (its ``id`` and position preserved, props
-    merged) instead of appending a new one. This mirrors ``push_notification``
-    and lets callers re-open a stream-backed view (e.g. the assistant's
-    ``image_viewer``) freely without stacking duplicate pages. Views opened
-    with an empty ``stream_id`` always append.
+    that item is updated (its ``id`` preserved, props merged) and moved to the
+    top instead of a duplicate being appended. This mirrors
+    ``push_notification`` and lets callers re-open a stream-backed view (e.g.
+    the assistant's ``image_viewer``) freely without stacking duplicate pages.
+    Views opened with an empty ``stream_id`` always append.
+
+    Moving it to the top is what makes re-opening *visible*. Merging in place
+    left the item wherever it was: browse to another directory, open a second
+    picture, and the viewer stayed buried under the menus pushed since, so the
+    screen never changed while the new frames were streamed to a view nobody
+    could see.
     """
     if props is None:
         props = {}
-    if stream_id and any(
-        isinstance(item, RenderStackItem) and item.stream_id == stream_id
-        for item in state.stack
-    ):
-        new_stack = tuple(
-            replace(
-                item,
-                kind=kind or item.kind,
-                title=title or item.title,
-                props={**item.props, **props},
-                items=items or item.items,
-            )
-            if isinstance(item, RenderStackItem) and item.stream_id == stream_id
-            else item
+    existing = next(
+        (
+            item
             for item in state.stack
+            if isinstance(item, RenderStackItem) and item.stream_id == stream_id
+        ),
+        None,
+    )
+    if stream_id and existing is not None:
+        updated = replace(
+            existing,
+            kind=kind or existing.kind,
+            title=title or existing.title,
+            props={**existing.props, **props},
+            items=items or existing.items,
+        )
+        new_stack = (
+            *(item for item in state.stack if item is not existing),
+            updated,
         )
         return replace(state, stack=new_stack)
     new_item = RenderStackItem(

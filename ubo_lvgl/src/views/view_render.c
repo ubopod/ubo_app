@@ -89,7 +89,10 @@ static int s_img_mode;        /* 0=vertical pan, 1=horizontal pan, 2=zoom */
 static int32_t s_img_scale;   /* current scale, 256 = 1:1 */
 static int32_t s_img_fit;     /* fit-to-screen scale (zoom-out floor) */
 static lv_obj_t *s_frame_hint; /* "waiting" hint, hidden once a frame lands */
-static int32_t s_chunk_w, s_chunk_h; /* dims the chunked frame path configured */
+static int32_t s_chunk_w, s_chunk_h; /* dims of the data in s_frame_buf */
+static int32_t s_chunk_next_row;     /* rows of the in-progress frame assembled */
+static bool s_chunk_ready;           /* s_frame_buf holds one complete frame */
+static bool s_chunk_attached;        /* the live image object shows s_frame_dsc */
 
 void ubo_render_reset(void)
 {
@@ -105,8 +108,10 @@ void ubo_render_reset(void)
     s_img_obj = NULL;
     s_img_mode = 0;
     s_frame_hint = NULL;
-    s_chunk_w = 0; /* a rebuilt view has a fresh image object; re-set its src */
-    s_chunk_h = 0;
+    /* A rebuilt view gets a fresh image object, so the src must be set again --
+     * but the assembled pixels survive: they are what `build_frame_view`
+     * re-attaches when the view for a still finally appears. */
+    s_chunk_attached = false;
 }
 
 static void build_text_viewer(const ubo_render_view *v)
@@ -226,6 +231,8 @@ static void build_qr_carousel(const ubo_render_view *v)
 static lv_image_dsc_t s_frame_dsc;
 static uint16_t *s_frame_buf;
 
+static void attach_chunk_frame(lv_obj_t *img);
+
 static void build_frame_view(bool stream)
 {
     lv_obj_t *c = ubo_screen_content();
@@ -248,6 +255,14 @@ static void build_frame_view(bool stream)
         s_rw_kind = RW_IMAGE;
         s_img_obj = img;
         s_img_mode = 0;
+        /* The pixels usually beat this view here (see ubo_render_update_frame_
+         * chunk), and a still has no next frame to try again with -- so show
+         * whatever is already assembled. A live stream skips this: its next
+         * frame is 100ms away and a stale one would flash first. */
+        if (s_chunk_ready && s_frame_buf) {
+            attach_chunk_frame(img);
+            lv_obj_add_flag(s_frame_hint, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 }
 
@@ -300,17 +315,61 @@ void ubo_render_update_frame(const uint8_t *rgb, size_t rgb_len, int32_t w,
     s_img_scale = scale;
     s_chunk_w = 0; /* force the chunked path to reconfigure if it takes over */
     s_chunk_h = 0;
+    s_chunk_next_row = 0;
+    s_chunk_ready = false; /* s_frame_buf now holds full-res data, not chunks */
+    s_chunk_attached = false;
 
     if (s_frame_hint) {
         lv_obj_add_flag(s_frame_hint, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
+/* Point the live image object at the assembled frame and size it to the panel.
+ * Split out because it runs from two places: the chunk that completes a frame,
+ * and `build_frame_view` when the view for an already-assembled still appears. */
+static void attach_chunk_frame(lv_obj_t *img)
+{
+    const size_t n = (size_t)s_chunk_w * (size_t)s_chunk_h;
+    memset(&s_frame_dsc, 0, sizeof(s_frame_dsc));
+    s_frame_dsc.header.cf = LV_COLOR_FORMAT_RGB565;
+    s_frame_dsc.header.w = (uint32_t)s_chunk_w;
+    s_frame_dsc.header.h = (uint32_t)s_chunk_h;
+    s_frame_dsc.header.stride = (uint32_t)s_chunk_w * 2;
+    s_frame_dsc.data = (const uint8_t *)s_frame_buf;
+    s_frame_dsc.data_size = (uint32_t)(n * 2);
+    lv_image_set_src(img, &s_frame_dsc);
+
+    /* Unlike the full-res path, low-res stream frames upscale to fill the
+     * panel (nearest-neighbor: antialiased transforms are too slow on the
+     * ESP32 and a viewfinder wants crisp pixels over smoothing). */
+    int32_t sx = (int32_t)((long)UBO_W * 256 / s_chunk_w);
+    int32_t sy = (int32_t)((long)UBO_H * 256 / s_chunk_h);
+    int32_t scale = sx < sy ? sx : sy;
+    if (scale > 1024) {
+        scale = 1024; /* cap the upscale at 4x */
+    }
+    lv_image_set_antialias(img, false);
+    lv_image_set_scale(img, (uint32_t)scale);
+    lv_obj_center(img);
+    /* image_viewer is pan/zoomable and now reaches MCU clients through this
+     * path (its picture used to come inline in props), so the still viewer's
+     * zoom floor has to be seeded here too, not only in
+     * ubo_render_update_frame. Unused when the view is a live stream. */
+    s_img_fit = scale;
+    s_img_scale = scale;
+    s_chunk_attached = true;
+}
+
 void ubo_render_update_frame_chunk(const uint8_t *rgb565, size_t len,
                                    int32_t row_offset, int32_t w, int32_t h)
 {
+    /* Deliberately assembled even when there is no image object yet: the
+     * chunks ride the event stream while the view that displays them arrives
+     * on the store stream, and the event stream regularly wins by ~70ms. The
+     * pixels are kept and `build_frame_view` attaches them when the view shows
+     * up -- for a still, dropping them here means dropping them forever. */
     lv_obj_t *img = ubo_screen_frame_target();
-    if (!img || !rgb565 || w <= 0 || h <= 0 || w > FRAME_MAX_DIM ||
+    if (!rgb565 || w <= 0 || h <= 0 || w > FRAME_MAX_DIM ||
         h > FRAME_MAX_DIM || row_offset < 0) {
         return;
     }
@@ -323,6 +382,18 @@ void ubo_render_update_frame_chunk(const uint8_t *rgb565, size_t len,
         return;
     }
 
+    /* Only assemble a sequence that starts at row 0 and stays contiguous. A
+     * camera survives a lost chunk because the next frame repaints everything
+     * 100ms later; a STILL has no next frame, so a gap would be displayed as a
+     * permanent black band. Waiting for a clean sequence shows the previous
+     * content (or the hint) instead of a half-painted picture. */
+    if (row_offset != s_chunk_next_row) {
+        if (row_offset != 0) {
+            return;
+        }
+        s_chunk_next_row = 0;
+    }
+
     if (w != s_chunk_w || h != s_chunk_h) {
         const size_t n = (size_t)w * (size_t)h;
         uint16_t *buf = realloc(s_frame_buf, n * 2);
@@ -333,36 +404,25 @@ void ubo_render_update_frame_chunk(const uint8_t *rgb565, size_t len,
         memset(s_frame_buf, 0, n * 2);
         s_chunk_w = w;
         s_chunk_h = h;
-
-        memset(&s_frame_dsc, 0, sizeof(s_frame_dsc));
-        s_frame_dsc.header.cf = LV_COLOR_FORMAT_RGB565;
-        s_frame_dsc.header.w = (uint32_t)w;
-        s_frame_dsc.header.h = (uint32_t)h;
-        s_frame_dsc.header.stride = (uint32_t)w * 2;
-        s_frame_dsc.data = (const uint8_t *)s_frame_buf;
-        s_frame_dsc.data_size = (uint32_t)(n * 2);
-        lv_image_set_src(img, &s_frame_dsc);
-
-        /* Unlike the full-res path, low-res stream frames upscale to fill the
-         * panel (nearest-neighbor: antialiased transforms are too slow on the
-         * ESP32 and a viewfinder wants crisp pixels over smoothing). */
-        int32_t sx = (int32_t)((long)UBO_W * 256 / w);
-        int32_t sy = (int32_t)((long)UBO_H * 256 / h);
-        int32_t scale = sx < sy ? sx : sy;
-        if (scale > 1024) {
-            scale = 1024; /* cap the upscale at 4x */
-        }
-        lv_image_set_antialias(img, false);
-        lv_image_set_scale(img, (uint32_t)scale);
-        lv_obj_center(img);
+        s_chunk_ready = false;
+        s_chunk_attached = false;
     }
 
     memcpy(&s_frame_buf[(size_t)row_offset * (size_t)w], rgb565, len);
+    s_chunk_next_row = row_offset + rows;
 
-    if (s_frame_hint) {
-        lv_obj_add_flag(s_frame_hint, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (row_offset + rows == h) {
+    if (s_chunk_next_row == h) {
+        s_chunk_next_row = 0; /* ready for the next frame */
+        s_chunk_ready = true;
+        if (!img) {
+            return; /* held until the view that shows it is built */
+        }
+        if (!s_chunk_attached) {
+            attach_chunk_frame(img);
+        }
+        if (s_frame_hint) {
+            lv_obj_add_flag(s_frame_hint, LV_OBJ_FLAG_HIDDEN);
+        }
         lv_obj_invalidate(img); /* repaint once per completed frame */
     }
 }

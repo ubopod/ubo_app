@@ -318,6 +318,43 @@ class TestPushRender:
         assert item.id == first_item.id
         assert item.props == {'image': 'second', 'width': 10}
 
+    def test_reopening_raises_a_buried_view_to_the_top(self) -> None:
+        """Verify re-opening a buried stream-backed view brings it back.
+
+        Merging in place is not enough: the file browser pushes menus on top of
+        the viewer as the user keeps browsing, so a second "Open Image" has to
+        raise the existing item, or the picture streams to a view nobody sees.
+        """
+        state = _make_state()
+        state = push_render(
+            state,
+            'image_viewer',
+            stream_id='file-system:image',
+            props={'width': 10},
+        )
+        buried = state.stack[-1]
+        assert isinstance(buried, RenderStackItem)
+        state = push_menu(state, 'file-system:dir:/tmp')
+
+        new_state = push_render(
+            state,
+            'image_viewer',
+            stream_id='file-system:image',
+            props={'width': 20},
+        )
+
+        assert len(new_state.stack) == len(state.stack)
+        item = new_state.stack[-1]
+        assert isinstance(item, RenderStackItem)
+        assert item.id == buried.id
+        assert item.props == {'width': 20}
+        # The menu that had been covering it is still on the stack, below.
+        assert any(
+            isinstance(other, MenuStackItem) and other.menu_key
+            == 'file-system:dir:/tmp'
+            for other in new_state.stack
+        )
+
     def test_empty_stream_id_still_appends(self) -> None:
         """Verify views without a stream_id keep stacking (no dedup)."""
         state = _make_state()
