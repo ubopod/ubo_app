@@ -37,6 +37,15 @@ from ubo_app.utils.async_ import to_thread
 # Track which event monitors are already running to prevent duplicates
 _active_monitors: set[str] = set()
 
+# Per-image callbacks invoked when that image's container emits a ``start``
+# event. Lets a service react to "its container started" without polling status.
+_container_start_hooks: dict[str, Callable[[], None]] = {}
+
+
+def register_container_start_hook(image_id: str, hook: Callable[[], None]) -> None:
+    """Register a callback fired when ``image_id``'s container starts."""
+    _container_start_hooks[image_id] = hook
+
 
 def start_event_monitor(image_id: str) -> None:
     """Bootstrap the long-lived docker event monitor for an image (idempotent)."""
@@ -469,6 +478,9 @@ def _monitor_events(  # noqa: C901, PLR0912, PLR0915
                 )
                 if container:
                     update_container(image_id=image_id, container=container)
+                    hook = _container_start_hooks.get(image_id)
+                    if hook is not None:
+                        hook()
                 else:
                     logger.warning(
                         '_monitor_events: Container not found after start event',

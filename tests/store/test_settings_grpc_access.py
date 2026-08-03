@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import pytest
-from redux import CompleteReducerResult, InitAction
+from redux import InitAction
 
-from ubo_app.store.services.notifications import NotificationsAddAction
 from ubo_app.store.settings.reducer import reducer
 from ubo_app.store.settings.types import (
     SettingsState,
@@ -32,38 +32,30 @@ def _isolated_persistent_store(
     )
 
 
-def _warnings(result: CompleteReducerResult) -> list[NotificationsAddAction]:
-    return [
-        action
-        for action in (result.actions or [])
-        if isinstance(action, NotificationsAddAction)
-    ]
+def test_toggle_on_flips_flag_without_notification() -> None:
+    """Enabling flips the flag and emits no notification.
 
-
-def test_toggle_on_flips_flag_and_warns() -> None:
-    """Enabling flips the flag and emits exactly one security warning."""
+    The security warning is merged into the docker service's single "gRPC
+    exposed" notification (fired when Envoy actually starts exposing the port),
+    so the reducer just flips the flag.
+    """
     initial = reducer(None, InitAction())
     assert isinstance(initial, SettingsState)
     assert initial.grpc_remote_access is False
 
     result = reducer(initial, SettingsToggleGrpcRemoteAccessAction())
 
-    assert isinstance(result, CompleteReducerResult)
-    assert result.state.grpc_remote_access is True
-    warnings = _warnings(result)
-    assert len(warnings) == 1
-    assert warnings[0].notification.id == 'grpc-access-warning'
+    assert isinstance(result, SettingsState)
+    assert result.grpc_remote_access is True
 
 
-def test_toggle_off_flips_flag_without_warning() -> None:
-    """Disabling flips the flag back and emits no notification."""
+def test_toggle_off_flips_flag_back() -> None:
+    """Disabling flips the flag back, also without any notification."""
     initial = reducer(None, InitAction())
     assert isinstance(initial, SettingsState)
-    enabled = reducer(initial, SettingsToggleGrpcRemoteAccessAction())
-    assert isinstance(enabled, CompleteReducerResult)
+    enabled = replace(initial, grpc_remote_access=True)
 
-    result = reducer(enabled.state, SettingsToggleGrpcRemoteAccessAction())
+    result = reducer(enabled, SettingsToggleGrpcRemoteAccessAction())
 
-    assert isinstance(result, CompleteReducerResult)
-    assert result.state.grpc_remote_access is False
-    assert _warnings(result) == []
+    assert isinstance(result, SettingsState)
+    assert result.grpc_remote_access is False
