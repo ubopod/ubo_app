@@ -38,16 +38,9 @@ class HomeAssistantModule(Protocol):
         self,
         composition_path: Path,
         zigbee_device: str | None,
-        macvlan: dict[str, str] | None = None,
+        *,
+        host_network: bool = False,
     ) -> None: ...
-
-    def parse_lan_params(self, ip_route: str, ip_addr: str) -> dict[str, str]:
-        """Parse macvlan prefills from `ip` output."""
-        ...
-
-    def _is_valid_macvlan(self, config: dict[str, str]) -> bool: ...
-
-    def _suggest_reserved_ip(self, subnet: str, gateway: str) -> str: ...
 
     def _zigbee_submenu_view(
         self,
@@ -66,9 +59,9 @@ def _disable_zigbee(
     monkeypatch: pytest.MonkeyPatch,
     ha: HomeAssistantModule,
 ) -> None:
-    """Bypass the store-backed Zigbee + macvlan resolution for render tests."""
+    """Bypass the store-backed Zigbee + host-network resolution for renders."""
     monkeypatch.setattr(ha, '_resolve_zigbee_device', lambda: None)
-    monkeypatch.setattr(ha, '_resolve_macvlan', lambda: None)
+    monkeypatch.setattr(ha, '_resolve_host_network', lambda: False)
 
 
 def _import_home_assistant() -> HomeAssistantModule:
@@ -388,84 +381,52 @@ def test_compose_includes_devices_when_adapter_present(
     assert 'devices:' not in compose
 
 
-def test_parse_lan_params_from_ip_output() -> None:
-    """LAN discovery derives parent/gateway/subnet from `ip` output."""
-    ha = _import_home_assistant()
-    ip_route = (
-        'default via 192.168.1.1 dev eth0 proto dhcp metric 100\n'
-        '192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.42\n'
-    )
-    ip_addr = (
-        '1: lo    inet 127.0.0.1/8 scope host lo\n'
-        '2: eth0    inet 192.168.1.42/24 brd 192.168.1.255 scope global eth0\n'
-    )
-    params = ha.parse_lan_params(ip_route, ip_addr)
-    assert params['parent'] == 'eth0'
-    assert params['gateway'] == '192.168.1.1'
-    assert params['subnet'] == '192.168.1.0/24'
-
-
-def test_parse_lan_params_no_default_route() -> None:
-    """No default route → no params (caller asks the user)."""
-    ha = _import_home_assistant()
-    assert ha.parse_lan_params('', '') == {}
-
-
-def test_macvlan_validation_rejects_yaml_injection() -> None:
-    """Validation rejects newline/garbage that could inject compose YAML keys."""
-    ha = _import_home_assistant()
-    valid = {
-        'parent': 'eth0',
-        'subnet': '192.168.1.0/24',
-        'gateway': '192.168.1.1',
-        'ip': '192.168.1.50',
-    }
-    assert ha._is_valid_macvlan(valid)  # noqa: SLF001
-
-    # The classic injection: a newline in the reserved-IP field dedenting to a
-    # new service key. Must be rejected.
-    injected = {**valid, 'ip': '1.2.3.4\n    privileged: true'}
-    assert not ha._is_valid_macvlan(injected)  # noqa: SLF001
-
-    # Each field independently guarded.
-    assert not ha._is_valid_macvlan({**valid, 'parent': 'eth0\n  x: y'})  # noqa: SLF001
-    assert not ha._is_valid_macvlan({**valid, 'subnet': 'not-a-subnet'})  # noqa: SLF001
-    assert not ha._is_valid_macvlan({**valid, 'gateway': 'nope'})  # noqa: SLF001
-
-
-def test_compose_attaches_macvlan_when_enabled(
+def test_compose_uses_host_network_when_enabled(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """A macvlan config multi-homes HA on a LAN IP and defines the network."""
+    """Host-network mode takes HA off the bridge and onto the host stack."""
     ha = _import_home_assistant()
     monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', tmp_path / 'data')
     composition_path = tmp_path / 'composition'
     composition_path.mkdir()
-    macvlan = {
-        'parent': 'eth0',
-        'subnet': '192.168.1.0/24',
-        'gateway': '192.168.1.1',
-        'ip': '192.168.1.50',
-    }
 
-    ha._write_home_assistant_compose(composition_path, None, macvlan)  # noqa: SLF001
+    ha._write_home_assistant_compose(  # noqa: SLF001
+        composition_path,
+        None,
+        host_network=True,
+    )
     compose = (composition_path / 'docker-compose.yml').read_text()
-    # HA stays on the bus AND gets a LAN IP.
-    assert 'driver: macvlan' in compose
-    assert 'parent: eth0' in compose
-    assert 'subnet: 192.168.1.0/24' in compose
-    assert 'gateway: 192.168.1.1' in compose
-    assert 'ipv4_address: 192.168.1.50' in compose
-    assert f'{ha.UBO_NET}: ' in compose  # mapping form alongside macvlan
+    ha_block = compose.split('  mosquitto:')[0]
+    assert 'network_mode: host' in ha_block
+    # Compose rejects `network_mode` alongside `networks:`, and `ports:` is not
+    # permitted either — HA binds 8123 on the host directly.
+    assert f'      - {ha.UBO_NET}\n' not in ha_block
+    assert '- 8123:8123' not in compose
+    # The broker is untouched: still on the bus, still publishing only its
+    # authenticated listener to loopback.
+    assert f'  {ha.UBO_NET}:\n    external: true\n' in compose
+    assert 'host_ip: 127.0.0.1' in compose
 
-    # Disabled → plain bridge-only, no macvlan network.
-    ha._write_home_assistant_compose(composition_path, None, None)  # noqa: SLF001
+
+def test_compose_stays_on_bridge_when_host_network_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Bridge mode publishes 8123 and keeps HA on the shared bus."""
+    ha = _import_home_assistant()
+    monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', tmp_path / 'data')
+    composition_path = tmp_path / 'composition'
+    composition_path.mkdir()
+
+    ha._write_home_assistant_compose(  # noqa: SLF001
+        composition_path,
+        None,
+        host_network=False,
+    )
     compose = (composition_path / 'docker-compose.yml').read_text()
-    assert 'driver: macvlan' not in compose
-    assert 'ha_macvlan:' not in compose
-    assert 'ipv4_address' not in compose
-    # Back to the bridge-only list form.
+    assert 'network_mode' not in compose
+    assert '- 8123:8123' in compose
     assert f'      - {ha.UBO_NET}\n' in compose
 
 
@@ -518,27 +479,21 @@ def test_zigbee_submenu_view_disabled_states() -> None:
     assert sub_heading == 'No adapter detected'
 
 
-def test_suggest_reserved_ip_high_host() -> None:
-    """A /24 yields a high host outside the common low DHCP range."""
+async def test_prepare_honours_host_network_intent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The prepare phase renders whichever network mode the store holds."""
     ha = _import_home_assistant()
-    assert (
-        ha._suggest_reserved_ip('192.168.1.0/24', '192.168.1.1')  # noqa: SLF001
-        == '192.168.1.250'
-    )
+    compositions = tmp_path / 'compositions'
+    monkeypatch.setattr(ha, 'COMPOSITIONS_PATH', compositions)
+    monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', tmp_path / 'data')
+    monkeypatch.setattr(ha, '_resolve_zigbee_device', lambda: None)
+    monkeypatch.setattr(ha, '_resolve_host_network', lambda: True)
 
+    assert await ha.prepare_home_assistant()
 
-def test_suggest_reserved_ip_avoids_gateway() -> None:
-    """The candidate steps off the gateway if they collide."""
-    ha = _import_home_assistant()
-    assert (
-        ha._suggest_reserved_ip('192.168.1.0/24', '192.168.1.250')  # noqa: SLF001
-        == '192.168.1.249'
-    )
-
-
-def test_suggest_reserved_ip_rejects_bad_or_tiny() -> None:
-    """Invalid or too-small subnets yield no suggestion."""
-    ha = _import_home_assistant()
-    assert ha._suggest_reserved_ip('not-a-subnet', '') == ''  # noqa: SLF001
-    assert ha._suggest_reserved_ip('192.168.1.0/31', '') == ''  # noqa: SLF001
-    assert ha._suggest_reserved_ip('', '') == ''  # noqa: SLF001
+    compose = (
+        compositions / ha.HOME_ASSISTANT_COMPOSITION_ID / 'docker-compose.yml'
+    ).read_text()
+    assert 'network_mode: host' in compose

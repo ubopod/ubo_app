@@ -1241,28 +1241,8 @@ async def init_service() -> Subscriptions:
     )
 
     register_persistent_store(
-        'docker_macvlan_enabled',
-        lambda state: state.docker.service.macvlan_enabled,
-    )
-
-    register_persistent_store(
-        'docker_macvlan_parent',
-        lambda state: state.docker.service.macvlan_parent,
-    )
-
-    register_persistent_store(
-        'docker_macvlan_subnet',
-        lambda state: state.docker.service.macvlan_subnet,
-    )
-
-    register_persistent_store(
-        'docker_macvlan_gateway',
-        lambda state: state.docker.service.macvlan_gateway,
-    )
-
-    register_persistent_store(
-        'docker_macvlan_ip',
-        lambda state: state.docker.service.macvlan_ip,
+        'docker_host_network_enabled',
+        lambda state: state.docker.service.host_network_enabled,
     )
 
     from ubo_app.store.core.action_registry import register_action

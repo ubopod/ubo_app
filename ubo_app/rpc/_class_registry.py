@@ -229,7 +229,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'DockerItemStatus': 'ubo_app.store.services.docker',
     'DockerRemoveUsernameAction': 'ubo_app.store.services.docker',
     'DockerServiceState': 'ubo_app.store.services.docker',
-    'DockerSetMacvlanConfigAction': 'ubo_app.store.services.docker',
+    'DockerSetHostNetworkAction': 'ubo_app.store.services.docker',
     'DockerSetStatusAction': 'ubo_app.store.services.docker',
     'DockerSetZigbeeIntentAction': 'ubo_app.store.services.docker',
     'DockerStartAction': 'ubo_app.store.services.docker',

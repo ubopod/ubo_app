@@ -328,11 +328,7 @@
     "service": {
       "_type": "DockerServiceState",
       "expose_to_lan": {},
-      "macvlan_enabled": false,
-      "macvlan_gateway": "",
-      "macvlan_ip": "",
-      "macvlan_parent": "",
-      "macvlan_subnet": "",
+      "host_network_enabled": false,
       "status": "running",
       "usernames": {},
       "zigbee_adapter_by_id": "",

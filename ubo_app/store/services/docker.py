@@ -96,20 +96,18 @@ class DockerSetZigbeeIntentAction(DockerAction):
     adapter_by_id: str = ''
 
 
-class DockerSetMacvlanConfigAction(DockerAction):
-    """Set Home Assistant's optional macvlan "advanced discovery" config.
+class DockerSetHostNetworkAction(DockerAction):
+    """Set whether Home Assistant runs on the host's network stack.
 
-    macvlan gives HA its own LAN IP so mDNS/SSDP discovery works. The LAN
-    parameters aren't in core state (``IpNetworkInterface`` has no subnet/
-    gateway), so they're discovered/confirmed via a web form and persisted
-    here; the compose macvlan network + attachment are re-derived at render.
+    Host networking is what makes HA's mDNS/SSDP discovery work: the container
+    shares the host's interfaces, so multicast reaches the LAN. It is the only
+    option that works over Wi-Fi — a macvlan sub-interface has its own MAC, and
+    an access point only accepts one MAC per associated station, so its frames
+    are silently dropped. Intent only; the compose ``network_mode`` and the
+    hostname shims that keep the add-on bus reachable are derived at render.
     """
 
     enabled: bool
-    parent: str = ''
-    subnet: str = ''
-    gateway: str = ''
-    ip: str = ''
 
 
 class DockerImageAction(DockerAction):
@@ -218,47 +216,15 @@ class DockerServiceState(Immutable):
             output_type=str,
         ),
     )
-    # Optional macvlan "advanced discovery" config for Home Assistant. Intent
-    # only — the compose macvlan network + multi-homed attachment are derived
-    # from these at render time.
-    macvlan_enabled: bool = field(
+    # Whether Home Assistant runs on the host's network stack (for mDNS/SSDP
+    # discovery). Intent only — the compose `network_mode` and the hostname
+    # shims that keep the add-on bus reachable are derived at render time.
+    host_network_enabled: bool = field(
         default_factory=functools.partial(
             read_from_persistent_store,
-            'docker_macvlan_enabled',
+            'docker_host_network_enabled',
             default=False,
             output_type=bool,
-        ),
-    )
-    macvlan_parent: str = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            'docker_macvlan_parent',
-            default='',
-            output_type=str,
-        ),
-    )
-    macvlan_subnet: str = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            'docker_macvlan_subnet',
-            default='',
-            output_type=str,
-        ),
-    )
-    macvlan_gateway: str = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            'docker_macvlan_gateway',
-            default='',
-            output_type=str,
-        ),
-    )
-    macvlan_ip: str = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            'docker_macvlan_ip',
-            default='',
-            output_type=str,
         ),
     )
 

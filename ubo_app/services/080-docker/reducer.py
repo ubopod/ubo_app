@@ -49,7 +49,7 @@ from ubo_app.store.services.docker import (
     DockerItemStatus,
     DockerRemoveUsernameAction,
     DockerServiceState,
-    DockerSetMacvlanConfigAction,
+    DockerSetHostNetworkAction,
     DockerSetStatusAction,
     DockerSetZigbeeIntentAction,
     DockerStartAction,
@@ -135,15 +135,8 @@ def service_reducer(
                 zigbee_adapter_by_id=action.adapter_by_id,
             )
 
-        case DockerSetMacvlanConfigAction():
-            return replace(
-                state,
-                macvlan_enabled=action.enabled,
-                macvlan_parent=action.parent,
-                macvlan_subnet=action.subnet,
-                macvlan_gateway=action.gateway,
-                macvlan_ip=action.ip,
-            )
+        case DockerSetHostNetworkAction():
+            return replace(state, host_network_enabled=action.enabled)
 
         case _:
             return state

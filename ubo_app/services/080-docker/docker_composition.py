@@ -136,7 +136,7 @@ async def run_composition(
     id = event.image
 
     # Re-render the compose file from current intent *before* `up`. The compose
-    # file is a derived artifact (Zigbee device mapping, macvlan, etc. are read
+    # file is a derived artifact (Zigbee device mapping, network mode, etc. are read
     # from store/persistent state at render time), and `up -d` only re-reads the
     # file on (re)create — so the render must happen here, not just at pull time.
     # No-op for entries without a `prepare` hook. Port binding runs afterwards
