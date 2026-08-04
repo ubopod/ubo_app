@@ -597,19 +597,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # The USB/PPP profile is the Ubo Pod build and is C6-only for now.
           - target: esp32c6
             board: waveshare-c6-amoled
-            ppp: true
           - target: esp32s3
             board: esp-box-3
-            ppp: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
+      # WiFi profile. -DUBO_TRANSPORT=tcp_lite is the default for the ESP-IDF
+      # build (components/ubo_client_core/CMakeLists.txt) but is passed
+      # explicitly so the published image's transport is not implicit.
       - name: Build Firmware
         uses: espressif/esp-idf-ci-action@v1
         with:
@@ -617,7 +617,7 @@ jobs:
           target: ${{ matrix.target }}
           path: ubo_lvgl/esp32
           command: >-
-            idf.py build &&
+            idf.py -DUBO_TRANSPORT=tcp_lite build &&
             idf.py merge-bin -o ubo-lvgl-${{ matrix.target }}-merged.bin
 
       # Staged per target: bootloader.bin / partition-table.bin /
@@ -641,9 +641,11 @@ jobs:
       # Second profile: PPP over the USB Serial/JTAG cable instead of WiFi (the
       # Ubo Pod build). It hands the USJ endpoint to PPP, so it has no USB log
       # console — which is why it is a separate image and not the default.
+      # Built for both boards: usb_ppp.c is target-neutral (USB Serial/JTAG
+      # exists on the C6 and the S3 alike) and UBO_USB_PPP_ENABLE only depends
+      # on LWIP_PPP_SUPPORT, which this profile turns on.
       # sdkconfig.defaults* is only read when sdkconfig is absent, hence the rm.
       - name: Build Firmware (USB/PPP profile)
-        if: matrix.ppp
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v6.0.1
@@ -651,11 +653,11 @@ jobs:
           path: ubo_lvgl/esp32
           command: >-
             rm -rf build sdkconfig sdkconfig.old &&
-            idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.ppp" build &&
+            idf.py -DUBO_TRANSPORT=tcp_lite
+            -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.ppp" build &&
             idf.py merge-bin -o ubo-lvgl-${{ matrix.target }}-usbppp-merged.bin
 
       - name: Stage USB/PPP Artifact
-        if: matrix.ppp
         env:
           VERSION: ${{ needs.version.outputs.version }}
           TARGET: ${{ matrix.target }}

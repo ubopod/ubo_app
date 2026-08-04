@@ -13,8 +13,8 @@
 # image. Override the chip with UBO_ESP32_CHIP=esp32s3 (default esp32c6).
 #
 # This script is specifically for a board cabled to a Pi over the PPP link. For
-# a board on a normal USB port — including the ESP32-S3-BOX-3, which has no PPP
-# profile — just use `idf.py -p <port> flash`.
+# a board on a normal USB port — e.g. a laptop used for flashing — just use
+# `idf.py -p <port> flash`.
 set -euo pipefail
 
 UNIT=ubo-esp32-ppp

@@ -18,7 +18,7 @@ supported ESP32 board. This is **additive** — the desktop (SDL) and Raspberry 
 | Audio in | ES8311 ADC, 1 mic | **ES7210 ADC, 2 mics** |
 | Buttons | BOOT (GPIO9) | BOOT (GPIO0), Mute (GPIO1) |
 | Viewfinder | low-res chunked only | low-res **+ full-res** (needs PSRAM) |
-| USB/PPP profile | yes (the Ubo Pod build) | not yet — WiFi only |
+| USB/PPP profile | yes (the Ubo Pod build) | yes |
 
 Both boards build from this one tree. `main/CMakeLists.txt` selects the board
 sources and driver components from **`IDF_TARGET`** — deliberately *not* from
@@ -211,6 +211,10 @@ The C6 has no USB-OTG (its only USB is the fixed-function Serial/JTAG CDC-ACM
 controller), so USB-Ethernet is impossible and PPP is the way to get IP over the
 wire. Envoy already binds `0.0.0.0:50052` in the Pi's host netns, so `10.66.0.1`
 reaches it with no forwarding and **no core-side change at all**.
+
+The profile builds for **both** boards: `usb_ppp.c` talks to the USB Serial/JTAG
+peripheral, which the S3 has as well, and `UBO_USB_PPP_ENABLE` depends only on
+`LWIP_PPP_SUPPORT`. Nothing in the PPP path is chip-specific.
 
 ```bash
 # sdkconfig.defaults* is only read when sdkconfig is absent — remove it first,
