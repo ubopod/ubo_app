@@ -24,7 +24,6 @@ from ubo_app.store.core.types import (
     MenuGoHomeAction,
     MenuScrollAction,
     MenuScrollDirection,
-    OpenRenderAction,
 )
 from ubo_app.store.services.audio import AudioChangeVolumeAction, AudioDevice
 from ubo_app.store.services.infrared import (
@@ -104,26 +103,10 @@ MENU_SCROLL_UP = 'menu:scroll-up'
 MENU_SCROLL_DOWN = 'menu:scroll-down'
 
 
-_WIFI_CAMERA_ACTION = OpenRenderAction(
-    kind='status',
-    title='Creating WiFi Connection',
-    props={
-        'icon': '󱛃',
-        'text': 'Creating Scanned WiFi Connection',
-        'icon_size': 56,
-        'text_font_size': 19,
-    },
-)
-_WIFI_WEB_ACTION = OpenRenderAction(
-    kind='status',
-    title='Creating WiFi Connection',
-    props={
-        'icon': '󱛃',
-        'text': 'Creating WiFi Connection via Web',
-        'icon_size': 56,
-        'text_font_size': 19,
-    },
-)
+# Run the real add-connection flow (030-wifi), forced to one input method, rather
+# than just flashing its final "creating" status with none of the steps before it.
+_WIFI_CAMERA_ACTION = ExecuteMenuActionAction(action_id='wifi:add-connection:camera')
+_WIFI_WEB_ACTION = ExecuteMenuActionAction(action_id='wifi:add-connection:web')
 
 
 def _const(action: UboAction) -> Callable[[BindableActionContext], UboAction]:

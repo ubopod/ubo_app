@@ -27,6 +27,7 @@ from ubo_app.store.core.types import (
     UpdatePromptAction,
 )
 from ubo_app.store.core.types.stack_items import RenderStackItem, StackItemType
+from ubo_app.store.input.types import InputMethod
 from ubo_app.store.main import store
 from ubo_app.store.services.ethernet import NetState
 from ubo_app.store.services.wifi import (
@@ -322,7 +323,30 @@ def _add_connection() -> None:
     create_task(input_wifi_connection())
 
 
+def _add_connection_via_camera() -> None:
+    """Run the same flow, forced to the camera/QR-code input method.
+
+    Backs the "WiFi Setup via Camera" voice shortcut, which needs the flow
+    (not just its final "creating" status) to actually run.
+    """
+    from pages.create_wireless_connection import input_wifi_connection
+
+    create_task(input_wifi_connection(input_methods=(InputMethod.CAMERA,)))
+
+
+def _add_connection_via_web() -> None:
+    """Run the same flow, forced to the web-dashboard input method.
+
+    Backs the "WiFi Setup via Web" voice shortcut.
+    """
+    from pages.create_wireless_connection import input_wifi_connection
+
+    create_task(input_wifi_connection(input_methods=(InputMethod.WEB_DASHBOARD,)))
+
+
 register_action('wifi:add-connection', _add_connection)
+register_action('wifi:add-connection:camera', _add_connection_via_camera)
+register_action('wifi:add-connection:web', _add_connection_via_web)
 
 
 @store.with_state(lambda state: state.wifi.is_hotspot_running)
