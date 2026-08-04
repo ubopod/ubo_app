@@ -61,6 +61,64 @@ function propStringList(data: RenderViewData.AsObject, key: string): string[] {
   );
 }
 
+// Unlike `propStringList`, blanks are kept: `labels`/`values`/`units` are
+// parallel arrays, and a sensor with no unit (an AQI, a VOC index) would
+// otherwise shift every unit below it onto the wrong row.
+function propStringRows(data: RenderViewData.AsObject, key: string): string[] {
+  return (
+    propEntry(data, key)?.[1].list?.itemsList?.map((item) => item.string ?? "") ??
+    []
+  );
+}
+
+function Readings({ data }: { data: RenderViewData.AsObject }) {
+  const labels = propStringRows(data, "labels");
+  const values = propStringRows(data, "values");
+  const units = propStringRows(data, "units");
+  const placeholder = propString(data, "placeholder") || "No readings yet";
+
+  return (
+    <Box sx={{ width: "100%", p: 2 }}>
+      <Paper sx={{ p: 2, borderRadius: 2 }}>
+        {labels.length === 0 ? (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ textAlign: "center", py: 2 }}
+          >
+            {placeholder}
+          </Typography>
+        ) : (
+          <Stack divider={<Box sx={{ borderTop: 1, borderColor: "divider" }} />}>
+            {labels.map((label, index) => (
+              <Stack
+                // Display names are not unique; the index keeps sibling keys
+                // distinct when two rows share a label.
+                key={`${index}-${label}`}
+                direction="row"
+                justifyContent="space-between"
+                alignItems="baseline"
+                spacing={2}
+                sx={{ py: 1 }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  {label}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}
+                >
+                  {`${values[index] ?? "—"} ${units[index] ?? ""}`.trim()}
+                </Typography>
+              </Stack>
+            ))}
+          </Stack>
+        )}
+      </Paper>
+    </Box>
+  );
+}
+
 function StatusRender({ data }: { data: RenderViewData.AsObject }) {
   const text = propString(data, "text");
   return (
@@ -310,6 +368,8 @@ export function RenderView({ data, store }: RenderViewProps) {
       );
     case "qr_code_carousel":
       return <QRCodeCarousel data={data} store={store} />;
+    case "readings":
+      return <Readings data={data} />;
     case "status":
       return <StatusRender data={data} />;
     case "text_viewer":

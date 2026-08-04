@@ -19,9 +19,13 @@ if TYPE_CHECKING:
 MAX_EXPECTED_LISTENERS = 600
 # Bumped from 95 to cover the speech-recognition wake-word model lifecycle event
 # handlers (WakeWordDownloadModelsEvent / WakeWordDeleteModelEvent), which run the
-# blocking download/delete off the reducer. These are intentional subscriptions,
-# not leaks; the guard still catches runaway handler growth.
-MAX_EXPECTED_EVENT_HANDLERS = 105
+# blocking download/delete off the reducer. Then to 108 for the MQTT bridge's two
+# subscriptions (MqttPublishEvent / MqttAnnounceRequestedEvent) — the seam other
+# services publish through, since they cannot import the bridge — plus the
+# sensors service's SensorsScanEvent handler, which runs the bus scan off the
+# reducer. These are intentional subscriptions, not leaks; the guard still
+# catches runaway growth.
+MAX_EXPECTED_EVENT_HANDLERS = 108
 
 
 @pytest.mark.timeout(500)

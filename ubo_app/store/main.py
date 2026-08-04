@@ -114,6 +114,7 @@ if TYPE_CHECKING:
         LocalizationState,
     )
     from ubo_app.store.services.mcp import McpAction, McpEvent, McpState
+    from ubo_app.store.services.mqtt import MqttAction, MqttEvent, MqttState
     from ubo_app.store.services.notifications import (
         NotificationsAction,
         NotificationsEvent,
@@ -121,7 +122,11 @@ if TYPE_CHECKING:
     )
     from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
     from ubo_app.store.services.rpi_connect import RPiConnectAction, RPiConnectState
-    from ubo_app.store.services.sensors import SensorsAction, SensorsState
+    from ubo_app.store.services.sensors import (
+        SensorsAction,
+        SensorsEvent,
+        SensorsState,
+    )
     from ubo_app.store.services.speech_recognition import (
         SpeechRecognitionAction,
         SpeechRecognitionEvent,
@@ -170,6 +175,7 @@ UboAction: TypeAlias = Union[
     'LightDMAction',
     'LocalizationAction',
     'McpAction',
+    'MqttAction',
     'NotificationsAction',
     'RgbRingAction',
     'RPiConnectAction',
@@ -199,7 +205,9 @@ UboEvent: TypeAlias = Union[
     'IpEvent',
     'LocalizationEvent',
     'McpEvent',
+    'MqttEvent',
     'NotificationsEvent',
+    'SensorsEvent',
     'SpeechRecognitionEvent',
     'UsersEvent',
     'WiFiEvent',
@@ -229,6 +237,7 @@ class RootState(BaseCombineReducerState):
     lightdm: LightDMState
     localization: LocalizationState
     mcp: McpState
+    mqtt: MqttState
     notifications: NotificationsState
     rgb_ring: RgbRingState
     rpi_connect: RPiConnectState

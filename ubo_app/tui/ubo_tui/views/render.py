@@ -9,13 +9,33 @@ from textual.containers import VerticalScroll
 from textual.widgets import Label, Static
 
 from ubo_tui.views.base import BaseView
-from ubo_tui.views.render_kinds.props import prop_string, prop_string_list
+from ubo_tui.views.render_kinds.props import (
+    _list_items,
+    _props_map,
+    prop_string,
+    prop_string_list,
+)
 from ubo_tui.views.render_kinds.qr import render_qr_text
 
 if TYPE_CHECKING:
     from textual.app import ComposeResult
 
 logger = logging.getLogger(__name__)
+
+
+def _prop_string_rows(view_data: Any, key: str) -> list[str]:
+    """Like ``prop_string_list``, but keeps blanks.
+
+    ``labels``/``values``/``units`` are parallel arrays; dropping an empty
+    string (a unit-less AQI) would shift every unit below it onto the wrong
+    row.
+    """
+    entry = _props_map(view_data).get(key)
+    rows: list[str] = []
+    for item in _list_items(entry):
+        value = getattr(item, "string", None)
+        rows.append(value if isinstance(value, str) else "")
+    return rows
 
 
 class RenderView(BaseView):
@@ -82,6 +102,8 @@ class RenderView(BaseView):
             yield from self._compose_qr_code()
         elif kind == "qr_code_carousel":
             yield from self._compose_qr_carousel()
+        elif kind == "readings":
+            yield from self._compose_readings()
         elif kind == "status":
             yield from self._compose_status()
         elif kind == "text_viewer":
@@ -122,6 +144,24 @@ class RenderView(BaseView):
                 classes="render-fallback",
                 markup=False,
             )
+
+    def _compose_readings(self) -> ComposeResult:
+        labels = _prop_string_rows(self.view_data, "labels")
+        values = _prop_string_rows(self.view_data, "values")
+        units = _prop_string_rows(self.view_data, "units")
+        if not labels:
+            placeholder = (
+                prop_string(self.view_data, "placeholder") or "No readings yet"
+            )
+            yield Label(placeholder, classes="render-fallback", markup=False)
+            return
+        name_width = max(len(label) for label in labels)
+        with VerticalScroll(classes="render-text"):
+            for index, label in enumerate(labels):
+                value = values[index] if index < len(values) else "—"
+                unit = units[index] if index < len(units) else ""
+                reading = f"{value} {unit}".strip()
+                yield Static(f"{label:<{name_width}}  {reading}", markup=False)
 
     def _compose_status(self) -> ComposeResult:
         text = prop_string(self.view_data, "text") or "(no status text)"

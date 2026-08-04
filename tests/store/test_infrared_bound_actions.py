@@ -12,13 +12,13 @@ autorun, or hardware is involved.
 
 from __future__ import annotations
 
-import importlib.util
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
 from redux import CompleteReducerResult
 
+from tests.service_loader import load_service_modules
 from ubo_app.store.core.bindable_actions import (
     BindableActionContext,
     clear_all_bindable_actions,
@@ -38,7 +38,6 @@ from ubo_app.store.services.infrared import (
 from ubo_app.store.services.keypad import Key, KeypadKeyPressAction
 
 if TYPE_CHECKING:
-    from types import ModuleType
 
     from ubo_app.store.main import UboAction
 
@@ -50,19 +49,12 @@ _SERVICE_DIR = (
 )
 
 
-def _load_module(name: str, filename: str) -> ModuleType:
-    spec = importlib.util.spec_from_file_location(name, _SERVICE_DIR / filename)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-_reducer_module = _load_module('infrared_reducer_under_test', 'reducer.py')
+_reducer_module, _setup_module = load_service_modules(
+    _SERVICE_DIR,
+    'reducer',
+    'setup',
+)
 reducer = _reducer_module.reducer
-
-_setup_module = _load_module('infrared_setup_under_test', 'setup.py')
 handle_bound_action = _setup_module._handle_bound_action_triggered  # noqa: SLF001
 
 # A code that is also a built-in keypad code (L1 press), so tests can prove a

@@ -792,6 +792,17 @@
         "label": "MCP Tools",
         "priority": 15
       },
+      "mqtt:": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Network",
+        "icon": "󰵁",
+        "key": "mqtt:",
+        "label": "MQTT",
+        "priority": -1
+      },
       "rpi_connect:": {
         "_type": "RegisteredAppEntry",
         "action_id": "rpi-connect:open_menu",
@@ -802,6 +813,17 @@
         "key": "rpi_connect:",
         "label": "RPi Connect",
         "priority": null
+      },
+      "sensors:": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Hardware",
+        "icon": "󰡵",
+        "key": "sensors:",
+        "label": "Sensors",
+        "priority": 1
       },
       "speech_recognition:": {
         "_type": "RegisteredAppEntry",
@@ -895,7 +917,9 @@
       "ip:": 0,
       "lightdm:": 0,
       "mcp:tools": 15,
+      "mqtt:": -1,
       "rpi_connect:": null,
+      "sensors:": 1,
       "speech_recognition:": 30,
       "speech_recognition:wake_up": 100,
       "speech_synthesis:": 10,
@@ -956,6 +980,24 @@
     "mcp_servers": {},
     "server_statuses": {}
   },
+  "mqtt": {
+    "_type": "MqttState",
+    "allow_remote_control": false,
+    "broker": {
+      "_type": "MqttBrokerConfig",
+      "ca_cert_path": "",
+      "has_password": false,
+      "host": "127.0.0.1",
+      "port": 1883,
+      "source": "bundled",
+      "use_tls": false,
+      "username": ""
+    },
+    "is_enabled": true,
+    "last_error": null,
+    "published_components": {},
+    "status": "disabled"
+  },
   "notifications": {
     "_type": "NotificationsState",
     "notifications": [],
@@ -976,6 +1018,8 @@
   },
   "sensors": {
     "_type": "SensorsState",
+    "devices": {},
+    "is_scanning": false,
     "light": {
       "_type": "SensorState",
       "value": 0.0
@@ -1121,6 +1165,16 @@
         "log_level": 20,
         "should_auto_restart": false
       },
+      "mqtt": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "mqtt",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "MQTT",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
       "notifications": {
         "_type": "ServiceState",
         "errors": [],
@@ -1248,6 +1302,209 @@
   "speech_recognition": {
     "_type": "SpeechRecognitionState",
     "assistant_enabled": false,
+    "assistant_session_audio_source": "",
+    "commands_catalog": {
+      "_type": "SpeechRecognitionCommandsCatalog",
+      "items": [
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:assistant-on",
+          "label": "Turn on Assistant",
+          "sample_phrases": [
+            "Turn on Assistant"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:assistant-off",
+          "label": "Turn off Assistant",
+          "sample_phrases": [
+            "Turn off Assistant"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:wifi-camera",
+          "label": "WiFi Setup via Camera",
+          "sample_phrases": [
+            "Create WiFi Connection with Camera",
+            "Create WiFi Connection with QR Code",
+            "Create WiFi Connection using Camera"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:wifi-web",
+          "label": "WiFi Setup via Web",
+          "sample_phrases": [
+            "Create WiFi Connection with Web Dashboard",
+            "Create WiFi Connection with Web",
+            "Create WiFi Connection with Web UI"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:light-strip-toggle",
+          "label": "Toggle Light Strip",
+          "sample_phrases": [
+            "Turn on light strip",
+            "Turn off light strip"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-on",
+          "label": "Turn on Lights",
+          "sample_phrases": [
+            "Turn on Lights"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-off",
+          "label": "Turn off Lights",
+          "sample_phrases": [
+            "Turn off Lights"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-red",
+          "label": "Turn Lights Red",
+          "sample_phrases": [
+            "Turn Lights Red"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-green",
+          "label": "Turn Lights Green",
+          "sample_phrases": [
+            "Turn Lights Green"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-blue",
+          "label": "Turn Lights Blue",
+          "sample_phrases": [
+            "Turn Lights Blue"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-white",
+          "label": "Turn Lights White",
+          "sample_phrases": [
+            "Turn Lights White"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-rainbow",
+          "label": "Turn Lights Rainbow",
+          "sample_phrases": [
+            "Turn Lights Rainbow"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:volume-up",
+          "label": "Turn Volume Up",
+          "sample_phrases": [
+            "Turn Volume Up"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:volume-down",
+          "label": "Turn Volume Down",
+          "sample_phrases": [
+            "Turn Volume Down"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:button-one",
+          "label": "Activate Button One",
+          "sample_phrases": [
+            "Activate Button One"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:button-two",
+          "label": "Activate Button Two",
+          "sample_phrases": [
+            "Activate Button Two"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:button-three",
+          "label": "Activate Button Three",
+          "sample_phrases": [
+            "Activate Button Three"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:go-back",
+          "label": "Go Back",
+          "sample_phrases": [
+            "Activate Back Button",
+            "Go Back"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:go-home",
+          "label": "Go Home",
+          "sample_phrases": [
+            "Activate Home Button",
+            "Go Home"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:scroll-up",
+          "label": "Scroll Up",
+          "sample_phrases": [
+            "Activate Up Button",
+            "Scroll Up"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:scroll-down",
+          "label": "Scroll Down",
+          "sample_phrases": [
+            "Activate Down Button",
+            "Scroll Down"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:ir-receive-on",
+          "label": "Enable IR Receiver",
+          "sample_phrases": [
+            "Enable Receive Keys",
+            "Turn on Receive Keys",
+            "Start Receiving IR"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:ir-receive-off",
+          "label": "Disable IR Receiver",
+          "sample_phrases": [
+            "Disable Receive Keys",
+            "Turn off Receive Keys",
+            "Stop Receiving IR"
+          ]
+        }
+      ]
+    },
     "conversation_end_phrases": [
       "i am done talking",
       "i'm done talking"

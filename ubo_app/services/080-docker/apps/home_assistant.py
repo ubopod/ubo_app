@@ -14,9 +14,12 @@ into a stale YAML that could brick an unattended boot.
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
 import ipaddress
 import json
 import re
+import secrets
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -41,6 +44,10 @@ from ubo_app.store.services.docker import (
     DockerSetMacvlanConfigAction,
     DockerSetZigbeeIntentAction,
 )
+from ubo_app.store.services.mqtt import (
+    BUNDLED_BROKER_PASSWORD_SECRET_ID,
+    BUNDLED_BROKER_USERNAME,
+)
 from ubo_app.store.services.notifications import (
     Notification,
     NotificationDisplayType,
@@ -48,6 +55,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
+from ubo_app.utils.secrets import read_secret, write_secret
 
 if TYPE_CHECKING:
     from ubo_app.store.services.docker import DockerServiceState
@@ -308,19 +316,69 @@ def _suggest_reserved_ip(subnet: str, gateway: str) -> str:
 
 
 MOSQUITTO_IMAGE = 'eclipse-mosquitto:2'
-# Mosquitto config allowing anonymous access. The broker has NO host `ports:`
-# publish — it is reachable only on `ubo_net` (as `mosquitto:1883`), so there
-# is no LAN surface to authenticate in v1.
+_MOSQUITTO_AUTH_SOURCE_PATH = '/mosquitto/config/passwd'
+_MOSQUITTO_AUTH_RUNTIME_PATH = '/run/mosquitto/passwd'
+# Two listeners with separate auth postures. 1883 stays anonymous but is only
+# reachable on `ubo_net` (containers connect as `mosquitto:1883`, so the Home
+# Assistant onboarding instructions need no credentials). 1884 requires the
+# generated password below and is the listener published on the host's
+# loopback (see `_write_home_assistant_compose`) — its only intended client is
+# the pod's own MQTT bridge, which reads the secret programmatically. Without
+# this split, any local process or secondary account on the pod could read all
+# telemetry and, with remote control enabled, drive the command surface.
 MOSQUITTO_CONF = (
+    'per_listener_settings true\n'
     'listener 1883\n'
     'allow_anonymous true\n'
+    'listener 1884\n'
+    'allow_anonymous false\n'
+    f'password_file {_MOSQUITTO_AUTH_RUNTIME_PATH}\n'
     'persistence true\n'
     'persistence_location /mosquitto/data/\n'
 )
 
+# Mosquitto 2.x `mosquitto_passwd` format: PBKDF2-HMAC-SHA512, tagged `$7$`,
+# with the iteration count it uses by default. Verified against a live
+# `eclipse-mosquitto:2` broker — do not change one without the other.
+_MOSQUITTO_HASH_ITERATIONS = 1000
+_MOSQUITTO_SALT_LENGTH = 64
+_MOSQUITTO_KEY_LENGTH = 64
+
+
+def _mosquitto_passwd_line(username: str, password: str) -> str:
+    """Render one `password_file` entry the way `mosquitto_passwd` would."""
+    salt = secrets.token_bytes(_MOSQUITTO_SALT_LENGTH)
+    digest = hashlib.pbkdf2_hmac(
+        'sha512',
+        password.encode(),
+        salt,
+        _MOSQUITTO_HASH_ITERATIONS,
+        dklen=_MOSQUITTO_KEY_LENGTH,
+    )
+    encoded_salt = base64.b64encode(salt).decode()
+    encoded_digest = base64.b64encode(digest).decode()
+    return (
+        f'{username}:$7${_MOSQUITTO_HASH_ITERATIONS}'
+        f'${encoded_salt}${encoded_digest}\n'
+    )
+
+
+def _bundled_broker_password() -> str:
+    """Return the bundled broker's credential, generating it on first use.
+
+    The password never needs to be typed by a human — the bridge reads it from
+    the secrets file — so it is generated once and reused, keeping the broker's
+    `password_file` and the bridge's view of it in sync across re-renders.
+    """
+    password = read_secret(BUNDLED_BROKER_PASSWORD_SECRET_ID)
+    if not password:
+        password = secrets.token_urlsafe(24)
+        write_secret(key=BUNDLED_BROKER_PASSWORD_SECRET_ID, value=password)
+    return password
+
 
 def _write_mosquitto_config() -> None:
-    """Write the anonymous Mosquitto config to its persistent bind-mount."""
+    """Write the Mosquitto config and password file to the bind-mount."""
     config_dir = HOME_ASSISTANT_DATA_PATH / 'mosquitto' / 'config'
     config_dir.mkdir(exist_ok=True, parents=True)
     (HOME_ASSISTANT_DATA_PATH / 'mosquitto' / 'data').mkdir(
@@ -328,6 +386,13 @@ def _write_mosquitto_config() -> None:
         parents=True,
     )
     (config_dir / 'mosquitto.conf').write_text(MOSQUITTO_CONF)
+    passwd_path = config_dir / 'passwd'
+    passwd_path.write_text(
+        _mosquitto_passwd_line(BUNDLED_BROKER_USERNAME, _bundled_broker_password()),
+    )
+    # Mosquitto warns on (and will eventually refuse) a world-readable
+    # password file.
+    passwd_path.chmod(0o600)
 
 
 HA_MACVLAN_NETWORK = 'ha_macvlan'
@@ -376,7 +441,16 @@ def _write_home_assistant_compose(
 
     The bundled Mosquitto broker lives in HA's project (HA owns its lifecycle)
     but is attached to the external `ubo_net` bus so peer add-ons can reach it
-    as `mosquitto:1883`. It publishes no host port.
+    as `mosquitto:1883`. Its *authenticated* listener (container port 1884,
+    see `MOSQUITTO_CONF`) is additionally published on the host's loopback as
+    127.0.0.1:1883 so the pod's MQTT bridge can publish readings to Home
+    Assistant over MQTT discovery without exposing an anonymous broker to
+    other local processes.
+
+    That publish deliberately uses compose's *long* syntax:
+    `apply_compose_port_binding` rewrites short-syntax entries only, so if HA
+    ever opts into the expose-to-LAN toggle, 8123 can move to 0.0.0.0 while the
+    broker stays pinned to loopback.
 
     When ``macvlan`` is given, HA is additionally attached to a macvlan network
     (its own LAN IP) so mDNS/SSDP discovery works; it stays multi-homed on
@@ -410,9 +484,27 @@ def _write_home_assistant_compose(
         f'    image: {MOSQUITTO_IMAGE}\n'
         '    container_name: mosquitto\n'
         '    restart: unless-stopped\n'
+        '    command:\n'
+        '      - /bin/sh\n'
+        '      - -ec\n'
+        '      - |\n'
+        '        mkdir -p /run/mosquitto\n'
+        '        chown root:root /run/mosquitto\n'
+        '        chmod 755 /run/mosquitto\n'
+        f'        cp {_MOSQUITTO_AUTH_SOURCE_PATH} '
+        f'{_MOSQUITTO_AUTH_RUNTIME_PATH}\n'
+        f'        chown mosquitto:mosquitto {_MOSQUITTO_AUTH_RUNTIME_PATH}\n'
+        f'        chmod 600 {_MOSQUITTO_AUTH_RUNTIME_PATH}\n'
+        '        exec /usr/sbin/mosquitto '
+        '-c /mosquitto/config/mosquitto.conf\n'
         '    volumes:\n'
         f'      - {mosquitto_path / "config"}:/mosquitto/config\n'
         f'      - {mosquitto_path / "data"}:/mosquitto/data\n'
+        '    ports:\n'
+        '      - target: 1884\n'
+        '        published: 1883\n'
+        '        host_ip: 127.0.0.1\n'
+        '        protocol: tcp\n'
         '    networks:\n'
         f'      - {UBO_NET}\n'
         f'{_top_level_networks_block(macvlan)}'
@@ -432,6 +524,8 @@ def _write_home_assistant_metadata(composition_path: Path) -> None:
             'An MQTT broker is bundled. To connect it, add the MQTT '
             'integration in Home Assistant and point it at broker '
             '"mosquitto" port 1883 (no username or password).\n\n'
+            'Once that is done, sensors plugged into this device appear in '
+            'Home Assistant automatically — no further configuration.\n\n'
             'Advanced discovery (macvlan) gives Home Assistant its own LAN IP '
             'for mDNS/SSDP discovery. Note: while macvlan is enabled, this '
             'device (the Pod) cannot reach Home Assistant on its macvlan IP '

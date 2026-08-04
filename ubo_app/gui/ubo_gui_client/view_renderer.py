@@ -144,6 +144,10 @@ class ViewRenderer:
         self._last_menu_page_index: int | None = None
         self._last_notification_page_index: int | None = None
         self._last_stack_depth: int | None = None
+        # Which render stream is on screen, so a props update for the *same*
+        # stream can be applied in place instead of rebuilding the widget and
+        # replaying the page-swap animation.
+        self._last_render_stream_id: str | None = None
 
         # Ensure a root menu always exists so that non-home views arriving
         # first (e.g. on reconnect to a core already in a submenu) get
@@ -169,6 +173,7 @@ class ViewRenderer:
         self._last_menu_page_index = None
         self._last_notification_page_index = None
         self._last_stack_depth = None
+        self._last_render_stream_id = None
         self.menu_widget.reset_to_root()
         logger.info('[ViewRenderer] State reset for reconnection')
 
@@ -342,9 +347,35 @@ class ViewRenderer:
             self._video_unsubscribe = None
             logger.info('[ViewRenderer] Video subscription cleaned up')
 
+    def _is_same_frame_stream(self, view: object) -> bool:
+        """Whether this view is a props update for the frame stream on screen.
+
+        The subscription belongs to the stream, not to the widget, so tearing it
+        down for an in-place update would freeze the feed: the update path
+        returns before the subscription is ever recreated.
+        """
+        from ubo_bindings.ubo.v1 import (
+            RenderViewData as ProtoRenderViewData,
+        )
+
+        if self._video_unsubscribe is None or not isinstance(
+            view,
+            ProtoRenderViewData,
+        ):
+            return False
+        stream_id = getattr(view, 'stream_id', '') or ''
+        return (
+            getattr(view, 'kind', '') == 'frame_stream'
+            and bool(stream_id)
+            and stream_id == self._last_render_stream_id
+        )
+
     def _render_view(self, view: ViewData) -> None:
         """Dispatch to the appropriate render method based on view type."""
-        self._cleanup_video_subscription()
+        # Anything else is a navigation away from whatever was on screen, and
+        # the video subscription goes with it.
+        if not self._is_same_frame_stream(view):
+            self._cleanup_video_subscription()
         from ubo_bindings.ubo.v1 import (
             ApplicationViewData as ProtoApplicationViewData,
         )
@@ -595,6 +626,7 @@ class ViewRenderer:
             Clock.schedule_once(_fix_scrollbar, 0)
 
         self._current_view_type = 'menu'
+        self._last_render_stream_id = None
 
         # Update tracking for transition animation detection
         if page_index is not None:
@@ -682,6 +714,7 @@ class ViewRenderer:
         )
         self.menu_widget.replace_top_with_application(widget, animated=True)
         self._current_view_type = 'application'
+        self._last_render_stream_id = None
         self._last_menu_page_index = None
         stack_depth = getattr(view, 'stack_depth', None)
         if stack_depth is not None:
@@ -714,6 +747,23 @@ class ViewRenderer:
                         k: _unwrap_extra_data_value(v)
                         for k, v in items_dict.items()
                     }
+
+            # A props update for the stream already on screen is an update, not
+            # a navigation: rebuilding the widget would replay the page-swap
+            # animation on every change. Live views (a sensor's readings at
+            # 1 Hz) are unusable otherwise. Gated on the stream id so opening a
+            # *different* stream of the same kind still animates as a new page.
+            if (
+                stream_id
+                and stream_id == self._last_render_stream_id
+                and self._try_update_application_in_place(
+                    widget_class,
+                    kwargs,
+                    f'render:{kind}:{stream_id}',
+                )
+            ):
+                return
+
             widget = widget_class(**kwargs)
 
         logger.info(
@@ -724,6 +774,7 @@ class ViewRenderer:
         )
         self.menu_widget.replace_top_with_application(widget, animated=True)
         self._current_view_type = 'application'
+        self._last_render_stream_id = stream_id or None
         self._last_menu_page_index = None
         stack_depth = getattr(view, 'stack_depth', None)
         if stack_depth is not None:
@@ -733,6 +784,11 @@ class ViewRenderer:
             from ubo_gui_client.widgets.frame_stream import FrameStreamRenderPage
 
             if isinstance(widget, FrameStreamRenderPage):
+                # Reaching here means the widget was rebuilt rather than updated
+                # in place, so a subscription kept for a same-stream update is
+                # now feeding a discarded widget. Idempotent, and the only path
+                # that resubscribes.
+                self._cleanup_video_subscription()
 
                 @mainthread
                 def _on_frame(

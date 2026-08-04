@@ -60,6 +60,21 @@ dependencies = [
   "adafruit-circuitpython-rgb-display==3.14.0",
   "adafruit-circuitpython-veml7700==2.1.3",
   "adafruit-circuitpython-pixelbuf==2.0.8",
+  # STEMMA QT sensor drivers — one per definition in the sensor registry
+  # (`040-sensors/registry.default.json`). A definition may only name a driver
+  # that is both listed here and on `drivers.DRIVER_ALLOWLIST`.
+  "adafruit-circuitpython-ahtx0==1.0.28",
+  "adafruit-circuitpython-bh1750==1.1.14",
+  "adafruit-circuitpython-bme280==2.6.28",
+  "adafruit-circuitpython-bme680==3.7.16",
+  "adafruit-circuitpython-bmp3xx==1.3.27",
+  "adafruit-circuitpython-ens160==1.1.2",
+  "adafruit-circuitpython-mcp9808==3.3.26",
+  "adafruit-circuitpython-pm25==2.1.24",
+  "adafruit-circuitpython-scd4x==1.4.12",
+  "adafruit-circuitpython-sgp40==1.3.24",
+  "adafruit-circuitpython-sht4x==1.0.22",
+  "adafruit-circuitpython-vl53l1x==1.1.12",
   "adafruit-blinka-raspberry-pi5-neopixel==1.0.0rc2 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
   # RPi dependencies
   "onnxruntime>=1.22.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
@@ -72,6 +87,8 @@ dependencies = [
   # gRPC
   "betterproto[compiler]==2.0.0b7",
   "pillow>=11.3.0",
+  # MQTT — publishes sensor readings to Home Assistant's bundled broker.
+  "aiomqtt==2.4.0",
 ]
 
 [tool.uv]
@@ -327,6 +344,10 @@ extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/050-lightdm"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-mqtt"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]

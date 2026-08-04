@@ -5,10 +5,9 @@ from __future__ import annotations
 import sys
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import Protocol, cast
 
-if TYPE_CHECKING:
-    import pytest
+import pytest
 
 DOCKER_SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app' / 'services' / '080-docker'
 
@@ -22,6 +21,8 @@ class HomeAssistantModule(Protocol):
     UBO_NET: str
     SERIAL_BY_ID_PATH: Path
     ZIGBEE_CONTAINER_DEVICE: str
+    BUNDLED_BROKER_USERNAME: str
+    BUNDLED_BROKER_PASSWORD_SECRET_ID: str
 
     def detect_serial_adapters(self) -> list[str]:
         """Enumerate serial-by-id adapters."""
@@ -83,6 +84,20 @@ def _import_home_assistant() -> HomeAssistantModule:
             sys.path.remove(docker_path)
 
 
+@pytest.fixture(autouse=True)
+def bundled_broker_secrets(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
+    """Keep the generated broker credential out of the real secrets file."""
+    ha = _import_home_assistant()
+    store: dict[str, str] = {}
+
+    def _write_secret(*, key: str, value: str) -> None:
+        store[key] = value
+
+    monkeypatch.setattr(ha, 'read_secret', store.get)
+    monkeypatch.setattr(ha, 'write_secret', _write_secret)
+    return store
+
+
 async def test_prepare_renders_compose_on_ubo_net(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -114,16 +129,125 @@ async def test_prepare_renders_compose_on_ubo_net(
     assert 'TZ=' in compose
     # No blanket privilege escalation in the device-only posture.
     assert 'privileged' not in compose
-    # The bundled MQTT broker rides the same external bus and publishes NO host
-    # port (reachable only as mosquitto:1883 on ubo_net) — so there is no LAN
-    # surface and the port-binding helper has nothing to rewrite.
+    # The bundled MQTT broker rides the same external bus (containers reach it
+    # as mosquitto:1883) AND its *authenticated* listener (1884) is published
+    # on the host's loopback so the pod's bridge can publish readings to it.
+    # Loopback only — never 0.0.0.0 — and never the anonymous listener.
     assert 'mosquitto:' in compose
     assert 'image: eclipse-mosquitto' in compose
+    assert 'host_ip: 127.0.0.1\n' in compose
+    assert '- target: 1884\n' in compose
+    assert 'published: 1883\n' in compose
+    # The bare short-syntax form would bind every interface — it must not appear.
     assert '- 1883:1883' not in compose
     mosquitto_conf = (
         data / 'mosquitto' / 'config' / 'mosquitto.conf'
     ).read_text()
-    assert 'allow_anonymous true' in mosquitto_conf
+    # Anonymous access is confined to the container-network listener; the
+    # host-published listener requires the generated credential.
+    assert 'per_listener_settings true' in mosquitto_conf
+    assert (
+        'listener 1883\nallow_anonymous true\n' in mosquitto_conf
+    )
+    assert (
+        'listener 1884\nallow_anonymous false\n'
+        'password_file /run/mosquitto/passwd\n' in mosquitto_conf
+    )
+    assert 'mkdir -p /run/mosquitto\n' in compose
+    assert 'cp /mosquitto/config/passwd /run/mosquitto/passwd\n' in compose
+    assert 'chown mosquitto:mosquitto /run/mosquitto/passwd\n' in compose
+    assert 'chmod 600 /run/mosquitto/passwd\n' in compose
+    assert (
+        'exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf\n' in compose
+    )
+
+
+async def test_mosquitto_password_file_is_generated_and_stable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    bundled_broker_secrets: dict[str, str],
+) -> None:
+    """The broker credential is generated once, hashed, and kept private.
+
+    The password itself lives in the secrets file (the bridge reads it from
+    there); the broker only ever sees the `mosquitto_passwd`-format hash, and
+    a re-render reuses the stored secret so the two stay in sync.
+    """
+    ha = _import_home_assistant()
+    compositions = tmp_path / 'compositions'
+    data = tmp_path / 'data'
+    monkeypatch.setattr(ha, 'COMPOSITIONS_PATH', compositions)
+    monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', data)
+    _disable_zigbee(monkeypatch, ha)
+
+    assert await ha.prepare_home_assistant()
+
+    passwd_path = data / 'mosquitto' / 'config' / 'passwd'
+    line = passwd_path.read_text()
+    password = bundled_broker_secrets[ha.BUNDLED_BROKER_PASSWORD_SECRET_ID]
+    # `user:$7$<iterations>$<salt-b64>$<digest-b64>` — and never the cleartext.
+    assert line.startswith(f'{ha.BUNDLED_BROKER_USERNAME}:$7$')
+    assert password not in line
+    assert passwd_path.stat().st_mode & 0o077 == 0
+    _, _, iterations, salt, digest = line.strip().split('$')
+    import base64
+    import hashlib
+
+    assert base64.b64decode(digest) == hashlib.pbkdf2_hmac(
+        'sha512',
+        password.encode(),
+        base64.b64decode(salt),
+        int(iterations),
+        dklen=len(base64.b64decode(digest)),
+    )
+
+    # A second render must not rotate the credential out from under the
+    # bridge's copy in the secrets file.
+    assert await ha.prepare_home_assistant()
+    assert bundled_broker_secrets[ha.BUNDLED_BROKER_PASSWORD_SECRET_ID] == password
+
+
+async def test_broker_stays_on_loopback_when_exposed_to_lan(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Exposing Home Assistant to the LAN must not expose the MQTT broker.
+
+    The host-published listener is authenticated, but it is still not meant
+    for the LAN. `apply_compose_port_binding` rewrites short-syntax ports
+    only, which is exactly why the broker's publish uses the long form: HA's
+    8123 moves, the broker does not.
+    """
+    import sys
+
+    ha = _import_home_assistant()
+    compositions = tmp_path / 'compositions'
+    data = tmp_path / 'data'
+    monkeypatch.setattr(ha, 'COMPOSITIONS_PATH', compositions)
+    monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', data)
+    _disable_zigbee(monkeypatch, ha)
+
+    assert await ha.prepare_home_assistant()
+    compose = (
+        compositions / ha.HOME_ASSISTANT_COMPOSITION_ID / 'docker-compose.yml'
+    ).read_text()
+
+    sys.path.insert(0, str(DOCKER_SERVICE_PATH))
+    try:
+        from apps._port_binding import (  # type: ignore[import-not-found]
+            apply_compose_port_binding,
+        )
+    finally:
+        sys.path.remove(str(DOCKER_SERVICE_PATH))
+
+    exposed = apply_compose_port_binding(compose, expose_to_lan=True)
+
+    # HA's own port is free to move to every interface ...
+    assert '- 8123:8123' in exposed
+    # ... but the broker keeps its explicit loopback binding.
+    assert 'host_ip: 127.0.0.1\n' in exposed
+    assert '- 1883:1883' not in exposed
+    assert '- 0.0.0.0:1883:1883' not in exposed
 
 
 async def test_prepare_creates_persistent_config_dir_and_metadata(

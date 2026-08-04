@@ -124,6 +124,7 @@ CORE_SERVICE_IDS = [
     'keypad',
     'lightdm',
     'mcp',
+    'mqtt',
     'notifications',
     'rgb_ring',
     'rpi_connect',

@@ -24,8 +24,13 @@ persistent_store_lock = fasteners.ReaderWriterLock()
 def register_persistent_store(
     key: str,
     selector: Callable[[RootState], T],
-) -> None:
-    """Register a part of the store to be persistent in the file system."""
+) -> Callable[[], None]:
+    """Register a part of the store to be persistent in the file system.
+
+    Returns the autorun's unsubscribe, so a service that can be stopped and
+    started again should return it from `init_service()`'s subscriptions —
+    otherwise each restart leaves another listener behind.
+    """
     from ubo_app.store.main import store
 
     @store.autorun(selector)
@@ -39,7 +44,14 @@ def register_persistent_store(
                 current_state = {}
             serialized_value = store.serialize_value(value)
             current_state[key] = serialized_value
-            Path(PERSISTENT_STORE_PATH).write_text(json.dumps(current_state, indent=2))
+            Path(PERSISTENT_STORE_PATH).write_text(
+                json.dumps(current_state, indent=2),
+            )
+
+    # Returned so a service can drop the listener on shutdown. Without it every
+    # restart leaves an autorun referencing an unloaded module and a coroutine
+    # runner bound to a stopped event loop.
+    return _.unsubscribe
 
 
 @overload
