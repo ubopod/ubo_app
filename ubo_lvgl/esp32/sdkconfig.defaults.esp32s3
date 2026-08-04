@@ -89,3 +89,12 @@ CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
 # A bespoke "Hey Ubo" would be wn9_customword, via Espressif's paid training
 # service.
 CONFIG_SR_WN_WN9_JARVIS_TTS=y
+
+# Actually run WakeNet. This is NOT implied by packing a model: the SR_WN_*
+# symbol above only decides srmodels.bin's contents, while the whole wake path
+# in client_app.c/audio.c is `#ifdef CONFIG_UBO_WAKE_ENABLE`, which defaults to
+# n. Without this line every build generated from these defaults (CI included)
+# ships the 292KB model in flash and never loads it — the board answers the BOOT
+# hold and nothing else. It stays out of sdkconfig.defaults because it depends
+# on UBO_AFE_ENABLE -> SPIRAM, which the C6 does not have.
+CONFIG_UBO_WAKE_ENABLE=y
