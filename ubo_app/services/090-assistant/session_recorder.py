@@ -285,7 +285,13 @@ class AssistantSessionRecorder:
 
 
 _recorder = AssistantSessionRecorder()
-_finalize_task: asyncio.Task[None] | None = None
+
+# Identity token for the drain currently in flight, or None when none is.
+# `create_task` hands back the `asyncio.Handle` of the *scheduling* call, not
+# the task — and the task runs on the service loop while this autorun fires on
+# whichever thread dispatched — so an in-flight drain is superseded by
+# invalidating its token, never by cancelling it.
+_drain_token: object | None = None
 
 
 def _handle_mic_sample(event: AudioReportSampleEvent) -> None:
@@ -308,12 +314,41 @@ async def _write_session(session: _Session, stop_reason: str) -> None:
     )
 
 
-async def _finalize_after_drain(stop_reason: str) -> None:
+async def _finalize_after_drain(stop_reason: str, token: object) -> None:
     """Wait for in-flight audio, then close the session and write it."""
+    global _drain_token  # noqa: PLW0603
     await asyncio.sleep(_DRAIN_SECONDS)
+    if token is not _drain_token:
+        # A new session started during the drain window and took the recorder.
+        return
+    _drain_token = None
     session = _recorder.stop(stop_reason)
     if session is not None and session.mic_chunks:
         await _write_session(session, stop_reason)
+
+
+def track_listening(data: tuple[bool, bool, str] | None) -> None:
+    """Start / stop the recorder from (debug flag, is_listening, source)."""
+    if data is None:
+        return
+    global _drain_token  # noqa: PLW0603
+    enabled, is_listening, audio_source = data
+    if enabled and is_listening:
+        # A new session during the drain window supersedes it.
+        if _drain_token is not None:
+            _drain_token = None
+            _recorder.stop('superseded')
+        # Rising edge — or a session already running when the flag came on,
+        # which is recorded from that point rather than skipped.
+        if not _recorder.is_active:
+            _recorder.start(audio_source)
+        return
+    if not _recorder.is_active or _drain_token is not None:
+        return
+    stop_reason = 'listening_ended' if not is_listening else 'debug_disabled'
+    _recorder.mark_closing()
+    _drain_token = token = object()
+    create_task(_finalize_after_drain(stop_reason, token))
 
 
 def setup_session_recorder() -> None:
@@ -322,34 +357,11 @@ def setup_session_recorder() -> None:
     store.subscribe_event(AudioPlayAudioSampleEvent, _handle_played_sample)
     store.subscribe_event(AudioPlayAudioSequenceEvent, _handle_played_sample)
 
-    @store.autorun(
+    store.autorun(
         lambda state: (
             state.settings.assistant_debug,
             state.assistant.is_listening,
             state.assistant.active_audio_source,
         ),
         options=AutorunOptions(default_value=None),
-    )
-    def _track_listening(data: tuple[bool, bool, str] | None) -> None:
-        if data is None:
-            return
-        global _finalize_task  # noqa: PLW0603
-        enabled, is_listening, audio_source = data
-        if enabled and is_listening:
-            # A new session during the drain window supersedes it.
-            if _finalize_task is not None and not _finalize_task.done():
-                _finalize_task.cancel()
-                _finalize_task = None
-                _recorder.stop('superseded')
-            # Rising edge — or a session already running when the flag came on,
-            # which is recorded from that point rather than skipped.
-            if not _recorder.is_active:
-                _recorder.start(audio_source)
-            return
-        if not _recorder.is_active or (
-            _finalize_task is not None and not _finalize_task.done()
-        ):
-            return
-        stop_reason = 'listening_ended' if not is_listening else 'debug_disabled'
-        _recorder.mark_closing()
-        _finalize_task = create_task(_finalize_after_drain(stop_reason))
+    )(track_listening)

@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
     from types import ModuleType
 
     import pytest
@@ -172,3 +173,87 @@ def test_full_coverage_session_reports_100_percent(
     assert directory is not None
     metadata = json.loads((directory / 'session.json').read_text())
     assert metadata['mic']['coverage_pct'] >= 95
+
+
+class _FakeHandle:
+    """What ``create_task`` really hands back: an ``asyncio.Handle``.
+
+    It schedules the coroutine on the service loop via ``call_soon_threadsafe``
+    and returns that call's handle, so the object has ``cancel``/``cancelled``
+    and — the part that matters here — no ``done``.
+    """
+
+    def cancel(self) -> None:
+        """Cancel the scheduling callback, not the task it would create."""
+
+    def cancelled(self) -> bool:
+        """Whether the scheduling callback was cancelled."""
+        return False
+
+
+def _stub_create_task(
+    monkeypatch: pytest.MonkeyPatch,
+    mod: ModuleType,
+) -> list[Coroutine[None, None, None]]:
+    """Capture scheduled coroutines, returning a handle shaped like the real one."""
+    scheduled: list[Coroutine[None, None, None]] = []
+
+    def create_task(
+        coroutine: Coroutine[None, None, None],
+        *_args: object,
+        **_kwargs: object,
+    ) -> _FakeHandle:
+        scheduled.append(coroutine)
+        return _FakeHandle()
+
+    monkeypatch.setitem(mod.__dict__, 'create_task', create_task)
+    return scheduled
+
+
+def test_back_to_back_sessions_do_not_trip_over_the_drain_handle(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A second session must not blow up on the first one's drain bookkeeping.
+
+    ``create_task`` returns the ``asyncio.Handle`` of the *scheduling* call, not
+    a ``Task``, so anything that treated the stored value as a task (``.done()``,
+    ``.cancel()``) raised ``AttributeError`` on the second session — the first
+    one always worked, which is what hid it.
+    """
+    mod = _load_recorder(monkeypatch, tmp_path)
+    scheduled = _stub_create_task(monkeypatch, mod)
+
+    mod.track_listening((True, True, 'esp32:aabbccddeeff'))
+    assert mod._recorder.is_active  # noqa: SLF001
+
+    mod.track_listening((True, False, 'esp32:aabbccddeeff'))
+    assert len(scheduled) == 1
+
+    # Second session, while the first one's drain is still notionally in flight.
+    mod.track_listening((True, True, 'esp32:aabbccddeeff'))
+    assert mod._recorder.is_active  # noqa: SLF001
+
+
+async def test_a_superseded_drain_leaves_the_new_session_alone(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The drain that lost the race must not stop the session that replaced it.
+
+    Both drains run to completion — the loser can only be told it is stale, not
+    cancelled, because the task lives on the service loop while the autorun
+    fires on whichever thread dispatched it.
+    """
+    mod = _load_recorder(monkeypatch, tmp_path)
+    scheduled = _stub_create_task(monkeypatch, mod)
+    monkeypatch.setitem(mod.__dict__, '_DRAIN_SECONDS', 0)
+
+    mod.track_listening((True, True, 'esp32:aabbccddeeff'))
+    mod.track_listening((True, False, 'esp32:aabbccddeeff'))
+    mod.track_listening((True, True, 'esp32:aabbccddeeff'))
+
+    # The superseded drain now runs; it must not take the live session with it.
+    await scheduled[0]
+
+    assert mod._recorder.is_active  # noqa: SLF001
