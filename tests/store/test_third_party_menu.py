@@ -57,7 +57,7 @@ def _setup(monkeypatch: pytest.MonkeyPatch, *, is_rpi: bool) -> None:
     )
 
     from ubo_app.store.settings.dynamic_system_menus import (
-        _setup_third_party_settings,  # noqa: PLC2701
+        _setup_third_party_settings,
     )
 
     _setup_third_party_settings()
