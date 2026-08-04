@@ -46,13 +46,17 @@ from ubo_app.store.input.types import (
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.mqtt import (
+    BUNDLED_BROKER_PASSWORD_SECRET_ID,
+    BUNDLED_BROKER_USERNAME,
     DEFAULT_PORT,
     DEFAULT_TLS_PORT,
     MqttBrokerConfig,
     MqttBrokerSource,
+    MqttBundledCredentialsChangedAction,
     MqttConnectionStatus,
     MqttSetAllowRemoteControlAction,
     MqttSetBrokerAction,
+    MqttSetBundledExposeToLanAction,
     MqttSetEnabledAction,
 )
 from ubo_app.store.services.notifications import (
@@ -64,7 +68,7 @@ from ubo_app.store.services.notifications import (
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import build_selection_menu
-from ubo_app.utils.secrets import clear_secret, write_secret
+from ubo_app.utils.secrets import clear_secret, read_secret, write_secret
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -279,6 +283,91 @@ async def _configure_broker() -> None:
     _apply_broker_form(result.data, broker)
 
 
+@store.with_state(lambda state: state.mqtt.bundled_expose_to_lan)
+def _bundled_expose_to_lan(expose_to_lan: bool) -> bool:  # noqa: FBT001
+    return expose_to_lan
+
+
+async def _configure_bundled_broker() -> None:
+    """Set the bundled broker's password and whether it listens on the LAN.
+
+    The password is *set*, never shown. Revealing it would have to put the
+    secret into the store, which is streamed to every connected client over the
+    plain-HTTP web UI and the gRPC port — so the user chooses a password they
+    already know instead. A generated one still exists underneath so the pod's
+    own bridge works untouched out of the box; it just isn't something a human
+    is ever asked to read back.
+    """
+    has_password = read_secret(BUNDLED_BROKER_PASSWORD_SECRET_ID) is not None
+    exposed = _bundled_expose_to_lan()
+    try:
+        _, result = await ubo_input(
+            prompt='Bundled broker',
+            descriptions=[
+                WebUIInputDescription(
+                    fields=[
+                        InputFieldDescription(
+                            name='password',
+                            label='Password',
+                            type=InputFieldType.PASSWORD,
+                            description=(
+                                f'Username is "{BUNDLED_BROKER_USERNAME}". Set a '
+                                'password you can also enter in Home Assistant'
+                                + (' — leave blank to keep the current one'
+                                   if has_password
+                                   else '')
+                            ),
+                        ),
+                        InputFieldDescription(
+                            name='expose_to_lan',
+                            label='Reachable from the network',
+                            type=InputFieldType.CHECKBOX,
+                            description=(
+                                'Off: only this device can connect. On: any '
+                                'client on your network can, with the password.'
+                            ),
+                            default_value='on' if exposed else '',
+                        ),
+                    ],
+                ),
+            ],
+        )
+    except asyncio.CancelledError:
+        return
+    if not result:
+        return
+    _apply_bundled_broker_form(result.data, exposed=exposed)
+
+
+def _apply_bundled_broker_form(
+    data: Mapping[str, str],
+    *,
+    exposed: bool,
+) -> None:
+    """Store a submitted bundled-broker form."""
+    password = (data.get('password') or '').strip()
+    if password:
+        write_secret(key=BUNDLED_BROKER_PASSWORD_SECRET_ID, value=password)
+        # The broker's `password_file` is rendered by the docker service, which
+        # cannot see a secrets-only write — this action is what makes it
+        # re-render and recreate the container.
+        store.dispatch(MqttBundledCredentialsChangedAction())
+        from client import request_reconnect
+
+        request_reconnect()
+
+    expose_to_lan = _is_checkbox_on(data.get('expose_to_lan'))
+    if expose_to_lan != exposed:
+        store.dispatch(MqttSetBundledExposeToLanAction(expose_to_lan=expose_to_lan))
+
+    if password or expose_to_lan != exposed:
+        _notify(
+            title='MQTT',
+            content='Broker updated. Home Assistant restarts to apply it.',
+            ok=True,
+        )
+
+
 def _apply_broker_form(data: Mapping[str, str], broker: MqttBrokerConfig) -> None:
     """Validate a submitted broker form and store it."""
     host = (data.get('host') or '').strip()
@@ -427,15 +516,16 @@ def _update_menu(
         ),
     ]
 
-    if broker.source is MqttBrokerSource.EXTERNAL:
-        items.append(
-            MenuItemData(
-                key='mqtt:configure',
-                label='Broker Settings',
-                icon='󰢻',
-                action_id='mqtt:configure',
-            ),
-        )
+    items.append(
+        MenuItemData(
+            key='mqtt:configure',
+            label='Broker Settings',
+            icon='󰢻',
+            action_id='mqtt:configure'
+            if broker.source is MqttBrokerSource.EXTERNAL
+            else 'mqtt:configure_bundled',
+        ),
+    )
 
     items.extend(
         [
@@ -460,11 +550,14 @@ def _update_menu(
         ],
     )
 
-    # The bundled broker is anonymous by design, and so is many a home LAN
-    # broker. Say so where the user turns inbound control on, not only in the
-    # README — a toggle is not an authentication boundary.
+    # Many a home LAN broker is anonymous. Say so where the user turns inbound
+    # control on, not only in the README — a toggle is not an authentication
+    # boundary. The bundled broker always authenticates, so it never warns.
     sub_heading = _describe_broker(broker)
-    if allow_remote_control and not broker.username:
+    has_credentials = (
+        broker.source is MqttBrokerSource.BUNDLED or bool(broker.username)
+    )
+    if allow_remote_control and not has_credentials:
         sub_heading = '󰀦 Broker has no credentials'
     elif last_error and status is MqttConnectionStatus.ERROR:
         sub_heading = f'󰜺 {last_error}'
@@ -494,6 +587,10 @@ def _select_external() -> None:
 # page on the stack.
 def _start_configure_broker() -> None:
     create_task(_configure_broker())
+
+
+def _start_configure_bundled_broker() -> None:
+    create_task(_configure_bundled_broker())
 
 
 def _start_test_connection() -> None:
@@ -528,6 +625,7 @@ def init_menu() -> list[Callable[[], None]]:
         ('mqtt:source:bundled', _select_bundled),
         ('mqtt:source:external', _select_external),
         ('mqtt:configure', _start_configure_broker),
+        ('mqtt:configure_bundled', _start_configure_bundled_broker),
         ('mqtt:test', _start_test_connection),
         ('mqtt:status', _open_status),
     )

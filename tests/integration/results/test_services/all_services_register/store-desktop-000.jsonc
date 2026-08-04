@@ -989,6 +989,8 @@
       "use_tls": false,
       "username": ""
     },
+    "bundled_credentials_revision": 0,
+    "bundled_expose_to_lan": false,
     "is_enabled": true,
     "last_error": null,
     "published_components": {},

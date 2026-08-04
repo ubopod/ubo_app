@@ -148,6 +148,38 @@ def test_broker_and_toggles_are_recorded() -> None:
     assert state.allow_remote_control is True
 
 
+def test_bundled_expose_to_lan_round_trips() -> None:
+    """The broker's LAN exposure is plain intent the docker service renders."""
+    state = reducer(
+        _state(),
+        types.MqttSetBundledExposeToLanAction(expose_to_lan=True),
+    )
+    assert state.bundled_expose_to_lan is True
+
+    state = reducer(
+        state,
+        types.MqttSetBundledExposeToLanAction(expose_to_lan=False),
+    )
+    assert state.bundled_expose_to_lan is False
+
+
+def test_bundled_credentials_change_bumps_the_revision() -> None:
+    """Each password change is a distinct transition the renderer can observe.
+
+    The password itself never enters the store, so without this counter a
+    secrets-only write would be invisible and the broker would keep serving the
+    old `password_file`.
+    """
+    state = _state()
+    first = state.bundled_credentials_revision
+
+    state = reducer(state, types.MqttBundledCredentialsChangedAction())
+    assert state.bundled_credentials_revision == first + 1
+
+    state = reducer(state, types.MqttBundledCredentialsChangedAction())
+    assert state.bundled_credentials_revision == first + 2
+
+
 def test_unknown_action_is_a_no_op() -> None:
     """The slice ignores every other service's traffic."""
     before = _state()

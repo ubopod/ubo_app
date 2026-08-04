@@ -29,6 +29,8 @@ BROKER_PERSISTENT_KEY = 'mqtt:broker'
 IS_ENABLED_PERSISTENT_KEY = 'mqtt:is_enabled'
 ALLOW_REMOTE_CONTROL_PERSISTENT_KEY = 'mqtt:allow_remote_control'
 PUBLISHED_COMPONENTS_PERSISTENT_KEY = 'mqtt:published_components'
+BUNDLED_EXPOSE_TO_LAN_PERSISTENT_KEY = 'mqtt:bundled_expose_to_lan'
+BUNDLED_CREDENTIALS_REVISION_PERSISTENT_KEY = 'mqtt:bundled_credentials_revision'
 
 # The bundled broker's address. Lives here rather than in the service so the
 # field defaults, the parser's fallbacks and the bundled-source forcing below
@@ -47,10 +49,11 @@ MAX_PORT = 65535
 # import each other.
 COMMAND_SEGMENT = 'command'
 
-# The bundled broker's host-loopback listener is authenticated: the docker
-# service generates this credential when it renders the Mosquitto config, and
-# the bridge presents it whenever the broker source is ``BUNDLED``. The
-# anonymous listener is only reachable on the container network. Here because
+# The bundled broker authenticates every connection — there is no anonymous
+# listener. The docker service generates this credential the first time it
+# renders the Mosquitto config; the bridge presents it whenever the broker
+# source is ``BUNDLED``, and the MQTT settings menu can replace it so the same
+# credentials can be handed to Home Assistant or any other client. Here because
 # the two services cannot import each other.
 BUNDLED_BROKER_USERNAME = 'ubo'
 BUNDLED_BROKER_PASSWORD_SECRET_ID = 'MQTT_BUNDLED_BROKER_PASSWORD'  # noqa: S105
@@ -73,7 +76,8 @@ class MqttBrokerSource(StrEnum):
     """Which broker the bridge should target.
 
     ``BUNDLED`` is the Mosquitto container shipped inside the Home Assistant
-    composition, published on the host's loopback.
+    composition, published on the host's loopback (or, when
+    ``bundled_expose_to_lan`` is set, on every interface).
     """
 
     BUNDLED = auto()
@@ -141,6 +145,14 @@ def _parse_opt_in(value: object) -> bool:
     return value is True
 
 
+def _parse_revision(value: object) -> int:
+    """Read the credentials revision, treating anything unusable as zero."""
+    try:
+        return max(0, int(value))  # pyright: ignore [reportArgumentType]
+    except (TypeError, ValueError):
+        return 0
+
+
 def _parse_port(value: object) -> int:
     """Read a port, falling back to the default for anything unusable."""
     try:
@@ -200,6 +212,21 @@ class MqttSetBrokerAction(MqttAction):
 
 class MqttSetEnabledAction(MqttAction):
     is_enabled: bool
+
+
+class MqttSetBundledExposeToLanAction(MqttAction):
+    """Bind the bundled broker's published port to the LAN, or to loopback."""
+
+    expose_to_lan: bool
+
+
+class MqttBundledCredentialsChangedAction(MqttAction):
+    """Signal that the bundled broker's password in the secrets file changed.
+
+    Carries no value — the password is never in the store. It exists so the
+    docker service can observe a transition and re-render the broker's
+    `password_file`, which a secrets-only write would otherwise not trigger.
+    """
 
 
 class MqttSetAllowRemoteControlAction(MqttAction):
@@ -267,14 +294,34 @@ class MqttState(Immutable):
         ),
     )
     # Master switch for inbound commands. Off by default and deliberately so:
-    # the bundled broker is anonymous and reachable by every container on
-    # `ubo_net`, and a LAN broker is only as trustworthy as its own auth. This
-    # is a user control, not an authentication boundary.
+    # a broker is only as trustworthy as the clients holding its credentials.
+    # This is a user control, not an authentication boundary.
     allow_remote_control: bool = field(
         default=read_from_persistent_store(
             ALLOW_REMOTE_CONTROL_PERSISTENT_KEY,
             default=False,
             mapper=_parse_opt_in,
+        ),
+    )
+    # Whether the bundled broker's published port binds all interfaces rather
+    # than loopback. Safe to offer because that listener authenticates; it is
+    # how a phone app or a second Home Assistant reaches this pod's broker.
+    bundled_expose_to_lan: bool = field(
+        default=read_from_persistent_store(
+            BUNDLED_EXPOSE_TO_LAN_PERSISTENT_KEY,
+            default=False,
+            mapper=_parse_opt_in,
+        ),
+    )
+    # Bumped whenever the bundled broker's password changes. The password lives
+    # in the secrets file, so a change is invisible to the store — and the
+    # docker service needs *some* state transition to notice it must re-render
+    # the broker's `password_file` and recreate the container.
+    bundled_credentials_revision: int = field(
+        default_factory=lambda: read_from_persistent_store(
+            BUNDLED_CREDENTIALS_REVISION_PERSISTENT_KEY,
+            default=0,
+            mapper=_parse_revision,
         ),
     )
     last_error: str | None = None

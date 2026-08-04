@@ -40,6 +40,7 @@ class HomeAssistantModule(Protocol):
         zigbee_device: str | None,
         *,
         host_network: bool = False,
+        broker_expose_to_lan: bool = False,
     ) -> None: ...
 
     def _zigbee_submenu_view(
@@ -62,6 +63,7 @@ def _disable_zigbee(
     """Bypass the store-backed Zigbee + host-network resolution for renders."""
     monkeypatch.setattr(ha, '_resolve_zigbee_device', lambda: None)
     monkeypatch.setattr(ha, '_resolve_host_network', lambda: False)
+    monkeypatch.setattr(ha, '_resolve_broker_expose_to_lan', lambda: False)
 
 
 def _import_home_assistant() -> HomeAssistantModule:
@@ -123,27 +125,27 @@ async def test_prepare_renders_compose_on_ubo_net(
     # No blanket privilege escalation in the device-only posture.
     assert 'privileged' not in compose
     # The bundled MQTT broker rides the same external bus (containers reach it
-    # as mosquitto:1883) AND its *authenticated* listener (1884) is published
-    # on the host's loopback so the pod's bridge can publish readings to it.
-    # Loopback only — never 0.0.0.0 — and never the anonymous listener.
+    # as mosquitto:1883) and is published on the host's loopback so the pod's
+    # own bridge can publish readings to it. Loopback by default — never
+    # 0.0.0.0 unless the user asks for it.
     assert 'mosquitto:' in compose
     assert 'image: eclipse-mosquitto' in compose
     assert 'host_ip: 127.0.0.1\n' in compose
-    assert '- target: 1884\n' in compose
+    assert '- target: 1883\n' in compose
     assert 'published: 1883\n' in compose
     # The bare short-syntax form would bind every interface — it must not appear.
     assert '- 1883:1883' not in compose
     mosquitto_conf = (
         data / 'mosquitto' / 'config' / 'mosquitto.conf'
     ).read_text()
-    # Anonymous access is confined to the container-network listener; the
-    # host-published listener requires the generated credential.
-    assert 'per_listener_settings true' in mosquitto_conf
+    # One listener, authenticated for everyone: there is no anonymous path, so
+    # the same address and credentials work from the bus, from loopback, and
+    # from the LAN.
+    assert 'per_listener_settings' not in mosquitto_conf
+    assert 'allow_anonymous true' not in mosquitto_conf
+    assert '1884' not in mosquitto_conf
     assert (
-        'listener 1883\nallow_anonymous true\n' in mosquitto_conf
-    )
-    assert (
-        'listener 1884\nallow_anonymous false\n'
+        'listener 1883\nallow_anonymous false\n'
         'password_file /run/mosquitto/passwd\n' in mosquitto_conf
     )
     assert 'mkdir -p /run/mosquitto\n' in compose
@@ -403,8 +405,10 @@ def test_compose_uses_host_network_when_enabled(
     # permitted either — HA binds 8123 on the host directly.
     assert f'      - {ha.UBO_NET}\n' not in ha_block
     assert '- 8123:8123' not in compose
-    # The broker is untouched: still on the bus, still publishing only its
-    # authenticated listener to loopback.
+    # Off the bus, the broker answers under the same name via the loopback
+    # publish — so an MQTT integration configured once survives the toggle.
+    assert '- "mosquitto:127.0.0.1"' in ha_block
+    # The broker itself is untouched: still on the bus, still loopback-bound.
     assert f'  {ha.UBO_NET}:\n    external: true\n' in compose
     assert 'host_ip: 127.0.0.1' in compose
 
@@ -426,8 +430,42 @@ def test_compose_stays_on_bridge_when_host_network_disabled(
     )
     compose = (composition_path / 'docker-compose.yml').read_text()
     assert 'network_mode' not in compose
+    assert 'extra_hosts' not in compose
     assert '- 8123:8123' in compose
     assert f'      - {ha.UBO_NET}\n' in compose
+
+
+def test_broker_binds_all_interfaces_when_exposed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Exposing the broker drops its loopback pin; the port itself is unchanged.
+
+    Safe to offer only because the listener authenticates — see
+    `MOSQUITTO_CONF`, which has no anonymous path.
+    """
+    ha = _import_home_assistant()
+    monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', tmp_path / 'data')
+    composition_path = tmp_path / 'composition'
+    composition_path.mkdir()
+
+    ha._write_home_assistant_compose(  # noqa: SLF001
+        composition_path,
+        None,
+        broker_expose_to_lan=True,
+    )
+    compose = (composition_path / 'docker-compose.yml').read_text()
+    assert '- target: 1883\n        published: 1883\n' in compose
+    assert 'host_ip' not in compose
+
+    # Default stays pinned to loopback.
+    ha._write_home_assistant_compose(  # noqa: SLF001
+        composition_path,
+        None,
+        broker_expose_to_lan=False,
+    )
+    compose = (composition_path / 'docker-compose.yml').read_text()
+    assert 'host_ip: 127.0.0.1\n' in compose
 
 
 def test_zigbee_submenu_view_enabled_present() -> None:
@@ -490,6 +528,7 @@ async def test_prepare_honours_host_network_intent(
     monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', tmp_path / 'data')
     monkeypatch.setattr(ha, '_resolve_zigbee_device', lambda: None)
     monkeypatch.setattr(ha, '_resolve_host_network', lambda: True)
+    monkeypatch.setattr(ha, '_resolve_broker_expose_to_lan', lambda: False)
 
     assert await ha.prepare_home_assistant()
 

@@ -1209,6 +1209,53 @@ def _reconcile_grpc_lan(data: tuple[bool, DockerItemStatus | None]) -> None:
         _reconcile_grpc_lan_disabled(status)
 
 
+# The (exposure, credentials-revision) pair the broker was last rendered for.
+# `None` until the first autorun pass, which only adopts the current value:
+# without that, every boot would recreate a perfectly good Home Assistant.
+_broker_settings_applied: list[tuple[bool, int] | None] = [None]
+
+_BROKER_RECREATABLE_STATUSES = (
+    DockerItemStatus.CREATED,
+    DockerItemStatus.STARTING,
+    DockerItemStatus.RUNNING,
+)
+
+
+@store.autorun(
+    lambda state: (
+        getattr(getattr(state, 'mqtt', None), 'bundled_expose_to_lan', False),
+        getattr(getattr(state, 'mqtt', None), 'bundled_credentials_revision', 0),
+        getattr(
+            getattr(state.docker, HOME_ASSISTANT_COMPOSITION_ID, None),
+            'status',
+            None,
+        ),
+    ),
+)
+def _reconcile_bundled_broker(data: tuple[bool, int, DockerItemStatus | None]) -> None:
+    """Recreate Home Assistant when the bundled broker's settings change.
+
+    Mosquitto's config and password file are derived artifacts, and both
+    `ports:` and `password_file` are read only when the container is *created*
+    — so a changed password or exposure has to recreate the composition, which
+    `DockerImageRunAction` does (re-render, then `up -d`).
+
+    The MQTT slice is read through `getattr` because that service can be
+    disabled, and `state.mqtt` raises rather than returning None when its slice
+    is absent — the mirror of how `050-mqtt` reads the docker slice.
+    """
+    expose_to_lan, revision, status = data
+    current = (expose_to_lan, revision)
+    if _broker_settings_applied[0] is None:
+        _broker_settings_applied[0] = current
+        return
+    if current == _broker_settings_applied[0]:
+        return
+    _broker_settings_applied[0] = current
+    if status in _BROKER_RECREATABLE_STATUSES:
+        store.dispatch(DockerImageRunAction(image=HOME_ASSISTANT_COMPOSITION_ID))
+
+
 async def init_service() -> Subscriptions:
     """Initialize the service."""
     # Register apps menu title

@@ -20,6 +20,8 @@ from ubo_app.store.main import store
 from ubo_app.store.services.mqtt import (
     ALLOW_REMOTE_CONTROL_PERSISTENT_KEY,
     BROKER_PERSISTENT_KEY,
+    BUNDLED_CREDENTIALS_REVISION_PERSISTENT_KEY,
+    BUNDLED_EXPOSE_TO_LAN_PERSISTENT_KEY,
     IS_ENABLED_PERSISTENT_KEY,
     PUBLISHED_COMPONENTS_PERSISTENT_KEY,
     MqttAnnounceRequestedEvent,
@@ -82,6 +84,14 @@ async def init_service() -> Subscriptions:
         register_persistent_store(
             ALLOW_REMOTE_CONTROL_PERSISTENT_KEY,
             lambda state: state.mqtt.allow_remote_control,
+        ),
+        register_persistent_store(
+            BUNDLED_EXPOSE_TO_LAN_PERSISTENT_KEY,
+            lambda state: state.mqtt.bundled_expose_to_lan,
+        ),
+        register_persistent_store(
+            BUNDLED_CREDENTIALS_REVISION_PERSISTENT_KEY,
+            lambda state: state.mqtt.bundled_credentials_revision,
         ),
         register_persistent_store(
             PUBLISHED_COMPONENTS_PERSISTENT_KEY,

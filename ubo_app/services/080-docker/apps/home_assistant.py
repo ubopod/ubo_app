@@ -21,6 +21,7 @@ import secrets
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from apps._port_binding import LOOPBACK_IP
 from apps._registry import COMPOSITIONS_PATH, UBO_NET, ContainerEntry
 from ubo_app.constants import CONFIG_PATH
 from ubo_app.logger import logger
@@ -174,22 +175,30 @@ def _resolve_host_network(host_network_enabled: bool) -> bool:  # noqa: FBT001
     return host_network_enabled
 
 
+@store.with_state(lambda state: getattr(state, 'mqtt', None))
+def _resolve_broker_expose_to_lan(mqtt_state: object) -> bool:
+    """Read whether the bundled broker's port should bind every interface.
+
+    Guarded with `getattr` because the MQTT service can be disabled, and
+    `state.mqtt` *raises* rather than returning None when its slice is absent —
+    the same guard `050-mqtt/client.py` uses to read the docker slice. A missing
+    slice reads as "loopback only", the safe direction.
+    """
+    return getattr(mqtt_state, 'bundled_expose_to_lan', False) is True
+
+
 MOSQUITTO_IMAGE = 'eclipse-mosquitto:2'
 _MOSQUITTO_AUTH_SOURCE_PATH = '/mosquitto/config/passwd'
 _MOSQUITTO_AUTH_RUNTIME_PATH = '/run/mosquitto/passwd'
-# Two listeners with separate auth postures. 1883 stays anonymous but is only
-# reachable on `ubo_net` (containers connect as `mosquitto:1883`, so the Home
-# Assistant onboarding instructions need no credentials). 1884 requires the
-# generated password below and is the listener published on the host's
-# loopback (see `_write_home_assistant_compose`) — its only intended client is
-# the pod's own MQTT bridge, which reads the secret programmatically. Without
-# this split, any local process or secondary account on the pod could read all
-# telemetry and, with remote control enabled, drive the command surface.
+# One listener, authenticated for everyone. There is deliberately no anonymous
+# path: an earlier split kept 1883 anonymous "because it is only reachable on
+# `ubo_net`", but that is not a boundary the pod controls — on Linux the host
+# routes to bridge addresses — and it forced the broker's address to differ
+# between Home Assistant's two network modes. With auth as the only boundary,
+# `mosquitto:1883` is the answer everywhere, and publishing the port to the LAN
+# becomes a safe, ordinary toggle.
 MOSQUITTO_CONF = (
-    'per_listener_settings true\n'
     'listener 1883\n'
-    'allow_anonymous true\n'
-    'listener 1884\n'
     'allow_anonymous false\n'
     f'password_file {_MOSQUITTO_AUTH_RUNTIME_PATH}\n'
     'persistence true\n'
@@ -258,12 +267,17 @@ def _ha_network_block(*, host_network: bool) -> str:
     """HA's networking stanza — host stack, or the `ubo_net` bridge.
 
     Compose rejects `network_mode` alongside `networks:`, so host mode takes HA
-    off the bus entirely — including its anonymous route to the bundled broker
-    (`mosquitto:1883`). Reconnecting HA to MQTT in that mode is the user's job
-    for now; `_enable_host_network` says so out loud.
+    off the bus. The `extra_hosts` shim keeps the broker answering to the *same*
+    name either way: on the bus it is the container, on the host stack it is the
+    loopback publish. Both reach the same authenticated listener, so an MQTT
+    integration configured once keeps working across the toggle.
     """
     if host_network:
-        return '    network_mode: host\n'
+        return (
+            '    network_mode: host\n'
+            '    extra_hosts:\n'
+            f'      - "mosquitto:{LOOPBACK_IP}"\n'
+        )
     return f'    networks:\n      - {UBO_NET}\n'
 
 
@@ -274,11 +288,26 @@ def _ha_ports_block(*, host_network: bool) -> str:
     return '    ports:\n      - 8123:8123\n'
 
 
+def _mosquitto_ports_block(*, expose_to_lan: bool) -> str:
+    """Publish the broker on loopback, or on every interface when asked.
+
+    Compose's *long* syntax deliberately: `apply_compose_port_binding` rewrites
+    short-syntax entries only, so if Home Assistant ever opts into the per-app
+    expose-to-LAN toggle, 8123 can move to 0.0.0.0 without dragging the broker
+    along. The broker's own exposure is its own decision, made here.
+    """
+    block = '    ports:\n      - target: 1883\n        published: 1883\n'
+    if not expose_to_lan:
+        block += f'        host_ip: {LOOPBACK_IP}\n'
+    return block + '        protocol: tcp\n'
+
+
 def _write_home_assistant_compose(
     composition_path: Path,
     zigbee_device: str | None,
     *,
     host_network: bool = False,
+    broker_expose_to_lan: bool = False,
 ) -> None:
     """Write HA's `docker-compose.yml` from current intent.
 
@@ -289,22 +318,16 @@ def _write_home_assistant_compose(
 
     The bundled Mosquitto broker lives in HA's project (HA owns its lifecycle)
     but is attached to the external `ubo_net` bus so peer add-ons can reach it
-    as `mosquitto:1883`. Its *authenticated* listener (container port 1884,
-    see `MOSQUITTO_CONF`) is additionally published on the host's loopback as
-    127.0.0.1:1883 so the pod's MQTT bridge can publish readings to Home
-    Assistant over MQTT discovery without exposing an anonymous broker to
-    other local processes.
-
-    That publish deliberately uses compose's *long* syntax:
-    `apply_compose_port_binding` rewrites short-syntax entries only, so if HA
-    ever opts into the expose-to-LAN toggle, 8123 can move to 0.0.0.0 while the
-    broker stays pinned to loopback.
+    as `mosquitto:1883`. Every connection authenticates (see `MOSQUITTO_CONF`),
+    so the same listener serves the bus, the pod's own MQTT bridge on loopback,
+    and — when ``broker_expose_to_lan`` is set — any client on the network.
 
     When ``host_network`` is set, HA runs on the host's network stack so
     mDNS/SSDP discovery works (the only option that works over Wi-Fi — a
     macvlan sub-interface has its own MAC, which an access point silently
     drops). It then binds 8123 on the host directly and leaves ``ubo_net``,
-    which also costs it the anonymous `mosquitto:1883` route.
+    reaching the broker through the loopback publish instead — under the same
+    name, via `extra_hosts`.
     """
     config_path = HOME_ASSISTANT_DATA_PATH / 'config'
     mosquitto_path = HOME_ASSISTANT_DATA_PATH / 'mosquitto'
@@ -349,11 +372,7 @@ def _write_home_assistant_compose(
         '    volumes:\n'
         f'      - {mosquitto_path / "config"}:/mosquitto/config\n'
         f'      - {mosquitto_path / "data"}:/mosquitto/data\n'
-        '    ports:\n'
-        '      - target: 1884\n'
-        '        published: 1883\n'
-        '        host_ip: 127.0.0.1\n'
-        '        protocol: tcp\n'
+        f'{_mosquitto_ports_block(expose_to_lan=broker_expose_to_lan)}'
         '    networks:\n'
         f'      - {UBO_NET}\n'
         f'networks:\n  {UBO_NET}:\n    external: true\n'
@@ -372,16 +391,15 @@ def _write_home_assistant_metadata(composition_path: Path) -> None:
             'the app.\n\n'
             'An MQTT broker is bundled. To connect it, add the MQTT '
             'integration in Home Assistant and point it at broker '
-            '"mosquitto" port 1883 (no username or password).\n\n'
+            '"mosquitto" port 1883. It asks for a username and password: find '
+            'them on this device under Settings > MQTT > Bundled broker. That '
+            'address is correct in either network mode.\n\n'
             'Once that is done, sensors plugged into this device appear in '
             'Home Assistant automatically — no further configuration.\n\n'
             'LAN discovery (host network) puts Home Assistant on this '
             "device's network stack so mDNS/SSDP discovery finds your "
             'devices — the only mode that works over Wi-Fi. Home Assistant '
-            'stays on port 8123 either way. Note: in that mode Home Assistant '
-            'leaves the container network, so the bundled broker is no longer '
-            'reachable as "mosquitto" and the MQTT integration has to be '
-            'pointed somewhere else.'
+            'stays on port 8123 either way.'
         ),
         'compose_id': HOME_ASSISTANT_COMPOSITION_ID,
     }
@@ -400,6 +418,7 @@ async def prepare_home_assistant() -> bool:
             composition_path,
             _resolve_zigbee_device(),
             host_network=_resolve_host_network(),
+            broker_expose_to_lan=_resolve_broker_expose_to_lan(),
         )
         _write_home_assistant_metadata(composition_path)
     except Exception:
@@ -488,11 +507,9 @@ def _detach_zigbee() -> None:
 def _enable_host_network() -> None:
     """Move HA onto the host network stack and recreate it.
 
-    Host mode costs HA its `ubo_net` membership, and with it the anonymous
-    `mosquitto:1883` route the onboarding instructions hand out — so this says
-    so rather than letting the MQTT integration fail silently at the next
-    restart. Giving the bundled broker user-settable credentials (which would
-    make one address correct in both modes) is separate, later work.
+    Host mode costs HA its `ubo_net` membership, but not its broker: the
+    `extra_hosts` shim keeps `mosquitto:1883` resolving, so a configured MQTT
+    integration survives the toggle untouched.
     """
     store.dispatch(DockerSetHostNetworkAction(enabled=True))
     store.dispatch(
@@ -501,8 +518,7 @@ def _enable_host_network() -> None:
                 title=HOME_ASSISTANT_LABEL,
                 content=(
                     "Home Assistant now shares this device's network so it "
-                    'can discover LAN devices. It stays on port 8123, but '
-                    'its MQTT broker setting needs re-pointing.'
+                    'can discover LAN devices. It stays on port 8123.'
                 ),
                 display_type=NotificationDisplayType.FLASH,
                 icon=HOME_ASSISTANT_ICON,

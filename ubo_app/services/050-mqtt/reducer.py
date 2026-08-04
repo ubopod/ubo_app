@@ -15,12 +15,14 @@ from redux import (
 from ubo_app.store.services.mqtt import (
     MqttAction,
     MqttAnnounceRequestedEvent,
+    MqttBundledCredentialsChangedAction,
     MqttConnectionStatus,
     MqttPublishAction,
     MqttPublishEvent,
     MqttRequestAnnounceAction,
     MqttSetAllowRemoteControlAction,
     MqttSetBrokerAction,
+    MqttSetBundledExposeToLanAction,
     MqttSetEnabledAction,
     MqttSetPublishedComponentsAction,
     MqttSetStatusAction,
@@ -55,6 +57,13 @@ def reducer(
             return replace(state, is_enabled=action.is_enabled)
         case MqttSetAllowRemoteControlAction():
             return replace(state, allow_remote_control=action.allow_remote_control)
+        case MqttSetBundledExposeToLanAction():
+            return replace(state, bundled_expose_to_lan=action.expose_to_lan)
+        case MqttBundledCredentialsChangedAction():
+            return replace(
+                state,
+                bundled_credentials_revision=state.bundled_credentials_revision + 1,
+            )
         case MqttSetPublishedComponentsAction():
             return replace(
                 state,
