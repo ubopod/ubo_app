@@ -8,14 +8,13 @@ pushed the real one — the lowest priority of all — off the bar entirely.
 from __future__ import annotations
 
 import importlib
-import importlib.util
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
+from tests.service_loader import load_service_modules
+
 if TYPE_CHECKING:
-    import pytest
     from redux import BaseAction, CompleteReducerResult
 
     from ubo_app.store.services.audio import AudioState
@@ -28,31 +27,26 @@ _LIVE_GLYPH = '\U000f036c'
 _GREEN = '#008000'
 
 
-def _load(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
-    """Load the audio reducer alongside its store types."""
-    monkeypatch.syspath_prepend(SERVICE_PATH.as_posix())
+def _load() -> SimpleNamespace:
+    """Load the audio reducer alongside its store types.
 
-    audio = importlib.reload(
-        importlib.import_module('ubo_app.store.services.audio'),
-    )
-    spec = importlib.util.spec_from_file_location(
-        'audio_service_reducer',
-        SERVICE_PATH / 'reducer.py',
-    )
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    ``ubo_app.store.services.audio`` is imported, never reloaded: the reducer
+    resolves it through ``sys.modules`` too, so both sides already agree on one
+    generation, and reloading it in place would swap the classes out from under
+    any *other* test file that imported them at collection time.
+    """
+    reducer, constants = load_service_modules(SERVICE_PATH, 'reducer', 'constants')
+    audio = importlib.import_module('ubo_app.store.services.audio')
 
-    return SimpleNamespace(audio=audio, reducer=module.reducer)
+    return SimpleNamespace(audio=audio, reducer=reducer.reducer, constants=constants)
 
 
 def _icon(result: object) -> StatusIconsRegisterAction:
     """Return the single status-icon registration in a reducer result.
 
-    Matched by class name: this file reloads the store module, so the class the
-    reducer emits is not the one an ``isinstance`` here would test against.
+    Matched by class name: an integration test earlier in the full suite may
+    have wiped ``sys.modules``, leaving the class the reducer emits a different
+    generation from the one an ``isinstance`` here would test against.
     """
     actions = cast('CompleteReducerResult', result).actions or []
     icons = [
@@ -68,9 +62,9 @@ def _state(ns: SimpleNamespace, **kwargs: object) -> AudioState:
     return cast('AudioState', ns.audio.AudioState(**kwargs))
 
 
-def test_muting_switches_the_glyph(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_muting_switches_the_glyph() -> None:
     """The icon reports the mute state."""
-    ns = _load(monkeypatch)
+    ns = _load()
 
     muted = _icon(
         ns.reducer(
@@ -95,9 +89,9 @@ def test_muting_switches_the_glyph(monkeypatch: pytest.MonkeyPatch) -> None:
     assert unmuted.icon == _LIVE_GLYPH
 
 
-def test_a_remote_listener_colours_the_icon(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_remote_listener_colours_the_icon() -> None:
     """A remote client receiving the microphone turns the icon green."""
-    ns = _load(monkeypatch)
+    ns = _load()
 
     result = ns.reducer(
         _state(ns, is_capture_mute=False),
@@ -110,13 +104,13 @@ def test_a_remote_listener_colours_the_icon(monkeypatch: pytest.MonkeyPatch) -> 
     assert result.state.is_remote_capture_active is True
 
 
-def test_muting_while_remote_wins(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_muting_while_remote_wins() -> None:
     """A muted microphone is never coloured as live.
 
     Nothing reaches a remote client while muted — the reducer emits no sample
     events — so a green microphone would claim the opposite of the truth.
     """
-    ns = _load(monkeypatch)
+    ns = _load()
 
     result = ns.reducer(
         _state(ns, is_capture_mute=False, is_remote_capture_active=True),
@@ -131,19 +125,13 @@ def test_muting_while_remote_wins(monkeypatch: pytest.MonkeyPatch) -> None:
     assert icon.color != _GREEN
 
 
-def test_the_icon_keeps_one_identity_and_position(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_the_icon_keeps_one_identity_and_position() -> None:
     """Mute and remote-capture changes reuse one id and priority.
 
     A second id would be a second icon competing for the four rendered slots; a
     changing priority would move the microphone along the status bar.
     """
-    ns = _load(monkeypatch)
-    from constants import (  # type: ignore[reportMissingImports]
-        AUDIO_MIC_STATE_ICON_ID,
-        AUDIO_MIC_STATE_ICON_PRIORITY,
-    )
+    ns = _load()
 
     icons = [
         _icon(
@@ -169,5 +157,7 @@ def test_the_icon_keeps_one_identity_and_position(
         ),
     ]
 
-    assert {icon.id for icon in icons} == {AUDIO_MIC_STATE_ICON_ID}
-    assert {icon.priority for icon in icons} == {AUDIO_MIC_STATE_ICON_PRIORITY}
+    assert {icon.id for icon in icons} == {ns.constants.AUDIO_MIC_STATE_ICON_ID}
+    assert {icon.priority for icon in icons} == {
+        ns.constants.AUDIO_MIC_STATE_ICON_PRIORITY,
+    }
