@@ -468,13 +468,16 @@ def test_home_assistant_trigger_ignores_the_assistant_switch(
         mode=ns.WakeMode.HOME_ASSISTANT,
         value='hey home assistant',
     )
-    state = replace(
+    # The assistant switch drops QUICK_CHAT + CONVERSATION; HOME_ASSISTANT is
+    # outside that gate and has to stay armed.
+    state = ns.reducer(
         _state(
             ns,
             ns.EngineConfig(engine=ns.Engine.VOSK, enabled=True, triggers=(trig,)),
         ),
-        assistant_enabled=False,
+        ns.SetAssistantEnabled(enabled=False),
     )
+    assert ns.WakeMode.HOME_ASSISTANT in state.enabled_wake_modes
 
     result = _detect(ns, state, ns.Engine.VOSK, 'ha1', phrase='hey home assistant')
 
@@ -675,6 +678,7 @@ def test_set_wake_mode_enabled_toggles_one_mode(
         ns.WakeMode.INTENTS,
         ns.WakeMode.QUICK_CHAT,
         ns.WakeMode.STOP_TALKING,
+        ns.WakeMode.HOME_ASSISTANT,
     )
 
     on = ns.reducer(

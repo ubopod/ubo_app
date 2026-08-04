@@ -164,6 +164,7 @@
     "is_capture_mute": true,
     "is_playback_mute": false,
     "is_recording": false,
+    "is_remote_capture_active": false,
     "playback_volume": 0.15,
     "recording": null
   },
@@ -1058,6 +1059,7 @@
   },
   "settings": {
     "_type": "SettingsState",
+    "assistant_debug": false,
     "beta_versions": false,
     "grpc_remote_access": false,
     "pdb_signal": false,
@@ -1338,7 +1340,6 @@
   },
   "speech_recognition": {
     "_type": "SpeechRecognitionState",
-    "assistant_enabled": false,
     "assistant_session_audio_source": "",
     "commands_catalog": {
       "_type": "SpeechRecognitionCommandsCatalog",
@@ -1539,12 +1540,49 @@
             "Turn off Receive Keys",
             "Stop Receiving IR"
           ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:speak-time",
+          "label": "Say the Time",
+          "sample_phrases": [
+            "What time is it right now",
+            "What time is it",
+            "Whats the time"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:speak-date",
+          "label": "Say the Date",
+          "sample_phrases": [
+            "What day is it today",
+            "What day is it",
+            "Whats the date today"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:speak-weather",
+          "label": "Say the Weather",
+          "sample_phrases": [
+            "Whats the weather like today",
+            "Whats the weather like",
+            "Whats the weather today"
+          ]
         }
       ]
     },
     "conversation_end_phrases": [
       "i am done talking",
       "i'm done talking"
+    ],
+    "enabled_wake_modes": [
+      "intents",
+      "quick_chat",
+      "conversation",
+      "stop_talking",
+      "home_assistant"
     ],
     "intents": [
       {
@@ -1818,9 +1856,77 @@
           "Stop Receiving IR",
           "Disable IR Receiver"
         ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_keys": [
+          "localization:speak-time"
+        ],
+        "id": "default:speak-time",
+        "label": "Say the Time",
+        "phrases": [
+          "What time is it (right now)",
+          "[Whats, What is] the time",
+          "Tell me the time"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_keys": [
+          "localization:speak-date"
+        ],
+        "id": "default:speak-date",
+        "label": "Say the Date",
+        "phrases": [
+          "What day is it (today)",
+          "[Whats, What is] the date (today)",
+          "[Whats, What is] todays date",
+          "Tell me the date"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_keys": [
+          "localization:speak-weather"
+        ],
+        "id": "default:speak-weather",
+        "label": "Say the Weather",
+        "phrases": [
+          "[Whats, What is] the weather (like) (today)",
+          "[Hows, How is] the weather (today)",
+          "Tell me the weather"
+        ]
       }
     ],
     "openwakeword_models": [],
+    "seeded_default_ids": [
+      "default:assistant-on",
+      "default:assistant-off",
+      "default:wifi-camera",
+      "default:wifi-web",
+      "default:light-strip-toggle",
+      "default:lights-on",
+      "default:lights-off",
+      "default:lights-red",
+      "default:lights-green",
+      "default:lights-blue",
+      "default:lights-white",
+      "default:lights-rainbow",
+      "default:volume-up",
+      "default:volume-down",
+      "default:button-one",
+      "default:button-two",
+      "default:button-three",
+      "default:go-back",
+      "default:go-home",
+      "default:scroll-up",
+      "default:scroll-down",
+      "default:ir-receive-on",
+      "default:ir-receive-off",
+      "default:speak-time",
+      "default:speak-date",
+      "default:speak-weather"
+    ],
     "status": "idle",
     "wake_engines": [
       {
