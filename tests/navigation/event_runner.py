@@ -13,6 +13,14 @@ from redux import CompleteReducerResult
 
 import ubo_app.store.core.view_computation as _view_computation
 import ubo_app.store.services.notifications as _notifications_module
+
+# Not used directly — imported so it lands in the collection-time module
+# snapshot below. The notification-display handler lazily imports it by its
+# dotted name at call time, while tests monkeypatch it through the
+# `ubo_app.utils` package attribute; unless the sys.modules entry survives,
+# those two paths resolve to different module objects after an `app_context`
+# cleanup and the monkeypatch silently misses.
+import ubo_app.utils.async_  # noqa: F401
 from tests.navigation.conftest import (
     ReducerRunner,
     compute_view_from_dynamic_menus,
@@ -71,8 +79,30 @@ class _RunnerStore:
         return decorator
 
 
+# The `ubo_app` module graph as it stands at collection time, when this module
+# is imported. `_load_menu_event_handlers` re-imports the production handlers,
+# and the handlers lazily import further `ubo_app` modules at call time; after
+# an `app_context` test's sys.modules cleanup (tests/fixtures/app.py) those
+# imports would resolve to freshly re-imported modules whose classes fail
+# `isinstance` against the collection-generation ones these tests construct —
+# every dispatch then becomes a silent no-op. Re-seeding sys.modules keeps the
+# whole graph in one generation. `setdefault` so a module that legitimately
+# re-imported meanwhile is left alone.
+_UBO_MODULES_SNAPSHOT = {
+    name: module
+    for name, module in sys.modules.items()
+    if name.startswith('ubo_app')
+}
+
+
+def _restore_collection_generation_modules() -> None:
+    for name, module in _UBO_MODULES_SNAPSHOT.items():
+        sys.modules.setdefault(name, module)
+
+
 def _load_menu_event_handlers(fake_store: _RunnerStore) -> ModuleType:
     """Load production handlers against a detached, synchronous test store."""
+    _restore_collection_generation_modules()
     handler_key = 'ubo_app.store.core.menu_event_handlers'
     notifications_key = 'ubo_app.store.services.notifications'
     store_key = 'ubo_app.store.main'

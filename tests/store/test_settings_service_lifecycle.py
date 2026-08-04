@@ -23,7 +23,16 @@ from ubo_app.store.settings.types import (
     SettingsState,
     SettingsStopServiceAction,
     SettingsStopServiceEvent,
+    SettingsToggleBetaVersionsAction,
+    SettingsTogglePdbSignalAction,
+    SettingsToggleVisualDebugAction,
 )
+
+# The toggle actions above are imported at module (collection) time on
+# purpose: the reducer's `isinstance` checks bind to ITS import generation,
+# which is also the collection-time one. A lazy in-test import would fetch a
+# freshly re-imported class after an `app_context` test's sys.modules cleanup
+# and the reducer would silently treat the action as unhandled.
 
 
 def _service(
@@ -179,8 +188,6 @@ def test_none_state_init_and_raise() -> None:
     import pytest
     from redux import InitAction, InitializationActionError
 
-    from ubo_app.store.settings.types import SettingsToggleVisualDebugAction
-
     assert isinstance(reducer(None, InitAction()), SettingsState)
     with pytest.raises(InitializationActionError):
         reducer(None, SettingsToggleVisualDebugAction())
@@ -188,8 +195,6 @@ def test_none_state_init_and_raise() -> None:
 
 def test_toggle_pdb_signal_notifies_only_when_enabling() -> None:
     """Enabling the PDB signal posts instructions; disabling stays quiet."""
-    from ubo_app.store.settings.types import SettingsTogglePdbSignalAction
-
     # Read the action type off the reducer's own module generation: an earlier
     # integration test may have reloaded ``notifications``, and a stale runtime
     # import here would not be the class the reducer actually emits.
@@ -215,8 +220,6 @@ def test_toggle_pdb_signal_notifies_only_when_enabling() -> None:
 
 def test_toggle_visual_debug_flips_flag() -> None:
     """Visual-debug toggles its flag with no side effects."""
-    from ubo_app.store.settings.types import SettingsToggleVisualDebugAction
-
     # No side effects, so this branch returns the bare state.
     result = cast(
         'SettingsState',
@@ -230,8 +233,6 @@ def test_toggle_visual_debug_flips_flag() -> None:
 
 def test_toggle_beta_versions_triggers_update_check() -> None:
     """Toggling beta versions flips the flag and re-checks for updates."""
-    from ubo_app.store.settings.types import SettingsToggleBetaVersionsAction
-
     update_check_action = reducer.__globals__['UpdateManagerRequestCheckAction']
 
     result = cast(

@@ -175,12 +175,14 @@ lint = ['lint:self', 'lint:rpc', 'lint:assistant', 'lint:mcp', 'lint:gui']
 "typecheck:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service typecheck"
 "typecheck:gui" = "poe --directory=ubo_app/gui typecheck"
 typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant", "typecheck:mcp", "typecheck:gui"]
-test = "pytest"
+# Two pytest invocations on purpose — see the script's docstring. A cmd task
+# (not a poe sequence) so extra pytest args are forwarded to both tiers.
+test = "python scripts/run_test_tiers.py"
 "test:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service test"
 "test:unit" = "pytest tests/store tests/navigation --ignore=tests/store/test_subscribe_event.py -v"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
-"docker:test:unit" = "sh -c 'docker run --rm -v \"$(pwd)\":/ubo-app ubo-app-test -- tests/store tests/navigation -v'"
+"docker:test:unit" = "sh -c 'docker run --rm -v \"$(pwd)\":/ubo-app -e UBO_TEST_TASK=test:unit ubo-app-test'"
 build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install --include=dev && npm run proto:compile && npm run build'"
 
 

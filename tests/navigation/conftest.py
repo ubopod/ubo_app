@@ -47,7 +47,6 @@ from ubo_app.store.core.types import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-    from tests.navigation.event_runner import NavigationEventRunner
     from ubo_app.store.core.types import MainAction, MainEvent
 
 
@@ -388,10 +387,20 @@ def nav() -> ReducerRunner:
     return ReducerRunner(result)
 
 
+# Imported at module (collection) time on purpose: the runner's dispatch does
+# `isinstance(action, MainAction)`, so it must share the same import
+# generation as the test modules that construct the actions. A lazy in-fixture
+# import would re-import a fresh module graph after an `app_context` test's
+# sys.modules cleanup and silently turn every dispatch into a no-op. Placed
+# down here rather than in the top import block because `event_runner` itself
+# imports `ReducerRunner`/`reducer` back from this module — the names above
+# must exist before the circular import resolves.
+from tests.navigation.event_runner import NavigationEventRunner  # noqa: E402
+
+
 @pytest.fixture
 def navigation_events() -> Iterator[NavigationEventRunner]:
     """Create a runner wired to production menu event handlers."""
-    from tests.navigation.event_runner import NavigationEventRunner
     from ubo_app.store.core.action_registry import (
         get_action,
         register_action,

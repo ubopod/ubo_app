@@ -32,6 +32,14 @@ modules_snapshot = set(sys.modules).union(
     },
 )
 
+# Everything under this root is a pytest-collected module (test files,
+# fixtures, helpers). The cleanup below must never evict them: pytest holds
+# the only reference and never re-imports them, so deleting them from
+# `sys.modules` only breaks `sys.modules[cls.__module__]` lookups later —
+# betterproto's lazy metadata, `typing.get_type_hints`, `pickle` — for
+# classes defined in test modules.
+TESTS_ROOT = Path(__file__).resolve().parent.parent
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable
@@ -404,10 +412,18 @@ async def app_context(
         # version mismatch that breaks every gRPC round-trip (and hangs the flow
         # tests). Skip both families so the proto object graph stays consistent.
         for module_name in set(sys.modules) - modules_snapshot:
-            if not module_name.startswith(
+            if module_name.startswith(
                 ('sdbus', 'gpiozero', 'lgpio', 'betterproto', 'ubo_bindings'),
             ):
-                del sys.modules[module_name]
+                continue
+            module_file = getattr(sys.modules.get(module_name), '__file__', None)
+            if module_file:
+                try:
+                    if TESTS_ROOT in Path(module_file).resolve().parents:
+                        continue
+                except (OSError, ValueError):
+                    pass
+            del sys.modules[module_name]
 
         gc.collect()
     finally:

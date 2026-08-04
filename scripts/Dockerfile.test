@@ -3,4 +3,11 @@ FROM ubo-app-dev
 RUN mkdir -p /root/.kivy/mods
 RUN touch /root/.kivy/icon
 
-ENTRYPOINT ["/bin/bash", "-c", "uv sync --frozen && (cd ubo_app/gui && UV_PROJECT_ENVIRONMENT=.venv uv sync --frozen) && uv run poe test $@"]
+# The repo is bind-mounted from the host, whose __pycache__ carries pyc files
+# compiled against host paths; keep the container's bytecode cache separate so
+# tracebacks resolve against /ubo-app sources.
+ENV PYTHONPYCACHEPREFIX=/tmp/pycache
+
+# UBO_TEST_TASK selects which poe task runs (default: the full `test`
+# sequence); extra container args are forwarded to that task.
+ENTRYPOINT ["/bin/bash", "-c", "uv sync --frozen && (cd ubo_app/gui && UV_PROJECT_ENVIRONMENT=.venv uv sync --frozen) && uv run poe ${UBO_TEST_TASK:-test} $@"]

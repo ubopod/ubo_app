@@ -7,8 +7,6 @@ from typing import TYPE_CHECKING
 
 from redux import BaseAction
 
-from ubo_app.utils.service import ServiceUnavailableError
-
 if TYPE_CHECKING:
     from ubo_app.store.core.types.enums import MenuScrollDirection, SettingsCategory
     from ubo_app.store.core.types.status_bar import StatusBarData
@@ -18,7 +16,11 @@ if TYPE_CHECKING:
 
 def service_default_factory() -> str | None:
     """Get the current service ID for action attribution."""
-    from ubo_app.utils.service import get_service
+    # Both names must come from the SAME import: with a module-level
+    # `ServiceUnavailableError`, a test-fixture sys.modules cleanup can leave
+    # this except clause holding the old class while the re-imported
+    # `get_service` raises the new one, so the except silently stops matching.
+    from ubo_app.utils.service import ServiceUnavailableError, get_service
 
     try:
         return get_service().service_id
