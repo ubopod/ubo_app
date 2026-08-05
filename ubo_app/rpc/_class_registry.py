@@ -679,6 +679,8 @@ CLASS_REGISTRY: dict[str, str] = {
     'WakeTriggerRemoveAction': 'ubo_app.store.services.speech_recognition',
     'WakeWordDeleteModelAction': 'ubo_app.store.services.speech_recognition',
     'WakeWordDeleteModelEvent': 'ubo_app.store.services.speech_recognition',
+    'WakeWordDownloadModelAction': 'ubo_app.store.services.speech_recognition',
+    'WakeWordDownloadModelEvent': 'ubo_app.store.services.speech_recognition',
     'WakeWordDownloadModelsAction': 'ubo_app.store.services.speech_recognition',
     'WakeWordDownloadModelsEvent': 'ubo_app.store.services.speech_recognition',
     'WakeWordEngineConfig': 'ubo_app.store.services.speech_recognition',

@@ -121,6 +121,20 @@ def test_available_models_stored_for_openwakeword(
     assert result.openwakeword_models == ('hey_ubo',)
 
 
+def test_available_models_stored_for_microwakeword(
+    reducer: Callable[..., Any],
+) -> None:
+    """Available microWakeWord models land on their own field, not OWW's."""
+    action = reducer.__globals__['WakeWordSetAvailableModelsAction']
+    engine = reducer.__globals__['WakeWordEngineName']
+    result = reducer(
+        _state(reducer),
+        action(engine=engine.MICROWAKEWORD, models=('hey_luna',)),
+    )
+    assert result.microwakeword_models == ('hey_luna',)
+    assert result.openwakeword_models == ()
+
+
 def test_report_speech_returns_to_idle(reducer: Callable[..., Any]) -> None:
     """A speech report drops the recognizer back to IDLE."""
     from ubo_app.store.services.speech_recognition import SpeechRecognitionEngineName

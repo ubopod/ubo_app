@@ -14,6 +14,10 @@ from commands import (
     register_shortcut_actions,
 )
 from engines_manager import EnginesManager
+from microwakeword_engine import MODELS_DIR as MICRO_MODELS_DIR
+from microwakeword_engine import delete_model as micro_delete_model
+from microwakeword_engine import scan_models as micro_scan_models
+from microwakeword_engine import validate_model as micro_validate_model
 from openwakeword_engine import (
     default_model_names,
     delete_model,
@@ -24,6 +28,10 @@ from pattern import PatternError, expand_pattern
 from wake_menu import dispatch_wake_menus, register_wake_handlers
 
 from ubo_app.colors import INFO_COLOR
+from ubo_app.engines.microwakeword_catalog import (
+    download_urls_for as microwakeword_download_urls_for,
+)
+from ubo_app.engines.microwakeword_catalog import model_for as microwakeword_model_for
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.bindable_actions import (
@@ -71,6 +79,7 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionUpdateCommandAction,
     WakeMode,
     WakeWordDeleteModelEvent,
+    WakeWordDownloadModelEvent,
     WakeWordDownloadModelsEvent,
     WakeWordEngineConfig,
     WakeWordEngineName,
@@ -80,6 +89,7 @@ from ubo_app.store.services.speech_recognition import (
     WakeWordSetModelsStatusAction,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.download import download_file
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
 
@@ -656,16 +666,151 @@ async def _handle_download_models(event: WakeWordDownloadModelsEvent) -> None:
     )
 
 
-async def _handle_delete_model(event: WakeWordDeleteModelEvent) -> None:
-    """Delete a wake-word model file off-reducer and re-scan the pool."""
-    if event.engine is not WakeWordEngineName.OPENWAKEWORD:
+# Stable id, like ``_DOWNLOAD_NOTIFICATION_ID`` — one live notification per
+# microWakeWord download, replaced in place as it progresses.
+_MICRO_DOWNLOAD_NOTIFICATION_ID = 'speech_recognition:microwakeword-download'
+
+
+def _micro_download_failed(model_id: str, reason: str) -> None:
+    """Report a failed microWakeWord download and clear the downloading status."""
+    store.dispatch(
+        WakeWordSetModelsStatusAction(
+            engine_name=WakeWordEngineName.MICROWAKEWORD,
+            status=WakeWordModelStatus.ERROR,
+        ),
+        NotificationsAddAction(
+            notification=Notification(
+                id=_MICRO_DOWNLOAD_NOTIFICATION_ID,
+                title='microWakeWord',
+                content=f'Failed to download "{model_id}": {reason}',
+                importance=Importance.HIGH,
+                display_type=NotificationDisplayType.FLASH,
+                icon='',
+            ),
+        ),
+    )
+
+
+async def _handle_download_model(event: WakeWordDownloadModelEvent) -> None:
+    """Download one catalog model (its ``.json`` + ``.tflite``) with a progress notice.
+
+    The reducer already validated ``model_id`` against the catalog, marked the
+    engine ``DOWNLOADING`` and emitted this event. Both halves land in ``.part``
+    files and are only renamed into place together, so a failure midway can
+    never leave a half-installed model that :func:`micro_scan_models` would list.
+    """
+    if event.engine is not WakeWordEngineName.MICROWAKEWORD:
+        logger.warning(
+            'Per-model download not supported for engine',
+            extra={'engine': event.engine},
+        )
+        store.dispatch(
+            WakeWordSetModelsStatusAction(
+                engine_name=event.engine,
+                status=WakeWordModelStatus.NOT_AVAILABLE,
+            ),
+        )
         return
-    await asyncio.to_thread(delete_model, event.model_id)
+
+    model = microwakeword_model_for(event.model_id)
+    if model is None:
+        # Belt-and-braces: the reducer rejects unknown ids, so this only fires
+        # if the catalog changed under a queued event.
+        _micro_download_failed(event.model_id, 'unknown model')
+        return
+
+    json_url, tflite_url = microwakeword_download_urls_for(model.id)
+    MICRO_MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    json_part = MICRO_MODELS_DIR / f'{model.id}.json.part'
+    tflite_part = MICRO_MODELS_DIR / f'{model.id}.tflite.part'
+
+    def _notify(progress: float) -> None:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id=_MICRO_DOWNLOAD_NOTIFICATION_ID,
+                    title='Downloading wake word',
+                    content=model.label,
+                    display_type=NotificationDisplayType.STICKY,
+                    color=INFO_COLOR,
+                    icon='󰇚',
+                    blink=False,
+                    progress=progress,
+                    show_dismiss_action=False,
+                    dismiss_on_close=False,
+                ),
+            ),
+        )
+
+    _notify(0.0)
+    try:
+        # The manifest is well under 1 KB against ~60 KB of weights, so the
+        # progress bar tracks the ``.tflite`` alone rather than interleaving two
+        # streams for a fraction of a percent.
+        async for _ in download_file(url=json_url, path=json_part):
+            pass
+        async for downloaded, total in download_file(
+            url=tflite_url,
+            path=tflite_part,
+        ):
+            _notify(downloaded / total if total else 0.0)
+    except Exception as error:
+        logger.exception(
+            'Failed to download microWakeWord model',
+            extra={'model': model.id},
+        )
+        for part in (json_part, tflite_part):
+            part.unlink(missing_ok=True)
+        _micro_download_failed(model.id, str(error) or 'download error')
+        return
+
+    if not await asyncio.to_thread(micro_validate_model, json_part):
+        for part in (json_part, tflite_part):
+            part.unlink(missing_ok=True)
+        _micro_download_failed(model.id, 'the downloaded model is not loadable')
+        return
+
+    json_part.replace(MICRO_MODELS_DIR / f'{model.id}.json')
+    tflite_part.replace(MICRO_MODELS_DIR / f'{model.id}.tflite')
+
     store.dispatch(
         WakeWordSetAvailableModelsAction(
             engine=event.engine,
-            models=tuple(scan_models()),
+            models=tuple(micro_scan_models()),
         ),
+        WakeWordSetModelsStatusAction(
+            engine_name=event.engine,
+            status=WakeWordModelStatus.AVAILABLE,
+        ),
+        NotificationsAddAction(
+            notification=Notification(
+                id=_MICRO_DOWNLOAD_NOTIFICATION_ID,
+                title='Wake word ready',
+                content=model.label,
+                display_type=NotificationDisplayType.FLASH,
+                flash_time=2,
+                color=INFO_COLOR,
+                icon='󰄬',
+                progress=1.0,
+                show_dismiss_action=True,
+                dismiss_on_close=True,
+            ),
+        ),
+    )
+
+
+async def _handle_delete_model(event: WakeWordDeleteModelEvent) -> None:
+    """Delete a wake-word model file off-reducer and re-scan the pool."""
+    if event.engine is WakeWordEngineName.OPENWAKEWORD:
+        await asyncio.to_thread(delete_model, event.model_id)
+        models = tuple(scan_models())
+    elif event.engine is WakeWordEngineName.MICROWAKEWORD:
+        await asyncio.to_thread(micro_delete_model, event.model_id)
+        models = tuple(micro_scan_models())
+    else:
+        return
+    store.dispatch(
+        WakeWordSetAvailableModelsAction(engine=event.engine, models=models),
     )
 
 
@@ -683,6 +828,7 @@ def init_service() -> Subscriptions:
             state.speech_recognition.wake_engines,
             state.speech_recognition.enabled_wake_modes,
             state.speech_recognition.openwakeword_models,
+            state.speech_recognition.microwakeword_models,
             state.speech_recognition.wake_word_models_status,
             state.infrared.registered_devices,
         ),
@@ -691,6 +837,7 @@ def init_service() -> Subscriptions:
         data: tuple[
             tuple[WakeWordEngineConfig, ...],
             tuple[WakeMode, ...],
+            tuple[str, ...],
             tuple[str, ...],
             tuple[WakeWordModelStatusEntry, ...],
             list[InfraredDevice],
@@ -701,17 +848,18 @@ def init_service() -> Subscriptions:
             wake_engines,
             enabled_wake_modes,
             openwakeword_models,
+            microwakeword_models,
             status_entries,
             ir_devices,
         ) = data
-        # The serializable state carries a tuple of (engine, status) records;
-        # collapse it to a dict for the menu builders' per-engine lookups.
-        models_status = {entry.engine: entry.status for entry in status_entries}
         dispatch_wake_menus(
             wake_engines,
             enabled_wake_modes,
-            openwakeword_models,
-            models_status,
+            {
+                WakeWordEngineName.OPENWAKEWORD: openwakeword_models,
+                WakeWordEngineName.MICROWAKEWORD: microwakeword_models,
+            },
+            status_entries,
             list(ir_devices),
         )
 
@@ -787,10 +935,11 @@ def init_service() -> Subscriptions:
     command_action_cleanups = _register_command_actions()
     static_menu_cleanups = _register_static_menus()
 
-    # Seed the OpenWakeWord model pool + status from disk so the Manage Models tab
+    # Seed each engine's model pool + status from disk so the Manage Models tab
     # renders. Done here (service start), never in the reducer, to keep the
     # reducer free of filesystem I/O.
     available_models = tuple(scan_models())
+    available_micro_models = tuple(micro_scan_models())
     store.dispatch(
         WakeWordSetAvailableModelsAction(
             engine=WakeWordEngineName.OPENWAKEWORD,
@@ -800,6 +949,16 @@ def init_service() -> Subscriptions:
             engine_name=WakeWordEngineName.OPENWAKEWORD,
             status=WakeWordModelStatus.AVAILABLE
             if available_models
+            else WakeWordModelStatus.NOT_AVAILABLE,
+        ),
+        WakeWordSetAvailableModelsAction(
+            engine=WakeWordEngineName.MICROWAKEWORD,
+            models=available_micro_models,
+        ),
+        WakeWordSetModelsStatusAction(
+            engine_name=WakeWordEngineName.MICROWAKEWORD,
+            status=WakeWordModelStatus.AVAILABLE
+            if available_micro_models
             else WakeWordModelStatus.NOT_AVAILABLE,
         ),
     )
@@ -857,6 +1016,10 @@ def init_service() -> Subscriptions:
         store.subscribe_event(
             WakeWordDownloadModelsEvent,
             _handle_download_models,
+        ),
+        store.subscribe_event(
+            WakeWordDownloadModelEvent,
+            _handle_download_model,
         ),
         store.subscribe_event(
             WakeWordDeleteModelEvent,

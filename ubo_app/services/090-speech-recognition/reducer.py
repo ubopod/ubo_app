@@ -12,6 +12,9 @@ from redux import (
     InitializationActionError,
 )
 
+# The catalog is the authorization list for per-model downloads — see the
+# ``WakeWordDownloadModelAction`` branch.
+from ubo_app.engines.microwakeword_catalog import model_for as microwakeword_model_for
 from ubo_app.store.services.assistant import (
     AssistantStartListeningAction,
     AssistantStopTalkingAction,
@@ -48,6 +51,8 @@ from ubo_app.store.services.speech_recognition import (
     WakeTriggerRemoveAction,
     WakeWordDeleteModelAction,
     WakeWordDeleteModelEvent,
+    WakeWordDownloadModelAction,
+    WakeWordDownloadModelEvent,
     WakeWordDownloadModelsAction,
     WakeWordDownloadModelsEvent,
     WakeWordEngineName,
@@ -131,6 +136,35 @@ def _with_commands_catalog(state: SpeechRecognitionState) -> SpeechRecognitionSt
     )
 
 
+def _model_pool(
+    state: SpeechRecognitionState,
+    engine: WakeWordEngineName,
+) -> tuple[str, ...] | None:
+    """Return *engine*'s on-disk model pool, or None if it doesn't have one.
+
+    Vosk matches spoken phrases rather than per-wake-word model files, so it has
+    no pool and nothing to delete.
+    """
+    if engine is WakeWordEngineName.OPENWAKEWORD:
+        return state.openwakeword_models
+    if engine is WakeWordEngineName.MICROWAKEWORD:
+        return state.microwakeword_models
+    return None
+
+
+def _with_model_pool(
+    state: SpeechRecognitionState,
+    engine: WakeWordEngineName,
+    models: tuple[str, ...],
+) -> SpeechRecognitionState:
+    """Return *state* with *engine*'s model pool replaced by *models*."""
+    if engine is WakeWordEngineName.OPENWAKEWORD:
+        return replace(state, openwakeword_models=models)
+    if engine is WakeWordEngineName.MICROWAKEWORD:
+        return replace(state, microwakeword_models=models)
+    return state
+
+
 def _map_engine_triggers(
     state: SpeechRecognitionState,
     engine: WakeWordEngineName,
@@ -163,6 +197,7 @@ def _apply_wake_mode(
     UboAction,
     SpeechRecognitionBoundActionTriggeredEvent
     | WakeWordDownloadModelsEvent
+    | WakeWordDownloadModelEvent
     | WakeWordDeleteModelEvent,
 ]:
     """Map a triggered wake *mode* to its assistant effect.
@@ -259,6 +294,7 @@ def reducer(
     UboAction,
     SpeechRecognitionBoundActionTriggeredEvent
     | WakeWordDownloadModelsEvent
+    | WakeWordDownloadModelEvent
     | WakeWordDeleteModelEvent,
 ]:
     if state is None:
@@ -487,34 +523,63 @@ def reducer(
                 ),
             )
 
+        case WakeWordDownloadModelAction(engine=engine, model_id=model_id):
+            # Only microWakeWord browses and fetches models one at a time; every
+            # other engine downloads its whole default set via
+            # ``WakeWordDownloadModelsAction``.
+            if engine is not WakeWordEngineName.MICROWAKEWORD:
+                return state
+            # Authorize against the curated catalog: ``model_id`` reaches the
+            # reducer from a menu tap *or* a remote gRPC dispatch, and it ends up
+            # in a download URL and an on-disk filename. Only ids we ship are
+            # accepted, so an arbitrary string can never become either.
+            if microwakeword_model_for(model_id) is None:
+                return state
+            # Idempotent at the boundary, matching the batch action above: a
+            # re-dispatch while a download is in flight must not emit a second
+            # event and launch an overlapping fetch.
+            if model_status(state, engine) is WakeWordModelStatus.DOWNLOADING:
+                return state
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    wake_word_models_status=set_model_status(
+                        state.wake_word_models_status,
+                        engine,
+                        WakeWordModelStatus.DOWNLOADING,
+                        model_id,
+                    ),
+                ),
+                events=[
+                    WakeWordDownloadModelEvent(engine=engine, model_id=model_id),
+                ],
+            )
+
         case WakeWordSetAvailableModelsAction(engine=engine, models=models):
             if engine is WakeWordEngineName.OPENWAKEWORD:
                 return replace(state, openwakeword_models=models)
+            if engine is WakeWordEngineName.MICROWAKEWORD:
+                return replace(state, microwakeword_models=models)
             return state
 
         case WakeWordDeleteModelAction(engine=engine, model_id=model_id):
-            # Only OpenWakeWord has a deletable on-disk model pool. Guard the
-            # engine so a malformed/remote action with the wrong engine can't
-            # mutate ``openwakeword_models`` (or prune the wrong engine's triggers)
-            # while the file-deleting event is dropped service-side.
-            if engine is not WakeWordEngineName.OPENWAKEWORD:
+            # Only the model-pool engines have something deletable on disk. Guard
+            # the engine so a malformed/remote action with the wrong engine can't
+            # mutate a pool (or prune the wrong engine's triggers) while the
+            # file-deleting event is dropped service-side.
+            pool = _model_pool(state, engine)
+            if pool is None:
                 return state
             # Authorize against the known pool: a remote/client-dispatched action
             # must not delete an arbitrary id (e.g. a shared helper model). Only
-            # ids present in ``openwakeword_models`` are deletable.
-            if model_id not in state.openwakeword_models:
+            # ids present in the engine's pool are deletable.
+            if model_id not in pool:
                 return state
             # Drop the model from the pool + any trigger referencing it; delete
             # the file off-reducer via the event.
+            remaining = tuple(stem for stem in pool if stem != model_id)
             pruned = _map_engine_triggers(
-                replace(
-                    state,
-                    openwakeword_models=tuple(
-                        stem
-                        for stem in state.openwakeword_models
-                        if stem != model_id
-                    ),
-                ),
+                _with_model_pool(state, engine, remaining),
                 engine,
                 lambda triggers: tuple(
                     trigger for trigger in triggers if trigger.value != model_id

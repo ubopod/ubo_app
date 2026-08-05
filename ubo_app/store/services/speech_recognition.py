@@ -49,6 +49,7 @@ class WakeWordEngineName(StrEnum):
 
     VOSK = 'vosk'
     OPENWAKEWORD = 'openwakeword'
+    MICROWAKEWORD = 'microwakeword'
     # PICOVOICE = 'picovoice'  # noqa: ERA001  (future — see EnginesManager registry)
 
 
@@ -71,6 +72,10 @@ class WakeWordModelStatusEntry(Immutable):
 
     engine: WakeWordEngineName
     status: WakeWordModelStatus
+    # Which model the ``DOWNLOADING`` status refers to, for engines that fetch
+    # one model at a time (microWakeWord). Empty for engine-wide batch downloads
+    # (OpenWakeWord) and for every non-downloading status.
+    model_id: str = ''
 
 
 class SpeechRecognitionAction(BaseAction):
@@ -138,6 +143,19 @@ class WakeWordDownloadModelsAction(SpeechRecognitionAction):
     """Action to download the default models for a wake word engine (batch)."""
 
     engine_name: WakeWordEngineName
+
+
+class WakeWordDownloadModelAction(SpeechRecognitionAction):
+    """Download one catalog model for a wake-word engine.
+
+    The per-model counterpart of :class:`WakeWordDownloadModelsAction`, used by
+    engines whose models are browsed and fetched individually (microWakeWord).
+    The reducer marks the engine as downloading and emits
+    :class:`WakeWordDownloadModelEvent`; the service does the fetch off-reducer.
+    """
+
+    engine: WakeWordEngineName
+    model_id: str
 
 
 class WakeWordDeleteModelAction(SpeechRecognitionAction):
@@ -325,6 +343,13 @@ class WakeWordDownloadModelsEvent(SpeechRecognitionEvent):
     """Event asking the service to download a wake-word engine's models."""
 
     engine_name: WakeWordEngineName
+
+
+class WakeWordDownloadModelEvent(SpeechRecognitionEvent):
+    """Event asking the service to download one catalog model."""
+
+    engine: WakeWordEngineName
+    model_id: str
 
 
 class WakeWordDeleteModelEvent(SpeechRecognitionEvent):
@@ -530,6 +555,11 @@ def _default_engine_configs(
             enabled=False,
             triggers=(),
         ),
+        WakeWordEngineConfig(
+            engine=WakeWordEngineName.MICROWAKEWORD,
+            enabled=False,
+            triggers=(),
+        ),
     )
 
 
@@ -652,6 +682,9 @@ class SpeechRecognitionState(Immutable):
     # OpenWakeWord model stems available on disk (downloaded defaults + uploaded
     # customs). Derived from disk by the service at startup; not persisted.
     openwakeword_models: tuple[str, ...] = field(default_factory=tuple)
+    # microWakeWord model ids available on disk (downloaded from the catalog).
+    # Derived from disk by the service at startup; not persisted, same as above.
+    microwakeword_models: tuple[str, ...] = field(default_factory=tuple)
     conversation_end_phrases: tuple[str, ...] = field(
         default=read_from_persistent_store(
             'speech_recognition:conversation_end_phrases',
@@ -710,11 +743,28 @@ def set_model_status(
     statuses: tuple[WakeWordModelStatusEntry, ...],
     engine: WakeWordEngineName,
     status: WakeWordModelStatus,
+    model_id: str = '',
 ) -> tuple[WakeWordModelStatusEntry, ...]:
     """Return *statuses* with *engine*'s status upserted to *status*."""
     return (
         *(entry for entry in statuses if entry.engine is not engine),
-        WakeWordModelStatusEntry(engine=engine, status=status),
+        WakeWordModelStatusEntry(engine=engine, status=status, model_id=model_id),
+    )
+
+
+def downloading_model_id(
+    state: SpeechRecognitionState,
+    engine: WakeWordEngineName,
+) -> str:
+    """Return the model *engine* is currently downloading, or ``''`` if none."""
+    return next(
+        (
+            entry.model_id
+            for entry in state.wake_word_models_status
+            if entry.engine is engine
+            and entry.status is WakeWordModelStatus.DOWNLOADING
+        ),
+        '',
     )
 
 

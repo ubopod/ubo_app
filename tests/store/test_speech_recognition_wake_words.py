@@ -900,11 +900,16 @@ def test_migration_only_enabled_slots(monkeypatch: pytest.MonkeyPatch) -> None:
 
     engines = ns.sr._load_wake_engines()  # noqa: SLF001
     by_name = {config.engine: config for config in engines}
-    assert set(by_name) == {ns.Engine.VOSK, ns.Engine.OPENWAKEWORD}
+    assert set(by_name) == {
+        ns.Engine.VOSK,
+        ns.Engine.OPENWAKEWORD,
+        ns.Engine.MICROWAKEWORD,
+    }
     vosk = by_name[ns.Engine.VOSK]
     # Only the enabled INTENTS slot survives; every disabled slot is dropped.
     assert {trigger.value for trigger in vosk.triggers} == {'ubo'}
     assert by_name[ns.Engine.OPENWAKEWORD].triggers == ()
+    assert by_name[ns.Engine.MICROWAKEWORD].triggers == ()
     assert not hasattr(vosk.triggers[0], 'enabled')
 
 
@@ -1068,3 +1073,202 @@ def test_download_models_is_noop_while_downloading(
         isinstance(event, ns.sr.WakeWordDownloadModelsEvent)
         for event in _download_events(result)
     )
+
+
+# ---------- microWakeWord (per-model catalog downloads) ----------
+
+
+def test_microwakeword_is_a_default_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A fresh install knows the engine, disabled, so its menus render."""
+    ns = _load(monkeypatch)
+    init = cast('type[BaseAction]', ns.reducer.__globals__['InitAction'])
+    state = cast('SpeechRecognitionState', ns.reducer(None, init()))
+
+    config = ns.engine_config(state, ns.Engine.MICROWAKEWORD)
+    assert config is not None
+    assert config.enabled is False
+    assert config.triggers == ()
+
+
+def _download_model(
+    ns: SimpleNamespace,
+    state: SpeechRecognitionState,
+    model_id: str,
+    engine: object | None = None,
+) -> object:
+    return ns.reducer(
+        state,
+        ns.sr.WakeWordDownloadModelAction(
+            engine=engine if engine is not None else ns.Engine.MICROWAKEWORD,
+            model_id=model_id,
+        ),
+    )
+
+
+def test_download_model_emits_event_and_records_which_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A catalog id marks the engine DOWNLOADING and names the model in flight."""
+    ns = _load(monkeypatch)
+    result = cast(
+        'CompleteReducerResult',
+        _download_model(ns, _state(ns), 'hey_luna'),
+    )
+
+    assert any(
+        isinstance(event, ns.sr.WakeWordDownloadModelEvent)
+        and event.model_id == 'hey_luna'
+        for event in _download_events(result)
+    )
+    assert (
+        ns.sr.model_status(result.state, ns.Engine.MICROWAKEWORD)
+        is ns.sr.WakeWordModelStatus.DOWNLOADING
+    )
+    assert (
+        ns.sr.downloading_model_id(result.state, ns.Engine.MICROWAKEWORD)
+        == 'hey_luna'
+    )
+
+
+def test_download_model_rejects_id_outside_the_catalog(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An unknown id is refused — it would become a URL and a filename.
+
+    ``model_id`` can arrive from a remote gRPC dispatch, so the curated catalog
+    is the authorization list rather than a mere UI convenience.
+    """
+    ns = _load(monkeypatch)
+    state = _state(ns)
+
+    for candidate in ('../../etc/passwd', 'not_a_wake_word', ''):
+        result = _download_model(ns, state, candidate)
+        assert result is state, candidate
+        assert not getattr(result, 'events', None), candidate
+
+
+def test_download_model_rejects_wrong_engine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only microWakeWord fetches per-model; OpenWakeWord downloads its set."""
+    ns = _load(monkeypatch)
+    state = _state(ns)
+
+    result = _download_model(ns, state, 'hey_luna', engine=ns.Engine.OPENWAKEWORD)
+
+    assert result is state
+    assert not getattr(result, 'events', None)
+
+
+def test_download_model_is_noop_while_downloading(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A re-dispatch while one fetch is in flight must not start a second."""
+    ns = _load(monkeypatch)
+    downloading = replace(
+        _state(ns),
+        wake_word_models_status=ns.sr.set_model_status(
+            (),
+            ns.Engine.MICROWAKEWORD,
+            ns.sr.WakeWordModelStatus.DOWNLOADING,
+            'hey_luna',
+        ),
+    )
+
+    result = _download_model(ns, downloading, 'okay_nabu')
+
+    assert not any(
+        isinstance(event, ns.sr.WakeWordDownloadModelEvent)
+        for event in _download_events(result)
+    )
+
+
+def test_available_models_stored_per_engine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each engine's pool lands on its own field — they must not cross over."""
+    ns = _load(monkeypatch)
+    state = _state(ns)
+
+    micro = ns.reducer(
+        state,
+        ns.WakeWordSetAvailableModelsAction(
+            engine=ns.Engine.MICROWAKEWORD,
+            models=('hey_luna',),
+        ),
+    )
+
+    assert micro.microwakeword_models == ('hey_luna',)
+    assert micro.openwakeword_models == ()
+
+
+def test_delete_model_prunes_microwakeword_triggers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Deleting a micro model drops it from the pool and unbinds its trigger."""
+    ns = _load(monkeypatch)
+    trigger = ns.Trigger(
+        id='hey_luna',
+        label='Hey Luna',
+        mode=ns.WakeMode.CONVERSATION,
+        value='hey_luna',
+    )
+    state = replace(
+        _state(
+            ns,
+            ns.EngineConfig(
+                engine=ns.Engine.MICROWAKEWORD,
+                enabled=True,
+                triggers=(trigger,),
+            ),
+        ),
+        microwakeword_models=('hey_luna', 'okay_nabu'),
+    )
+
+    result = cast(
+        'CompleteReducerResult',
+        ns.reducer(
+            state,
+            ns.WakeWordDeleteModelAction(
+                engine=ns.Engine.MICROWAKEWORD,
+                model_id='hey_luna',
+            ),
+        ),
+    )
+
+    assert result.state.microwakeword_models == ('okay_nabu',)
+    assert (
+        ns.trigger_by_id(result.state, ns.Engine.MICROWAKEWORD, 'hey_luna') is None
+    )
+    assert any(
+        isinstance(event, ns.WakeWordDeleteModelEvent)
+        for event in (result.events or [])
+    )
+
+
+def test_delete_model_does_not_cross_engine_pools(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A micro-engine delete can't reach into the OpenWakeWord pool.
+
+    The two pools share ids in principle (e.g. ``hey_jarvis`` exists for both),
+    so the engine guard is what keeps a delete on one from hitting the other.
+    """
+    ns = _load(monkeypatch)
+    state = replace(
+        _state(ns),
+        openwakeword_models=('hey_jarvis',),
+        microwakeword_models=(),
+    )
+
+    result = ns.reducer(
+        state,
+        ns.WakeWordDeleteModelAction(
+            engine=ns.Engine.MICROWAKEWORD,
+            model_id='hey_jarvis',
+        ),
+    )
+
+    new_state = result.state if hasattr(result, 'state') else result
+    assert new_state.openwakeword_models == ('hey_jarvis',)
+    assert not getattr(result, 'events', None)

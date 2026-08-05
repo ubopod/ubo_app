@@ -1898,6 +1898,7 @@
         ]
       }
     ],
+    "microwakeword_models": [],
     "openwakeword_models": [],
     "seeded_default_ids": [
       "default:assistant-on",
@@ -1940,12 +1941,25 @@
         "enabled": false,
         "engine": "openwakeword",
         "triggers": []
+      },
+      {
+        "_type": "WakeWordEngineConfig",
+        "enabled": false,
+        "engine": "microwakeword",
+        "triggers": []
       }
     ],
     "wake_word_models_status": [
       {
         "_type": "WakeWordModelStatusEntry",
         "engine": "openwakeword",
+        "model_id": "",
+        "status": "not_available"
+      },
+      {
+        "_type": "WakeWordModelStatusEntry",
+        "engine": "microwakeword",
+        "model_id": "",
         "status": "not_available"
       }
     ]

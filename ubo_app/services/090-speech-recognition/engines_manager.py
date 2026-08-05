@@ -9,6 +9,7 @@ from abstraction.wake_word_recognition_mixin import WakeTrigger
 from constants import INTENTS_LISTENING_TIMEOUT_SECONDS
 from matching import expand_phrases, match_recognition, stop_talking_triggers
 from mic_buffer import MicBuffer
+from microwakeword_engine import MicroWakeWordEngine
 from openwakeword_engine import OpenWakeWordEngine
 from vosk_engine import VoskEngine
 
@@ -55,13 +56,16 @@ class EnginesManager:
     def __init__(self) -> None:
         """Initialize `EnginesManager`."""
         # Vosk serves command/intent speech recognition and is also a wake
-        # engine. OpenWakeWord is a second wake engine. All enabled wake engines
-        # run concurrently over the same mic audio. (Register Picovoice here.)
+        # engine. OpenWakeWord and microWakeWord are wake-only engines. All
+        # enabled wake engines run concurrently over the same mic audio.
+        # (Register Picovoice here.)
         self._vosk_engine = VoskEngine()
         self._openwakeword_engine = OpenWakeWordEngine()
+        self._microwakeword_engine = MicroWakeWordEngine()
         self._wake_engines: dict[WakeWordEngineName, WakeWordRecognitionMixin] = {
             WakeWordEngineName.VOSK: self._vosk_engine,
             WakeWordEngineName.OPENWAKEWORD: self._openwakeword_engine,
+            WakeWordEngineName.MICROWAKEWORD: self._microwakeword_engine,
         }
         self._speech_engine: SpeechRecognitionMixin = self._vosk_engine
 

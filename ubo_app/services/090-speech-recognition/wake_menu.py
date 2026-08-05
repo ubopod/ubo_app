@@ -30,6 +30,11 @@ from wake_phrase_validation import (
     validate_phrase,
 )
 
+from ubo_app.engines.microwakeword_catalog import all_models as microwakeword_all_models
+from ubo_app.engines.microwakeword_catalog import model_for as microwakeword_model_for
+from ubo_app.engines.microwakeword_catalog import (
+    model_label as microwakeword_model_label,
+)
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
@@ -68,10 +73,12 @@ from ubo_app.store.services.speech_recognition import (
     WakeTriggerAddAction,
     WakeTriggerRemoveAction,
     WakeWordDeleteModelAction,
+    WakeWordDownloadModelAction,
     WakeWordDownloadModelsAction,
     WakeWordEngineConfig,
     WakeWordEngineName,
     WakeWordModelStatus,
+    WakeWordModelStatusEntry,
     WakeWordSetAvailableModelsAction,
     WakeWordTrigger,
     engine_config,
@@ -184,14 +191,22 @@ def _clean_phrase_lines(raw: str) -> list[str]:
 
 _SOURCE_VOSK = 'Vosk'
 _SOURCE_OPENWAKEWORD = 'OpenWakeWord'
+_SOURCE_MICROWAKEWORD = 'microWakeWord'
 _SOURCE_PICOVOICE = 'Picovoice'
 _SOURCE_INFRARED = 'Infrared'
 _SOURCE_ORDER: tuple[str, ...] = (
     _SOURCE_VOSK,
     _SOURCE_OPENWAKEWORD,
+    _SOURCE_MICROWAKEWORD,
     _SOURCE_PICOVOICE,
     _SOURCE_INFRARED,
 )
+# The model-based sources, mapped onto their engine so the shared value form and
+# the availability check don't need a branch per engine.
+_SOURCE_ENGINES: dict[str, WakeWordEngineName] = {
+    _SOURCE_OPENWAKEWORD: WakeWordEngineName.OPENWAKEWORD,
+    _SOURCE_MICROWAKEWORD: WakeWordEngineName.MICROWAKEWORD,
+}
 def _notify_setup_required(message: str) -> None:
     store.dispatch(
         NotificationsAddAction(
@@ -261,20 +276,18 @@ def _source_unavailable(
                 '(Voice Shortcuts → Download Vosk).',
             )
         return None
-    if source == _SOURCE_OPENWAKEWORD:
-        config = engine_config(state, WakeWordEngineName.OPENWAKEWORD)
+    if source in _SOURCE_ENGINES:
+        engine = _SOURCE_ENGINES[source]
+        label = _engine_label(engine)
+        config = engine_config(state, engine)
         if config is None or not config.enabled:
             return (
                 '(disabled)',
-                'Enable OpenWakeWord first '
-                '(Wake Up → Engines → OpenWakeWord → Enable Engine).',
+                f'Enable {label} first '
+                f'(Wake Up → Engines → {label} → Enable Engine).',
             )
-        if not state.openwakeword_models:
-            return (
-                '(no models)',
-                'Download or upload an OpenWakeWord model first '
-                '(Wake Up → Engines → OpenWakeWord).',
-            )
+        if not _engine_models(state, engine):
+            return ('(no models)', _ENGINE_SETUP_HINT[engine])
         return None
     if source == _SOURCE_INFRARED:
         if not ir_devices:
@@ -358,8 +371,8 @@ async def _provide_value_form(
     """Step 2: collect the source-specific value and save (replacing if editing)."""
     if source == _SOURCE_VOSK:
         await _vosk_value_form(mode, engines_manager, replace_target)
-    elif source == _SOURCE_OPENWAKEWORD:
-        await _openwakeword_value_form(mode, replace_target)
+    elif source in _SOURCE_ENGINES:
+        await _model_engine_value_form(_SOURCE_ENGINES[source], mode, replace_target)
     elif source == _SOURCE_INFRARED:
         await _infrared_value_form(mode, replace_target)
     else:
@@ -445,19 +458,36 @@ def _parse_sensitivity(raw: str | None) -> float:
     return max(0.0, min(1.0, percent / 100))
 
 
-async def _openwakeword_value_form(
+def _default_sensitivity(engine: WakeWordEngineName, model_id: str) -> float:
+    """Return the sensitivity a *new* trigger for *model_id* starts at.
+
+    microWakeWord models ship an upstream-tuned ``probability_cutoff`` (0.63 to
+    0.97 across the catalog); surfacing it as ``1 - cutoff`` means a fresh
+    trigger reproduces upstream's tuning instead of the generic 0.5, which for
+    most of these models would be far too trigger-happy.
+    """
+    if engine is WakeWordEngineName.MICROWAKEWORD:
+        model = microwakeword_model_for(model_id)
+        if model is not None:
+            return 1 - model.probability_cutoff
+    return 0.5
+
+
+async def _model_engine_value_form(
+    engine: WakeWordEngineName,
     mode: WakeMode,
     replace_target: WakeWordTrigger | InfraredDevice | None,
 ) -> None:
-    """Pick a downloaded OpenWakeWord model (+ name + sensitivity) for *mode*."""
+    """Pick a downloaded model (+ name + sensitivity) for *mode* on *engine*.
+
+    Shared by the two model-based wake engines — they differ only in which pool
+    they read, how a model is obtained, and the default sensitivity.
+    """
     state = _read_speech_recognition_state()
-    config = engine_config(state, WakeWordEngineName.OPENWAKEWORD)
-    models = list(state.openwakeword_models)
+    config = engine_config(state, engine)
+    models = list(_engine_models(state, engine))
     if config is None or not config.enabled or not models:
-        _notify_setup_required(
-            'Enable OpenWakeWord and download or upload a model first '
-            '(Wake Up → Engines → OpenWakeWord).',
-        )
+        _notify_setup_required(_ENGINE_SETUP_HINT[engine])
         return
     title = _WAKE_MODE_META[mode][0]
     old = replace_target if isinstance(replace_target, WakeWordTrigger) else None
@@ -472,7 +502,8 @@ async def _openwakeword_value_form(
                             name='model',
                             label='Model',
                             type=InputFieldType.SELECT,
-                            description='An OpenWakeWord model to detect.',
+                            description=f'A {_engine_label(engine)} model to '
+                            'detect.',
                             options=models,
                             default_value=default_model,
                             required=True,
@@ -491,7 +522,17 @@ async def _openwakeword_value_form(
                             description='Higher triggers more readily (and risks '
                             'more false activations).',
                             default_value=str(
-                                round((old.sensitivity if old else 0.5) * 100),
+                                round(
+                                    (
+                                        old.sensitivity
+                                        if old
+                                        else _default_sensitivity(
+                                            engine,
+                                            default_model,
+                                        )
+                                    )
+                                    * 100,
+                                ),
                             ),
                             required=True,
                         ),
@@ -513,7 +554,7 @@ async def _openwakeword_value_form(
     # reject a stem already used by another trigger, ignoring the one being edited.
     collisions = phrase_collisions(
         stem,
-        WakeWordEngineName.OPENWAKEWORD,
+        engine,
         _read_speech_recognition_state(),
         exclude_trigger_id=old.id if old is not None else None,
     )
@@ -522,15 +563,10 @@ async def _openwakeword_value_form(
         return
     actions: list[object] = []
     if old is not None:
-        actions.append(
-            WakeTriggerRemoveAction(
-                engine=WakeWordEngineName.OPENWAKEWORD,
-                id=old.id,
-            ),
-        )
+        actions.append(WakeTriggerRemoveAction(engine=engine, id=old.id))
     actions.append(
         WakeTriggerAddAction(
-            engine=WakeWordEngineName.OPENWAKEWORD,
+            engine=engine,
             id=uuid4().hex,
             label=name,
             mode=mode,
@@ -675,9 +711,41 @@ async def _end_phrases_form(engines_manager: EnginesManager) -> None:
 _ENGINE_LABELS: dict[WakeWordEngineName, str] = {
     WakeWordEngineName.VOSK: 'Vosk',
     WakeWordEngineName.OPENWAKEWORD: 'OpenWakeWord',
+    WakeWordEngineName.MICROWAKEWORD: 'microWakeWord',
 }
 def _engine_label(engine: WakeWordEngineName) -> str:
     return _ENGINE_LABELS.get(engine, engine.value)
+
+
+# The engines that keep a pool of model files on disk (Vosk matches spoken
+# phrases instead, so it has no pool and no model menus).
+_MODEL_ENGINES: tuple[WakeWordEngineName, ...] = (
+    WakeWordEngineName.OPENWAKEWORD,
+    WakeWordEngineName.MICROWAKEWORD,
+)
+
+_ENGINE_SETUP_HINT: dict[WakeWordEngineName, str] = {
+    WakeWordEngineName.OPENWAKEWORD: (
+        'Enable OpenWakeWord and download or upload a model first '
+        '(Wake Up → Engines → OpenWakeWord).'
+    ),
+    WakeWordEngineName.MICROWAKEWORD: (
+        'Enable microWakeWord and download a wake word first '
+        '(Wake Up → Engines → microWakeWord → Add Wake Word).'
+    ),
+}
+
+
+def _engine_models(
+    state: SpeechRecognitionState,
+    engine: WakeWordEngineName,
+) -> tuple[str, ...]:
+    """Return *engine*'s on-disk model pool (empty for engines without one)."""
+    if engine is WakeWordEngineName.OPENWAKEWORD:
+        return state.openwakeword_models
+    if engine is WakeWordEngineName.MICROWAKEWORD:
+        return state.microwakeword_models
+    return ()
 
 
 def _model_stem(filename: str, label: str) -> str:
@@ -692,7 +760,18 @@ async def _upload_model_form(engine: WakeWordEngineName) -> None:
 
     The model is added to the available pool only; it is assigned to a mode later
     from Wake Up → Phrases → <mode> → Add → OpenWakeWord.
+
+    OpenWakeWord-only: the body writes a single ``.onnx`` into *its* ``MODELS_DIR``
+    but reports the pool under *engine*, so another engine's id here would file an
+    OpenWakeWord model into the wrong pool. The menu only offers this row for
+    OpenWakeWord; the guard covers a remote/gRPC dispatch that bypasses the menu.
     """
+    if engine is not WakeWordEngineName.OPENWAKEWORD:
+        logger.warning(
+            'Model upload not supported for engine',
+            extra={'engine': engine},
+        )
+        return
     try:
         _, result = await ubo_input(
             prompt='Upload a wake-word model',
@@ -789,36 +868,51 @@ def _menu_engine(engine: WakeWordEngineName) -> str:
     return f'speech-recognition:wake-engine:{engine.value}'
 
 
-def _oww_config(
+def _menu_engine_catalog(engine: WakeWordEngineName) -> str:
+    return f'speech-recognition:wake-engine:{engine.value}:catalog'
+
+
+def _config_for(
     wake_engines: tuple[WakeWordEngineConfig, ...],
+    engine: WakeWordEngineName,
 ) -> WakeWordEngineConfig | None:
-    return next(
-        (c for c in wake_engines if c.engine is WakeWordEngineName.OPENWAKEWORD),
-        None,
-    )
+    return next((c for c in wake_engines if c.engine is engine), None)
 
 
 def dispatch_wake_menus(
     wake_engines: tuple[WakeWordEngineConfig, ...],
     enabled_wake_modes: tuple[WakeMode, ...],
-    openwakeword_models: tuple[str, ...],
-    models_status: dict[WakeWordEngineName, WakeWordModelStatus],
+    engine_models: dict[WakeWordEngineName, tuple[str, ...]],
+    status_entries: tuple[WakeWordModelStatusEntry, ...],
     ir_devices: list[InfraredDevice],
 ) -> None:
     """(Re)build the whole mode-first wake-up menu tree from state."""
+    # The serializable state carries a tuple of (engine, status, model_id)
+    # records; collapse it here for the menu builders' per-engine lookups.
+    models_status = {entry.engine: entry.status for entry in status_entries}
+    downloading_model_ids = {
+        entry.engine: entry.model_id
+        for entry in status_entries
+        if entry.status is WakeWordModelStatus.DOWNLOADING
+    }
     _dispatch_wake_up_menu()
     _dispatch_phrases_menu()
     for mode in _WAKE_MODE_META:
         _dispatch_mode_menu(mode, wake_engines, enabled_wake_modes, ir_devices)
     _dispatch_engines_menu(wake_engines)
-    config = _oww_config(wake_engines)
-    if config is not None:
-        _dispatch_engine_menu(config, openwakeword_models, models_status)
-        _dispatch_oww_models_menu(
-            openwakeword_models,
-            downloading=models_status.get(WakeWordEngineName.OPENWAKEWORD)
-            is WakeWordModelStatus.DOWNLOADING,
-        )
+    for engine in _MODEL_ENGINES:
+        config = _config_for(wake_engines, engine)
+        if config is None:
+            continue
+        models = engine_models.get(engine, ())
+        downloading = models_status.get(engine) is WakeWordModelStatus.DOWNLOADING
+        _dispatch_engine_menu(config, models, models_status)
+        _dispatch_engine_models_menu(engine, models, downloading=downloading)
+        if engine is WakeWordEngineName.MICROWAKEWORD:
+            _dispatch_micro_catalog_menu(
+                models,
+                downloading_model_ids.get(engine, ''),
+            )
 
 
 def _dispatch_wake_up_menu() -> None:
@@ -950,21 +1044,28 @@ def _dispatch_mode_menu(
     )
 
 
+def _is_enabled(
+    wake_engines: tuple[WakeWordEngineConfig, ...],
+    engine: WakeWordEngineName,
+) -> bool:
+    config = _config_for(wake_engines, engine)
+    return bool(config and config.enabled)
+
+
 def _dispatch_engines_menu(
     wake_engines: tuple[WakeWordEngineConfig, ...],
 ) -> None:
-    config = _oww_config(wake_engines)
-    enabled = bool(config and config.enabled)
-    rows = (
+    rows = tuple(
         MenuItemData(
-            key='openwakeword',
-            label=f'OpenWakeWord ({"On" if enabled else "Off"})',
-            icon='\U000f036f',
-            action_id=(
-                f'speech-recognition:goto:'
-                f'{_menu_engine(WakeWordEngineName.OPENWAKEWORD)}'
+            key=engine.value,
+            label=(
+                f'{_engine_label(engine)} '
+                f'({"On" if _is_enabled(wake_engines, engine) else "Off"})'
             ),
-        ),
+            icon='\U000f036f',
+            action_id=f'speech-recognition:goto:{_menu_engine(engine)}',
+        )
+        for engine in _MODEL_ENGINES
     )
     store.dispatch(
         UpdateDynamicMenuAction(
@@ -1025,14 +1126,47 @@ def _dispatch_engine_menu(
             is_active=config.enabled,
             action_id=f'speech-recognition:toggle-engine:{engine.value}',
         ),
-        _download_or_models_row(engine, models, downloading=downloading),
-        MenuItemData(
-            key='upload',
-            label='Upload Model',
-            icon='\U000f0552',
-            action_id=f'speech-recognition:upload-model:{engine.value}',
-        ),
     ]
+    if engine is WakeWordEngineName.MICROWAKEWORD:
+        # microWakeWord browses a curated catalog and fetches one wake word at a
+        # time, so it gets an "Add Wake Word" picker instead of OpenWakeWord's
+        # all-or-nothing batch download. Uploads are not offered: a model is a
+        # ``.tflite`` plus a matching ``.json`` manifest, not a single file.
+        rows.append(
+            MenuItemData(
+                key='catalog',
+                label='Downloading…' if downloading else 'Add Wake Word',
+                icon='\U000f01da',
+                action_id=(
+                    None
+                    if downloading
+                    else f'speech-recognition:goto:{_menu_engine_catalog(engine)}'
+                ),
+            ),
+        )
+        if models:
+            rows.append(
+                MenuItemData(
+                    key='models',
+                    label='Models',
+                    icon='\U000f0411',
+                    action_id=(
+                        f'speech-recognition:goto:{_menu_engine_models(engine)}'
+                    ),
+                ),
+            )
+    else:
+        rows.extend(
+            (
+                _download_or_models_row(engine, models, downloading=downloading),
+                MenuItemData(
+                    key='upload',
+                    label='Upload Model',
+                    icon='\U000f0552',
+                    action_id=f'speech-recognition:upload-model:{engine.value}',
+                ),
+            ),
+        )
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=_menu_engine(engine),
@@ -1045,13 +1179,17 @@ def _dispatch_engine_menu(
     )
 
 
-def _dispatch_oww_models_menu(
+def _dispatch_engine_models_menu(
+    engine: WakeWordEngineName,
     models: tuple[str, ...],
     *,
     downloading: bool,
 ) -> None:
-    """List the downloaded OpenWakeWord models (tap to delete) + a re-fetch row."""
-    engine = WakeWordEngineName.OPENWAKEWORD
+    """List an engine's downloaded models (tap to delete).
+
+    OpenWakeWord gets a trailing batch re-fetch row; microWakeWord doesn't —
+    its models are added one at a time from the catalog menu instead.
+    """
     rows: list[MenuItemData] = [
         MenuItemData(
             key=f'model-{stem}',
@@ -1061,18 +1199,19 @@ def _dispatch_oww_models_menu(
         )
         for stem in models
     ]
-    rows.append(
-        MenuItemData(
-            key='download',
-            label='Downloading…' if downloading else 'Download Default Models',
-            icon='\U000f01da',
-            action_id=(
-                None
-                if downloading
-                else f'speech-recognition:download-models:{engine.value}'
+    if engine is WakeWordEngineName.OPENWAKEWORD:
+        rows.append(
+            MenuItemData(
+                key='download',
+                label='Downloading…' if downloading else 'Download Default Models',
+                icon='\U000f01da',
+                action_id=(
+                    None
+                    if downloading
+                    else f'speech-recognition:download-models:{engine.value}'
+                ),
             ),
-        ),
-    )
+        )
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=_menu_engine_models(engine),
@@ -1081,6 +1220,53 @@ def _dispatch_oww_models_menu(
             sub_heading='Tap a model to delete it.',
             items=tuple(rows),
             placeholder='No models yet',
+        ),
+    )
+
+
+def _dispatch_micro_catalog_menu(
+    models: tuple[str, ...],
+    downloading_id: str,
+) -> None:
+    """List the microWakeWord catalog — tap an entry to download it.
+
+    Entries already on disk (and the one currently downloading) are inert; the
+    icon carries the state so the row reads at a glance on the 240x240 screen.
+    """
+    engine = WakeWordEngineName.MICROWAKEWORD
+    rows: list[MenuItemData] = []
+    for model in microwakeword_all_models():
+        installed = model.id in models
+        is_downloading = model.id == downloading_id
+        if installed:
+            icon, action_id = '\U000f012c', None
+        elif is_downloading:
+            icon, action_id = '\U000f01da', None
+        else:
+            icon = '\U000f01da'
+            action_id = (
+                f'speech-recognition:download-model:{engine.value}:{model.id}'
+            )
+        rows.append(
+            MenuItemData(
+                key=f'catalog-{model.id}',
+                label=(
+                    f'{model.label} (downloading…)'
+                    if is_downloading
+                    else microwakeword_model_label(model)
+                ),
+                icon=icon,
+                action_id=action_id,
+            ),
+        )
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=_menu_engine_catalog(engine),
+            title='Add Wake Word',
+            heading='Add Wake Word',
+            sub_heading='Tap a wake word to download it.',
+            items=tuple(rows),
+            placeholder='',
         ),
     )
 
@@ -1282,6 +1468,17 @@ def register_wake_handlers(  # noqa: C901, PLR0915
         )
         store.dispatch(WakeWordDownloadModelsAction(engine_name=engine))
 
+    def _download_model(action_id: str) -> None:
+        engine_str, model_id = action_id.removeprefix(
+            'speech-recognition:download-model:',
+        ).split(':', 1)
+        store.dispatch(
+            WakeWordDownloadModelAction(
+                engine=WakeWordEngineName(engine_str),
+                model_id=model_id,
+            ),
+        )
+
     def _upload_model(action_id: str) -> None:
         engine = WakeWordEngineName(
             action_id.removeprefix('speech-recognition:upload-model:'),
@@ -1348,6 +1545,9 @@ def register_wake_handlers(  # noqa: C901, PLR0915
         ('speech-recognition:edit-ir:*', _edit_ir),
         ('speech-recognition:remove-ir:*', _remove_ir),
         ('speech-recognition:download-models:*', _download_models),
+        # Distinct from the plural prefix above — the trailing ':' means
+        # 'download-models:openwakeword' can't match this one, or vice versa.
+        ('speech-recognition:download-model:*', _download_model),
         ('speech-recognition:upload-model:*', _upload_model),
         ('speech-recognition:delete-model:*', _delete_model),
         ('speech-recognition:confirm-delete-model:*', _confirm_delete_model),
