@@ -379,7 +379,12 @@ class UboServiceThread(threading.Thread):
                     if process_path.exists():
                         process = await asyncio.subprocess.create_subprocess_exec(
                             process_path,
-                            cwd=process_path.parent.parent,
+                            # The cwd must not be an ancestor of the service venv's
+                            # site-packages: nltk>=3.10.1 (pulled in by the
+                            # assistant's pipeline) blocks imports of its
+                            # dependencies that resolve to paths under the cwd
+                            # (CWE-427 mitigation).
+                            cwd=DATA_PATH,
                             env={
                                 'GRPC_ADDRESS': GRPC_LISTEN_ADDRESS,
                                 'GRPC_PORT': str(GRPC_LISTEN_PORT),
