@@ -279,9 +279,16 @@ def build_message(  # noqa: C901, PLR0912
                 if value_cls is not None and issubclass(
                     value_cls, betterproto.Message,
                 ):
-                    # Map values need conversion (e.g. extra_data map)
+                    # Two shapes of message-valued map: dynamic-typed values
+                    # (e.g. extra_data) go through the BasicType oneof;
+                    # structured Immutable values (e.g. SensorsState.devices)
+                    # recurse through build_message like any other message.
                     converted = {
-                        k: _convert_basic_value(v, value_cls)
+                        k: (
+                            build_message(v, expected_type=value_cls)
+                            if hasattr(v, '__dataclass_fields__')
+                            else _convert_basic_value(v, value_cls)
+                        )
                         for k, v in object_.items()
                     }
                     return cast('T', expected_type(items=converted))  # type: ignore[call-arg]
