@@ -7,8 +7,6 @@ from typing import TYPE_CHECKING
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
 
-from ubo_app.utils.persistent_store import read_from_persistent_store
-
 
 class CameraSourceKind(StrEnum):
     """Whether a camera source is hardware on this device or a remote client."""
