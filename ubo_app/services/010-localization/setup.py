@@ -368,6 +368,7 @@ def init_service() -> Subscriptions:
         RegisterSettingAppAction(
             category=SettingsCategory.LOCALIZATION,
             priority=0,
+            key='language',
             label='Language',
             icon='󰗊',
             action_id=OPEN_LANGUAGE_ACTION_ID,
@@ -375,6 +376,7 @@ def init_service() -> Subscriptions:
         RegisterSettingAppAction(
             category=SettingsCategory.LOCALIZATION,
             priority=1,
+            key='location',
             label='Location',
             icon='󰍎',
             action_id=OPEN_LOCATION_ACTION_ID,
