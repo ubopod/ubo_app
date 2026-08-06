@@ -110,6 +110,11 @@ DATA_PATH = Path(
         platformdirs.user_data_path(appname='ubo', ensure_exists=True),
     ),
 )
+# `ensure_exists` above only applies to the platformdirs default; an
+# UBO_DATA_PATH override (e.g. tests/.env) bypasses it, so guarantee the
+# directory exists unconditionally — service_thread.py spawns binaries with
+# cwd=DATA_PATH, and a missing cwd fails create_subprocess_exec outright.
+DATA_PATH.mkdir(parents=True, exist_ok=True)
 
 DISPLAY_BAUDRATE = int(os.environ.get('UBO_DISPLAY_BAUDRATE', '60_000_000'))
 WIDTH = 240
