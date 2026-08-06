@@ -29,7 +29,7 @@ being available to consume and drive.
 | `abstraction/wake_word_recognition_mixin.py` | `WakeWordRecognitionMixin` + `WakeTrigger` — trigger-list wake detection. |
 | `vosk_engine.py`                      | Vosk engine: speech recognition **and** wake detection; lazy Kaldi model load. |
 | `openwakeword_engine.py`              | OpenWakeWord engine: confidence-scored wake detection + model download/upload/delete/scan. |
-| `microwakeword_engine.py`             | microWakeWord engine: streaming `.tflite` wake detection over `pymicro-wakeword` + model scan/validate/delete. Catalog lives in [`ubo_app/engines/microwakeword_catalog.py`](../../engines/microwakeword_catalog.py). |
+| `microwakeword_engine.py`             | microWakeWord engine: streaming `.tflite` wake detection over `pymicro-wakeword` + model scan/validate/install/delete. Catalog lives in [`ubo_app/engines/microwakeword_catalog.py`](../../engines/microwakeword_catalog.py). |
 | `engines_manager.py`                  | `EnginesManager`: registry of engines, mic fan-out, trigger sync, detection routing, cleanup. |
 | `mic_buffer.py`                       | `MicBuffer` — rolling N-second mic buffer dumped to WAV on assistant wake/stop phrases. |
 | `pattern.py`                          | `expand_pattern()` — compact utterance-pattern → concrete phrase list.     |
@@ -50,7 +50,7 @@ Slice: `state.speech_recognition` —
 | `wake_engines`            | `tuple[WakeWordEngineConfig, ...]`      | Per-engine `enabled` flag + its `WakeWordTrigger`s. Persisted; migrated from legacy keys. |
 | `enabled_wake_modes`      | `tuple[WakeMode, ...]`                  | Which wake modes are armed. Per-mode switches for Shortcut/Short Chat/Conversation; STOP_TALKING is always armed (no switch). Fresh installs default to all on. Persisted. |
 | `openwakeword_models`     | `tuple[str, ...]`                       | OpenWakeWord model stems on disk (downloaded + uploaded). Derived from disk at startup; **not** persisted. |
-| `microwakeword_models`    | `tuple[str, ...]`                       | microWakeWord model ids on disk (downloaded from the catalog). Derived from disk at startup; **not** persisted. |
+| `microwakeword_models`    | `tuple[str, ...]`                       | microWakeWord model ids on disk (downloaded from the catalog, or uploaded). Derived from disk at startup; **not** persisted. |
 | `conversation_end_phrases`| `tuple[str, ...]`                       | End-of-turn phrases consumed assistant-side. Persisted.       |
 | `status`                  | `SpeechRecognitionStatus`               | `IDLE` / `INTENTS_WAITING` (standalone command window, 10 s) / `ASSISTANT_WAITING` (stage-1 matching armed alongside a quick-chat session). |
 | `assistant_session_audio_source` | `str`                            | The mic of the quick-chat session stage-1 is armed for (only meaningful while `ASSISTANT_WAITING`). `''` = on-device system mic — the only source Vosk consumes, so a non-empty value (web mic) keeps the grammar disarmed. |
@@ -193,12 +193,23 @@ commit of [OHF-Voice/linux-voice-assistant](https://github.com/OHF-Voice/linux-v
 (Apache-2.0) rather than a branch, so an upstream retrain can't change a model under a user between
 releases — **bump that constant to pick up upstream changes**, and re-check the sizes and cutoffs.
 
+A custom pair can also be uploaded (Engines → microWakeWord → Upload Model) with one file picker
+per half. `install_uploaded_model` rewrites the manifest's `model` key to the stem it installs
+under: `from_config` resolves the weights as `<manifest's directory>/<manifest's "model" key>`, so a
+manifest naming whatever the training run produced would send the loader after a file that was never
+installed. Both halves are staged under their final names, loaded once to prove they work, and only
+then promoted — **weights first**, because `set_triggers` builds its reload signature from the
+`.json` alone and a manifest that lands ahead of its weights lets a concurrent sync hit the missing-
+weights case, which upstream segfaults on rather than raising.
+
 The catalog is also the *authorization list*: `WakeWordDownloadModelAction` carries a `model_id`
 that can arrive from a remote gRPC dispatch and ends up in both a download URL and an on-disk
 filename, so the reducer refuses any id `microwakeword_catalog.model_for` doesn't know.
 
 Each entry's upstream-tuned `probability_cutoff` (0.63–0.97) seeds a new trigger's sensitivity as
 `1 - cutoff`, so a fresh trigger reproduces upstream's tuning rather than the generic `0.5` default.
+An uploaded model has no catalog entry, so `probability_cutoff_for` reads the same value back out of
+its installed manifest — otherwise every custom model would land on exactly the `0.5` this avoids.
 `MicroWakeWord` instances own a native TFLite interpreter, so `_unload_models` closes each one
 before a reload — dropping the reference alone leaks until a non-deterministic finalizer runs.
 

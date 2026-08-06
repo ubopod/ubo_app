@@ -19,6 +19,7 @@ import asyncio
 import contextlib
 import io
 import json
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -39,9 +40,18 @@ __all__ = [
     'MODELS_DIR',
     'MicroWakeWordEngine',
     'delete_model',
+    'install_uploaded_model',
+    'probability_cutoff_for',
     'scan_models',
     'staging_paths',
 ]
+
+# What ``MicroWakeWord.from_config`` reads out of a manifest. Checked before
+# staging so an incomplete upload is rejected with a reason, rather than
+# surfacing as a generic "not loadable" from deep inside the loader.
+_REQUIRED_MANIFEST_KEYS = ('wake_word', 'micro')
+_REQUIRED_MICRO_KEYS = ('probability_cutoff', 'sliding_window_size')
+
 
 class StagingPaths(NamedTuple):
     """Where the two halves of an in-flight download live before install."""
@@ -136,6 +146,103 @@ def validate_model(config_path: Path) -> bool:
         return False
     model.close()
     return True
+
+
+def _manifest_for_install(manifest: bytes, model_id: str) -> dict[str, object] | None:
+    """Parse an uploaded manifest and point it at the id we install under.
+
+    ``from_config`` resolves the weights as ``<manifest's directory>/<manifest's
+    "model" key>``, so the key has to name the file we actually install — not
+    whatever the training run happened to call it. Returns ``None`` when the
+    manifest is unusable.
+    """
+    try:
+        parsed = json.loads(manifest)
+    except ValueError:
+        logger.exception(
+            'Uploaded microWakeWord manifest is not valid JSON',
+            extra={'model_id': model_id},
+        )
+        return None
+    micro = parsed.get('micro') if isinstance(parsed, dict) else None
+    if (
+        not isinstance(parsed, dict)
+        or not isinstance(micro, dict)
+        or any(key not in parsed for key in _REQUIRED_MANIFEST_KEYS)
+        or any(key not in micro for key in _REQUIRED_MICRO_KEYS)
+    ):
+        logger.error(
+            'Uploaded microWakeWord manifest is missing required keys',
+            extra={'model_id': model_id, 'required': _REQUIRED_MANIFEST_KEYS},
+        )
+        return None
+    return {**parsed, 'model': f'{model_id}.tflite'}
+
+
+def install_uploaded_model(
+    model_id: str,
+    *,
+    manifest: bytes,
+    weights: bytes,
+) -> bool:
+    """Validate an uploaded model pair and install it as *model_id*.
+
+    The upload counterpart of the catalog download: both halves are staged
+    under their final names, loaded once to prove they actually work, and only
+    then moved into place together — so a rejected upload leaves nothing behind
+    and :func:`scan_models` never lists a dud.
+    """
+    if not model_id or Path(model_id).name != model_id:
+        # Same hardening as `delete_model`: the id lands in a filename, so it
+        # never gets to carry a path.
+        logger.warning(
+            'Refusing to install model with invalid id',
+            extra={'model_id': model_id},
+        )
+        return False
+    normalized = _manifest_for_install(manifest, model_id)
+    if normalized is None:
+        return False
+    staging = staging_paths(model_id)
+    shutil.rmtree(staging.directory, ignore_errors=True)
+    try:
+        staging.directory.mkdir(parents=True, exist_ok=True)
+        staging.weights.write_bytes(weights)
+        staging.config.write_text(json.dumps(normalized))
+        if not validate_model(staging.config):
+            return False
+        # Weights first. ``set_triggers`` builds its reload signature from the
+        # ``.json`` alone, so a manifest that lands ahead of its weights lets a
+        # concurrent trigger sync load a model whose ``.tflite`` isn't there
+        # yet — and that is the case upstream segfaults on rather than raises.
+        staging.weights.replace(MODELS_DIR / f'{model_id}.tflite')
+        staging.config.replace(MODELS_DIR / f'{model_id}.json')
+    except OSError:
+        logger.exception(
+            'Failed to install uploaded microWakeWord model',
+            extra={'model_id': model_id},
+        )
+        return False
+    finally:
+        shutil.rmtree(staging.directory, ignore_errors=True)
+    return True
+
+
+def probability_cutoff_for(model_id: str) -> float | None:
+    """Return *model_id*'s tuned detection threshold from its installed manifest.
+
+    Lets an uploaded model seed a new trigger's sensitivity from the value it
+    was trained with, the way a catalog model does from its
+    ``MicroWakeWordModelEntry``. ``None`` when there's no usable manifest.
+    """
+    try:
+        manifest = json.loads((MODELS_DIR / f'{model_id}.json').read_text())
+        cutoff = manifest['micro']['probability_cutoff']
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if not isinstance(cutoff, int | float):
+        return None
+    return float(cutoff)
 
 
 def delete_model(model_id: str) -> None:

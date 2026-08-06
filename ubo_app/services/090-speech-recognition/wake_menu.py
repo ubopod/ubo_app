@@ -19,6 +19,9 @@ from uuid import uuid4
 from commands import (
     MODE_BINDABLE_KEY,
 )
+from microwakeword_engine import install_uploaded_model as micro_install_uploaded_model
+from microwakeword_engine import probability_cutoff_for as micro_probability_cutoff_for
+from microwakeword_engine import scan_models as micro_scan_models
 from openwakeword_engine import (
     MODELS_DIR,
     helpers_available,
@@ -80,6 +83,7 @@ from ubo_app.store.services.speech_recognition import (
     WakeWordModelStatus,
     WakeWordModelStatusEntry,
     WakeWordSetAvailableModelsAction,
+    WakeWordSetModelsStatusAction,
     WakeWordTrigger,
     engine_config,
     trigger_by_id,
@@ -92,7 +96,7 @@ from ubo_app.utils.menu_items import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
     from engines_manager import EnginesManager
 
@@ -465,11 +469,18 @@ def _default_sensitivity(engine: WakeWordEngineName, model_id: str) -> float:
     0.97 across the catalog); surfacing it as ``1 - cutoff`` means a fresh
     trigger reproduces upstream's tuning instead of the generic 0.5, which for
     most of these models would be far too trigger-happy.
+
+    An uploaded model has no catalog entry, so its cutoff is read back from the
+    manifest it was installed with — otherwise every custom model would land on
+    exactly the 0.5 this exists to avoid.
     """
     if engine is WakeWordEngineName.MICROWAKEWORD:
         model = microwakeword_model_for(model_id)
         if model is not None:
             return 1 - model.probability_cutoff
+        cutoff = micro_probability_cutoff_for(model_id)
+        if cutoff is not None:
+            return 1 - cutoff
     return 0.5
 
 
@@ -503,7 +514,7 @@ async def _model_engine_value_form(
                             label='Model',
                             type=InputFieldType.SELECT,
                             description=f'A {_engine_label(engine)} model to '
-                            'detect.',
+                            f'detect.{_training_hint(engine)}',
                             options=models,
                             default_value=default_model,
                             required=True,
@@ -735,6 +746,20 @@ _ENGINE_SETUP_HINT: dict[WakeWordEngineName, str] = {
     ),
 }
 
+# Where a user goes to train a phrase the catalog doesn't carry. Surfaced in
+# the Web UI forms only — a URL is unreadable in a menu sub-heading, which both
+# 240x240 clients truncate.
+_ENGINE_TRAINING_URL: dict[WakeWordEngineName, str] = {
+    WakeWordEngineName.OPENWAKEWORD: 'https://openwakeword.com/',
+    WakeWordEngineName.MICROWAKEWORD: 'https://microwakeword.com/',
+}
+
+
+def _training_hint(engine: WakeWordEngineName) -> str:
+    """Return the "go train one" sentence for *engine*, or '' if it has no site."""
+    url = _ENGINE_TRAINING_URL.get(engine)
+    return f' To train a new wake word, visit {url}' if url else ''
+
 
 def _engine_models(
     state: SpeechRecognitionState,
@@ -755,18 +780,98 @@ def _model_stem(filename: str, label: str) -> str:
     return slug or 'wake_model'
 
 
+def _upload_fields(engine: WakeWordEngineName) -> list[InputFieldDescription]:
+    """Build the upload form for *engine*.
+
+    microWakeWord takes two files — the weights and the ``.json`` manifest that
+    carries its detection parameters — where OpenWakeWord takes a single
+    ``.onnx``.
+    """
+    fields = [
+        InputFieldDescription(
+            name='label',
+            label='Name',
+            type=InputFieldType.TEXT,
+            description='A name for this model.',
+            required=True,
+        ),
+    ]
+    if engine is WakeWordEngineName.MICROWAKEWORD:
+        return [
+            *fields,
+            InputFieldDescription(
+                name='weights_file',
+                label='Model File',
+                type=InputFieldType.FILE,
+                description=f'A microWakeWord .tflite model.{_training_hint(engine)}',
+                required=True,
+            ),
+            InputFieldDescription(
+                name='manifest_file',
+                label='Manifest',
+                type=InputFieldType.FILE,
+                description='The .json manifest that came with the model.',
+                required=True,
+            ),
+        ]
+    return [
+        *fields,
+        InputFieldDescription(
+            name='model_file',
+            label='Model File',
+            type=InputFieldType.FILE,
+            description=f'An OpenWakeWord .onnx model.{_training_hint(engine)}',
+            required=True,
+        ),
+    ]
+
+
+def _upload_id(data: Mapping[str, str], field: str) -> str | None:
+    """Return one FILE field's upload id, or ``None`` if it wasn't really filled.
+
+    ``required=True`` isn't enforced end to end: on the gRPC path an untouched
+    file input still yields a *successful* zero-byte upload, distinguishable
+    only by its blank filename, while the Flask fallback emits no
+    ``_upload_id`` at all. Both mean "absent". Every field is checked before
+    any is awaited, so an incomplete form is rejected without waiting on the
+    halves that *were* supplied.
+    """
+    upload_id = data.get(f'{field}_upload_id')
+    if not upload_id or not data.get(f'{field}_name'):
+        return None
+    return upload_id
+
+
+async def _upload_bytes(upload_id: str) -> bytes | None:
+    """Await one upload's payload, treating an empty one as not supplied."""
+    from ubo_app.utils.file_upload import await_completed_upload
+
+    return await await_completed_upload(upload_id) or None
+
+
+def _notify_duplicate(stem: str, engine: WakeWordEngineName) -> None:
+    """Refuse a stem that's already installed, naming where to delete it."""
+    # Overwriting in place wouldn't change the model pool, so the engine would
+    # keep the old loaded model until restart. Make the user delete the existing
+    # one first (which prunes its trigger and forces a reload).
+    _notify_rejected(
+        [
+            f'A model named "{stem}" already exists. Delete it first '
+            f'(Engines → {_engine_label(engine)} → Models) or rename your upload.',
+        ],
+    )
+
+
 async def _upload_model_form(engine: WakeWordEngineName) -> None:
-    """Upload a custom OpenWakeWord ``.onnx`` model into the engine's pool.
+    """Upload a custom model into *engine*'s pool.
 
     The model is added to the available pool only; it is assigned to a mode later
-    from Wake Up → Phrases → <mode> → Add → OpenWakeWord.
+    from Wake Up → Phrases → <mode> → Add → <engine>.
 
-    OpenWakeWord-only: the body writes a single ``.onnx`` into *its* ``MODELS_DIR``
-    but reports the pool under *engine*, so another engine's id here would file an
-    OpenWakeWord model into the wrong pool. The menu only offers this row for
-    OpenWakeWord; the guard covers a remote/gRPC dispatch that bypasses the menu.
+    Only the two pool-backed engines can take an upload; the guard covers a
+    remote/gRPC dispatch that bypasses the menu.
     """
-    if engine is not WakeWordEngineName.OPENWAKEWORD:
+    if engine not in _MODEL_ENGINES:
         logger.warning(
             'Model upload not supported for engine',
             extra={'engine': engine},
@@ -775,58 +880,93 @@ async def _upload_model_form(engine: WakeWordEngineName) -> None:
     try:
         _, result = await ubo_input(
             prompt='Upload a wake-word model',
-            descriptions=[
-                WebUIInputDescription(
-                    fields=[
-                        InputFieldDescription(
-                            name='label',
-                            label='Name',
-                            type=InputFieldType.TEXT,
-                            description='A name for this model.',
-                            required=True,
-                        ),
-                        InputFieldDescription(
-                            name='model_file',
-                            label='Model File',
-                            type=InputFieldType.FILE,
-                            description='An OpenWakeWord .onnx model.',
-                            required=True,
-                        ),
-                    ],
-                ),
-            ],
+            descriptions=[WebUIInputDescription(fields=_upload_fields(engine))],
         )
     except asyncio.CancelledError:
         return
     if result is None:
         return
 
-    data = result.data
-    label = (data.get('label') or '').strip()
-    upload_id = data.get('model_file_upload_id')
-    filename = data.get('model_file_name', '')
-    if not label or not upload_id:
+    label = (result.data.get('label') or '').strip()
+    if not label:
         return
+    if engine is WakeWordEngineName.MICROWAKEWORD:
+        await _install_micro_upload(result.data, label)
+    else:
+        await _install_openwakeword_upload(result.data, label)
 
-    from ubo_app.utils.file_upload import await_completed_upload
 
+async def _install_micro_upload(data: Mapping[str, str], label: str) -> None:
+    """Install an uploaded microWakeWord ``.tflite`` + ``.json`` pair."""
+    engine = WakeWordEngineName.MICROWAKEWORD
+    weights_id = _upload_id(data, 'weights_file')
+    manifest_id = _upload_id(data, 'manifest_file')
+    if not weights_id or not manifest_id:
+        _notify_rejected(
+            ['A microWakeWord model needs both the .tflite and its .json manifest.'],
+        )
+        return
+    # Both halves land in memory before anything touches the filesystem: each
+    # upload consumes its own temp file, so a second-half failure after a
+    # partial write would otherwise leave a stray half installed.
     try:
-        model_bytes = await await_completed_upload(upload_id)
+        weights = await _upload_bytes(weights_id)
+        manifest = await _upload_bytes(manifest_id)
     except (OSError, RuntimeError):
         _notify_rejected(['Model upload failed. Check the logs.'])
         return
-
-    stem = _model_stem(filename, label)
-    # Reject a duplicate stem: overwriting in place wouldn't change the model pool,
-    # so the engine would keep the old loaded model until restart. Make the user
-    # delete the existing one first (which prunes its trigger and forces a reload).
-    if stem in scan_models():
+    if not weights or not manifest:
         _notify_rejected(
-            [
-                f'A model named "{stem}" already exists. Delete it first '
-                '(Engines → OpenWakeWord → Models) or rename your upload.',
-            ],
+            ['A microWakeWord model needs both the .tflite and its .json manifest.'],
         )
+        return
+
+    stem = _model_stem(data.get('weights_file_name', ''), label)
+    if stem in micro_scan_models():
+        _notify_duplicate(stem, engine)
+        return
+
+    if not await asyncio.to_thread(
+        micro_install_uploaded_model,
+        stem,
+        manifest=manifest,
+        weights=weights,
+    ):
+        _notify_rejected(
+            ["That isn't a loadable microWakeWord model. Check that the .json "
+             'manifest matches the .tflite you uploaded.'],
+        )
+        return
+
+    store.dispatch(
+        WakeWordSetAvailableModelsAction(
+            engine=engine,
+            models=tuple(micro_scan_models()),
+        ),
+        WakeWordSetModelsStatusAction(
+            engine_name=engine,
+            status=WakeWordModelStatus.AVAILABLE,
+        ),
+    )
+
+
+async def _install_openwakeword_upload(data: Mapping[str, str], label: str) -> None:
+    """Install an uploaded OpenWakeWord ``.onnx`` model."""
+    engine = WakeWordEngineName.OPENWAKEWORD
+    upload_id = _upload_id(data, 'model_file')
+    if not upload_id:
+        return
+    try:
+        model_bytes = await _upload_bytes(upload_id)
+    except (OSError, RuntimeError):
+        _notify_rejected(['Model upload failed. Check the logs.'])
+        return
+    if not model_bytes:
+        return
+
+    stem = _model_stem(data.get('model_file_name', ''), label)
+    if stem in scan_models():
+        _notify_duplicate(stem, engine)
         return
 
     # OpenWakeWord can't load *any* custom model without the shared feature-extractor
@@ -851,6 +991,10 @@ async def _upload_model_form(engine: WakeWordEngineName) -> None:
     await asyncio.to_thread((MODELS_DIR / f'{stem}.onnx').write_bytes, model_bytes)
     store.dispatch(
         WakeWordSetAvailableModelsAction(engine=engine, models=tuple(scan_models())),
+        WakeWordSetModelsStatusAction(
+            engine_name=engine,
+            status=WakeWordModelStatus.AVAILABLE,
+        ),
     )
 
 
@@ -1130,8 +1274,7 @@ def _dispatch_engine_menu(
     if engine is WakeWordEngineName.MICROWAKEWORD:
         # microWakeWord browses a curated catalog and fetches one wake word at a
         # time, so it gets an "Add Wake Word" picker instead of OpenWakeWord's
-        # all-or-nothing batch download. Uploads are not offered: a model is a
-        # ``.tflite`` plus a matching ``.json`` manifest, not a single file.
+        # all-or-nothing batch download.
         rows.append(
             MenuItemData(
                 key='catalog',
@@ -1156,17 +1299,24 @@ def _dispatch_engine_menu(
                 ),
             )
     else:
-        rows.extend(
-            (
-                _download_or_models_row(engine, models, downloading=downloading),
-                MenuItemData(
-                    key='upload',
-                    label='Upload Model',
-                    icon='\U000f0552',
-                    action_id=f'speech-recognition:upload-model:{engine.value}',
-                ),
-            ),
+        rows.append(
+            _download_or_models_row(engine, models, downloading=downloading),
         )
+    rows.append(
+        MenuItemData(
+            key='upload',
+            label='Upload Model',
+            icon='\U000f0552',
+            # Greyed mid-download: a finished upload reports AVAILABLE, which
+            # would clobber the in-flight DOWNLOADING status and prematurely
+            # re-enable the catalog row above.
+            action_id=(
+                None
+                if downloading
+                else f'speech-recognition:upload-model:{engine.value}'
+            ),
+        ),
+    )
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=_menu_engine(engine),

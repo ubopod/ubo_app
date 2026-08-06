@@ -10,6 +10,10 @@ cycle.
   directory under its final filenames — validating the `.part` files made
   `from_config` look for a `.tflite` that wasn't there yet, failing every model
   download
+- feat(speech-recognition): upload a custom microWakeWord model as a `.tflite` +
+  `.json` pair, with the manifest's `model` key normalized to the installed stem
+- feat(speech-recognition): point at the wake-word training sites from the
+  OpenWakeWord and microWakeWord model forms
 - feat(wyoming): add secured Home Assistant Wyoming satellite and assistant-engine
   integration
 - feat(wyoming,speech-recognition): detect the Home Assistant wake word on-device

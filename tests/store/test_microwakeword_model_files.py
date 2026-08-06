@@ -215,6 +215,193 @@ def test_validate_model_rejects_a_corrupt_manifest(
     assert calls == []
 
 
+def test_install_uploaded_model_installs_the_pair(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A valid upload lands as a ``<id>.json`` + ``<id>.tflite`` pair."""
+    module, models_dir = _load(monkeypatch, tmp_path)
+    _stub_loader(module, monkeypatch)
+
+    result = module.install_uploaded_model(
+        'my_word',
+        manifest=json.dumps(MANIFEST).encode(),
+        weights=b'weights',
+    )
+
+    assert result is True
+    assert module.scan_models() == ['my_word']
+    assert (models_dir / 'my_word.tflite').read_bytes() == b'weights'
+
+
+def test_install_uploaded_model_rewrites_the_weights_reference(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The manifest's ``model`` key is normalized to the installed stem.
+
+    An uploaded manifest names whatever file the training run produced. Since
+    ``from_config`` resolves the weights from that key, leaving it alone would
+    send the loader after a file that was never installed.
+    """
+    module, models_dir = _load(monkeypatch, tmp_path)
+    calls = _stub_loader(module, monkeypatch)
+    manifest = {**MANIFEST, 'model': 'something_else.tflite'}
+
+    result = module.install_uploaded_model(
+        'my_word',
+        manifest=json.dumps(manifest).encode(),
+        weights=b'weights',
+    )
+
+    assert result is True
+    installed = json.loads((models_dir / 'my_word.json').read_text())
+    assert installed['model'] == 'my_word.tflite'
+    # The loader was reached, i.e. the rewrite happened before validation.
+    assert len(calls) == 1
+
+
+def test_install_uploaded_model_rejects_an_incomplete_manifest(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A manifest missing what ``from_config`` reads is refused up front."""
+    module, models_dir = _load(monkeypatch, tmp_path)
+    calls = _stub_loader(module, monkeypatch)
+    manifest = {'type': 'micro', 'model': 'my_word.tflite'}  # no wake_word, no micro
+
+    result = module.install_uploaded_model(
+        'my_word',
+        manifest=json.dumps(manifest).encode(),
+        weights=b'weights',
+    )
+
+    assert result is False
+    assert calls == []
+    assert list(models_dir.iterdir()) == []
+
+
+def test_install_uploaded_model_rejects_unparsable_manifest_bytes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """An empty or truncated ``.json`` half never reaches the loader."""
+    module, models_dir = _load(monkeypatch, tmp_path)
+    calls = _stub_loader(module, monkeypatch)
+
+    assert (
+        module.install_uploaded_model('my_word', manifest=b'', weights=b'weights')
+        is False
+    )
+    assert (
+        module.install_uploaded_model(
+            'my_word',
+            manifest=b'{"type": "micro"',
+            weights=b'weights',
+        )
+        is False
+    )
+    assert calls == []
+    assert list(models_dir.iterdir()) == []
+
+
+def test_install_uploaded_model_leaves_nothing_when_validation_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A model that parses but won't load leaves no staging dir and no pair."""
+    module, models_dir = _load(monkeypatch, tmp_path)
+
+    def _fail(_config_path: Path) -> SimpleNamespace:
+        message = 'not a tflite model'
+        raise ValueError(message)
+
+    monkeypatch.setattr(module, '_load_model', _fail)
+
+    result = module.install_uploaded_model(
+        'my_word',
+        manifest=json.dumps(MANIFEST).encode(),
+        weights=b'not really weights',
+    )
+
+    assert result is False
+    assert module.scan_models() == []
+    assert list(models_dir.iterdir()) == []
+
+
+def test_install_uploaded_model_promotes_weights_before_the_manifest(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The ``.tflite`` lands before the ``.json`` that points at it.
+
+    ``set_triggers`` builds its reload signature from the manifest alone, so a
+    manifest promoted first lets a concurrent sync load a model whose weights
+    aren't installed yet — the case upstream segfaults on. Only an ordering
+    assertion catches a well-meaning reorder.
+    """
+    module, _models_dir = _load(monkeypatch, tmp_path)
+    _stub_loader(module, monkeypatch)
+    promoted: list[str] = []
+    original = Path.replace
+
+    def _record(self: Path, target: Path) -> Path:
+        promoted.append(Path(target).suffix)
+        return original(self, target)
+
+    monkeypatch.setattr(Path, 'replace', _record)
+
+    module.install_uploaded_model(
+        'my_word',
+        manifest=json.dumps(MANIFEST).encode(),
+        weights=b'weights',
+    )
+
+    assert promoted == ['.tflite', '.json']
+
+
+def test_install_uploaded_model_refuses_a_traversal_id(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """An id carrying a path can't write outside MODELS_DIR."""
+    module, models_dir = _load(monkeypatch, tmp_path)
+    _stub_loader(module, monkeypatch)
+
+    result = module.install_uploaded_model(
+        '../evil',
+        manifest=json.dumps(MANIFEST).encode(),
+        weights=b'weights',
+    )
+
+    assert result is False
+    assert list(models_dir.parent.glob('evil.*')) == []
+
+
+def test_probability_cutoff_for_reads_the_installed_manifest(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """An uploaded model's tuned cutoff is recoverable for the sensitivity seed."""
+    module, models_dir = _load(monkeypatch, tmp_path)
+    (models_dir / 'my_word.json').write_text(json.dumps(MANIFEST))
+    (models_dir / 'my_word.tflite').write_bytes(b'weights')
+
+    assert module.probability_cutoff_for('my_word') == 0.63
+
+
+def test_probability_cutoff_for_missing_or_malformed_model(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """No manifest, or one without a cutoff, yields ``None`` for the caller."""
+    module, models_dir = _load(monkeypatch, tmp_path)
+    (models_dir / 'no_cutoff.json').write_text(json.dumps({'type': 'micro'}))
+
+    assert module.probability_cutoff_for('absent') is None
+    assert module.probability_cutoff_for('no_cutoff') is None
+
+
 def test_scan_models_on_missing_directory(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
