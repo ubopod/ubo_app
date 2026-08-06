@@ -77,11 +77,13 @@
   },
   "settings": {
     "_type": "SettingsState",
+    "assistant_debug": false,
     "beta_versions": false,
     "grpc_remote_access": false,
     "pdb_signal": false,
     "services": {},
     "services_status": "loading",
+    "tcp_lite_enabled": true,
     "visual_debug": false
   },
   "status_icons": {

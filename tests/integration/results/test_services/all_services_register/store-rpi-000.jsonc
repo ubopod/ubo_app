@@ -164,6 +164,7 @@
     "is_capture_mute": true,
     "is_playback_mute": false,
     "is_recording": false,
+    "is_remote_capture_active": false,
     "playback_volume": 0.15,
     "recording": null
   },
@@ -177,7 +178,6 @@
         "label": "Local Camera 0"
       }
     ],
-    "camera_type": "default",
     "pending_remote_registrations": [],
     "queue": [],
     "selected_source_id": "local:0"
@@ -336,11 +336,7 @@
     "service": {
       "_type": "DockerServiceState",
       "expose_to_lan": {},
-      "macvlan_enabled": false,
-      "macvlan_gateway": "",
-      "macvlan_ip": "",
-      "macvlan_parent": "",
-      "macvlan_subnet": "",
+      "host_network_enabled": false,
       "status": "running",
       "usernames": {},
       "zigbee_adapter_by_id": "",
@@ -393,6 +389,35 @@
     "is_on_application": false,
     "is_on_chat": false,
     "is_on_notification": false
+  },
+  "kiosk": {
+    "_type": "KioskState",
+    "connected_ports": [],
+    "dashboards": [
+      {
+        "_type": "KioskDashboard",
+        "id": "ubo-webui",
+        "name": "Ubo WebUI",
+        "url": "http://localhost:4321"
+      }
+    ],
+    "is_active": false,
+    "is_enabled": false,
+    "is_installed": false,
+    "is_installing": false,
+    "port_selections": {
+      "_type": "KioskPortSelections",
+      "hdmi_a_1": {
+        "_type": "KioskPortSelection",
+        "dashboard_id": "ubo-webui",
+        "role": "browser"
+      },
+      "hdmi_a_2": {
+        "_type": "KioskPortSelection",
+        "dashboard_id": null,
+        "role": "terminal"
+      }
+    }
   },
   "lightdm": {
     "_type": "LightDMState",
@@ -800,6 +825,17 @@
         "label": "MCP Tools",
         "priority": 15
       },
+      "mqtt:": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Network",
+        "icon": "󰵁",
+        "key": "mqtt:",
+        "label": "MQTT",
+        "priority": -1
+      },
       "rpi_connect:": {
         "_type": "RegisteredAppEntry",
         "action_id": "rpi-connect:open_menu",
@@ -810,6 +846,17 @@
         "key": "rpi_connect:",
         "label": "RPi Connect",
         "priority": null
+      },
+      "sensors:": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Hardware",
+        "icon": "󰡵",
+        "key": "sensors:",
+        "label": "Sensors",
+        "priority": 1
       },
       "speech_recognition:": {
         "_type": "RegisteredAppEntry",
@@ -903,7 +950,9 @@
       "ip:": 0,
       "lightdm:": 0,
       "mcp:tools": 15,
+      "mqtt:": -1,
       "rpi_connect:": null,
+      "sensors:": 1,
       "speech_recognition:": 30,
       "speech_recognition:wake_up": 100,
       "speech_synthesis:": 10,
@@ -964,6 +1013,26 @@
     "mcp_servers": {},
     "server_statuses": {}
   },
+  "mqtt": {
+    "_type": "MqttState",
+    "allow_remote_control": false,
+    "broker": {
+      "_type": "MqttBrokerConfig",
+      "ca_cert_path": "",
+      "has_password": false,
+      "host": "127.0.0.1",
+      "port": 1883,
+      "source": "bundled",
+      "use_tls": false,
+      "username": ""
+    },
+    "bundled_credentials_revision": 0,
+    "bundled_expose_to_lan": false,
+    "is_enabled": true,
+    "last_error": null,
+    "published_components": {},
+    "status": "disabled"
+  },
   "notifications": {
     "_type": "NotificationsState",
     "notifications": [],
@@ -984,6 +1053,41 @@
   },
   "sensors": {
     "_type": "SensorsState",
+    "devices": {
+      "pct2075_0x48": {
+        "_type": "SensorDeviceState",
+        "address": 72,
+        "definition_id": "pct2075",
+        "entities": [
+          {
+            "_type": "SensorEntityReading",
+            "key": "temperature",
+            "value": 0.0
+          }
+        ],
+        "id": "pct2075_0x48",
+        "is_builtin": true,
+        "label": "PCT2075 Temperature",
+        "status": "active"
+      },
+      "veml7700_0x10": {
+        "_type": "SensorDeviceState",
+        "address": 16,
+        "definition_id": "veml7700",
+        "entities": [
+          {
+            "_type": "SensorEntityReading",
+            "key": "illuminance",
+            "value": 0.0
+          }
+        ],
+        "id": "veml7700_0x10",
+        "is_builtin": true,
+        "label": "VEML7700 Ambient Light",
+        "status": "active"
+      }
+    },
+    "is_scanning": false,
     "light": {
       "_type": "SensorState",
       "value": 0.0
@@ -995,6 +1099,7 @@
   },
   "settings": {
     "_type": "SettingsState",
+    "assistant_debug": false,
     "beta_versions": false,
     "grpc_remote_access": false,
     "pdb_signal": false,
@@ -1109,6 +1214,16 @@
         "log_level": 20,
         "should_auto_restart": false
       },
+      "kiosk": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "kiosk",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "Browser Kiosk",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
       "lightdm": {
         "_type": "ServiceState",
         "errors": [],
@@ -1126,6 +1241,16 @@
         "is_active": true,
         "is_enabled": true,
         "label": "MCP",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
+      "mqtt": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "mqtt",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "MQTT",
         "log_level": 20,
         "should_auto_restart": false
       },
@@ -1251,14 +1376,254 @@
       }
     },
     "services_status": "ready",
+    "tcp_lite_enabled": true,
     "visual_debug": false
   },
   "speech_recognition": {
     "_type": "SpeechRecognitionState",
-    "assistant_enabled": false,
+    "assistant_session_audio_source": "",
+    "commands_catalog": {
+      "_type": "SpeechRecognitionCommandsCatalog",
+      "items": [
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:assistant-on",
+          "label": "Turn on Assistant",
+          "sample_phrases": [
+            "Turn on Assistant"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:assistant-off",
+          "label": "Turn off Assistant",
+          "sample_phrases": [
+            "Turn off Assistant"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:wifi-camera",
+          "label": "WiFi Setup via Camera",
+          "sample_phrases": [
+            "Create WiFi Connection with Camera",
+            "Create WiFi Connection with QR Code",
+            "Create WiFi Connection using Camera"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:wifi-web",
+          "label": "WiFi Setup via Web",
+          "sample_phrases": [
+            "Create WiFi Connection with Web Dashboard",
+            "Create WiFi Connection with Web",
+            "Create WiFi Connection with Web UI"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:light-strip-toggle",
+          "label": "Toggle Light Strip",
+          "sample_phrases": [
+            "Turn on light strip",
+            "Turn off light strip"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-on",
+          "label": "Turn on Lights",
+          "sample_phrases": [
+            "Turn on Lights"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-off",
+          "label": "Turn off Lights",
+          "sample_phrases": [
+            "Turn off Lights"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-red",
+          "label": "Turn Lights Red",
+          "sample_phrases": [
+            "Turn Lights Red"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-green",
+          "label": "Turn Lights Green",
+          "sample_phrases": [
+            "Turn Lights Green"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-blue",
+          "label": "Turn Lights Blue",
+          "sample_phrases": [
+            "Turn Lights Blue"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-white",
+          "label": "Turn Lights White",
+          "sample_phrases": [
+            "Turn Lights White"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-rainbow",
+          "label": "Turn Lights Rainbow",
+          "sample_phrases": [
+            "Turn Lights Rainbow"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:volume-up",
+          "label": "Turn Volume Up",
+          "sample_phrases": [
+            "Turn Volume Up"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:volume-down",
+          "label": "Turn Volume Down",
+          "sample_phrases": [
+            "Turn Volume Down"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:button-one",
+          "label": "Activate Button One",
+          "sample_phrases": [
+            "Activate Button One"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:button-two",
+          "label": "Activate Button Two",
+          "sample_phrases": [
+            "Activate Button Two"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:button-three",
+          "label": "Activate Button Three",
+          "sample_phrases": [
+            "Activate Button Three"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:go-back",
+          "label": "Go Back",
+          "sample_phrases": [
+            "Activate Back Button",
+            "Go Back"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:go-home",
+          "label": "Go Home",
+          "sample_phrases": [
+            "Activate Home Button",
+            "Go Home"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:scroll-up",
+          "label": "Scroll Up",
+          "sample_phrases": [
+            "Activate Up Button",
+            "Scroll Up"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:scroll-down",
+          "label": "Scroll Down",
+          "sample_phrases": [
+            "Activate Down Button",
+            "Scroll Down"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:ir-receive-on",
+          "label": "Enable IR Receiver",
+          "sample_phrases": [
+            "Enable Receive Keys",
+            "Turn on Receive Keys",
+            "Start Receiving IR"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:ir-receive-off",
+          "label": "Disable IR Receiver",
+          "sample_phrases": [
+            "Disable Receive Keys",
+            "Turn off Receive Keys",
+            "Stop Receiving IR"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:speak-time",
+          "label": "Say the Time",
+          "sample_phrases": [
+            "What time is it right now",
+            "What time is it",
+            "Whats the time"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:speak-date",
+          "label": "Say the Date",
+          "sample_phrases": [
+            "What day is it today",
+            "What day is it",
+            "Whats the date today"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:speak-weather",
+          "label": "Say the Weather",
+          "sample_phrases": [
+            "Whats the weather like today",
+            "Whats the weather like",
+            "Whats the weather today"
+          ]
+        }
+      ]
+    },
     "conversation_end_phrases": [
       "i am done talking",
       "i'm done talking"
+    ],
+    "enabled_wake_modes": [
+      "intents",
+      "quick_chat",
+      "conversation",
+      "stop_talking",
+      "home_assistant"
     ],
     "intents": [
       {
@@ -1532,9 +1897,78 @@
           "Stop Receiving IR",
           "Disable IR Receiver"
         ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_keys": [
+          "localization:speak-time"
+        ],
+        "id": "default:speak-time",
+        "label": "Say the Time",
+        "phrases": [
+          "What time is it (right now)",
+          "[Whats, What is] the time",
+          "Tell me the time"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_keys": [
+          "localization:speak-date"
+        ],
+        "id": "default:speak-date",
+        "label": "Say the Date",
+        "phrases": [
+          "What day is it (today)",
+          "[Whats, What is] the date (today)",
+          "[Whats, What is] todays date",
+          "Tell me the date"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_keys": [
+          "localization:speak-weather"
+        ],
+        "id": "default:speak-weather",
+        "label": "Say the Weather",
+        "phrases": [
+          "[Whats, What is] the weather (like) (today)",
+          "[Hows, How is] the weather (today)",
+          "Tell me the weather"
+        ]
       }
     ],
+    "microwakeword_models": [],
     "openwakeword_models": [],
+    "seeded_default_ids": [
+      "default:assistant-on",
+      "default:assistant-off",
+      "default:wifi-camera",
+      "default:wifi-web",
+      "default:light-strip-toggle",
+      "default:lights-on",
+      "default:lights-off",
+      "default:lights-red",
+      "default:lights-green",
+      "default:lights-blue",
+      "default:lights-white",
+      "default:lights-rainbow",
+      "default:volume-up",
+      "default:volume-down",
+      "default:button-one",
+      "default:button-two",
+      "default:button-three",
+      "default:go-back",
+      "default:go-home",
+      "default:scroll-up",
+      "default:scroll-down",
+      "default:ir-receive-on",
+      "default:ir-receive-off",
+      "default:speak-time",
+      "default:speak-date",
+      "default:speak-weather"
+    ],
     "status": "idle",
     "wake_engines": [
       {
@@ -1548,12 +1982,25 @@
         "enabled": false,
         "engine": "openwakeword",
         "triggers": []
+      },
+      {
+        "_type": "WakeWordEngineConfig",
+        "enabled": false,
+        "engine": "microwakeword",
+        "triggers": []
       }
     ],
     "wake_word_models_status": [
       {
         "_type": "WakeWordModelStatusEntry",
         "engine": "openwakeword",
+        "model_id": "",
+        "status": "not_available"
+      },
+      {
+        "_type": "WakeWordModelStatusEntry",
+        "engine": "microwakeword",
+        "model_id": "",
         "status": "not_available"
       }
     ]
