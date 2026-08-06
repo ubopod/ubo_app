@@ -474,7 +474,7 @@ def _default_sensitivity(engine: WakeWordEngineName, model_id: str) -> float:
     manifest it was installed with — otherwise every custom model would land on
     exactly the 0.5 this exists to avoid.
     """
-    if engine is WakeWordEngineName.MICROWAKEWORD:
+    if engine == WakeWordEngineName.MICROWAKEWORD:
         model = microwakeword_model_for(model_id)
         if model is not None:
             return 1 - model.probability_cutoff
@@ -766,9 +766,9 @@ def _engine_models(
     engine: WakeWordEngineName,
 ) -> tuple[str, ...]:
     """Return *engine*'s on-disk model pool (empty for engines without one)."""
-    if engine is WakeWordEngineName.OPENWAKEWORD:
+    if engine == WakeWordEngineName.OPENWAKEWORD:
         return state.openwakeword_models
-    if engine is WakeWordEngineName.MICROWAKEWORD:
+    if engine == WakeWordEngineName.MICROWAKEWORD:
         return state.microwakeword_models
     return ()
 
@@ -796,7 +796,7 @@ def _upload_fields(engine: WakeWordEngineName) -> list[InputFieldDescription]:
             required=True,
         ),
     ]
-    if engine is WakeWordEngineName.MICROWAKEWORD:
+    if engine == WakeWordEngineName.MICROWAKEWORD:
         return [
             *fields,
             InputFieldDescription(
@@ -890,7 +890,7 @@ async def _upload_model_form(engine: WakeWordEngineName) -> None:
     label = (result.data.get('label') or '').strip()
     if not label:
         return
-    if engine is WakeWordEngineName.MICROWAKEWORD:
+    if engine == WakeWordEngineName.MICROWAKEWORD:
         await _install_micro_upload(result.data, label)
     else:
         await _install_openwakeword_upload(result.data, label)
@@ -1020,7 +1020,7 @@ def _config_for(
     wake_engines: tuple[WakeWordEngineConfig, ...],
     engine: WakeWordEngineName,
 ) -> WakeWordEngineConfig | None:
-    return next((c for c in wake_engines if c.engine is engine), None)
+    return next((c for c in wake_engines if c.engine == engine), None)
 
 
 def dispatch_wake_menus(
@@ -1037,7 +1037,7 @@ def dispatch_wake_menus(
     downloading_model_ids = {
         entry.engine: entry.model_id
         for entry in status_entries
-        if entry.status is WakeWordModelStatus.DOWNLOADING
+        if entry.status == WakeWordModelStatus.DOWNLOADING
     }
     _dispatch_wake_up_menu()
     _dispatch_phrases_menu()
@@ -1049,10 +1049,10 @@ def dispatch_wake_menus(
         if config is None:
             continue
         models = engine_models.get(engine, ())
-        downloading = models_status.get(engine) is WakeWordModelStatus.DOWNLOADING
+        downloading = models_status.get(engine) == WakeWordModelStatus.DOWNLOADING
         _dispatch_engine_menu(config, models, models_status)
         _dispatch_engine_models_menu(engine, models, downloading=downloading)
-        if engine is WakeWordEngineName.MICROWAKEWORD:
+        if engine == WakeWordEngineName.MICROWAKEWORD:
             _dispatch_micro_catalog_menu(
                 models,
                 downloading_model_ids.get(engine, ''),
@@ -1120,9 +1120,9 @@ def _dispatch_mode_menu(
     Silence (STOP_TALKING) has no switch and is always armed.
     """
     title, description = _WAKE_MODE_META[mode]
-    is_enabled = mode is WakeMode.STOP_TALKING or mode in enabled_wake_modes
+    is_enabled = mode == WakeMode.STOP_TALKING or mode in enabled_wake_modes
     rows: list[MenuItemData] = []
-    if mode is not WakeMode.STOP_TALKING:
+    if mode != WakeMode.STOP_TALKING:
         rows.append(
             _build_toggle_item(
                 key='mode-enabled',
@@ -1143,7 +1143,7 @@ def _dispatch_mode_menu(
                 ),
             )
             for trigger in config.triggers
-            if trigger.mode is mode
+            if trigger.mode == mode
         )
     mode_key = MODE_BINDABLE_KEY[mode]
     rows.extend(
@@ -1167,7 +1167,7 @@ def _dispatch_mode_menu(
             action_id=f'speech-recognition:add-trigger:{mode.value}',
         ),
     )
-    if mode is WakeMode.CONVERSATION:
+    if mode == WakeMode.CONVERSATION:
         rows.append(
             MenuItemData(
                 key='end-phrases',
@@ -1262,7 +1262,7 @@ def _dispatch_engine_menu(
     models_status: dict[WakeWordEngineName, WakeWordModelStatus],
 ) -> None:
     engine = config.engine
-    downloading = models_status.get(engine) is WakeWordModelStatus.DOWNLOADING
+    downloading = models_status.get(engine) == WakeWordModelStatus.DOWNLOADING
     rows: list[MenuItemData] = [
         _build_toggle_item(
             key='engine-enabled',
@@ -1271,7 +1271,7 @@ def _dispatch_engine_menu(
             action_id=f'speech-recognition:toggle-engine:{engine.value}',
         ),
     ]
-    if engine is WakeWordEngineName.MICROWAKEWORD:
+    if engine == WakeWordEngineName.MICROWAKEWORD:
         # microWakeWord browses a curated catalog and fetches one wake word at a
         # time, so it gets an "Add Wake Word" picker instead of OpenWakeWord's
         # all-or-nothing batch download.
@@ -1349,7 +1349,7 @@ def _dispatch_engine_models_menu(
         )
         for stem in models
     ]
-    if engine is WakeWordEngineName.OPENWAKEWORD:
+    if engine == WakeWordEngineName.OPENWAKEWORD:
         rows.append(
             MenuItemData(
                 key='download',
@@ -1517,7 +1517,7 @@ def register_wake_handlers(  # noqa: C901, PLR0915
             return
         source = (
             _SOURCE_VOSK
-            if engine is WakeWordEngineName.VOSK
+            if engine == WakeWordEngineName.VOSK
             else _SOURCE_OPENWAKEWORD
         )
         create_task(

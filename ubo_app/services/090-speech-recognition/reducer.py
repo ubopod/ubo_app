@@ -145,9 +145,9 @@ def _model_pool(
     Vosk matches spoken phrases rather than per-wake-word model files, so it has
     no pool and nothing to delete.
     """
-    if engine is WakeWordEngineName.OPENWAKEWORD:
+    if engine == WakeWordEngineName.OPENWAKEWORD:
         return state.openwakeword_models
-    if engine is WakeWordEngineName.MICROWAKEWORD:
+    if engine == WakeWordEngineName.MICROWAKEWORD:
         return state.microwakeword_models
     return None
 
@@ -158,9 +158,9 @@ def _with_model_pool(
     models: tuple[str, ...],
 ) -> SpeechRecognitionState:
     """Return *state* with *engine*'s model pool replaced by *models*."""
-    if engine is WakeWordEngineName.OPENWAKEWORD:
+    if engine == WakeWordEngineName.OPENWAKEWORD:
         return replace(state, openwakeword_models=models)
-    if engine is WakeWordEngineName.MICROWAKEWORD:
+    if engine == WakeWordEngineName.MICROWAKEWORD:
         return replace(state, microwakeword_models=models)
     return state
 
@@ -178,7 +178,7 @@ def _map_engine_triggers(
         state,
         wake_engines=tuple(
             replace(config, triggers=transform(config.triggers))
-            if config.engine is engine
+            if config.engine == engine
             else config
             for config in state.wake_engines
         ),
@@ -233,15 +233,15 @@ def _apply_wake_mode(
             ],
         )
     if (
-        mode is not WakeMode.STOP_TALKING
+        mode != WakeMode.STOP_TALKING
         and enforce_mode_gate
         and mode not in state.enabled_wake_modes
     ):
         # This mode's switch is off — swallow the wake without acting on it.
         return CompleteReducerResult(state=_idle(state), actions=[])
     if (
-        mode is WakeMode.INTENTS
-        and state.status is SpeechRecognitionStatus.IDLE
+        mode == WakeMode.INTENTS
+        and state.status == SpeechRecognitionStatus.IDLE
     ):
         return CompleteReducerResult(
             state=replace(state, status=SpeechRecognitionStatus.INTENTS_WAITING),
@@ -249,7 +249,7 @@ def _apply_wake_mode(
         )
     if (
         mode in _ASSISTANT_MODES
-        and state.status is SpeechRecognitionStatus.IDLE
+        and state.status == SpeechRecognitionStatus.IDLE
     ):
         return CompleteReducerResult(
             state=replace(state, status=SpeechRecognitionStatus.IDLE),
@@ -263,8 +263,8 @@ def _apply_wake_mode(
                 ),
             ],
         )
-    if mode is WakeMode.STOP_TALKING:
-        if state.status is SpeechRecognitionStatus.INTENTS_WAITING:
+    if mode == WakeMode.STOP_TALKING:
+        if state.status == SpeechRecognitionStatus.INTENTS_WAITING:
             # Dismiss the voice-shortcut window early — there is no assistant to
             # silence, the user just wants out of it without waiting for timeout.
             return CompleteReducerResult(
@@ -277,7 +277,7 @@ def _apply_wake_mode(
                 AssistantStopTalkingAction(phrase=phrase, detector=detector),
             ],
         )
-    if state.status is SpeechRecognitionStatus.ASSISTANT_WAITING:
+    if state.status == SpeechRecognitionStatus.ASSISTANT_WAITING:
         # A wake detection mid-session. OpenWakeWord isn't grammar-constrained so
         # it can still fire here; dropping to IDLE would disarm stage-1 for the
         # rest of the session, and the arming autorun keys off the assistant's
@@ -317,7 +317,7 @@ def reducer(
                 state,
                 wake_engines=tuple(
                     replace(config, enabled=enabled)
-                    if config.engine is engine
+                    if config.engine == engine
                     else config
                     for config in state.wake_engines
                 ),
@@ -363,7 +363,7 @@ def reducer(
             return replace(state, enabled_wake_modes=order_wake_modes(modes))
 
         case SpeechRecognitionSetWakeModeEnabledAction(mode=mode, enabled=enabled):
-            if mode is WakeMode.STOP_TALKING:
+            if mode == WakeMode.STOP_TALKING:
                 # Silence has no switch; ignore a stray toggle defensively.
                 return state
             modes = set(state.enabled_wake_modes)
@@ -494,7 +494,7 @@ def reducer(
             # Idempotent at the boundary: a re-dispatch while a download is already
             # in flight (e.g. a remote/direct dispatch that bypasses the menu's UI
             # guard) must not emit a second event and launch an overlapping loop.
-            if model_status(state, engine_name) is WakeWordModelStatus.DOWNLOADING:
+            if model_status(state, engine_name) == WakeWordModelStatus.DOWNLOADING:
                 return state
             # Stay pure: mark the engine as downloading and let the service
             # handler perform the actual (blocking) download off the loop.
@@ -527,7 +527,7 @@ def reducer(
             # Only microWakeWord browses and fetches models one at a time; every
             # other engine downloads its whole default set via
             # ``WakeWordDownloadModelsAction``.
-            if engine is not WakeWordEngineName.MICROWAKEWORD:
+            if engine != WakeWordEngineName.MICROWAKEWORD:
                 return state
             # Authorize against the curated catalog: ``model_id`` reaches the
             # reducer from a menu tap *or* a remote gRPC dispatch, and it ends up
@@ -538,7 +538,7 @@ def reducer(
             # Idempotent at the boundary, matching the batch action above: a
             # re-dispatch while a download is in flight must not emit a second
             # event and launch an overlapping fetch.
-            if model_status(state, engine) is WakeWordModelStatus.DOWNLOADING:
+            if model_status(state, engine) == WakeWordModelStatus.DOWNLOADING:
                 return state
             return CompleteReducerResult(
                 state=replace(
@@ -556,9 +556,9 @@ def reducer(
             )
 
         case WakeWordSetAvailableModelsAction(engine=engine, models=models):
-            if engine is WakeWordEngineName.OPENWAKEWORD:
+            if engine == WakeWordEngineName.OPENWAKEWORD:
                 return replace(state, openwakeword_models=models)
-            if engine is WakeWordEngineName.MICROWAKEWORD:
+            if engine == WakeWordEngineName.MICROWAKEWORD:
                 return replace(state, microwakeword_models=models)
             return state
 
@@ -597,7 +597,7 @@ def reducer(
         case SpeechRecognitionSetAssistantListeningAction(active=True):
             # Arm stage-1 alongside a quick-chat session. Only from rest: an armed
             # command window (INTENTS_WAITING) outranks it.
-            if state.status is not SpeechRecognitionStatus.IDLE:
+            if state.status != SpeechRecognitionStatus.IDLE:
                 return state
             return replace(
                 state,
@@ -606,7 +606,7 @@ def reducer(
             )
 
         case SpeechRecognitionSetAssistantListeningAction(active=False):
-            if state.status is not SpeechRecognitionStatus.ASSISTANT_WAITING:
+            if state.status != SpeechRecognitionStatus.ASSISTANT_WAITING:
                 return state
             return _idle(state)
 
@@ -618,9 +618,9 @@ def reducer(
                 action_keys=action.intent.action_keys,
                 phrase=action.text,
             )
-            if state.status is SpeechRecognitionStatus.INTENTS_WAITING:
+            if state.status == SpeechRecognitionStatus.INTENTS_WAITING:
                 return CompleteReducerResult(state=_idle(state), events=[event])
-            if state.status is SpeechRecognitionStatus.ASSISTANT_WAITING:
+            if state.status == SpeechRecognitionStatus.ASSISTANT_WAITING:
                 # Stage 1: run the command and end the quick-chat session, so the
                 # utterance is discarded instead of being answered by the LLM.
                 return CompleteReducerResult(
@@ -640,7 +640,7 @@ def reducer(
         case SpeechRecognitionReportIntentTimeoutAction():
             # No command was recognised within the listening window; leave
             # listening mode and clear the listening indicator.
-            if state.status is SpeechRecognitionStatus.INTENTS_WAITING:
+            if state.status == SpeechRecognitionStatus.INTENTS_WAITING:
                 return CompleteReducerResult(
                     state=replace(state, status=SpeechRecognitionStatus.IDLE),
                     actions=[ACKNOWLEDGMENT_ACTION],

@@ -185,7 +185,7 @@ class EnginesManager:
             active = [
                 trigger
                 for trigger in config.triggers
-                if trigger.mode is WakeMode.STOP_TALKING
+                if trigger.mode == WakeMode.STOP_TALKING
                 or trigger.mode in enabled_wake_modes
             ]
             if config.enabled and active:
@@ -240,10 +240,10 @@ class EnginesManager:
         )
 
         is_remote_session = (
-            status is SpeechRecognitionStatus.ASSISTANT_WAITING
+            status == SpeechRecognitionStatus.ASSISTANT_WAITING
             and bool(assistant_audio_source)
         )
-        if status is SpeechRecognitionStatus.IDLE or is_remote_session:
+        if status == SpeechRecognitionStatus.IDLE or is_remote_session:
             # A remote-mic session's audio is dropped by ``_queue_chunk``, so Vosk
             # can never hear it — leave the grammar disarmed rather than pretend.
             self._cancel_intents_timeout()
@@ -264,7 +264,7 @@ class EnginesManager:
             ],
         )
 
-        if status is SpeechRecognitionStatus.INTENTS_WAITING:
+        if status == SpeechRecognitionStatus.INTENTS_WAITING:
             self._start_intents_timeout()
         else:
             self._cancel_intents_timeout()
@@ -308,7 +308,7 @@ class EnginesManager:
         quick-chat turn is the reducer's call, from ``status``.
         """
         status, intents, wake_engines = data
-        if status is SpeechRecognitionStatus.IDLE:
+        if status == SpeechRecognitionStatus.IDLE:
             return
 
         action = match_recognition(
@@ -352,7 +352,7 @@ class EnginesManager:
         # STOP_TALKING must always get through (e.g. a "stop" right after a wake);
         # other modes debounce per-mode so a phrase matching two concurrent engines
         # only fires once without cross-mode suppression.
-        if mode is not WakeMode.STOP_TALKING:
+        if mode != WakeMode.STOP_TALKING:
             now = asyncio.get_event_loop().time()
             last = self._last_detection_time.get(mode, 0.0)
             if now - last < _DETECTION_DEBOUNCE_SECONDS:
@@ -366,7 +366,7 @@ class EnginesManager:
                 return
             self._last_detection_time[mode] = now
 
-        if mode is not WakeMode.INTENTS:
+        if mode != WakeMode.INTENTS:
             # Persist the rolling mic buffer for the assistant wake/stop phrases.
             # Run the synchronous WAV write off the loop so the dispatch isn't
             # delayed.

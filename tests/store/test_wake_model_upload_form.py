@@ -266,10 +266,10 @@ def test_a_successful_upload_reports_the_pool_and_marks_models_available(
     statuses = [
         action
         for action in _DISPATCHED
-        if getattr(action, 'status', None) is WakeWordModelStatus.AVAILABLE
+        if getattr(action, 'status', None) == WakeWordModelStatus.AVAILABLE
     ]
     assert len(statuses) == 1
-    assert getattr(statuses[0], 'engine_name', None) is MICRO
+    assert getattr(statuses[0], 'engine_name', None) == MICRO
 
 
 def test_an_engine_without_a_model_pool_opens_no_form(

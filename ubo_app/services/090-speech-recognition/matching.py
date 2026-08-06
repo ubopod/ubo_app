@@ -59,9 +59,9 @@ def stop_talking_triggers(
     return {
         trigger.value.lower(): trigger.id
         for config in configs
-        if config.engine is WakeWordEngineName.VOSK and config.enabled
+        if config.engine == WakeWordEngineName.VOSK and config.enabled
         for trigger in config.triggers
-        if trigger.mode is WakeMode.STOP_TALKING
+        if trigger.mode == WakeMode.STOP_TALKING
     }
 
 

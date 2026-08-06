@@ -573,7 +573,7 @@ async def _handle_download_models(event: WakeWordDownloadModelsEvent) -> None:
     notification by one unit; the on-disk pool is reported after each so the
     Models list fills in live. On completion the spinner flashes "ready".
     """
-    if event.engine_name is not WakeWordEngineName.OPENWAKEWORD:
+    if event.engine_name != WakeWordEngineName.OPENWAKEWORD:
         logger.warning(
             'Model download not supported for engine',
             extra={'engine_name': event.engine_name},
@@ -709,7 +709,7 @@ async def _handle_download_model(event: WakeWordDownloadModelEvent) -> None:
     yet, failing every download. ``micro_scan_models`` globs the top level
     only, so the staging directory stays invisible while in flight.
     """
-    if event.engine is not WakeWordEngineName.MICROWAKEWORD:
+    if event.engine != WakeWordEngineName.MICROWAKEWORD:
         logger.warning(
             'Per-model download not supported for engine',
             extra={'engine': event.engine},
@@ -812,10 +812,10 @@ async def _handle_download_model(event: WakeWordDownloadModelEvent) -> None:
 
 async def _handle_delete_model(event: WakeWordDeleteModelEvent) -> None:
     """Delete a wake-word model file off-reducer and re-scan the pool."""
-    if event.engine is WakeWordEngineName.OPENWAKEWORD:
+    if event.engine == WakeWordEngineName.OPENWAKEWORD:
         await asyncio.to_thread(delete_model, event.model_id)
         models = tuple(scan_models())
-    elif event.engine is WakeWordEngineName.MICROWAKEWORD:
+    elif event.engine == WakeWordEngineName.MICROWAKEWORD:
         await asyncio.to_thread(micro_delete_model, event.model_id)
         models = tuple(micro_scan_models())
     else:
@@ -995,7 +995,7 @@ def init_service() -> Subscriptions:
         is_quick_chat = (
             is_listening
             and isinstance(active_source, WakePhraseTriggerSource)
-            and active_source.mode is WakeMode.QUICK_CHAT
+            and active_source.mode == WakeMode.QUICK_CHAT
         )
         store.dispatch(
             SpeechRecognitionSetAssistantListeningAction(

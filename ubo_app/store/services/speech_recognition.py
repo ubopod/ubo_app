@@ -719,7 +719,7 @@ def engine_config(
 ) -> WakeWordEngineConfig | None:
     """Return the config for *engine*, or None if not present."""
     return next(
-        (config for config in state.wake_engines if config.engine is engine),
+        (config for config in state.wake_engines if config.engine == engine),
         None,
     )
 
@@ -733,7 +733,7 @@ def model_status(
         (
             entry.status
             for entry in state.wake_word_models_status
-            if entry.engine is engine
+            if entry.engine == engine
         ),
         None,
     )
@@ -747,7 +747,7 @@ def set_model_status(
 ) -> tuple[WakeWordModelStatusEntry, ...]:
     """Return *statuses* with *engine*'s status upserted to *status*."""
     return (
-        *(entry for entry in statuses if entry.engine is not engine),
+        *(entry for entry in statuses if entry.engine != engine),
         WakeWordModelStatusEntry(engine=engine, status=status, model_id=model_id),
     )
 
@@ -761,8 +761,8 @@ def downloading_model_id(
         (
             entry.model_id
             for entry in state.wake_word_models_status
-            if entry.engine is engine
-            and entry.status is WakeWordModelStatus.DOWNLOADING
+            if entry.engine == engine
+            and entry.status == WakeWordModelStatus.DOWNLOADING
         ),
         '',
     )
