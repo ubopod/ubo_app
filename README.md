@@ -360,22 +360,28 @@ Then you can run the tests with:
 docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv ubo-app-test
 ```
 
-You can add arguments to the `pytest` command to run specific tests like this:
+To run a specific test file or a single test, use `docker:test:raw` rather than
+passing pytest args directly to `ubo-app-test` — the default entrypoint task
+runs the unit and app test tiers as two separate pytest invocations (see
+`scripts/run_test_tiers.py`), so extra args get appended to both tiers' fixed
+directory lists instead of replacing them:
 
 ```bash
-docker run --rm -it --name ubo-app-test -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv ubo-app-test -- <pytest-args>
+uv run poe docker:test:raw tests/reproduction/test_menu.py -v
+uv run poe docker:test:raw tests/integration/test_services.py::test_all_services_register -v -x
 ```
 
-For example, to run only the tests in the `tests/integration/test_core.py` file, you can run:
+If this fails with a `setuptools-scm`/version-detection error from the
+bind-mounted repo, pass `PRETEND_VERSION` through from your shell:
 
 ```bash
-docker run --rm -it -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv -v uvo-app-dev-uv-local:/root/.local/share/uv -v ubo-app-dev-uv-venv:/ubo-app/.venv ubo-app-test
+PRETEND_VERSION=0.0.0.dev0 uv run poe docker:test:raw tests/reproduction/test_menu.py -v
 ```
 
-To pass it command line options add a double-dash before the options:
+To pass command line options to the full suite, add a double-dash before the options:
 
 ```bash
-docker run --rm -it -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv -v uvo-app-dev-uv-local:/root/.local/share/uv -v ubo-app-dev-uv-venv:/ubo-app/.venv ubo-app-test -- -svv --make-screenshots --override-store-snapshots --override-window-snapshots
+docker run --rm -it -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv -v ubo-app-dev-uv-local:/root/.local/share/uv -v ubo-app-dev-uv-venv:/ubo-app/.venv ubo-app-test -- -svv --make-screenshots --override-store-snapshots --override-window-snapshots
 ```
 
 **Useful pytest options for snapshot testing:**
@@ -387,7 +393,7 @@ docker run --rm -it -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv -v uvo
 For example, to debug a failing snapshot test:
 
 ```bash
-docker run --rm -it -v .:/ubo-app -v ubo-app-dev-uv-cache:/root/.cache/uv ubo-app-test -- --make-screenshots tests/integration/
+uv run poe docker:test:raw --make-screenshots tests/integration/
 ```
 
 Then check the generated `.mismatch.png` files in `tests/integration/results/` to see what changed.
