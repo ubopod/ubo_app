@@ -62,6 +62,7 @@ MAX_FRAME_SIZE = 1 << 20
 _VARINT_MAX_SHIFT = 64
 
 _server_container: list[asyncio.Server | None] = [None]
+_server_lock = asyncio.Lock()
 
 
 def _encode_varint(value: int) -> bytes:
@@ -216,22 +217,32 @@ def get_server() -> asyncio.Server | None:
 
 
 async def close_server() -> None:
-    """Close the MCU server if running."""
-    server = _server_container[0]
-    if server is not None:
-        server.close()
-        await server.wait_closed()
+    """Close the MCU server if running. No-op if it isn't."""
+    async with _server_lock:
+        server = _server_container[0]
+        if server is None:
+            return
         _server_container[0] = None
+    server.close()
+    await server.wait_closed()
 
 
 async def serve() -> None:
-    """Serve the MCU raw-TCP listener."""
-    server = await asyncio.start_server(
-        _handle_connection,
-        MCU_LISTEN_ADDRESS,
-        MCU_LISTEN_PORT,
-    )
-    _server_container[0] = server
+    """Serve the MCU raw-TCP listener. No-op if already running.
+
+    The lock only guards the check-and-set below, not ``serve_forever()`` —
+    holding it for the server's whole lifetime would deadlock a concurrent
+    ``close_server()`` call against a running server.
+    """
+    async with _server_lock:
+        if _server_container[0] is not None:
+            return
+        server = await asyncio.start_server(
+            _handle_connection,
+            MCU_LISTEN_ADDRESS,
+            MCU_LISTEN_PORT,
+        )
+        _server_container[0] = server
 
     logger.info(
         'Starting MCU server',

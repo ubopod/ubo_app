@@ -44,6 +44,7 @@ def _setup_general_settings() -> None:
         SettingsToggleBetaVersionsAction,
         SettingsToggleGrpcRemoteAccessAction,
         SettingsTogglePdbSignalAction,
+        SettingsToggleTcpLiteAction,
         SettingsToggleVisualDebugAction,
     )
 
@@ -62,6 +63,9 @@ def _setup_general_settings() -> None:
     def _toggle_assistant_debug() -> None:
         store.dispatch(SettingsToggleAssistantDebugAction())
 
+    def _toggle_tcp_lite() -> None:
+        store.dispatch(SettingsToggleTcpLiteAction())
+
     register_action('settings:general:toggle_pdb', _toggle_pdb)
     register_action('settings:general:toggle_visual_debug', _toggle_visual_debug)
     register_action('settings:general:toggle_beta', _toggle_beta)
@@ -70,6 +74,7 @@ def _setup_general_settings() -> None:
         _toggle_grpc_remote_access,
     )
     register_action('settings:general:toggle_assistant_debug', _toggle_assistant_debug)
+    register_action('settings:general:toggle_tcp_lite', _toggle_tcp_lite)
 
     @store.autorun(
         lambda state: (
@@ -78,11 +83,12 @@ def _setup_general_settings() -> None:
             state.settings.beta_versions,
             state.settings.grpc_remote_access,
             state.settings.assistant_debug,
+            state.settings.tcp_lite_enabled,
         ),
         options=AutorunOptions(default_value=None),
     )
     def _sync_general_menu(
-        data: tuple[bool, bool, bool, bool, bool] | None,
+        data: tuple[bool, bool, bool, bool, bool, bool] | None,
     ) -> None:
         if data is None:
             return
@@ -92,6 +98,7 @@ def _setup_general_settings() -> None:
             beta_versions,
             grpc_remote_access,
             assistant_debug,
+            tcp_lite_enabled,
         ) = data
 
         store.dispatch(
@@ -128,6 +135,12 @@ def _setup_general_settings() -> None:
                         label='Asst. Debug',
                         icon='󰱒' if assistant_debug else '󰄱',
                         action_id='settings:general:toggle_assistant_debug',
+                    ),
+                    MenuItemData(
+                        key='tcp_lite_enabled',
+                        label='TCP Lite',
+                        icon='󰱒' if tcp_lite_enabled else '󰄱',
+                        action_id='settings:general:toggle_tcp_lite',
                     ),
                 ),
                 placeholder='',

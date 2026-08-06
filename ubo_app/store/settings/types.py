@@ -43,6 +43,10 @@ class SettingsToggleGrpcRemoteAccessAction(SettingsAction):
     """Toggle gRPC remote (LAN) access action."""
 
 
+class SettingsToggleTcpLiteAction(SettingsAction):
+    """Toggle the TCP-lite (MCU raw-TCP) server action."""
+
+
 class SettingsToggleAssistantDebugAction(SettingsAction):
     """Toggle assistant debug session recording action."""
 
@@ -166,6 +170,12 @@ class SettingsState(Immutable):
         default_factory=lambda: read_from_persistent_store(
             'settings:grpc_remote_access',
             default=False,
+        ),
+    )
+    tcp_lite_enabled: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            'settings:tcp_lite_enabled',
+            default=True,
         ),
     )
     assistant_debug: bool = field(

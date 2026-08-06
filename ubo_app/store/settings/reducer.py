@@ -39,6 +39,7 @@ from ubo_app.store.settings.types import (
     SettingsToggleBetaVersionsAction,
     SettingsToggleGrpcRemoteAccessAction,
     SettingsTogglePdbSignalAction,
+    SettingsToggleTcpLiteAction,
     SettingsToggleVisualDebugAction,
 )
 from ubo_app.store.update_manager.types import UpdateManagerRequestCheckAction
@@ -133,6 +134,12 @@ def reducer(
             return replace(
                 state,
                 grpc_remote_access=not state.grpc_remote_access,
+            )
+
+        case SettingsToggleTcpLiteAction():
+            return replace(
+                state,
+                tcp_lite_enabled=not state.tcp_lite_enabled,
             )
 
         case SettingsSetServicesAction():
