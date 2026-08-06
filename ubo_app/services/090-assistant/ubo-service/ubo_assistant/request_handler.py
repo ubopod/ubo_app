@@ -49,6 +49,7 @@ from ubo_bindings.ubo.v1 import (
 )
 
 from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE
+from ubo_assistant.error_notification import is_transient_error
 from ubo_assistant.grpc_collector import GRPCTerminalCollector
 from ubo_assistant.pipeline_builder import (
     LLM,
@@ -469,6 +470,16 @@ async def _run_request(  # noqa: C901, PLR0912, PLR0915
 
     @task.event_handler('on_pipeline_error')
     async def _on_pipeline_error(_task: object, frame: ErrorFrame) -> None:
+        if is_transient_error(frame):
+            # A websocket provider dropped an idle connection and pipecat is
+            # already reconnecting. Failing the request here would abort a
+            # request that is about to recover; let it run on and fall back to
+            # the first-output timeout if the output really never arrives.
+            logger.debug(
+                'Ignoring transient provider error in request pipeline {extra}',
+                extra={'error': frame.error},
+            )
+            return
         # Surface provider errors (bad model, 401, unreachable host, …) as a real
         # error frame instead of letting them fall through to a misleading
         # "produced no output (provider timeout)". dispatch_error also sets the

@@ -2623,6 +2623,7 @@ dependencies = [
     { name = "python-fake" },
     { name = "ubo-app-raw-bindings" },
     { name = "vosk" },
+    { name = "websockets" },
 ]
 
 [package.dev-dependencies]
@@ -2644,6 +2645,7 @@ requires-dist = [
     { name = "python-fake", specifier = ">=0.2.0" },
     { name = "ubo-app-raw-bindings", editable = "../../../rpc" },
     { name = "vosk", specifier = "==0.3.44" },
+    { name = "websockets", specifier = ">=13.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -2658,7 +2660,7 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
-version = "2.0.1.dev260621103485410048"
+version = "2.0.1.dev260712103484953551"
 source = { editable = "../../../rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },

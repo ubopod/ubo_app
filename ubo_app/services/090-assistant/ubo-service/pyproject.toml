@@ -21,6 +21,9 @@ dependencies = [
   "python-fake>=0.2.0",
   "ubo-app-raw-bindings",
   "vosk==0.3.44",
+  # Imported directly by error_notification to classify websocket close codes;
+  # otherwise only a transitive dependency of pipecat-ai.
+  "websockets>=13.1",
   # RPi dependencies
   "piper-tts==1.4.1",
 ]
