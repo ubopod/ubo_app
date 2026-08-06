@@ -556,6 +556,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'SettingsToggleBetaVersionsAction': 'ubo_app.store.settings.types',
     'SettingsToggleGrpcRemoteAccessAction': 'ubo_app.store.settings.types',
     'SettingsTogglePdbSignalAction': 'ubo_app.store.settings.types',
+    'SettingsToggleTcpLiteAction': 'ubo_app.store.settings.types',
     'SettingsToggleVisualDebugAction': 'ubo_app.store.settings.types',
     'SilenceTimeoutStopReason': 'ubo_app.store.services.assistant',
     'SnapshotEvent': 'ubo_app.store.core.types.events',
