@@ -18,8 +18,9 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import io
+import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 from abstraction.wake_word_recognition_mixin import WakeWordRecognitionMixin
 from typing_extensions import override
@@ -34,7 +35,39 @@ if TYPE_CHECKING:
     from abstraction.wake_word_recognition_mixin import WakeTrigger
     from pymicro_wakeword import MicroWakeWord, MicroWakeWordFeatures
 
-__all__ = ['MODELS_DIR', 'MicroWakeWordEngine', 'delete_model', 'scan_models']
+__all__ = [
+    'MODELS_DIR',
+    'MicroWakeWordEngine',
+    'delete_model',
+    'scan_models',
+    'staging_paths',
+]
+
+class StagingPaths(NamedTuple):
+    """Where the two halves of an in-flight download live before install."""
+
+    directory: Path
+    config: Path
+    weights: Path
+
+
+def staging_paths(model_id: str) -> StagingPaths:
+    """Return the staging layout a download for *model_id* writes into.
+
+    The pair is staged under its *final* names inside a hidden directory rather
+    than as ``<name>.part`` siblings of the installed models. ``from_config``
+    resolves the weights as ``<manifest's directory>/<manifest's "model" key>``,
+    so a ``<id>.json.part`` manifest sends :func:`validate_model` looking for a
+    ``<id>.tflite`` that isn't there yet — which fails every download.
+    :func:`scan_models` globs the top level only, so the directory stays
+    invisible while the download is in flight.
+    """
+    directory = MODELS_DIR / f'.{model_id}.part'
+    return StagingPaths(
+        directory=directory,
+        config=directory / f'{model_id}.json',
+        weights=directory / f'{model_id}.tflite',
+    )
 
 
 def _load_model(config_path: Path) -> MicroWakeWord:
@@ -72,7 +105,27 @@ def validate_model(config_path: Path) -> bool:
     a TFLite interpreter) and releases it again. Cheap — these models are under
     100 KB — and catches a truncated or corrupted download that
     :func:`scan_models` would otherwise happily list.
+
+    The weights are resolved by ``from_config`` as ``config_path.parent /
+    config['model']``, *not* from ``config_path``'s own stem. A missing sibling
+    is checked here rather than left to ``from_config``: upstream's loader
+    dereferences the null interpreter that a failed open produces, which
+    segfaults instead of raising, so ``except Exception`` below can't catch it.
     """
+    try:
+        weights = config_path.parent / json.loads(config_path.read_text())['model']
+    except (OSError, ValueError, KeyError):
+        logger.exception(
+            'Unreadable microWakeWord manifest',
+            extra={'path': config_path},
+        )
+        return False
+    if not weights.is_file():
+        logger.error(
+            'microWakeWord manifest points at missing weights',
+            extra={'path': config_path, 'weights': weights},
+        )
+        return False
     try:
         model = _load_model(config_path)
     except Exception:

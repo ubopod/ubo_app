@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -17,6 +18,7 @@ from engines_manager import EnginesManager
 from microwakeword_engine import MODELS_DIR as MICRO_MODELS_DIR
 from microwakeword_engine import delete_model as micro_delete_model
 from microwakeword_engine import scan_models as micro_scan_models
+from microwakeword_engine import staging_paths as micro_staging_paths
 from microwakeword_engine import validate_model as micro_validate_model
 from openwakeword_engine import (
     default_model_names,
@@ -695,9 +697,17 @@ async def _handle_download_model(event: WakeWordDownloadModelEvent) -> None:
     """Download one catalog model (its ``.json`` + ``.tflite``) with a progress notice.
 
     The reducer already validated ``model_id`` against the catalog, marked the
-    engine ``DOWNLOADING`` and emitted this event. Both halves land in ``.part``
-    files and are only renamed into place together, so a failure midway can
-    never leave a half-installed model that :func:`micro_scan_models` would list.
+    engine ``DOWNLOADING`` and emitted this event. Both halves land in a hidden
+    staging directory and are only moved into place together, so a failure
+    midway can never leave a half-installed model that
+    :func:`micro_scan_models` would list.
+
+    They're staged under their *final* names rather than as ``<name>.part``
+    siblings because ``from_config`` resolves the weights from the manifest's
+    ``model`` key relative to the manifest's own directory — a ``.part``
+    manifest would send validation looking for a ``.tflite`` that isn't there
+    yet, failing every download. ``micro_scan_models`` globs the top level
+    only, so the staging directory stays invisible while in flight.
     """
     if event.engine is not WakeWordEngineName.MICROWAKEWORD:
         logger.warning(
@@ -720,9 +730,9 @@ async def _handle_download_model(event: WakeWordDownloadModelEvent) -> None:
         return
 
     json_url, tflite_url = microwakeword_download_urls_for(model.id)
-    MICRO_MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    json_part = MICRO_MODELS_DIR / f'{model.id}.json.part'
-    tflite_part = MICRO_MODELS_DIR / f'{model.id}.tflite.part'
+    staging = micro_staging_paths(model.id)
+    shutil.rmtree(staging.directory, ignore_errors=True)
+    staging.directory.mkdir(parents=True, exist_ok=True)
 
     def _notify(progress: float) -> None:
         store.dispatch(
@@ -747,11 +757,11 @@ async def _handle_download_model(event: WakeWordDownloadModelEvent) -> None:
         # The manifest is well under 1 KB against ~60 KB of weights, so the
         # progress bar tracks the ``.tflite`` alone rather than interleaving two
         # streams for a fraction of a percent.
-        async for _ in download_file(url=json_url, path=json_part):
+        async for _ in download_file(url=json_url, path=staging.config):
             pass
         async for downloaded, total in download_file(
             url=tflite_url,
-            path=tflite_part,
+            path=staging.weights,
         ):
             _notify(downloaded / total if total else 0.0)
     except Exception as error:
@@ -759,19 +769,20 @@ async def _handle_download_model(event: WakeWordDownloadModelEvent) -> None:
             'Failed to download microWakeWord model',
             extra={'model': model.id},
         )
-        for part in (json_part, tflite_part):
-            part.unlink(missing_ok=True)
+        shutil.rmtree(staging.directory, ignore_errors=True)
         _micro_download_failed(model.id, str(error) or 'download error')
         return
 
-    if not await asyncio.to_thread(micro_validate_model, json_part):
-        for part in (json_part, tflite_part):
-            part.unlink(missing_ok=True)
+    if not await asyncio.to_thread(micro_validate_model, staging.config):
+        shutil.rmtree(staging.directory, ignore_errors=True)
         _micro_download_failed(model.id, 'the downloaded model is not loadable')
         return
 
-    json_part.replace(MICRO_MODELS_DIR / f'{model.id}.json')
-    tflite_part.replace(MICRO_MODELS_DIR / f'{model.id}.tflite')
+    # Weights before manifest — see `install_uploaded_model` for why the order
+    # matters (`set_triggers` keys its reload signature on the `.json` alone).
+    staging.weights.replace(MICRO_MODELS_DIR / f'{model.id}.tflite')
+    staging.config.replace(MICRO_MODELS_DIR / f'{model.id}.json')
+    shutil.rmtree(staging.directory, ignore_errors=True)
 
     store.dispatch(
         WakeWordSetAvailableModelsAction(

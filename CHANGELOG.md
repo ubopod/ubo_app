@@ -6,6 +6,10 @@ history and may still collect terse maintainer-oriented entries during a release
 cycle.
 
 ## Upcoming
+- fix(speech-recognition): validate a downloaded microWakeWord model in a staging
+  directory under its final filenames — validating the `.part` files made
+  `from_config` look for a `.tflite` that wasn't there yet, failing every model
+  download
 - feat(wyoming): add secured Home Assistant Wyoming satellite and assistant-engine
   integration
 - feat(wyoming,speech-recognition): detect the Home Assistant wake word on-device
