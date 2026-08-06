@@ -1336,6 +1336,7 @@
       }
     },
     "services_status": "ready",
+    "tcp_lite_enabled": true,
     "visual_debug": false
   },
   "speech_recognition": {
