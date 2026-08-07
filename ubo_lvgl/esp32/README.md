@@ -106,6 +106,9 @@ stay proto-compatible with.
 
 ## Toolchain environment (EIM install)
 
+The **poe tasks below resolve all of this themselves** — reach for the raw
+`idf.py` prefix only when you need an action they don't wrap.
+
 ESP-IDF **v6.0.1** is installed via EIM with a non-standard layout, so the default
 `activate`/`export.sh` alone does not work. Use this prefix for every `idf.py` call:
 
@@ -171,6 +174,31 @@ into `ubo-setup` so you can set them again. (A short BOOT tap is still HOME.)
 
 ## Build / flash / monitor
 
+From the repo root, the poe tasks handle the toolchain environment, the
+per-board build dir and sdkconfig, and the one-time `set-target`:
+
+```bash
+uv run poe esp32:build   --board c6                        # or --board s3
+uv run poe esp32:flash   --board s3 --port /dev/cu.usbmodem1101
+uv run poe esp32:monitor --board c6                        # Ctrl-] to exit
+```
+
+| Arg | Default | Meaning |
+|---|---|---|
+| `--board` | *required* | `c6` = Waveshare C6 AMOLED, `s3` = ESP32-S3-BOX-3 |
+| `--profile` | `ppp` | `ppp` = the shipping USB/PPP build (**no USB console**, so `esp32:monitor` shows nothing); `wifi` = the debug build |
+| `--port` | auto-detect | Pass it when both boards are plugged in |
+| `--transport` | build default (`tcp_lite`) | `-DUBO_TRANSPORT`; sticks in the build dir's CMake cache once set |
+| `--fresh` | off | Delete the build dir **and sdkconfig** first — needed after editing a checked-in `sdkconfig.defaults*`, since those are only read when the sdkconfig is absent. Discards anything you set with `menuconfig`. |
+
+Each `(board, profile)` pair gets its own `build.<target>[.ppp]` and
+`sdkconfig.<target>[.ppp]`, so the two boards never clobber each other and each
+sdkconfig only ever comes from one defaults list. `esp32:flash` builds first.
+`scripts/esp32.sh` is the implementation; anything it doesn't wrap (`menuconfig`,
+`merge-bin`, `fullclean`) needs the raw `idf` prefix below.
+
+The rest of this section is what those tasks do underneath.
+
 `CONFIG_IDF_TARGET` is **not** pinned in `sdkconfig.defaults` (per-chip settings
 live in `sdkconfig.defaults.<target>`, which ESP-IDF appends automatically), so
 `set-target` is a required first step rather than an optional one.
@@ -222,6 +250,10 @@ peripheral, which the S3 has as well, and `UBO_USB_PPP_ENABLE` depends only on
 rm -f sdkconfig
 idf -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.ppp" build
 ```
+
+This is what `uv run poe esp32:build --board <c6|s3>` builds by default; it keeps
+the profile in its own `sdkconfig.<target>.ppp`, so there is no shared `sdkconfig`
+to remove and no way for the two profiles to leak into each other.
 
 > **This profile has no USB logs.** PPP must own the USJ endpoint, so
 > `CONFIG_ESP_CONSOLE_SECONDARY_NONE=y` and `idf monitor` over the cable shows

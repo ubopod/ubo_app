@@ -267,6 +267,40 @@ build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install -
 "device:test:hil" = "poe test-hil --copy --run --results"
 "device:test:hil:run" = "poe test-hil --run"
 
+# ESP32 firmware (ubo_lvgl/esp32) for both supported boards. --board is
+# required: c6 = Waveshare ESP32-C6-Touch-AMOLED-1.8, s3 = Espressif
+# ESP32-S3-BOX-3. --profile defaults to the shipping `ppp` build (USB/PPP link
+# to ubo-core, no USB console); pass `--profile wifi` for the debug build whose
+# serial console `esp32:monitor` can actually read. Each pair builds into its
+# own build.<target>[.ppp]/sdkconfig.<target>[.ppp], so the two boards never
+# clobber each other. `esp32:flash` builds first (idf.py flash does).
+[tool.poe.tasks."esp32:build"]
+args = [
+  { name = "board", type = "string", default = "" },
+  { name = "profile", type = "string", default = "ppp" },
+  { name = "transport", type = "string", default = "" },
+  { name = "fresh", type = "boolean" },
+]
+cmd = "scripts/esp32.sh build"
+
+[tool.poe.tasks."esp32:flash"]
+args = [
+  { name = "board", type = "string", default = "" },
+  { name = "profile", type = "string", default = "ppp" },
+  { name = "port", type = "string", default = "" },
+  { name = "transport", type = "string", default = "" },
+  { name = "fresh", type = "boolean" },
+]
+cmd = "scripts/esp32.sh flash"
+
+[tool.poe.tasks."esp32:monitor"]
+args = [
+  { name = "board", type = "string", default = "" },
+  { name = "profile", type = "string", default = "ppp" },
+  { name = "port", type = "string", default = "" },
+]
+cmd = "scripts/esp32.sh monitor"
+
 [tool.poe.tasks.test-on-device]
 args = [
   { name = "deps", type = "boolean" },
