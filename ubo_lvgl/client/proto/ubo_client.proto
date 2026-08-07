@@ -167,13 +167,13 @@ message AudioReportSampleAction {
 
 message Action {
   oneof action {
-    AssistantStartListeningAction assistant_start_listening_action = 43;
-    AssistantStopListeningAction assistant_stop_listening_action = 44;
-    AudioReportSampleAction audio_report_sample_action = 58;
-    AudioSetVolumeAction audio_set_volume_action = 60;
-    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 64;
-    KeypadKeyPressAction keypad_key_press_action = 152;
-    KeypadKeyReleaseAction keypad_key_release_action = 153;
+    AssistantStartListeningAction assistant_start_listening_action = 44;
+    AssistantStopListeningAction assistant_stop_listening_action = 45;
+    AudioReportSampleAction audio_report_sample_action = 60;
+    AudioSetVolumeAction audio_set_volume_action = 62;
+    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 66;
+    KeypadKeyPressAction keypad_key_press_action = 154;
+    KeypadKeyReleaseAction keypad_key_release_action = 155;
   }
 }
 
@@ -259,14 +259,14 @@ message AssistantRequestMicStreamEvent {
 message Event {
   oneof event {
     ApplicationScrollEvent application_scroll_event = 1;
-    AssistantRequestMicStreamEvent assistant_request_mic_stream_event = 19;
-    AudioPlayAudioSampleEvent audio_play_audio_sample_event = 26;
-    AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 27;
-    AudioStopPlaybackEvent audio_stop_playback_event = 31;
-    FrameStreamChunkEvent frame_stream_chunk_event = 87;
-    FrameStreamDataEvent frame_stream_data_event = 88;
-    MenuChooseByIndexEvent menu_choose_by_index_event = 109;
-    StackChangedEvent stack_changed_event = 135;
+    AssistantRequestMicStreamEvent assistant_request_mic_stream_event = 20;
+    AudioPlayAudioSampleEvent audio_play_audio_sample_event = 27;
+    AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 28;
+    AudioStopPlaybackEvent audio_stop_playback_event = 32;
+    FrameStreamChunkEvent frame_stream_chunk_event = 88;
+    FrameStreamDataEvent frame_stream_data_event = 89;
+    MenuChooseByIndexEvent menu_choose_by_index_event = 118;
+    StackChangedEvent stack_changed_event = 149;
   }
 }
 

@@ -746,13 +746,13 @@ extern "C" {
 #define ubo_client_AudioReportSampleAction_timestamp_tag 2
 #define ubo_client_AudioReportSampleAction_sample_speech_recognition_tag 3
 #define ubo_client_AudioReportSampleAction_audio_source_tag 5
-#define ubo_client_Action_assistant_start_listening_action_tag 43
-#define ubo_client_Action_assistant_stop_listening_action_tag 44
-#define ubo_client_Action_audio_report_sample_action_tag 58
-#define ubo_client_Action_audio_set_volume_action_tag 60
-#define ubo_client_Action_audio_toggle_mute_status_action_tag 64
-#define ubo_client_Action_keypad_key_press_action_tag 152
-#define ubo_client_Action_keypad_key_release_action_tag 153
+#define ubo_client_Action_assistant_start_listening_action_tag 44
+#define ubo_client_Action_assistant_stop_listening_action_tag 45
+#define ubo_client_Action_audio_report_sample_action_tag 60
+#define ubo_client_Action_audio_set_volume_action_tag 62
+#define ubo_client_Action_audio_toggle_mute_status_action_tag 66
+#define ubo_client_Action_keypad_key_press_action_tag 154
+#define ubo_client_Action_keypad_key_release_action_tag 155
 #define ubo_client_ApplicationScrollEvent_direction_tag 2
 #define ubo_client_MenuChooseByIndexEvent_index_tag 2
 #define ubo_client_FrameStreamDataEvent_stream_id_tag 2
@@ -773,14 +773,14 @@ extern "C" {
 #define ubo_client_AssistantRequestMicStreamEvent_audio_source_tag 2
 #define ubo_client_AssistantRequestMicStreamEvent_is_active_tag 3
 #define ubo_client_Event_application_scroll_event_tag 1
-#define ubo_client_Event_assistant_request_mic_stream_event_tag 19
-#define ubo_client_Event_audio_play_audio_sample_event_tag 26
-#define ubo_client_Event_audio_play_audio_sequence_event_tag 27
-#define ubo_client_Event_audio_stop_playback_event_tag 31
-#define ubo_client_Event_frame_stream_chunk_event_tag 87
-#define ubo_client_Event_frame_stream_data_event_tag 88
-#define ubo_client_Event_menu_choose_by_index_event_tag 109
-#define ubo_client_Event_stack_changed_event_tag 135
+#define ubo_client_Event_assistant_request_mic_stream_event_tag 20
+#define ubo_client_Event_audio_play_audio_sample_event_tag 27
+#define ubo_client_Event_audio_play_audio_sequence_event_tag 28
+#define ubo_client_Event_audio_stop_playback_event_tag 32
+#define ubo_client_Event_frame_stream_chunk_event_tag 88
+#define ubo_client_Event_frame_stream_data_event_tag 89
+#define ubo_client_Event_menu_choose_by_index_event_tag 118
+#define ubo_client_Event_stack_changed_event_tag 149
 #define ubo_client_BasicType_bool_value_tag      1
 #define ubo_client_BasicType_bytes_value_tag     2
 #define ubo_client_BasicType_float_value_tag     3
@@ -1010,13 +1010,13 @@ X(a, POINTER,  SINGULAR, STRING,   audio_source,      5)
 #define ubo_client_AudioReportSampleAction_DEFAULT NULL
 
 #define ubo_client_Action_FIELDLIST(X, a) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (action,assistant_start_listening_action,action.assistant_start_listening_action),  43) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (action,assistant_stop_listening_action,action.assistant_stop_listening_action),  44) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (action,audio_report_sample_action,action.audio_report_sample_action),  58) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (action,audio_set_volume_action,action.audio_set_volume_action),  60) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (action,audio_toggle_mute_status_action,action.audio_toggle_mute_status_action),  64) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (action,keypad_key_press_action,action.keypad_key_press_action), 152) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (action,keypad_key_release_action,action.keypad_key_release_action), 153)
+X(a, POINTER,  ONEOF,    MESSAGE,  (action,assistant_start_listening_action,action.assistant_start_listening_action),  44) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (action,assistant_stop_listening_action,action.assistant_stop_listening_action),  45) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (action,audio_report_sample_action,action.audio_report_sample_action),  60) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (action,audio_set_volume_action,action.audio_set_volume_action),  62) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (action,audio_toggle_mute_status_action,action.audio_toggle_mute_status_action),  66) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (action,keypad_key_press_action,action.keypad_key_press_action), 154) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (action,keypad_key_release_action,action.keypad_key_release_action), 155)
 #define ubo_client_Action_CALLBACK NULL
 #define ubo_client_Action_DEFAULT NULL
 #define ubo_client_Action_action_assistant_start_listening_action_MSGTYPE ubo_client_AssistantStartListeningAction
@@ -1088,14 +1088,14 @@ X(a, POINTER,  SINGULAR, BOOL,     is_active,         3)
 
 #define ubo_client_Event_FIELDLIST(X, a) \
 X(a, POINTER,  ONEOF,    MESSAGE,  (event,application_scroll_event,event.application_scroll_event),   1) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,assistant_request_mic_stream_event,event.assistant_request_mic_stream_event),  19) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sample_event,event.audio_play_audio_sample_event),  26) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sequence_event,event.audio_play_audio_sequence_event),  27) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_stop_playback_event,event.audio_stop_playback_event),  31) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_chunk_event,event.frame_stream_chunk_event),  87) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_data_event,event.frame_stream_data_event),  88) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,menu_choose_by_index_event,event.menu_choose_by_index_event), 109) \
-X(a, POINTER,  ONEOF,    MESSAGE,  (event,stack_changed_event,event.stack_changed_event), 135)
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,assistant_request_mic_stream_event,event.assistant_request_mic_stream_event),  20) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sample_event,event.audio_play_audio_sample_event),  27) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_play_audio_sequence_event,event.audio_play_audio_sequence_event),  28) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,audio_stop_playback_event,event.audio_stop_playback_event),  32) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_chunk_event,event.frame_stream_chunk_event),  88) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,frame_stream_data_event,event.frame_stream_data_event),  89) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,menu_choose_by_index_event,event.menu_choose_by_index_event), 118) \
+X(a, POINTER,  ONEOF,    MESSAGE,  (event,stack_changed_event,event.stack_changed_event), 149)
 #define ubo_client_Event_CALLBACK NULL
 #define ubo_client_Event_DEFAULT NULL
 #define ubo_client_Event_event_application_scroll_event_MSGTYPE ubo_client_ApplicationScrollEvent
