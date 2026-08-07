@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -158,6 +159,72 @@ async def test_start_recreates_missing_service_and_starts_it(
 
     assert len(created) == 1
     assert cast('_Service', created[0]).started is True
+
+
+def test_start_is_idempotent_against_a_racing_second_call(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A second ``start()`` call on the same object must not crash.
+
+    ``threading.Thread.start`` raises if called twice on the same object.
+    ``is_started`` only flips once setup finishes running on the new thread
+    (see ``run``), so a real caller can't rely on it to avoid a second call
+    landing here first. Reproduces the "threads can only be started once"
+    regression (Sentry UBO-APP-KE).
+    """
+    service = UboServiceThread(tmp_path / '090-demo')
+    service.setup = lambda: None
+    calls: list[None] = []
+    monkeypatch.setattr(
+        service_module.threading.Thread,
+        'start',
+        lambda _self: calls.append(None),
+    )
+
+    service.start()
+    service.start()
+
+    assert len(calls) == 1
+
+
+async def test_start_survives_racing_events_for_the_same_service(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Two concurrent restart events for one service must not crash.
+
+    Reproduces the auto-restart race: a service reporting inactive twice
+    (``SettingsServiceSetStatusAction``) before the first restart's thread
+    is visibly started dispatches two ``SettingsStartServiceEvent``s. Both
+    pass the module-level ``start()`` guard (``is_started`` hasn't flipped
+    yet) and reach ``UboServiceThread.start()`` for the same object. Sentry
+    UBO-APP-KE.
+    """
+    path = tmp_path / '090-demo'
+    monkeypatch.setattr(service_module, 'SERVICE_PATHS_BY_ID', {'demo': path})
+    monkeypatch.setattr(service_module, 'SERVICES_BY_PATH', {})
+    monkeypatch.setattr(UboServiceThread, 'setup', lambda: None, raising=False)
+    monkeypatch.setattr(
+        UboServiceThread,
+        'initiate',
+        lambda self: service_module.SERVICES_BY_PATH.__setitem__(self.path, self),
+    )
+
+    thread_start_calls: list[None] = []
+
+    def fake_thread_start(_self: object) -> None:
+        if thread_start_calls:
+            msg = 'threads can only be started once'
+            raise RuntimeError(msg)
+        thread_start_calls.append(None)
+
+    monkeypatch.setattr(service_module.threading.Thread, 'start', fake_thread_start)
+
+    event = SettingsStartServiceEvent(service_id='demo', delay=0)
+    await asyncio.gather(service_module.start(event), service_module.start(event))
+
+    assert len(thread_start_calls) == 1
 
 
 async def test_stop_escalates_when_service_does_not_join(

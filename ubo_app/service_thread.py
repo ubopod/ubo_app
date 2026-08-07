@@ -170,6 +170,7 @@ class UboServiceThread(threading.Thread):
 
         self.module = None
         self.is_started = False
+        self._start_requested = False
         self.has_reducer = False
 
         self._reducer_barrier = None
@@ -309,6 +310,17 @@ class UboServiceThread(threading.Thread):
     def start(self) -> None:
         if not hasattr(self, 'setup'):
             return
+        # ``is_started`` only flips once setup finishes running on the new
+        # thread (see ``run``), so two ``SettingsStartServiceEvent``s for the
+        # same service racing through the module-level ``start()`` can both
+        # pass its guard and reach this method before either thread is
+        # visibly started. Idempotency has to live here, checked and set
+        # synchronously (no ``await`` in between), so the second caller sees
+        # it before ``threading.Thread.start`` ever runs a second time on
+        # the same object.
+        if self._start_requested:
+            return
+        self._start_requested = True
 
         super().start()
 
