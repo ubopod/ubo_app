@@ -11,12 +11,12 @@ loaded the same way ``test_speech_recognition_wake_words.py`` loads the reducer.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    import pytest
+import pytest
 
 SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app/services/090-speech-recognition'
 
@@ -69,6 +69,36 @@ def test_delete_model_refuses_path_traversal(
     module.delete_model('../victim')
 
     assert victim.exists()
+
+
+async def test_run_survives_malformed_chunk(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A non-bytes-like chunk on the input queue must not kill ``_run``.
+
+    Nothing else restarts the loop after it dies (``decide_running_state``
+    only re-fires on a trigger-config change — see
+    ``BackgroundRunningMixin``), so a single malformed chunk would otherwise
+    silently and permanently stop wake-word detection. Reproduces the crash
+    from Sentry issue UBO-APP-RE (``TypeError: can't extend bytearray with
+    int``).
+    """
+    module, _models_dir = _load(monkeypatch, tmp_path)
+    mixin_module = importlib.import_module('abstraction.wake_word_recognition_mixin')
+    WakeTrigger = mixin_module.WakeTrigger  # noqa: N806
+
+    engine = module.OpenWakeWordEngine()
+    engine.triggers = (WakeTrigger(id='trigger-id', value='hey_test'),)
+    engine._model = object()  # noqa: SLF001
+
+    await engine.input_queue.put(5)
+    await engine.input_queue.put(b'ab')
+
+    with pytest.raises(TimeoutError):
+        await asyncio.wait_for(engine._run(), timeout=0.05)  # noqa: SLF001
+
+    assert engine._audio_buffer == bytearray(b'ab')  # noqa: SLF001
 
 
 def test_helpers_available_requires_both_feature_models(
