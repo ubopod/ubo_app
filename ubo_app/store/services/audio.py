@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import field
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
@@ -11,12 +12,52 @@ from redux import BaseAction, BaseEvent
 from ubo_app.utils.clock import default_now
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 class AudioDevice(StrEnum):
     """Audio device enum."""
 
     INPUT = 'Input'
     OUTPUT = 'Output'
+
+
+class AudioOutput(StrEnum):
+    """Where playback is routed.
+
+    ``UBO_SPEAKERS`` and ``LINEOUT`` are the same PipeWire sink — the WM8960
+    HAT — driven through two independent analog amps off the same DAC. They are
+    switched by zeroing one hardware mixer and enabling the other, not by
+    changing sinks. ``HDMI_1``/``HDMI_2`` are the two vc4 HDMI sinks, which are
+    only usable while a display is attached.
+    """
+
+    UBO_SPEAKERS = 'ubo_speakers'
+    LINEOUT = 'lineout'
+    HDMI_1 = 'hdmi_1'
+    HDMI_2 = 'hdmi_2'
+
+    def get_label(self) -> str:
+        """Return the user-facing label for this output."""
+        return {
+            AudioOutput.UBO_SPEAKERS: 'Ubo Speakers',
+            AudioOutput.LINEOUT: 'Lineout',
+            AudioOutput.HDMI_1: 'HDMI 1',
+            AudioOutput.HDMI_2: 'HDMI 2',
+        }[self]
+
+
+class AudioOutputVolume(Immutable):
+    """A remembered playback volume for a single output.
+
+    Each output keeps its own level: the speaker and lineout amps have
+    different gain characteristics, and a TV's own volume control sits
+    downstream of the HDMI sinks.
+    """
+
+    output: AudioOutput
+    volume: float
 
 
 class AudioSequenceSource(StrEnum):
@@ -80,6 +121,28 @@ class AudioToggleMuteStatusAction(AudioAction):
     """Toggle mute status action."""
 
     device: AudioDevice
+
+
+class AudioSelectOutputAction(AudioAction):
+    """Route playback to a specific output."""
+
+    output: AudioOutput
+
+
+class AudioSetLineoutAutoSwitchAction(AudioAction):
+    """Enable or disable switching to the lineout when a jack is inserted."""
+
+    is_enabled: bool
+
+
+class AudioReportLineoutJackAction(AudioAction):
+    """Report the lineout jack insert-detect line (GPIO6) changing state.
+
+    The pin is pulled up and driven to ground by the jack's insert switch, so
+    ``is_inserted`` is the inverse of the raw level.
+    """
+
+    is_inserted: bool
 
 
 class AudioPlayChimeAction(AudioAction):
@@ -205,6 +268,24 @@ class AudioPlaybackDoneEvent(AudioEvent):
     id: str
 
 
+def _restore_output_volumes() -> tuple[AudioOutputVolume, ...]:
+    """Restore the per-output volumes from the persistent store.
+
+    Must be a ``default_factory`` returning a real tuple, not a plain
+    ``default=``: the store deserializes a JSON array to a *list*, and a
+    dataclass rejects a mutable default at class-definition time. As a plain
+    default that fails only once the key has actually been written — so the
+    first boot works and every one after it cannot import this module.
+    """
+    return tuple(
+        read_from_persistent_store(
+            'audio_state:output_volumes',
+            default=(),
+            output_type=tuple[AudioOutputVolume, ...],
+        ),
+    )
+
+
 def _capture_mute_default() -> bool:
     """Return the default capture mute state.
 
@@ -250,6 +331,31 @@ class AudioState(Immutable):
     # satellite). Colours the microphone status icon; not persisted, since it
     # describes a live connection rather than user intent.
     is_remote_capture_active: bool = False
+
+    selected_output: AudioOutput = field(
+        default=read_from_persistent_store(
+            'audio_state:selected_output',
+            default=AudioOutput.UBO_SPEAKERS,
+            mapper=AudioOutput,
+        ),
+    )
+    output_volumes: Sequence[AudioOutputVolume] = field(
+        default_factory=_restore_output_volumes,
+    )
+    is_lineout_auto_switch_enabled: bool = field(
+        default=read_from_persistent_store(
+            'audio_state:is_lineout_auto_switch_enabled',
+            default=True,
+        ),
+    )
+
+    # Live reading of the GPIO6 insert-detect line. Not persisted — it
+    # describes the physical world, not user intent, and is re-read on boot.
+    #
+    # Automatic switching only fires when this *changes*, which is what makes a
+    # manual pick stick: choosing HDMI with headphones plugged in survives until
+    # the jack is next inserted or removed.
+    is_lineout_jack_inserted: bool = False
 
     is_recording: bool = False
     recording: AudioSample | None = None

@@ -1,6 +1,8 @@
 # ruff: noqa: D100, D103
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from constants import AUDIO_MIC_STATE_ICON_ID, AUDIO_MIC_STATE_ICON_PRIORITY
 from redux import (
     CompleteReducerResult,
@@ -17,6 +19,8 @@ from ubo_app.store.services.audio import (
     AudioEvent,
     AudioInstallDriverAction,
     AudioInstallDriverEvent,
+    AudioOutput,
+    AudioOutputVolume,
     AudioPlayAudioSampleAction,
     AudioPlayAudioSampleEvent,
     AudioPlayAudioSequenceAction,
@@ -26,9 +30,12 @@ from ubo_app.store.services.audio import (
     AudioPlayChimeAction,
     AudioPlayChimeEvent,
     AudioPlayRecordingAction,
+    AudioReportLineoutJackAction,
     AudioReportRemoteCaptureAction,
     AudioReportSampleAction,
     AudioReportSampleEvent,
+    AudioSelectOutputAction,
+    AudioSetLineoutAutoSwitchAction,
     AudioSetMuteStatusAction,
     AudioSetVolumeAction,
     AudioStartRecordingAction,
@@ -41,6 +48,9 @@ from ubo_app.store.services.audio import (
 )
 from ubo_app.store.services.notifications import Chime
 from ubo_app.store.status_icons.types import StatusIconsRegisterAction
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 Action = InitAction | AudioAction | StatusIconsRegisterAction
 
@@ -63,6 +73,32 @@ def _microphone_icon(
         color=RUNNING_COLOR if is_remote_capture_active and not is_mute else 'white',
         priority=AUDIO_MIC_STATE_ICON_PRIORITY,
         id=AUDIO_MIC_STATE_ICON_ID,
+    )
+
+
+def _remember_volume(
+    output_volumes: Sequence[AudioOutputVolume],
+    output: AudioOutput,
+    volume: float,
+) -> tuple[AudioOutputVolume, ...]:
+    """Return ``output_volumes`` with ``output``'s entry set to ``volume``."""
+    return (
+        # `==`, not `is`: these come back from the persistent store as
+        # freshly-constructed members, so identity comparison silently fails.
+        *(item for item in output_volumes if item.output != output),
+        AudioOutputVolume(output=output, volume=volume),
+    )
+
+
+def _recall_volume(
+    output_volumes: Sequence[AudioOutputVolume],
+    output: AudioOutput,
+    default: float,
+) -> float:
+    """Return the volume remembered for ``output``, or ``default``."""
+    return next(
+        (item.volume for item in output_volumes if item.output == output),
+        default,
     )
 
 
@@ -92,6 +128,62 @@ def reducer(
 
         case AudioSetVolumeAction(device=AudioDevice.INPUT):
             return state(capture_volume=action.volume)
+
+        case AudioSelectOutputAction():
+            # Bank the level the user set for the output they're leaving, then
+            # restore whatever the incoming one was last used at. The speaker
+            # and lineout amps have different gain, and a TV has its own volume
+            # control downstream, so one shared level is wrong for all three.
+            output_volumes = _remember_volume(
+                state.output_volumes,
+                state.selected_output,
+                state.playback_volume,
+            )
+            return state(
+                selected_output=action.output,
+                output_volumes=output_volumes,
+                playback_volume=_recall_volume(
+                    output_volumes,
+                    action.output,
+                    state.playback_volume,
+                ),
+            )
+
+        case AudioSetLineoutAutoSwitchAction():
+            if not action.is_enabled:
+                return state(is_lineout_auto_switch_enabled=False)
+            # Turning it on applies it right away rather than waiting for the
+            # next plug event, so the toggle has a visible effect.
+            return CompleteReducerResult(
+                state=state(is_lineout_auto_switch_enabled=True),
+                actions=[
+                    AudioSelectOutputAction(
+                        output=AudioOutput.LINEOUT
+                        if state.is_lineout_jack_inserted
+                        else AudioOutput.UBO_SPEAKERS,
+                    ),
+                ],
+            )
+
+        case AudioReportLineoutJackAction():
+            # Only *transitions* drive automatic switching. Re-reporting the
+            # current level (on startup, or a repeated edge) must not undo a
+            # manual selection the user made since the jack last moved.
+            if action.is_inserted == state.is_lineout_jack_inserted:
+                return state
+            new_state = state(is_lineout_jack_inserted=action.is_inserted)
+            if not new_state.is_lineout_auto_switch_enabled:
+                return new_state
+            return CompleteReducerResult(
+                state=new_state,
+                actions=[
+                    AudioSelectOutputAction(
+                        output=AudioOutput.LINEOUT
+                        if action.is_inserted
+                        else AudioOutput.UBO_SPEAKERS,
+                    ),
+                ],
+            )
 
         case AudioChangeVolumeAction(device=AudioDevice.OUTPUT):
             return CompleteReducerResult(
