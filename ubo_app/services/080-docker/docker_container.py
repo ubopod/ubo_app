@@ -419,13 +419,25 @@ def _monitor_events(  # noqa: C901, PLR0912, PLR0915
                             ),
                         )
                 except docker.errors.DockerException:
+                    # A 'pull' event fires per-layer, so ``event['id']`` can
+                    # match ``path`` before the image is actually committed/
+                    # tagged — ``images.get`` 404s (ImageNotFound) on that
+                    # intermediate event. Don't re-raise: that would kill this
+                    # thread for good (nothing restarts it, and
+                    # ``_active_monitors`` is never cleared on this path — see
+                    # Sentry UBO-APP-QC), permanently freezing the image's
+                    # status. A later 'pull' event for the same image retries
+                    # this lookup once it actually resolves.
+                    logger.debug(
+                        'Event monitor: image not found yet after pull event',
+                        extra={'image_id': image_id},
+                    )
                     store.dispatch(
                         DockerImageSetStatusAction(
                             image=image_id,
                             status=DockerItemStatus.NOT_AVAILABLE,
                         ),
                     )
-                    raise
             elif action == 'delete':
                 # For delete events, event.get('id') is often None
                 # Check if we have a docker_id tracked
