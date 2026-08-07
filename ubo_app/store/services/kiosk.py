@@ -100,11 +100,23 @@ def _restore_port_selection(
     key: str,
     default: KioskPortSelection,
 ) -> KioskPortSelection:
-    return read_from_persistent_store(
+    """Restore a port selection, falling back to ``default`` if it isn't one.
+
+    ``output_type`` is a hint, not a guarantee: ``Store.load_object`` returns
+    scalars as-is before it ever consults the requested type, so a value
+    written under an older schema — these keys once held a bare role string —
+    passes straight through and lands in state as a ``str``. Nothing notices
+    until an autorun reads ``.role`` off it, at which point the exception fires
+    on every state change and the kiosk menus silently stop updating.
+    """
+    restored = read_from_persistent_store(
         key,
         output_type=KioskPortSelection,
         default=default,
     )
+    if not isinstance(restored, KioskPortSelection):
+        return default
+    return restored
 
 
 def _restore_port_selections() -> KioskPortSelections:
