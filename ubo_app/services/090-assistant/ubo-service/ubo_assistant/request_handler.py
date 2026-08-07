@@ -143,6 +143,7 @@ _STT_PROVIDER_IDS = {
     'ASSEMBLYAI': 'assemblyai',
     'VENICE': 'venice',
     'MISTRAL': 'mistral',
+    'ELEVENLABS': 'elevenlabs',
 }
 _LLM_PROVIDER_IDS = {
     'OLLAMA': 'ollama',

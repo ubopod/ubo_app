@@ -57,7 +57,9 @@ _SERVICE_ID_BY_TTS_NAME: dict[AssistantTtsName, str] = {
 }
 
 # Per-provider default voice used when the user hasn't picked one. Mirrors
-# ``DEFAULT_VOICES`` on the core side (ElevenLabs falls back to its secret).
+# ``DEFAULT_VOICES`` on the core side. ElevenLabs is absent on purpose: it
+# resolves through its own secret first (see ``_create_elevenlabs_service``)
+# before falling back to ``DEFAULT_ELEVENLABS_TTS_VOICE``.
 _DEFAULT_CLOUD_VOICE: dict[str, str] = {
     'openai': 'alloy',
     'rime': 'antoine',
@@ -67,6 +69,10 @@ _DEFAULT_CLOUD_VOICE: dict[str, str] = {
     # ``DEFAULT_MISTRAL_TTS_VOICE`` fallback.
     'mistral': 'en_paul_neutral',
 }
+
+# Default-library voice ("George") used when the user set an API key but no
+# voice id. Kept in sync with core's ``DEFAULT_ELEVENLABS_TTS_VOICE``.
+DEFAULT_ELEVENLABS_TTS_VOICE = 'JBFqnCBsd6RMkjVDRZzb'
 
 VENICE_BASE_URL = 'https://api.venice.ai/api/v1'
 DEFAULT_VENICE_TTS_MODEL = os.environ.get(
@@ -414,12 +420,20 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             return None
 
     def _create_elevenlabs_service(self) -> ElevenLabsTTSService | None:
-        """Create ElevenLabs TTS service if both api key and voice id are set."""
+        """Create ElevenLabs TTS service if the api key is set.
+
+        The voice id is optional at setup (an API key alone also unlocks
+        ElevenLabs STT), so resolution falls back through picked voice →
+        ``elevenlabs_voice_id`` secret → the default-library voice. Ordering
+        matters: the secret must still win over the default for users who
+        configured a voice before it became optional.
+        """
         voice_id = (
             self._config.selected_voices.get('elevenlabs')
             or self._config.elevenlabs_voice_id
+            or DEFAULT_ELEVENLABS_TTS_VOICE
         )
-        if not (self._config.elevenlabs_api_key and voice_id):
+        if not self._config.elevenlabs_api_key:
             return None
         try:
             return ElevenLabsTTSService(

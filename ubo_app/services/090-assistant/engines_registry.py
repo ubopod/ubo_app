@@ -51,6 +51,11 @@ _DEEPGRAM_ENGINE = DeepgramEngine()
 # setup flow covers all three modalities (same rationale as ``_VENICE_ENGINE``).
 _MISTRAL_ENGINE = MistralEngine()
 
+# Single shared ElevenLabs engine reused across STT + TTS — one
+# ``elevenlabs_api_key`` setup flow covers both modalities (same rationale as
+# ``_VENICE_ENGINE``).
+_ELEVENLABS_ENGINE = ElevenLabsEngine()
+
 STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
     AssistantSTTName.VOSK: VoskEngine(),
     AssistantSTTName.MOONSHINE: MoonshineEngine(),
@@ -61,6 +66,7 @@ STT_ENGINES: dict[AssistantSTTName, AIProviderMixin] = {
     AssistantSTTName.ASSEMBLYAI: AssemblyAIEngine(),
     AssistantSTTName.VENICE: _VENICE_ENGINE,
     AssistantSTTName.MISTRAL: _MISTRAL_ENGINE,
+    AssistantSTTName.ELEVENLABS: _ELEVENLABS_ENGINE,
 }
 
 LLM_ENGINES: dict[AssistantLLMName, AIProviderMixin] = {
@@ -88,7 +94,7 @@ TTS_ENGINES: dict[AssistantTTSName, AIProviderMixin] = {
     AssistantTTSName.KOKORO: KokoroEngine(),
     AssistantTTSName.GOOGLE: GoogleCloudEngine(label='Google'),
     AssistantTTSName.OPENAI: OpenAIEngine(),
-    AssistantTTSName.ELEVENLABS: ElevenLabsEngine(),
+    AssistantTTSName.ELEVENLABS: _ELEVENLABS_ENGINE,
     AssistantTTSName.RIME: RimeEngine(),
     AssistantTTSName.VENICE: _VENICE_ENGINE,
     AssistantTTSName.DEEPGRAM: _DEEPGRAM_ENGINE,

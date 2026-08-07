@@ -154,6 +154,13 @@ ELEVENLABS_API_KEY_SECRET_ID = 'elevenlabs_api_key'  # noqa: S105
 ELEVENLABS_API_KEY_PATTERN = '^(sk_)?[a-zA-Z0-9]{32,}$'
 ELEVENLABS_VOICE_ID = 'elevenlabs_voice_id'
 ELEVENLABS_VOICE_ID_PATTERN = '^[a-zA-Z0-9-_]{20,}$'
+# Last-resort ElevenLabs voice. The voice id is optional at setup (an API key
+# alone is enough — it also unlocks ElevenLabs STT, which needs no voice), so
+# TTS falls back to this when neither a picked voice nor the secret is set.
+# "George" is a default-library voice present on every account; ElevenLabs uses
+# this exact id in the request examples of its own text-to-speech API reference.
+DEFAULT_ELEVENLABS_TTS_VOICE = 'JBFqnCBsd6RMkjVDRZzb'
+DEFAULT_ELEVENLABS_TTS_VOICE_LABEL = 'George (default)'
 
 BRAVE_SEARCH_API_KEY_SECRET_ID = 'brave_search_api_key'  # noqa: S105
 BRAVE_SEARCH_API_KEY_PATTERN = '^BS[a-zA-Z0-9-_]{20,}$'

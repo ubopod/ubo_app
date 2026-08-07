@@ -13,7 +13,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from ubo_app.constants.assistant import ELEVENLABS_VOICE_ID
+from ubo_app.constants.assistant import (
+    ELEVENLABS_API_KEY_SECRET_ID,
+    ELEVENLABS_VOICE_ID,
+)
 from ubo_app.engines import (
     anthropic,
     assemblyai,
@@ -67,8 +70,10 @@ _ENGINES = [
     pytest.param(assemblyai, assemblyai.AssemblyAIEngine, 'a' * 32, {},
                  id='assemblyai'),
     pytest.param(rime, rime.RimeEngine, 'a' * 32, {}, id='rime'),
-    pytest.param(elevenlabs, elevenlabs.ElevenLabsEngine, 'a' * 32,
-                 {ELEVENLABS_VOICE_ID: 'a' * 20}, id='elevenlabs'),
+    # No ``extra``: the API key alone is the whole setup requirement — the voice
+    # id is optional (TTS falls back to the default voice, STT needs no voice).
+    pytest.param(elevenlabs, elevenlabs.ElevenLabsEngine, 'a' * 32, {},
+                 id='elevenlabs'),
     pytest.param(google, google.GoogleEngine, 'AIza' + 'a' * 35, {}, id='google'),
 ]
 
@@ -164,3 +169,40 @@ def test_engine_exposes_stable_identity(
     for value in (engine.name, engine.label, engine.not_setup_message):
         assert isinstance(value, str)
         assert value
+
+
+@pytest.mark.usefixtures('_tmp_secrets')
+def test_elevenlabs_is_setup_without_a_voice_id() -> None:
+    """An API key alone sets ElevenLabs up — the voice id is TTS-only.
+
+    Gating ``is_setup`` on the voice id would hide ElevenLabs from the
+    speech-to-text picker, which never needs a voice.
+    """
+    engine = elevenlabs.ElevenLabsEngine()
+    secrets.write_secret(key=ELEVENLABS_API_KEY_SECRET_ID, value='a' * 32)
+
+    assert secrets.read_secret(ELEVENLABS_VOICE_ID) is None
+    assert engine.is_setup is True
+
+
+@pytest.mark.usefixtures('_tmp_secrets')
+async def test_elevenlabs_setup_without_voice_keeps_the_stored_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Re-running setup and skipping the voice must not wipe an existing one."""
+    secrets.write_secret(key=ELEVENLABS_VOICE_ID, value='b' * 20)
+
+    async def fake_ubo_input(*_args: object, **_kwargs: object) -> object:
+        return '', InputResult(
+            data={'api_key': 'a' * 32, 'voice_id': ''},
+            files={},
+            method=InputMethod.WEB_DASHBOARD,
+        )
+
+    monkeypatch.setattr(elevenlabs, 'ubo_input', fake_ubo_input)
+    monkeypatch.setattr(elevenlabs, 'store', _FakeStore(), raising=False)
+
+    await elevenlabs.ElevenLabsEngine()._setup()  # noqa: SLF001
+
+    assert secrets.read_secret(ELEVENLABS_API_KEY_SECRET_ID) == 'a' * 32
+    assert secrets.read_secret(ELEVENLABS_VOICE_ID) == 'b' * 20

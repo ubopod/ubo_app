@@ -35,6 +35,8 @@ from ubo_app.constants.assistant import (
     CEREBRAS_API_KEY_SECRET_ID,
     DEEPGRAM_API_KEY_SECRET_ID,
     DEEPSEEK_API_KEY_SECRET_ID,
+    DEFAULT_ELEVENLABS_TTS_VOICE,
+    DEFAULT_ELEVENLABS_TTS_VOICE_LABEL,
     DEFAULT_LLM_OLLAMA_MODEL,
     ELEVENLABS_API_KEY_SECRET_ID,
     ELEVENLABS_VOICE_ID,
@@ -2145,7 +2147,13 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         # primary voice from the secret directly (matches how other autoruns
         # treat secrets_monitor.value: a change signal, not a data source).
         secret_voice = secrets.read_secret(ELEVENLABS_VOICE_ID) or ''
-        selected = selected_voices.get(AssistantTTSName.ELEVENLABS) or secret_voice
+        # Mirrors the subprocess's resolution order (picked → secret → default)
+        # so the checkmark lands on the voice that will actually be used.
+        selected = (
+            selected_voices.get(AssistantTTSName.ELEVENLABS)
+            or secret_voice
+            or DEFAULT_ELEVENLABS_TTS_VOICE
+        )
 
         for action_id in _elevenlabs_voice_action_ids:
             unregister_action(action_id)
@@ -2161,6 +2169,12 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             labels.setdefault(secret_voice, secret_voice)
         for entry in available_voices:
             labels.setdefault(entry.id, entry.label or entry.id)
+        # Always offer the default-library voice, so an API-key-only setup has a
+        # named, selectable voice even before the account's voices are fetched.
+        labels.setdefault(
+            DEFAULT_ELEVENLABS_TTS_VOICE,
+            DEFAULT_ELEVENLABS_TTS_VOICE_LABEL,
+        )
 
         items: list[MenuItemData] = []
         for voice_id, label in labels.items():

@@ -50,6 +50,7 @@ class AssistantSTTName(StrEnum):
     ASSEMBLYAI = 'assemblyai'
     VENICE = 'venice'
     MISTRAL = 'mistral'
+    ELEVENLABS = 'elevenlabs'
 
 
 class AssistantLLMName(StrEnum):

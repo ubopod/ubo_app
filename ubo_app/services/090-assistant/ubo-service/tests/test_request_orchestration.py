@@ -26,6 +26,7 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.deepgram.stt import DeepgramSTTService
+from pipecat.services.elevenlabs.stt import ElevenLabsRealtimeSTTService
 from pipecat.services.moonshine.stt import MoonshineSTTService
 from provider_harness import FakeUboRPCClient
 from ubo_bindings.ubo.v1 import (
@@ -158,6 +159,10 @@ def test_realtime_feed_for_cloud_streaming_not_segmented_or_vosk() -> None:
     # stubs, so this pins the actual taxonomy: Deepgram streams, Google-segmented,
     # Vosk and Moonshine buffer.
     assert _stt_needs_realtime_feed(DeepgramSTTService.__new__(DeepgramSTTService))
+    # ElevenLabs realtime is a websocket streamer, not a segmented service.
+    assert _stt_needs_realtime_feed(
+        ElevenLabsRealtimeSTTService.__new__(ElevenLabsRealtimeSTTService),
+    )
     assert not _stt_needs_realtime_feed(
         SegmentedGoogleSTTService.__new__(SegmentedGoogleSTTService),
     )

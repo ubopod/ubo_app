@@ -327,6 +327,12 @@ STT_PROVIDERS: tuple[Provider[AssistantSttName], ...] = (
     ),
     Provider('venice', AssistantSttName.VENICE, secret_ids=('venice_api_key',)),
     Provider('mistral', AssistantSttName.MISTRAL, secret_ids=('mistral_api_key',)),
+    # STT needs only the key — the voice id is a TTS-only concern.
+    Provider(
+        'elevenlabs',
+        AssistantSttName.ELEVENLABS,
+        secret_ids=('elevenlabs_api_key',),
+    ),
 )
 
 # Cheap/fast models per provider (mirroring the app's DEFAULT_MODELS where they

@@ -175,6 +175,7 @@ class Assistant:
                 assemblyai_api_key=assemblyai_api_key,
                 venice_api_key=venice_api_key,
                 mistral_api_key=mistral_api_key,
+                elevenlabs_api_key=elevenlabs_api_key,
             ),
             google_credentials=google_credentials,
             selector='state.assistant.selected_stt',
