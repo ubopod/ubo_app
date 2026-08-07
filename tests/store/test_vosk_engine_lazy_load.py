@@ -24,10 +24,12 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
+import pytest
+
+from ubo_app.utils.async_evicting_queue import AsyncEvictingQueue
+
 if TYPE_CHECKING:
     from types import ModuleType
-
-    import pytest
 
 SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app/services/090-speech-recognition'
 
@@ -156,3 +158,71 @@ async def test_reconcile_retries_switched_model_without_abandoning_it(
     state = await module.VoskEngine._reconcile(engine, state)  # noqa: SLF001
     assert state.recognizer is not previous_recognizer
     assert state.loaded_model_id == 'b'
+
+
+class _FakeRecognizer:
+    """Stands in for ``KaldiRecognizer``: raises like the real C binding does.
+
+    ``vosk_recognizer_accept_waveform`` calls ``len(data)`` internally, so a
+    non-bytes-like chunk raises ``TypeError: object of type 'int' has no
+    len()`` — reproduced here without the real native dependency.
+    """
+
+    def __init__(self) -> None:
+        self.seen: list[bytes] = []
+
+    def AcceptWaveform(self, data: object) -> bool:  # noqa: N802
+        if not isinstance(data, (bytes, bytearray)):
+            msg = f"object of type '{type(data).__name__}' has no len()"
+            raise TypeError(msg)
+        self.seen.append(bytes(data))
+        return False
+
+    def PartialResult(self) -> str:  # noqa: N802
+        return '{}'
+
+
+async def test_run_survives_malformed_chunk(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A non-bytes-like chunk on the input queue must not kill ``_run``.
+
+    Nothing else restarts the loop after it dies (``decide_running_state``
+    only re-fires on a trigger-config change — see
+    ``BackgroundRunningMixin``), so a single malformed chunk would otherwise
+    silently and permanently stop speech recognition. Reproduces the crash
+    from Sentry issue UBO-APP-RF (``TypeError: object of type 'int' has no
+    len()`` from ``AcceptWaveform``).
+    """
+    module = _load_vosk_engine(monkeypatch)
+    _install_fake_vosk(monkeypatch)
+
+    fake_recognizer = _FakeRecognizer()
+    state = module._RecognizerState(  # noqa: SLF001
+        model=SimpleNamespace(kind='model'),
+        recognizer=fake_recognizer,
+        loaded_model_id='m1',
+        phrases=None,
+        retry_at=0.0,
+    )
+
+    async def _reconcile(_state: object) -> object:
+        return state
+
+    input_queue: AsyncEvictingQueue[object] = AsyncEvictingQueue(maxsize=5)
+    await input_queue.put(5)
+    await input_queue.put(b'ab')
+
+    engine = SimpleNamespace(
+        name='vosk',
+        should_be_running=lambda: True,
+        input_queue=input_queue,
+        process_executor=None,
+        ongoing_recognition=None,
+        _reconcile=_reconcile,
+    )
+
+    with pytest.raises(TimeoutError):
+        await asyncio.wait_for(module.VoskEngine._run(engine), timeout=0.05)  # noqa: SLF001
+
+    assert fake_recognizer.seen == [b'ab']
