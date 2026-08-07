@@ -1,13 +1,14 @@
 # Native C web-grpc LVGL client. Included from the top-level CMakeLists when
 # UBO_WITH_CLIENT is ON. Links the libubo_lvgl renderer, libcurl (HTTP/1.1),
-# and the nanopb runtime + committed generated bindings.
+# and the nanopb runtime + generated bindings (gitignored; see proto/regen.sh).
 
 find_package(Threads REQUIRED)
 
 set(NANOPB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/nanopb)
 
-# nanopb runtime (pointer/malloc mode). Generated files are committed; see
-# proto/regen.sh to refresh them when ubo_client.proto changes.
+# nanopb runtime (pointer/malloc mode). Generated files are gitignored; run
+# `uv run poe proto:lvgl:generate` (or proto/regen.sh) to (re)build them when
+# ubo_client.proto changes — a fresh checkout needs this at least once.
 add_library(ubo_nanopb STATIC
     ${NANOPB_DIR}/pb_common.c
     ${NANOPB_DIR}/pb_encode.c
@@ -24,7 +25,8 @@ target_include_directories(ubo_nanopb PUBLIC
 target_compile_definitions(ubo_nanopb PUBLIC PB_ENABLE_MALLOC PB_FIELD_32BIT)
 
 # Manual codegen target (not part of the default build): `cmake --build . --target
-# ubo_client_proto_regen`. Requires uv + python protobuf.
+# ubo_client_proto_regen`. Requires uv + python protobuf. Prefer
+# `uv run poe proto:lvgl:generate`, which also verifies tag sync first.
 add_custom_target(ubo_client_proto_regen
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/proto/regen.sh
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/proto

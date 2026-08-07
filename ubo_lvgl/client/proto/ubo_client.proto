@@ -10,8 +10,15 @@
 // Keeping this curated keeps the nanopb output tiny: the real Action (~253
 // members) and Event (~133 members) oneofs would otherwise bloat the MCU image.
 //
-// Regenerate: see ubo_lvgl/client/proto/README or the CMake `ubo_client_pb`
-// target (runs nanopb_generator.py).
+// The `action`/`event` oneof tag numbers are core-derived and drift whenever
+// ubo-core adds a new action/event anywhere (see ubo_app/rpc/generator/
+// generate_proto.py — tags are assigned by alphabetical position). Never
+// hand-edit them: `uv run poe proto:lvgl:check` verifies they match the
+// current core proto (part of the umbrella `poe proto`, and enforced in CI);
+// `uv run poe proto:lvgl:sync` patches this file when they've drifted.
+//
+// Regenerate ubo_client.pb.{c,h} (gitignored, not committed) with
+// `uv run poe proto:lvgl:generate` or `ubo_lvgl/client/proto/regen.sh`.
 
 syntax = "proto3";
 

@@ -103,6 +103,10 @@ ubo_app/_version.py
 !/ubo_app/rpc/ubo_bindings/client.py
 !/ubo_app/rpc/ubo_bindings/parent_version.py
 
+# nanopb (LVGL client) — generated, see ubo_lvgl/client/proto/regen.sh
+/ubo_lvgl/client/proto/ubo_client.pb.c
+/ubo_lvgl/client/proto/ubo_client.pb.h
+
 /screenshots
 /snapshots
 /recordings

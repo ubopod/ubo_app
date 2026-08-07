@@ -215,7 +215,19 @@ build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install -
 "proto:compile:raw" = "sh -c 'mkdir -p ubo_app/rpc/ubo_bindings && python -m grpc_tools.protoc -I ubo_app/rpc/proto/ --python_betterproto_opt=typing.310 --python_betterproto_out=ubo_app/rpc/ubo_bindings/ ubo_app/rpc/proto/store/v1/store.proto ubo_app/rpc/proto/secrets/v1/secrets.proto'"
 "proto:compile" = ["proto:compile:raw", "lint:fix:rpc"]
 
-"proto" = ["proto:generate", "proto:compile"]
+# LVGL C client's curated proto (ubo_lvgl/client/proto/ubo_client.proto) hard-codes a subset of
+# ubo-core's Action/Event oneof tag numbers, which ubo-core assigns by alphabetical position — so
+# any new action/event upstream silently renumbers them. `:check` diffs the curated tags against
+# the freshly generated core proto (needs proto:generate to have run first) and fails loudly on
+# drift instead of letting a firmware build silently dispatch the wrong action. `:sync` applies the
+# fix for review/commit. `:generate` (check + nanopb regen) is what the umbrella `proto` task runs;
+# its output (ubo_client.pb.{c,h}) is gitignored, never committed.
+"proto:lvgl:check" = "bash ubo_lvgl/client/proto/sync_tags.sh"
+"proto:lvgl:sync" = "bash ubo_lvgl/client/proto/sync_tags.sh . --write"
+"proto:lvgl:regen" = "bash ubo_lvgl/client/proto/regen.sh"
+"proto:lvgl:generate" = ["proto:lvgl:check", "proto:lvgl:regen"]
+
+"proto" = ["proto:generate", "proto:compile", "proto:lvgl:generate"]
 
 # Swift / Kotlin client bindings live in sibling repos (ubo-swift-grpc,
 # ubo-kotlin-grpc) and aren't always checked out — keep them off the
