@@ -167,7 +167,7 @@ def init_service() -> None:
         create_task(check_is_ssh_enabled())
         return True
 
-    register_action('ssh:open_menu', _open_ssh_menu)
+    register_action('ssh:open_menu', _open_ssh_menu, allow_reregister=True)
     store.dispatch(
         RegisterSettingAppAction(
             priority=1,
