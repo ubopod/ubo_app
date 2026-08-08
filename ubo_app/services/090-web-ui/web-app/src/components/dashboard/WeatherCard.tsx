@@ -81,40 +81,50 @@ export function WeatherCard({ localization }: WeatherCardProps) {
 
   return (
     <DashboardCard title="Weather" icon="󰖐">
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-        <WeatherIcon
-          symbolCode={weather.symbolCode}
-          size={72}
-          cloudColor={theme.palette.text.secondary}
-        />
-        <Box sx={{ minWidth: 0 }}>
+      {/* Single-column tile: the icon and temperature share one centred row,
+          with everything else stacked under it, so nothing has to compete for
+          horizontal space at the narrowest breakpoint. */}
+      <Box sx={{ textAlign: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 1,
+          }}
+        >
+          <WeatherIcon
+            symbolCode={weather.symbolCode}
+            size={64}
+            cloudColor={theme.palette.text.secondary}
+          />
           <Typography variant="h4" fontWeight={600} lineHeight={1.1}>
             {Math.round(weather.temperatureCelsius)}°C
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {describe(weather.symbolCode)}
-          </Typography>
-          {place && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{
-                display: "block",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <span style={{ fontFamily: "ArimoNerdFont" }}>󰍎</span> {place}
-            </Typography>
-          )}
-          {weather.windSpeedMps != null && (
-            <Typography variant="caption" color="text.secondary" display="block">
-              <span style={{ fontFamily: "ArimoNerdFont" }}>󰖝</span>{" "}
-              {weather.windSpeedMps.toFixed(1)} m/s
-            </Typography>
-          )}
         </Box>
+        <Typography variant="body2" color="text.secondary">
+          {describe(weather.symbolCode)}
+        </Typography>
+        {place && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              display: "block",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span style={{ fontFamily: "ArimoNerdFont" }}>󰍎</span> {place}
+          </Typography>
+        )}
+        {weather.windSpeedMps != null && (
+          <Typography variant="caption" color="text.secondary" display="block">
+            <span style={{ fontFamily: "ArimoNerdFont" }}>󰖝</span>{" "}
+            {weather.windSpeedMps.toFixed(1)} m/s
+          </Typography>
+        )}
       </Box>
     </DashboardCard>
   );

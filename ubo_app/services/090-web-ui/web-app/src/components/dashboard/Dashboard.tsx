@@ -9,6 +9,7 @@ import {
   StorageCard,
   UptimeCard,
 } from "./SystemCards";
+import { ClockCard, DateCard } from "./TimeCards";
 import { WeatherCard } from "./WeatherCard";
 import type { StoreServiceClient } from "../../bindings/store/v1/StoreServiceClientPb";
 import type { AppState } from "../../store/types";
@@ -32,11 +33,23 @@ interface DashboardTileSpec {
 const TILES: DashboardTileSpec[] = [
   {
     id: "weather",
-    span: 2,
+    span: 1,
     // The card explains "location not detected yet" itself, so it stays
     // visible as soon as the localization slice exists at all.
     isAvailable: (state) => state.localization !== null,
     render: (state) => <WeatherCard localization={state.localization!} />,
+  },
+  {
+    id: "date",
+    span: 1,
+    isAvailable: (state) => Boolean(state.localization?.date),
+    render: (state) => <DateCard localization={state.localization!} />,
+  },
+  {
+    id: "clock",
+    span: 1,
+    isAvailable: (state) => Boolean(state.localization?.clock),
+    render: (state) => <ClockCard localization={state.localization!} />,
   },
   {
     id: "cpu",
