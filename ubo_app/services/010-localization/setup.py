@@ -18,7 +18,11 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from constants import GEO_BACKOFF_SCHEDULE, GEO_DEBOUNCE_SECONDS
+from constants import (
+    GEO_BACKOFF_SCHEDULE,
+    GEO_DEBOUNCE_SECONDS,
+    WEATHER_REFRESH_CHECK_SECONDS,
+)
 from geolocation import fetch_geolocation, should_apply_geolocation
 from location_menu import (
     LOCATION_MENU_ID,
@@ -33,7 +37,7 @@ from voice import (
     format_spoken_weather,
     register_voice_bindable_actions,
 )
-from weather import fetch_weather
+from weather import fetch_weather, is_stale
 
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action
@@ -45,7 +49,9 @@ from ubo_app.store.core.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.localization import (
     LanguageCode,
+    LocalizationLocationChangedEvent,
     LocalizationLocationResetEvent,
+    LocalizationRefreshWeatherAction,
     LocalizationSetLanguageAction,
     LocalizationSetLocationAction,
     LocalizationSpeakDateEvent,
@@ -277,6 +283,41 @@ def _handle_weather_refresh_requested(
     create_task(_refresh_weather(event.location))
 
 
+def _handle_location_changed(event: LocalizationLocationChangedEvent) -> None:
+    """Fetch the forecast for a newly detected location.
+
+    The reducer clears `weather` whenever the location moves, so without this
+    the dashboard would sit empty until the periodic refresher next woke.
+    """
+    create_task(_refresh_weather(event.location))
+
+
+@store.with_state(lambda state: state.localization.weather)
+def _is_weather_stale(weather: WeatherCondition | None) -> bool:
+    return is_stale(weather, now=time.time())
+
+
+async def _monitor_weather(end_event: asyncio.Event) -> None:
+    """Re-fetch the forecast once the cached one expires.
+
+    The wake interval is only a coarse tick; `expires_at` — set from MET
+    Norway's `Expires` header — is what actually decides, because their terms
+    ask clients not to re-request before then.
+
+    It checks *before* sleeping, which is what covers startup: `weather` is
+    deliberately not persisted, so it is always `None` after a restart, while
+    the location usually is persisted and unchanged — meaning no
+    `LocationChangedEvent` fires to prompt a fetch. Sleeping first would leave
+    every client without a forecast for a full interval after every restart.
+    """
+    while not end_event.is_set():
+        # No location yet is not an error: the reducer drops the action, and
+        # `_handle_location_changed` picks it up once detection finishes.
+        if _is_weather_stale():
+            store.dispatch(LocalizationRefreshWeatherAction())
+        await asyncio.sleep(WEATHER_REFRESH_CHECK_SECONDS)
+
+
 # --------------------------------------------------------------------------- #
 # Spoken answers (stage-1 voice shortcuts)
 # --------------------------------------------------------------------------- #
@@ -385,12 +426,17 @@ def init_service() -> Subscriptions:
 
     end_event = asyncio.Event()
     create_task(_monitor_location(end_event))
+    create_task(_monitor_weather(end_event))
 
     logger.info('Localization service initialized')
 
     return [
         end_event.set,
         store.subscribe_event(LocalizationLocationResetEvent, _request_detection),
+        store.subscribe_event(
+            LocalizationLocationChangedEvent,
+            _handle_location_changed,
+        ),
         store.subscribe_event(
             LocalizationWeatherRefreshRequestedEvent,
             _handle_weather_refresh_requested,

@@ -33,8 +33,20 @@ class SensorsReportReadingAction(SensorsAction):
 
 
 class SensorEntityReading(Immutable):
+    """One reading, carrying enough metadata to render itself.
+
+    The descriptive fields are copied from the sensor registry's
+    ``EntityDefinition`` at dispatch time. They are redundant in-process, but
+    the registry never leaves the device, so a remote client that only sees
+    this state slice has no other way to learn a reading's unit or label.
+    """
+
     key: str
     value: float | None = None
+    name: str = ''
+    unit: str | None = None
+    device_class: str | None = None
+    precision: int | None = None
 
 
 class SensorDeviceState(Immutable):

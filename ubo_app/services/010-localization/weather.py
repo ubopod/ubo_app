@@ -84,6 +84,16 @@ def describe_symbol(symbol_code: str) -> str:
     return base.replace('_', ' ').replace('-', ' ') or 'unknown'
 
 
+def is_stale(condition: WeatherCondition | None, *, now: float) -> bool:
+    """Return whether *condition* should be re-fetched.
+
+    MET Norway's terms ask clients to honour the `Expires` header rather than
+    poll on a schedule of their own, so this — not the refresher's wake
+    interval — is what decides whether a request goes out.
+    """
+    return condition is None or condition.expires_at <= now
+
+
 def _expires_at(header: str | None) -> float:
     if header:
         try:

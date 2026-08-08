@@ -252,6 +252,75 @@ def test_read_sensors_feeds_only_builtins_into_the_legacy_slots(
     assert legacy == {Sensor.TEMPERATURE: 21.5, Sensor.LIGHT: 0.0}
 
 
+def test_read_sensors_attaches_registry_metadata_to_each_reading(
+    monkeypatch: pytest.MonkeyPatch,
+    dispatched: list[Any],
+) -> None:
+    """Readings carry their unit and label, so remote clients can render them.
+
+    The registry never leaves the device, so a web or mobile client that only
+    sees `SensorsState` has no other way to learn that `22.4` is degrees.
+    """
+    definition = registry.SensorDefinition(
+        id='bme280',
+        label='BME280',
+        manufacturer='Bosch',
+        addresses=(0x76,),
+        driver=registry.DriverSpec(
+            module='adafruit_bme280.basic',
+            class_name='Adafruit_BME280_I2C',
+        ),
+        entities=(
+            registry.EntityDefinition(
+                key='temperature',
+                attribute='temperature',
+                name='Temperature',
+                device_class='temperature',
+                unit_of_measurement='°C',
+                suggested_display_precision=1,
+            ),
+            # No metadata beyond a name — the reading must still go out.
+            registry.EntityDefinition(
+                key='gas_resistance',
+                attribute='gas',
+                name='Gas resistance',
+            ),
+        ),
+    )
+    sensor = drivers.ActiveSensor(
+        device_id='bme280_0x76',
+        definition=definition,
+        instance=object(),
+    )
+    setup.ACTIVE_SENSORS['bme280_0x76'] = sensor
+    monkeypatch.setattr(
+        setup,
+        'read_entities',
+        lambda _sensor: {'temperature': 22.4, 'gas_resistance': 51000.0},
+    )
+
+    setup.read_sensors()
+
+    action = next(
+        action
+        for action in dispatched
+        if type(action).__name__ == 'SensorsReportDeviceReadingsAction'
+    )
+    entities = {entity.key: entity for entity in action.entities}
+
+    assert entities['temperature'].value == 22.4
+    assert entities['temperature'].name == 'Temperature'
+    assert entities['temperature'].unit == '°C'
+    assert entities['temperature'].device_class == 'temperature'
+    assert entities['temperature'].precision == 1
+
+    assert entities['gas_resistance'].value == 51000.0
+    assert entities['gas_resistance'].name == 'Gas resistance'
+    assert entities['gas_resistance'].unit is None
+    assert entities['gas_resistance'].device_class is None
+    assert entities['gas_resistance'].precision is None
+
+
 def test_read_sensors_reports_zero_for_an_absent_builtin(
     dispatched: list[Any],
 ) -> None:

@@ -35,3 +35,10 @@ GEO_BACKOFF_SCHEDULE = (10, 30, 60, 120, 300)
 # MET Norway asks clients not to re-request before the forecast expires; when
 # the response carries no `Expires` header we fall back to this.
 WEATHER_FALLBACK_TTL_SECONDS = 30 * 60
+
+# How often the background refresher wakes to see whether the cached forecast
+# has expired. It is only the tick — `expires_at` is the actual gate, because
+# MET Norway's terms require honouring their `Expires` header rather than
+# polling on a schedule of our own. Weather does not change fast enough for a
+# finer tick to buy anything.
+WEATHER_REFRESH_CHECK_SECONDS = 10 * 60

@@ -45,6 +45,7 @@ def _monkeypatch_socket(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _monkeypatch_psutil(monkeypatch: pytest.MonkeyPatch) -> None:
+    import os
     import socket
 
     import psutil
@@ -55,6 +56,43 @@ def _monkeypatch_psutil(monkeypatch: pytest.MonkeyPatch) -> None:
         'virtual_memory',
         lambda *_: type('', (object,), {'percent': 50}),
     )
+    # Everything below feeds `SystemState`, which is snapshotted — so each has
+    # to be a fixed value rather than whatever the test machine happens to
+    # report, or the store snapshot would never settle.
+    monkeypatch.setattr(
+        psutil,
+        'disk_usage',
+        lambda *_: type(
+            '',
+            (object,),
+            {'total': 32 * 1024**3, 'used': 8 * 1024**3, 'free': 24 * 1024**3,
+             'percent': 25.0},
+        ),
+    )
+    # Constant counters mean the computed rate is always 0, which is exactly
+    # what a snapshot wants.
+    monkeypatch.setattr(
+        psutil,
+        'net_io_counters',
+        lambda *_, **__: type(
+            '',
+            (object,),
+            {'bytes_sent': 1024, 'bytes_recv': 2048},
+        ),
+    )
+    monkeypatch.setattr(psutil, 'boot_time', lambda: 1700000000.0)
+    # A fixed reading rather than an empty mapping: empty would send the
+    # collector on to `/sys/class/thermal/thermal_zone0/temp`, which exists in
+    # Docker and on the Pi and would report the host's real temperature.
+    monkeypatch.setattr(
+        psutil,
+        'sensors_temperatures',
+        lambda *_, **__: {
+            'cpu_thermal': [type('', (object,), {'current': 42.0})],
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(os, 'getloadavg', lambda: (0.0, 0.0, 0.0))
     monkeypatch.setattr(
         psutil,
         'net_if_addrs',

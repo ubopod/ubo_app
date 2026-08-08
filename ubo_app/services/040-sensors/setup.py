@@ -49,7 +49,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from adafruit_rgb_display.rgb import busio
-    from registry import SensorDefinition
+    from registry import EntityDefinition, SensorDefinition
 
     from ubo_app.store.main import RootState
     from ubo_app.store.services.mqtt import MqttComponent
@@ -312,6 +312,24 @@ def _register_builtins() -> tuple[SensorMatch, ...]:
     return tuple(matches)
 
 
+def _make_reading(
+    key: str,
+    value: float | None,
+    definition: EntityDefinition | None,
+) -> SensorEntityReading:
+    """Pair a raw reading with its registry metadata for remote renderers."""
+    if definition is None:
+        return SensorEntityReading(key=key, value=value)
+    return SensorEntityReading(
+        key=key,
+        value=value,
+        name=definition.name,
+        unit=definition.unit_of_measurement,
+        device_class=definition.device_class,
+        precision=definition.suggested_display_precision,
+    )
+
+
 def read_sensors() -> dict[str, dict[str, float | None]]:
     """Read every active device and report its entities.
 
@@ -331,11 +349,12 @@ def read_sensors() -> dict[str, dict[str, float | None]]:
     for device_id, sensor in list(ACTIVE_SENSORS.items()):
         readings = read_entities(sensor)
         all_readings[device_id] = readings
+        definitions = {entity.key: entity for entity in sensor.definition.entities}
         store.dispatch(
             SensorsReportDeviceReadingsAction(
                 device_id=device_id,
                 entities=tuple(
-                    SensorEntityReading(key=key, value=value)
+                    _make_reading(key, value, definitions.get(key))
                     for key, value in readings.items()
                 ),
                 timestamp=timestamp,

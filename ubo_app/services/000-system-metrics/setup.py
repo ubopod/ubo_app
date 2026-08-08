@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import time
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import psutil
@@ -14,7 +17,10 @@ from ubo_app.store.core.view_registry import (
     register_status_bar_dependency,
 )
 from ubo_app.store.main import store
-from ubo_app.store.services.system import SystemMetricsUpdateAction
+from ubo_app.store.services.system import (
+    SystemMetricsUpdateAction,
+    SystemStorageUpdateAction,
+)
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
@@ -22,10 +28,94 @@ if TYPE_CHECKING:
 
 # Only dispatch CPU/RAM if delta exceeds this threshold (percentage points)
 _METRICS_THRESHOLD = 0.5
+# Same idea for the CPU die temperature, in degrees Celsius.
+_TEMPERATURE_THRESHOLD = 0.5
+# Network counters move constantly, so an unconditioned comparison would defeat
+# the debounce entirely and turn a mostly-idle loop into a guaranteed 1 Hz
+# dispatch. A rate has to clear *both* floors to count as a change.
+_NETWORK_ABSOLUTE_THRESHOLD = 4 * 1024  # bytes/second
+_NETWORK_RELATIVE_THRESHOLD = 0.1  # fraction of the previous rate
+
+# Disk usage moves over minutes, not seconds; polling it at 1 Hz is wasted work.
+_STORAGE_INTERVAL = 30
+
+# Where the Raspberry Pi exposes CPU temperature when psutil finds no sensor.
+_THERMAL_ZONE = Path('/sys/class/thermal/thermal_zone0/temp')
 
 # Cached last-dispatched values to skip redundant dispatches.
 # Container pattern avoids ``global`` statements.
-_last: dict[str, float | str] = {'clock': '', 'cpu': -1.0, 'ram': -1.0}
+_last: dict[str, float | str | None] = {
+    'clock': '',
+    'cpu': -1.0,
+    'ram': -1.0,
+    'temperature': None,
+    'upload': -1.0,
+    'download': -1.0,
+}
+
+# Previous cumulative network counters, for turning them into a rate.
+_network_sample: dict[str, float] = {'time': 0.0, 'sent': 0.0, 'received': 0.0}
+
+
+def read_cpu_temperature() -> float | None:
+    """Return the CPU temperature in Celsius, or ``None`` if unavailable."""
+    # `sensors_temperatures` only exists on Linux, so it is absent from the
+    # stubs when type-checking on macOS — hence the guarded lookup.
+    read = getattr(psutil, 'sensors_temperatures', None)
+    try:
+        sensors = read() if read else {}
+    except OSError:
+        sensors = {}
+
+    for readings in sensors.values():
+        for reading in readings:
+            if reading.current:
+                return float(reading.current)
+
+    try:
+        return int(_THERMAL_ZONE.read_text()) / 1000
+    except (OSError, ValueError):
+        return None
+
+
+def read_network_rates() -> tuple[float, float]:
+    """Return (upload, download) in bytes/second since the previous call."""
+    counters = psutil.net_io_counters()
+    now = time.monotonic()
+    elapsed = now - _network_sample['time']
+
+    previous_sent = _network_sample['sent']
+    previous_received = _network_sample['received']
+    _network_sample.update(
+        time=now,
+        sent=counters.bytes_sent,
+        received=counters.bytes_recv,
+    )
+
+    # First sample has no baseline, and a counter reset (interface reload)
+    # would otherwise show up as an enormous spike.
+    if elapsed <= 0 or previous_sent == 0:
+        return 0.0, 0.0
+
+    upload = max(0.0, counters.bytes_sent - previous_sent) / elapsed
+    download = max(0.0, counters.bytes_recv - previous_received) / elapsed
+    return upload, download
+
+
+def _has_network_change(key: str, rate: float) -> bool:
+    previous = float(_last[key] or 0)
+    delta = abs(rate - previous)
+    return (
+        delta > _NETWORK_ABSOLUTE_THRESHOLD
+        and delta > previous * _NETWORK_RELATIVE_THRESHOLD
+    )
+
+
+def _has_temperature_change(temperature: float | None) -> bool:
+    previous = _last['temperature']
+    if temperature is None or previous is None:
+        return temperature is not previous
+    return abs(temperature - float(previous)) > _TEMPERATURE_THRESHOLD
 
 
 def read_metrics() -> None:
@@ -39,17 +129,30 @@ def read_metrics() -> None:
     # Use local timezone for clock display
     local_tz = datetime.now(tz=UTC).astimezone().tzinfo
     clock = datetime.now(tz=local_tz).strftime('%H:%M')
+    temperature = read_cpu_temperature()
+    upload, download = read_network_rates()
+    load_average_1, load_average_5, load_average_15 = os.getloadavg()
 
     clock_changed = clock != _last['clock']
-    cpu_changed = abs(cpu_percent - float(_last['cpu'])) > _METRICS_THRESHOLD
-    ram_changed = abs(ram_percent - float(_last['ram'])) > _METRICS_THRESHOLD
+    cpu_changed = abs(cpu_percent - float(_last['cpu'] or 0)) > _METRICS_THRESHOLD
+    ram_changed = abs(ram_percent - float(_last['ram'] or 0)) > _METRICS_THRESHOLD
 
-    if not (clock_changed or cpu_changed or ram_changed):
+    if not (
+        clock_changed
+        or cpu_changed
+        or ram_changed
+        or _has_temperature_change(temperature)
+        or _has_network_change('upload', upload)
+        or _has_network_change('download', download)
+    ):
         return
 
     _last['clock'] = clock
     _last['cpu'] = cpu_percent
     _last['ram'] = ram_percent
+    _last['temperature'] = temperature
+    _last['upload'] = upload
+    _last['download'] = download
 
     logger.verbose(
         '[SystemMetrics] Dispatching: cpu=%.1f, ram=%.1f, clock=%s',
@@ -63,6 +166,25 @@ def read_metrics() -> None:
             cpu_percent=cpu_percent,
             ram_percent=ram_percent,
             clock=clock,
+            cpu_temperature_celsius=temperature,
+            load_average_1=load_average_1,
+            load_average_5=load_average_5,
+            load_average_15=load_average_15,
+            boot_time=psutil.boot_time(),
+            network_upload_bps=upload,
+            network_download_bps=download,
+        ),
+    )
+
+
+def read_storage() -> None:
+    """Read disk usage of the root filesystem and dispatch it."""
+    usage = psutil.disk_usage('/')
+    store.dispatch(
+        SystemStorageUpdateAction(
+            disk_total_bytes=usage.total,
+            disk_used_bytes=usage.used,
+            disk_percent=usage.percent,
         ),
     )
 
@@ -72,6 +194,13 @@ async def _monitor_metrics(end_event: asyncio.Event) -> None:
     while not end_event.is_set():
         read_metrics()
         await asyncio.sleep(1)
+
+
+async def _monitor_storage(end_event: asyncio.Event) -> None:
+    """Periodically read disk usage."""
+    while not end_event.is_set():
+        read_storage()
+        await asyncio.sleep(_STORAGE_INTERVAL)
 
 
 def init_service() -> Subscriptions:
@@ -106,6 +235,7 @@ def init_service() -> Subscriptions:
 
     end_event = asyncio.Event()
     create_task(_monitor_metrics(end_event))
+    create_task(_monitor_storage(end_event))
 
     logger.info('[SystemMetrics] Service started')
     return [

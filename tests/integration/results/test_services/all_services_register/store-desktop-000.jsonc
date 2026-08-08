@@ -2045,8 +2045,18 @@
   },
   "system": {
     "_type": "SystemState",
+    "boot_time": 1700000000.0,
     "clock": "00:00",
     "cpu_percent": 50,
+    "cpu_temperature_celsius": 42.0,
+    "disk_percent": 25.0,
+    "disk_total_bytes": 34359738368,
+    "disk_used_bytes": 8589934592,
+    "load_average_1": 0.0,
+    "load_average_15": 0.0,
+    "load_average_5": 0.0,
+    "network_download_bps": 0.0,
+    "network_upload_bps": 0.0,
     "ram_percent": 50
   },
   "update_manager": {

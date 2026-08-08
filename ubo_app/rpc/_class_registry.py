@@ -630,6 +630,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'SystemMetricsUpdateAction': 'ubo_app.store.services.system',
     'SystemPrompt': 'ubo_app.store.services.assistant',
     'SystemState': 'ubo_app.store.services.system',
+    'SystemStorageUpdateAction': 'ubo_app.store.services.system',
     'TailscaleAction': 'ubo_app.store.services.tailscale',
     'TailscaleDoneDownloadingAction': 'ubo_app.store.services.tailscale',
     'TailscaleEvent': 'ubo_app.store.services.tailscale',
