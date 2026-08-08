@@ -192,6 +192,17 @@ interface AppShellProps {
 export function AppShell({ store }: AppShellProps) {
   const stateManager = useMemo(() => new StateManager(store), [store]);
 
+  // A failed `/status` poll swaps this component out for the status message, so
+  // a core restart unmounts us. Without this the manager's streams stay open
+  // and keep reconnecting with no owner, and the remount adds a second set —
+  // enough to exhaust the browser's per-origin connection cap and leave the
+  // page stuck on "Connecting to store..." until a manual refresh.
+  //
+  // Relies on `StrictMode` being off (see `client.tsx`): its double
+  // mount/unmount would dispose the memoised manager without rebuilding it. If
+  // StrictMode is ever enabled, construct the manager inside this effect.
+  useEffect(() => () => stateManager.dispose(), [stateManager]);
+
   // Subscribe to audio events
   useEffect(() => {
     const unsubscribe = subscribeToAudioEvents(store);

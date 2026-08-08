@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 
+import { resilientStream, type ResilientStream } from "./resilient-stream";
 import type { AppState } from "./types";
 import { unpackAny } from "./unpack-any";
 import {
@@ -80,16 +81,26 @@ export class StateManager {
   };
 
   private listeners: Set<StateListener> = new Set();
-  private viewStackStream: ReturnType<
-    StoreServiceClient["subscribeEvent"]
-  > | null = null;
-  private metricsStream: ReturnType<
-    StoreServiceClient["subscribeStore"]
-  > | null = null;
+  private streams: ResilientStream[] = [];
 
   constructor(private store: StoreServiceClient) {
-    this.subscribeToViewAndStackChanges();
-    this.subscribeToSystemMetrics();
+    this.streams = [
+      this.subscribeToViewAndStackChanges(),
+      this.subscribeToSystemMetrics(),
+    ];
+  }
+
+  /**
+   * Cancel every subscription. Call from the owner's unmount cleanup —
+   * otherwise the streams stay open and keep reconnecting forever, and the
+   * browser's 6-connections-per-origin cap is reached after a restart or two
+   * (see the note in `action-dispatcher.ts`).
+   */
+  dispose(): void {
+    for (const stream of this.streams) {
+      stream.dispose();
+    }
+    this.streams = [];
   }
 
   getState(): AppState {
@@ -112,94 +123,87 @@ export class StateManager {
     this.notify();
   }
 
-  private subscribeToViewAndStackChanges(): void {
-    if (this.viewStackStream) {
-      this.viewStackStream.cancel();
-    }
+  private subscribeToViewAndStackChanges(): ResilientStream {
+    const buildRequest = () => {
+      const request = new SubscribeEventRequest();
+      const viewEvent = new Event();
+      viewEvent.setViewChangedEvent(new ViewChangedEvent());
+      request.addEvents(viewEvent);
+      const stackEvent = new Event();
+      stackEvent.setStackChangedEvent(new StackChangedEvent());
+      request.addEvents(stackEvent);
+      const inputEvent = new Event();
+      inputEvent.setWebUiInputEvent(new WebUIInputEvent());
+      request.addEvents(inputEvent);
+      return request;
+    };
 
-    const request = new SubscribeEventRequest();
-    const viewEvent = new Event();
-    viewEvent.setViewChangedEvent(new ViewChangedEvent());
-    request.addEvents(viewEvent);
-    const stackEvent = new Event();
-    stackEvent.setStackChangedEvent(new StackChangedEvent());
-    request.addEvents(stackEvent);
-    const inputEvent = new Event();
-    inputEvent.setWebUiInputEvent(new WebUIInputEvent());
-    request.addEvents(inputEvent);
+    // The server replays the current view and stack to every new subscriber,
+    // so a reconnect restores the UI without anyone touching the device.
+    return resilientStream(
+      () => this.store.subscribeEvent(buildRequest()),
+      (response: SubscribeEventResponse) => {
+        const evt = response.getEvent();
+        if (!evt) return;
 
-    const stream = this.store.subscribeEvent(request);
-    this.viewStackStream = stream;
+        const viewChangedEvent = evt.getViewChangedEvent();
+        if (viewChangedEvent) {
+          const newStatusBar = viewChangedEvent.getStatusBar()?.toObject();
+          this.update({
+            currentView: viewChangedEvent.getView()?.toObject() ?? null,
+            ...(newStatusBar ? { statusBar: newStatusBar } : {}),
+            connected: true,
+          });
+          return;
+        }
 
-    stream.on("error", () => {
-      this.update({ connected: false });
-      setTimeout(() => this.subscribeToViewAndStackChanges(), 1000);
-    });
+        const stackChangedEvent = evt.getStackChangedEvent();
+        if (stackChangedEvent) {
+          this.update({
+            stack: stackChangedEvent.toObject().stackList,
+          });
+          return;
+        }
 
-    stream.on("data", (response: SubscribeEventResponse) => {
-      const evt = response.getEvent();
-      if (!evt) return;
-
-      const viewChangedEvent = evt.getViewChangedEvent();
-      if (viewChangedEvent) {
-        const newStatusBar = viewChangedEvent.getStatusBar()?.toObject();
-        this.update({
-          currentView: viewChangedEvent.getView()?.toObject() ?? null,
-          ...(newStatusBar ? { statusBar: newStatusBar } : {}),
-          connected: true,
-        });
-        return;
-      }
-
-      const stackChangedEvent = evt.getStackChangedEvent();
-      if (stackChangedEvent) {
-        this.update({
-          stack: stackChangedEvent.toObject().stackList,
-        });
-        return;
-      }
-
-      const webUiInputEvent = evt.getWebUiInputEvent();
-      if (webUiInputEvent) {
-        synthesizeNavigationKey(webUiInputEvent.getCommand());
-      }
-    });
+        const webUiInputEvent = evt.getWebUiInputEvent();
+        if (webUiInputEvent) {
+          synthesizeNavigationKey(webUiInputEvent.getCommand());
+        }
+      },
+      () => this.update({ connected: false }),
+    );
   }
 
-  private subscribeToSystemMetrics(): void {
-    if (this.metricsStream) {
-      this.metricsStream.cancel();
-    }
+  private subscribeToSystemMetrics(): ResilientStream {
+    const buildRequest = () => {
+      const request = new SubscribeStoreRequest();
+      request.setSelectorsList([...STORE_SELECTORS]);
+      return request;
+    };
 
-    const request = new SubscribeStoreRequest();
-    request.setSelectorsList([...STORE_SELECTORS]);
+    return resilientStream(
+      () => this.store.subscribeStore(buildRequest()),
+      (response: SubscribeStoreResponse) => {
+        const results = response.getResultsList();
+        if (results.length !== STORE_SELECTORS.length) return;
 
-    const stream = this.store.subscribeStore(request);
-    this.metricsStream = stream;
+        // A selector that raised server-side comes back as Empty → null; keep
+        // the previous value rather than blanking a tile on one bad frame.
+        const decoded = results.map((result) =>
+          unpackAny(result.getTypeUrl(), result.getValue_asU8()),
+        );
+        const [system, localization, sensors, volume] = decoded;
 
-    stream.on("error", () => {
-      setTimeout(() => this.subscribeToSystemMetrics(), 1000);
-    });
-
-    stream.on("data", (response: SubscribeStoreResponse) => {
-      const results = response.getResultsList();
-      if (results.length !== STORE_SELECTORS.length) return;
-
-      // A selector that raised server-side comes back as Empty → null; keep
-      // the previous value rather than blanking a tile on one bad frame.
-      const decoded = results.map((result) =>
-        unpackAny(result.getTypeUrl(), result.getValue_asU8()),
-      );
-      const [system, localization, sensors, volume] = decoded;
-
-      this.update({
-        system: (system as AppState["system"]) ?? this.state.system,
-        localization:
-          (localization as AppState["localization"]) ?? this.state.localization,
-        sensors: (sensors as AppState["sensors"]) ?? this.state.sensors,
-        volume: typeof volume === "number" ? volume : this.state.volume,
-      });
-    });
+        this.update({
+          system: (system as AppState["system"]) ?? this.state.system,
+          localization:
+            (localization as AppState["localization"]) ??
+            this.state.localization,
+          sensors: (sensors as AppState["sensors"]) ?? this.state.sensors,
+          volume: typeof volume === "number" ? volume : this.state.volume,
+        });
+      },
+    );
   }
 }
 
