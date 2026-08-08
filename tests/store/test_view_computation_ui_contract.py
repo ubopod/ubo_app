@@ -253,7 +253,9 @@ def test_compute_status_bar_data_collects_ui_state(
             temperature=SensorState(value=21.5),
             light=SensorState(value=0.7),
         ),
-        system=SimpleNamespace(clock='12:34'),
+        # The clock comes from localization — it is the time at the device's
+        # location, not in the host's timezone.
+        localization=SimpleNamespace(clock='12:34'),
         audio=SimpleNamespace(is_recording=True),
     )
 

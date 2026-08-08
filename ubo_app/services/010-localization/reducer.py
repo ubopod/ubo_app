@@ -22,6 +22,7 @@ from ubo_app.store.services.localization import (
     LocalizationSpeakWeatherAction,
     LocalizationSpeakWeatherEvent,
     LocalizationState,
+    LocalizationUpdateClockAction,
     LocalizationUpdateWeatherAction,
     LocalizationWeatherRefreshRequestedEvent,
     LocationSource,
@@ -104,6 +105,9 @@ def reducer(
 
         case LocalizationUpdateWeatherAction():
             return replace(state, weather=action.weather)
+
+        case LocalizationUpdateClockAction():
+            return replace(state, clock=action.clock, date=action.date)
 
         case LocalizationRefreshWeatherAction():
             if state.location is None:

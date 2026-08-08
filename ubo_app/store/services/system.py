@@ -18,7 +18,6 @@ class SystemMetricsUpdateAction(SystemAction):
 
     cpu_percent: float
     ram_percent: float
-    clock: str  # Format: "HH:MM"
     cpu_temperature_celsius: float | None = None
     load_average_1: float = 0.0
     load_average_5: float = 0.0
@@ -54,7 +53,8 @@ class SystemState(Immutable):
 
     cpu_percent: float = 0.0
     ram_percent: float = 0.0
-    clock: str = ''
+    # The clock lives in `LocalizationState`: it is the time at the device's
+    # *location*, which this service has no way to know.
     # `None` where the platform exposes no CPU thermal sensor (desktop dev).
     cpu_temperature_celsius: float | None = None
     load_average_1: float = 0.0

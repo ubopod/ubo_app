@@ -110,6 +110,17 @@ class LocalizationUpdateWeatherAction(LocalizationAction):
 class LocalizationRefreshWeatherAction(LocalizationAction): ...
 
 
+class LocalizationUpdateClockAction(LocalizationAction):
+    """Publish the wall clock at the device's location.
+
+    Dispatched only when one of the two strings actually changes, so the clock
+    costs the store one update a minute rather than one a tick.
+    """
+
+    clock: str  # Format: "HH:MM"
+    date: str  # Format: "YYYY-MM-DD"
+
+
 class LocalizationSpeakTimeAction(LocalizationAction): ...
 
 
@@ -232,3 +243,9 @@ class LocalizationState(Immutable):
     # Deliberately not persisted: a weather snapshot from the last boot is
     # always stale, and re-fetching costs one request.
     weather: WeatherCondition | None = None
+    # The wall clock *at the device's location*, which is not necessarily the
+    # host's timezone — nothing sets the OS zone from the detected location.
+    # This service owns the location, so it owns the time there too; the status
+    # bar and every client read these rather than computing their own.
+    clock: str = ''
+    date: str = ''

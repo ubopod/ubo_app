@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from constants import (
+    CLOCK_TICK_SECONDS,
     GEO_BACKOFF_SCHEDULE,
     GEO_DEBOUNCE_SECONDS,
     WEATHER_REFRESH_CHECK_SECONDS,
@@ -46,6 +47,7 @@ from ubo_app.store.core.types import (
     SettingsCategory,
     StackPushMenuAction,
 )
+from ubo_app.store.core.view_registry import register_status_bar_dependency
 from ubo_app.store.main import store
 from ubo_app.store.services.localization import (
     LanguageCode,
@@ -57,6 +59,7 @@ from ubo_app.store.services.localization import (
     LocalizationSpeakDateEvent,
     LocalizationSpeakTimeEvent,
     LocalizationSpeakWeatherEvent,
+    LocalizationUpdateClockAction,
     LocalizationUpdateWeatherAction,
     LocalizationWeatherRefreshRequestedEvent,
     LocationSource,
@@ -74,7 +77,11 @@ from ubo_app.utils.persistent_store import register_persistent_store
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from ubo_app.store.services.localization import LocationInfo, WeatherCondition
+    from ubo_app.store.services.localization import (
+        LocalizationState,
+        LocationInfo,
+        WeatherCondition,
+    )
     from ubo_app.utils.types import Subscriptions
 
 
@@ -344,6 +351,32 @@ def _now(timezone: str | None) -> datetime:
     return datetime.now().astimezone()
 
 
+@store.with_state(lambda state: state.localization)
+def _publish_clock(localization: LocalizationState) -> None:
+    """Dispatch the wall clock at the device's location, if it moved.
+
+    Both strings are minute-resolution, so the tick is far finer than the
+    updates: the store only sees one dispatch a minute, and none at all while
+    the values are unchanged.
+    """
+    timezone = localization.location.timezone if localization.location else None
+    now = _now(timezone)
+    clock = now.strftime('%H:%M')
+    date = now.strftime('%Y-%m-%d')
+
+    if clock == localization.clock and date == localization.date:
+        return
+
+    store.dispatch(LocalizationUpdateClockAction(clock=clock, date=date))
+
+
+async def _monitor_clock(end_event: asyncio.Event) -> None:
+    """Keep the published clock within a few seconds of the minute boundary."""
+    while not end_event.is_set():
+        _publish_clock()
+        await asyncio.sleep(CLOCK_TICK_SECONDS)
+
+
 def _handle_speak_time(event: LocalizationSpeakTimeEvent) -> None:
     _speak(format_spoken_time(_now(event.timezone)))
 
@@ -424,14 +457,30 @@ def init_service() -> Subscriptions:
         ),
     )
 
+    # The clock at the device's location — this service owns the location, so
+    # it owns the time there. Registered here rather than in system-metrics,
+    # whose clock used the host timezone and could disagree with the time this
+    # same service speaks aloud.
+    unregister_clock = register_status_bar_dependency(
+        'localization:clock',
+        lambda s: s.localization.clock,
+    )
+
+    # Publish once synchronously, before any task gets to run: the status bar
+    # reads this, and waiting for the first tick would leave every client with
+    # a blank clock for as long as service startup takes.
+    _publish_clock()
+
     end_event = asyncio.Event()
     create_task(_monitor_location(end_event))
     create_task(_monitor_weather(end_event))
+    create_task(_monitor_clock(end_event))
 
     logger.info('Localization service initialized')
 
     return [
         end_event.set,
+        unregister_clock,
         store.subscribe_event(LocalizationLocationResetEvent, _request_detection),
         store.subscribe_event(
             LocalizationLocationChangedEvent,

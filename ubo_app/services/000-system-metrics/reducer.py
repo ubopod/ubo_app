@@ -30,7 +30,6 @@ def reducer(
                 state,
                 cpu_percent=action.cpu_percent,
                 ram_percent=action.ram_percent,
-                clock=action.clock,
                 cpu_temperature_celsius=action.cpu_temperature_celsius,
                 load_average_1=action.load_average_1,
                 load_average_5=action.load_average_5,

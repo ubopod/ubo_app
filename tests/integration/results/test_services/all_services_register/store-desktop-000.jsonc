@@ -995,7 +995,7 @@
     ],
     "status_bar": {
       "_type": "StatusBarData",
-      "clock": "00:00",
+      "clock": "",
       "icons": [
         {
           "_type": "StatusIconData",
@@ -2046,7 +2046,6 @@
   "system": {
     "_type": "SystemState",
     "boot_time": 1700000000.0,
-    "clock": "00:00",
     "cpu_percent": 50,
     "cpu_temperature_celsius": 42.0,
     "disk_percent": 25.0,

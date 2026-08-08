@@ -71,7 +71,6 @@ def test_init_produces_zeroed_metrics() -> None:
 
     assert state.cpu_percent == 0.0
     assert state.ram_percent == 0.0
-    assert state.clock == ''
     assert state.cpu_temperature_celsius is None
     assert state.boot_time == 0.0
     assert state.disk_total_bytes == 0
@@ -85,7 +84,6 @@ def test_metrics_update_populates_every_fast_field() -> None:
         types.SystemMetricsUpdateAction(
             cpu_percent=34.5,
             ram_percent=61.25,
-            clock='14:30',
             cpu_temperature_celsius=52.5,
             load_average_1=0.31,
             load_average_5=0.28,
@@ -98,7 +96,6 @@ def test_metrics_update_populates_every_fast_field() -> None:
 
     assert state.cpu_percent == 34.5
     assert state.ram_percent == 61.25
-    assert state.clock == '14:30'
     assert state.cpu_temperature_celsius == 52.5
     assert state.load_average_1 == 0.31
     assert state.load_average_5 == 0.28
@@ -115,7 +112,6 @@ def test_metrics_update_keeps_a_missing_temperature_none() -> None:
         types.SystemMetricsUpdateAction(
             cpu_percent=1.0,
             ram_percent=2.0,
-            clock='00:00',
         ),
     )
 
@@ -129,7 +125,6 @@ def test_storage_update_leaves_the_fast_fields_alone() -> None:
         types.SystemMetricsUpdateAction(
             cpu_percent=34.5,
             ram_percent=61.25,
-            clock='14:30',
             cpu_temperature_celsius=52.5,
             boot_time=1700000000.0,
         ),
@@ -149,7 +144,6 @@ def test_storage_update_leaves_the_fast_fields_alone() -> None:
     assert state.disk_percent == 25.0
     # Untouched by the storage arm.
     assert state.cpu_percent == 34.5
-    assert state.clock == '14:30'
     assert state.cpu_temperature_celsius == 52.5
     assert state.boot_time == 1700000000.0
 

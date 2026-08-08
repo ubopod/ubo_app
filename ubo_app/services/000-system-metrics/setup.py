@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import os
 import time
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -14,7 +13,6 @@ from ubo_app.logger import logger
 from ubo_app.store.core.view_registry import (
     register_home_view_data_provider,
     register_home_view_dependency,
-    register_status_bar_dependency,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.system import (
@@ -45,7 +43,6 @@ _THERMAL_ZONE = Path('/sys/class/thermal/thermal_zone0/temp')
 # Cached last-dispatched values to skip redundant dispatches.
 # Container pattern avoids ``global`` statements.
 _last: dict[str, float | str | None] = {
-    'clock': '',
     'cpu': -1.0,
     'ram': -1.0,
     'temperature': None,
@@ -126,20 +123,15 @@ def read_metrics() -> None:
     """
     cpu_percent = psutil.cpu_percent(interval=None)
     ram_percent = psutil.virtual_memory().percent
-    # Use local timezone for clock display
-    local_tz = datetime.now(tz=UTC).astimezone().tzinfo
-    clock = datetime.now(tz=local_tz).strftime('%H:%M')
     temperature = read_cpu_temperature()
     upload, download = read_network_rates()
     load_average_1, load_average_5, load_average_15 = os.getloadavg()
 
-    clock_changed = clock != _last['clock']
     cpu_changed = abs(cpu_percent - float(_last['cpu'] or 0)) > _METRICS_THRESHOLD
     ram_changed = abs(ram_percent - float(_last['ram'] or 0)) > _METRICS_THRESHOLD
 
     if not (
-        clock_changed
-        or cpu_changed
+        cpu_changed
         or ram_changed
         or _has_temperature_change(temperature)
         or _has_network_change('upload', upload)
@@ -147,7 +139,6 @@ def read_metrics() -> None:
     ):
         return
 
-    _last['clock'] = clock
     _last['cpu'] = cpu_percent
     _last['ram'] = ram_percent
     _last['temperature'] = temperature
@@ -155,17 +146,15 @@ def read_metrics() -> None:
     _last['download'] = download
 
     logger.verbose(
-        '[SystemMetrics] Dispatching: cpu=%.1f, ram=%.1f, clock=%s',
+        '[SystemMetrics] Dispatching: cpu=%.1f, ram=%.1f',
         cpu_percent,
         ram_percent,
-        clock,
     )
 
     store.dispatch(
         SystemMetricsUpdateAction(
             cpu_percent=cpu_percent,
             ram_percent=ram_percent,
-            clock=clock,
             cpu_temperature_celsius=temperature,
             load_average_1=load_average_1,
             load_average_5=load_average_5,
@@ -216,11 +205,6 @@ def init_service() -> Subscriptions:
         'system:ram',
         lambda s: s.system.ram_percent,
     )
-    unregister_clock = register_status_bar_dependency(
-        'system:clock',
-        lambda s: s.system.clock,
-    )
-
     # Register home view data providers for decoupled view computation
     unregister_cpu_data = register_home_view_data_provider(
         'system:cpu',
@@ -242,7 +226,6 @@ def init_service() -> Subscriptions:
         end_event.set,
         unregister_cpu,
         unregister_ram,
-        unregister_clock,
         unregister_cpu_data,
         unregister_ram_data,
     ]

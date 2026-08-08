@@ -388,6 +388,7 @@ CLASS_REGISTRY: dict[str, str] = {
     'LocalizationSpeakWeatherAction': 'ubo_app.store.services.localization',
     'LocalizationSpeakWeatherEvent': 'ubo_app.store.services.localization',
     'LocalizationState': 'ubo_app.store.services.localization',
+    'LocalizationUpdateClockAction': 'ubo_app.store.services.localization',
     'LocalizationUpdateWeatherAction': 'ubo_app.store.services.localization',
     'LocalizationWeatherRefreshRequestedEvent': 'ubo_app.store.services.localization',
     'LocationInfo': 'ubo_app.store.services.localization',

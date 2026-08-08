@@ -67,7 +67,6 @@ def _populated_sensors() -> SensorsState:
             SystemState(
                 cpu_percent=34.5,
                 ram_percent=61.25,
-                clock='14:30',
                 cpu_temperature_celsius=52.5,
                 boot_time=1700000000.0,
                 disk_total_bytes=32 * 1024**3,
@@ -92,6 +91,8 @@ def _populated_sensors() -> SensorsState:
                     temperature_celsius=21.0,
                     wind_speed_mps=3.0,
                 ),
+                clock='14:30',
+                date='2026-08-08',
             ),
         ),
         ('SensorsState', SensorsState()),
@@ -127,7 +128,6 @@ def test_packed_system_state_round_trips_every_field() -> None:
         SystemState(
             cpu_percent=34.5,
             ram_percent=61.25,
-            clock='14:30',
             cpu_temperature_celsius=52.5,
             load_average_1=0.31,
             load_average_5=0.28,
@@ -143,7 +143,6 @@ def test_packed_system_state_round_trips_every_field() -> None:
     decoded = GRPCSystemState().parse(packed.value)
 
     assert decoded.cpu_percent == pytest.approx(34.5)
-    assert decoded.clock == '14:30'
     assert decoded.cpu_temperature_celsius == pytest.approx(52.5)
     assert decoded.load_average_1 == pytest.approx(0.31)
     assert decoded.load_average_5 == pytest.approx(0.28)
@@ -152,6 +151,29 @@ def test_packed_system_state_round_trips_every_field() -> None:
     assert decoded.disk_total_bytes == 32 * 1024**3
     assert decoded.disk_percent == pytest.approx(25.0)
     assert decoded.network_download_bps == pytest.approx(1234567.0)
+
+
+def test_packed_localization_state_carries_the_clock_at_the_location() -> None:
+    """The clock lives here, not in SystemState — it is the time *there*.
+
+    The host timezone is never set from the detected location, so a clock
+    computed from it can disagree with the time this same service speaks.
+    """
+    from ubo_bindings.ubo.v1 import LocalizationState as GRPCLocalizationState
+
+    packed = _pack_to_any(
+        LocalizationState(
+            location=LocationInfo(latitude=52.52, longitude=13.405, city='Berlin'),
+            clock='14:30',
+            date='2026-08-08',
+        ),
+    )
+    decoded = GRPCLocalizationState().parse(packed.value)
+
+    assert decoded.clock == '14:30'
+    assert decoded.date == '2026-08-08'
+    assert decoded.location is not None
+    assert decoded.location.city == 'Berlin'
 
 
 def test_packed_sensors_state_keeps_device_readings_and_metadata() -> None:

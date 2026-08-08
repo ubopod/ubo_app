@@ -27,6 +27,11 @@ USER_AGENT = _user_agent()
 
 HTTP_TIMEOUT_SECONDS = 10
 
+# The published clock is minute-resolution, so this only decides how soon
+# after the minute rolls over the change is seen — not how often the store is
+# updated, which stays at once a minute.
+CLOCK_TICK_SECONDS = 5
+
 # Connectivity flaps while Wi-Fi associates and captive portals briefly look
 # "connected", so let the link settle before spending a lookup on it.
 GEO_DEBOUNCE_SECONDS = 10
