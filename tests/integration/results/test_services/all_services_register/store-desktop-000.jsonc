@@ -5,10 +5,12 @@
     "active_audio_source": "",
     "active_policy": null,
     "active_source": null,
+    "active_system_prompt": "",
     "elevenlabs_available_voices": [],
     "elevenlabs_voices": [],
     "generic_llm_providers": [],
     "is_active": false,
+    "is_default_system_prompt_enabled": true,
     "is_listening": false,
     "is_microphone_mute": true,
     "kokoro_is_downloaded": false,
@@ -156,17 +158,22 @@
       "venice": "af_heart"
     },
     "selected_vosk_model": "vosk-model-small-en-us-0.15",
+    "system_prompts": [],
     "vosk_downloaded_models": []
   },
   "audio": {
     "_type": "AudioState",
     "capture_volume": 0.5,
     "is_capture_mute": true,
+    "is_lineout_auto_switch_enabled": true,
+    "is_lineout_jack_inserted": false,
     "is_playback_mute": false,
     "is_recording": false,
     "is_remote_capture_active": false,
+    "output_volumes": [],
     "playback_volume": 0.15,
-    "recording": null
+    "recording": null,
+    "selected_output": "ubo_speakers"
   },
   "camera": {
     "_type": "CameraState",
@@ -532,6 +539,17 @@
         "label": "Speech Recognition",
         "priority": 50
       },
+      "assistant:system_prompts": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Assistant",
+        "icon": "󰈙",
+        "key": "assistant:system_prompts",
+        "label": "System Prompt",
+        "priority": 18
+      },
       "assistant:tts": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
@@ -542,6 +560,17 @@
         "key": "assistant:tts",
         "label": "Speech Synthesis",
         "priority": 30
+      },
+      "audio:": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Hardware",
+        "icon": "󰕾",
+        "key": "audio:",
+        "label": "Audio",
+        "priority": 20
       },
       "camera:": {
         "_type": "RegisteredAppEntry",
@@ -934,7 +963,9 @@
       "assistant:llm": 40,
       "assistant:providers": 10,
       "assistant:stt": 50,
+      "assistant:system_prompts": 18,
       "assistant:tts": 30,
+      "audio:": 20,
       "camera:": 1,
       "display:": 10,
       "docker:registries": 2,

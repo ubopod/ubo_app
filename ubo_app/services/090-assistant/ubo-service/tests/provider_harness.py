@@ -37,6 +37,7 @@ from ubo_assistant.kokoro import MODEL_PATH as KOKORO_MODEL_PATH
 from ubo_assistant.kokoro import VOICES_PATH as KOKORO_VOICES_PATH
 from ubo_assistant.piper import DEFAULT_PIPER_VOICE_ID
 from ubo_assistant.request_handler import _run_request
+from ubo_assistant.system_prompt_watcher import SystemPromptWatcher
 from ubo_assistant.vosk import DEFAULT_VOSK_MODEL_ID
 
 if TYPE_CHECKING:
@@ -138,6 +139,14 @@ class FakeUboRPCClient:
         """No-op subscription (the one-shot path doesn't need events)."""
         return lambda: None
 
+    def autorun(self, _selectors: list[str]) -> object:
+        """No-op autorun, so watchers keep their defaults under the harness."""
+
+        def decorator(function: object) -> object:
+            return function
+
+        return decorator
+
 
 @dataclass
 class PipelineResult:
@@ -209,7 +218,9 @@ async def run_pipeline(
         piper_voice_id=piper_voice_id,
         kokoro_voice_id=kokoro_voice_id,
     )
-    await _run_request(client, event)  # type: ignore[arg-type]
+    # Defaults to the built-in prompt only, matching the pre-selection behavior.
+    watcher = SystemPromptWatcher(client)  # type: ignore[arg-type]
+    await _run_request(client, event, watcher)  # type: ignore[arg-type]
     return _drain(client.frames)
 
 

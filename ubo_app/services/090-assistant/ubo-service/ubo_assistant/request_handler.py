@@ -48,7 +48,6 @@ from ubo_bindings.ubo.v1 import (
     Event,
 )
 
-from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE
 from ubo_assistant.error_notification import is_transient_error
 from ubo_assistant.grpc_collector import GRPCTerminalCollector
 from ubo_assistant.pipeline_builder import (
@@ -69,6 +68,8 @@ if TYPE_CHECKING:
     from pipecat.pipeline.task import PipelineTask
     from pipecat.processors.frame_processor import FrameProcessor
     from ubo_bindings.client import UboRPCClient
+
+    from ubo_assistant.system_prompt_watcher import SystemPromptWatcher
 
 _MAX_CONCURRENT_REQUESTS = 3
 _PIPELINE_IDLE_TIMEOUT_SECS = 120.0
@@ -178,7 +179,10 @@ _IDLE_TIMEOUT_FRAMES: dict[str, tuple[type[Frame], ...]] = {
 }
 
 
-def setup_request_handler(client: UboRPCClient) -> None:
+def setup_request_handler(
+    client: UboRPCClient,
+    system_prompt_watcher: SystemPromptWatcher,
+) -> None:
     """Subscribe to ``AssistantRunPipelineEvent`` and handle parametrized requests."""
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT_REQUESTS)
     requests: dict[str, asyncio.Task[None]] = {}
@@ -190,7 +194,7 @@ def setup_request_handler(client: UboRPCClient) -> None:
 
         async def _guarded() -> None:
             async with semaphore:
-                await _run_request(client, run_event)
+                await _run_request(client, run_event, system_prompt_watcher)
 
         request = client.event_loop.create_task(_guarded())
         requests[run_event.session_id] = request
@@ -389,6 +393,7 @@ async def _queue_stt_input_realtime(
 async def _run_request(  # noqa: C901, PLR0912, PLR0915
     client: UboRPCClient,
     event: AssistantRunPipelineEvent,
+    system_prompt_watcher: SystemPromptWatcher,
 ) -> None:
     """Build and run a single parametrized request pipeline."""
     session_id = event.session_id
@@ -449,7 +454,11 @@ async def _run_request(  # noqa: C901, PLR0912, PLR0915
 
     context_aggregator: LLMContextAggregatorPair | None = None
     if LLM in stages:
-        system_prompt = event.system_prompt or DEFAULT_SYSTEM_MESSAGE
+        # One-shot requests get no tools, so the tool instructions are omitted.
+        # A caller-supplied prompt still wins over the user's selection.
+        system_prompt = event.system_prompt or system_prompt_watcher.compose(
+            include_tools=False,
+        )
         messages: list[LLMContextMessage] = [
             {'role': 'system', 'content': system_prompt},
         ]

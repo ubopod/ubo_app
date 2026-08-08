@@ -34,6 +34,8 @@ from ubo_app.store.services.speech_recognition import WakeMode
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ubo_app.store.services.audio import AudioSample
     from ubo_app.store.services.keypad import Key
 
@@ -104,6 +106,71 @@ def _load_selected_models(value: str) -> dict[AssistantLLMName, str]:
             continue
         selected_models[llm_name] = str(model)
     return selected_models
+
+
+# Id of the built-in system prompt. It is not stored in ``system_prompts`` — its
+# text lives in the assistant subprocess (``DEFAULT_SYSTEM_MESSAGE``), which the
+# core can't import — so only its enabled flag is tracked here.
+DEFAULT_SYSTEM_PROMPT_ID = 'default'
+
+
+class SystemPrompt(Immutable):
+    """A user-authored system prompt that can be enabled alongside others."""
+
+    id: str
+    label: str
+    content: str
+    is_enabled: bool = False
+
+
+def compose_active_system_prompt(prompts: Sequence[SystemPrompt]) -> str:
+    """Join the enabled user prompts. Excludes the built-in default."""
+    return '\n\n'.join(
+        prompt.content.strip()
+        for prompt in prompts
+        if prompt.is_enabled and prompt.content.strip()
+    )
+
+
+def _load_system_prompts(value: str) -> tuple[SystemPrompt, ...]:
+    """Load user system prompts from persistent storage."""
+    try:
+        entries = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return ()
+    if not isinstance(entries, list):
+        return ()
+    prompts: list[SystemPrompt] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        id_ = entry.get('id')
+        label = entry.get('label')
+        content = entry.get('content')
+        if (
+            isinstance(id_, str)
+            and id_
+            and isinstance(label, str)
+            and isinstance(content, str)
+        ):
+            prompts.append(
+                SystemPrompt(
+                    id=id_,
+                    label=label,
+                    content=content,
+                    is_enabled=entry.get('is_enabled') is True,
+                ),
+            )
+    return tuple(prompts)
+
+
+def persisted_system_prompts() -> tuple[SystemPrompt, ...]:
+    """Read the stored user system prompts."""
+    return read_from_persistent_store(
+        'assistant:system_prompts',
+        default=(),
+        mapper=_load_system_prompts,
+    )
 
 
 class GenericLLMProvider(Immutable):
@@ -1034,6 +1101,34 @@ class AssistantRemoveGenericLLMProviderAction(AssistantAction):
     provider_id: str
 
 
+class AssistantAddSystemPromptAction(AssistantAction):
+    """Action to add (or upsert by id) a user system prompt.
+
+    Editing reuses this action with the entry's existing ``prompt_id`` so a
+    renamed prompt is updated in place; the reducer preserves ``is_enabled``.
+    """
+
+    prompt_id: str
+    label: str
+    content: str
+
+
+class AssistantRemoveSystemPromptAction(AssistantAction):
+    """Action to remove a user system prompt."""
+
+    prompt_id: str
+
+
+class AssistantToggleSystemPromptAction(AssistantAction):
+    """Action to flip whether a system prompt is injected into the LLM context.
+
+    ``DEFAULT_SYSTEM_PROMPT_ID`` toggles the built-in prompt instead of an
+    entry in ``system_prompts``.
+    """
+
+    prompt_id: str
+
+
 class AssistantSelectGenericLLMProviderAction(AssistantAction):
     """Action to mark a named generic LLM provider as the active one.
 
@@ -1579,4 +1674,28 @@ class AssistantState(Immutable):
     last_stop_reason: AssistantStopReasonUnion | None = None
     policies: tuple[AssistantTriggerPolicyEntry, ...] = field(
         default_factory=_default_policies,
+    )
+    # User-authored system prompts. Several can be enabled at once; the enabled
+    # ones are concatenated into the LLM's system message.
+    system_prompts: tuple[SystemPrompt, ...] = field(
+        default_factory=persisted_system_prompts,
+    )
+    # Whether the subprocess's built-in ``DEFAULT_SYSTEM_MESSAGE`` is part of the
+    # composed prompt. Its text isn't mirrored here — the core can't import the
+    # subprocess package — so only the flag crosses the boundary.
+    is_default_system_prompt_enabled: bool = field(
+        default=read_from_persistent_store(
+            'assistant:is_default_system_prompt_enabled',
+            default=True,
+        ),
+    )
+    # Derived: the enabled entries of ``system_prompts``, joined. A selector
+    # can't return a container over gRPC, so the subprocess subscribes to this
+    # scalar rather than the tuple — the same workaround as
+    # ``moonshine_downloaded_models_wrapper``. Recomputed by the reducer at every
+    # write site.
+    active_system_prompt: str = field(
+        default_factory=lambda: compose_active_system_prompt(
+            persisted_system_prompts(),
+        ),
     )

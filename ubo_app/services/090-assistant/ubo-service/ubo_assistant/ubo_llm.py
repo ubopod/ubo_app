@@ -64,6 +64,8 @@ if TYPE_CHECKING:
     from pipecat.pipeline.service_switcher import ServiceSwitcher
     from ubo_bindings.ubo.v1 import WeatherCondition
 
+    from ubo_assistant.system_prompt_watcher import SystemPromptWatcher
+
 # How long ``get_weather`` waits for a core-side refetch to land in the autorun
 # cache before answering with (and disclaiming) the last known conditions.
 WEATHER_REFRESH_TIMEOUT_SECONDS = 4.0
@@ -283,6 +285,9 @@ class UboLLMService(UboLLMSwitchService):
         client: UboRPCClient,
         config: LLMServiceConfig,
         selector: str,
+        # Quoted: this module has no ``from __future__ import annotations``, so
+        # a bare TYPE_CHECKING-only name would be evaluated at class creation.
+        system_prompt_watcher: 'SystemPromptWatcher | None' = None,
     ) -> None:
         """Initialize LLM service with various services including remote Ollama."""
         self._config = config
@@ -347,6 +352,7 @@ class UboLLMService(UboLLMSwitchService):
             client=client,
             selector=selector,
             settings=make_empty_llm_settings(),
+            system_prompt_watcher=system_prompt_watcher,
         )
 
         # Register built-in functions

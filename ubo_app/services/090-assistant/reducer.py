@@ -16,11 +16,13 @@ from redux.basic_types import InitAction
 from ubo_app.logger import logger
 from ubo_app.store.services.assistant import (
     DEFAULT_MODELS,
+    DEFAULT_SYSTEM_PROMPT_ID,
     DEFAULT_VOICES,
     AssistantAction,
     AssistantAddElevenLabsVoiceAction,
     AssistantAddGenericLLMProviderAction,
     AssistantAddMoonshineDownloadedModelAction,
+    AssistantAddSystemPromptAction,
     AssistantCancelRequestAction,
     AssistantCancelRequestEvent,
     AssistantCompleteAction,
@@ -55,6 +57,7 @@ from ubo_app.store.services.assistant import (
     AssistantPipelineStage,
     AssistantRemoveGenericLLMProviderAction,
     AssistantRemoveMoonshineDownloadedModelAction,
+    AssistantRemoveSystemPromptAction,
     AssistantReportAction,
     AssistantRequestMicStreamEvent,
     AssistantRunPipelineAction,
@@ -89,6 +92,7 @@ from ubo_app.store.services.assistant import (
     AssistantSTTName,
     AssistantSynthesizeAction,
     AssistantToggleListeningAction,
+    AssistantToggleSystemPromptAction,
     AssistantTranscribeAction,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
@@ -97,9 +101,11 @@ from ubo_app.store.services.assistant import (
     GenericLLMProvider,
     MoonshineDownloadedModels,
     StopTalkingPhraseStopReason,
+    SystemPrompt,
     UserStopReason,
     WakePhraseMatcher,
     WakePhraseTriggerSource,
+    compose_active_system_prompt,
     resolve_policy,
 )
 from ubo_app.store.services.audio import (
@@ -540,6 +546,70 @@ def reducer(
             return replace(
                 state,
                 provider_setup_status=provider_setup_status,
+            )
+
+        case AssistantAddSystemPromptAction():
+            # Upsert by id so the edit flow (which reuses the entry's existing
+            # id even when the label changes) updates in place. The enabled
+            # flag is carried over so editing never silently deactivates a
+            # prompt that was in use.
+            previous = next(
+                (
+                    prompt
+                    for prompt in state.system_prompts
+                    if prompt.id == action.prompt_id
+                ),
+                None,
+            )
+            system_prompts = (
+                *(
+                    prompt
+                    for prompt in state.system_prompts
+                    if prompt.id != action.prompt_id
+                ),
+                SystemPrompt(
+                    id=action.prompt_id,
+                    label=action.label,
+                    content=action.content,
+                    is_enabled=previous.is_enabled if previous else True,
+                ),
+            )
+            return replace(
+                state,
+                system_prompts=system_prompts,
+                active_system_prompt=compose_active_system_prompt(system_prompts),
+            )
+
+        case AssistantRemoveSystemPromptAction():
+            system_prompts = tuple(
+                prompt
+                for prompt in state.system_prompts
+                if prompt.id != action.prompt_id
+            )
+            return replace(
+                state,
+                system_prompts=system_prompts,
+                active_system_prompt=compose_active_system_prompt(system_prompts),
+            )
+
+        case AssistantToggleSystemPromptAction():
+            if action.prompt_id == DEFAULT_SYSTEM_PROMPT_ID:
+                return replace(
+                    state,
+                    is_default_system_prompt_enabled=(
+                        not state.is_default_system_prompt_enabled
+                    ),
+                )
+            system_prompts = tuple(
+                replace(prompt, is_enabled=not prompt.is_enabled)
+                if prompt.id == action.prompt_id
+                else prompt
+                for prompt in state.system_prompts
+            )
+            return replace(
+                state,
+                system_prompts=system_prompts,
+                active_system_prompt=compose_active_system_prompt(system_prompts),
             )
 
         case AssistantAddGenericLLMProviderAction():

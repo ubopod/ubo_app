@@ -242,3 +242,14 @@ ASSEMBLYAI_API_KEY_PATTERN = '^[a-f0-9]{32}$'
 
 RIME_API_KEY_SECRET_ID = 'rime_api_key'  # noqa: S105
 RIME_API_KEY_PATTERN = '^[a-zA-Z0-9-_]{32,}$'
+
+# Shown as helper text under the multiline prompt box in the Web UI form, so it
+# has to read as a few plain sentences rather than a bulleted guide.
+SYSTEM_PROMPT_GUIDANCE = (
+    'Write it as instructions to the assistant: state the persona, tone and any '
+    'rules it must follow. Keep it short — replies are spoken aloud, so ask for '
+    'brevity unless you want long answers. Prefer concrete rules ("answer in at '
+    'most two sentences") over vague adjectives ("be helpful"), and say what to '
+    'do rather than only what to avoid. Every enabled prompt is sent together, '
+    'so leave out anything another one already covers.'
+)

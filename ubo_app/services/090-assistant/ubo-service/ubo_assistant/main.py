@@ -29,7 +29,6 @@ from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from ubo_bindings.client import UboRPCClient
 
 from ubo_assistant.barge_in import BargeInOnListenSignal
-from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
 from ubo_assistant.end_of_turn import EndOfTurnPhraseDetector
 from ubo_assistant.error_notification import attach_error_notifier
 from ubo_assistant.image_frame import ImageGenFrame
@@ -42,6 +41,7 @@ from ubo_assistant.silence_user_turn_stop import (
 )
 from ubo_assistant.stop_listening_on_bot_speech import StopListeningOnBotSpeech
 from ubo_assistant.stop_talking import StopTalkingOnSignal
+from ubo_assistant.system_prompt_watcher import SystemPromptWatcher
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
 from ubo_assistant.ubo_llm import LLMServiceConfig, UboLLMService
@@ -182,6 +182,7 @@ class Assistant:
         )
 
         policy_watcher = PolicyWatcher(self.client)
+        system_prompt_watcher = SystemPromptWatcher(self.client)
         silence_user_turn_stop_strategy = UboPolicyAwareUserTurnStopStrategy(
             client=self.client,
             policy_watcher=policy_watcher,
@@ -213,11 +214,12 @@ class Assistant:
                 generic_llm_model=generic_llm_model,
             ),
             selector='state.assistant.selected_llm',
+            system_prompt_watcher=system_prompt_watcher,
         )
 
         messages: list[LLMContextMessage] = [{
             'role': 'system',
-            'content': DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE,
+            'content': system_prompt_watcher.compose(include_tools=True),
         }]
 
         tools = ToolsSchema(standard_tools=[])
@@ -287,7 +289,7 @@ class Assistant:
 
         # Handle decoupled programmatic STT/LLM/TTS pipeline requests, isolated
         # from the live conversation pipeline below.
-        setup_request_handler(self.client)
+        setup_request_handler(self.client, system_prompt_watcher)
 
         async def is_image_gen_frame(frame: Frame) -> bool:
             return isinstance(frame, ImageGenFrame)

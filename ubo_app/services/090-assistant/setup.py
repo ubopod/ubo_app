@@ -26,6 +26,15 @@ from engines_registry import (
     is_engine_configured,
 )
 from session_recorder import setup_session_recorder
+from system_prompt_menu import (
+    DETAIL_MENU_KEY_PREFIX as SYSTEM_PROMPT_DETAIL_MENU_KEY_PREFIX,
+)
+from system_prompt_menu import (
+    MENU_ID as SYSTEM_PROMPT_MENU_ID,
+)
+from system_prompt_menu import (
+    setup_system_prompt_menu,
+)
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
 from ubo_app.constants import SECRETS_PATH
@@ -421,6 +430,26 @@ def _register_persistent_stores() -> None:
     register_persistent_store(
         'assistant:selected_generic_llm_provider',
         lambda state: state.assistant.selected_generic_llm_provider,
+    )
+    # ``active_system_prompt`` is derived from these two and is deliberately not
+    # persisted — the reducer recomputes it from the restored values on boot.
+    register_persistent_store(
+        'assistant:system_prompts',
+        lambda state: json.dumps(
+            [
+                {
+                    'id': prompt.id,
+                    'label': prompt.label,
+                    'content': prompt.content,
+                    'is_enabled': prompt.is_enabled,
+                }
+                for prompt in state.assistant.system_prompts
+            ],
+        ),
+    )
+    register_persistent_store(
+        'assistant:is_default_system_prompt_enabled',
+        lambda state: state.assistant.is_default_system_prompt_enabled,
     )
     register_persistent_store(
         'assistant:ollama_thinking_enabled',
@@ -3223,6 +3252,7 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
         'assistant:llm': 'assistant:llm',
         'assistant:tts': 'assistant:tts',
         'assistant:image_generator': 'assistant:image_generator',
+        SYSTEM_PROMPT_MENU_ID: SYSTEM_PROMPT_MENU_ID,
     }
 
     def _match_catalog_tail(tail: str) -> str | None:  # noqa: C901, PLR0912
@@ -3271,6 +3301,9 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
             return 'assistant:tts:elevenlabs:voices'
         if tail == 'mistral:voices':
             return 'assistant:tts:mistral:voices'
+        if tail.startswith(SYSTEM_PROMPT_DETAIL_MENU_KEY_PREFIX):
+            prompt_id = tail[len(SYSTEM_PROMPT_DETAIL_MENU_KEY_PREFIX) :]
+            return f'{SYSTEM_PROMPT_MENU_ID}:{prompt_id}'
         return None
 
     def _assistant_path_matcher(path: tuple[str, ...]) -> str | None:
@@ -3372,7 +3405,7 @@ def _register_bindable_actions() -> None:
     )
 
 
-async def init_service() -> None:
+async def init_service() -> None:  # noqa: PLR0915
     """Initialize the assistant service."""
     _register_persistent_stores()
     _register_bindable_actions()
@@ -3513,6 +3546,15 @@ async def init_service() -> None:
         'assistant:provider_status',
         lambda s: tuple(s.assistant.provider_setup_status.items()),
     )
+    # Covers the list menu and every per-prompt detail page — both are rebuilt
+    # from these two slices.
+    register_menu_content_dependency(
+        SYSTEM_PROMPT_MENU_ID,
+        lambda s: (
+            s.assistant.system_prompts,
+            s.assistant.is_default_system_prompt_enabled,
+        ),
+    )
 
     (
         _secrets_monitor,
@@ -3585,6 +3627,14 @@ async def init_service() -> None:
             label='Image Generator',
             icon='󰹉',
         ),
+        # Between Image Generator (20) and the MCP service's Tools entry (15).
+        RegisterSettingAppAction(
+            category=SettingsCategory.ASSISTANT,
+            priority=18,
+            key='system_prompts',
+            label='System Prompt',
+            icon='󰈙',
+        ),
     )
 
     # Register path matchers for assistant sub-pages
@@ -3592,6 +3642,9 @@ async def init_service() -> None:
 
     store.subscribe_event(AssistantRunPipelineEvent, _remember_playback_choice)
     setup_session_recorder()
+    # The autorun it registers persists via the store's listener set (keep_ref),
+    # the same way ``_watch_ollama_container_status``'s does.
+    setup_system_prompt_menu()
 
 
     store.subscribe_event(AssistantHandleReportEvent, _communicate)

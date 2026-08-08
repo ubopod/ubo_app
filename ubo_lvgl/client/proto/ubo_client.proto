@@ -174,13 +174,13 @@ message AudioReportSampleAction {
 
 message Action {
   oneof action {
-    AssistantStartListeningAction assistant_start_listening_action = 44;
-    AssistantStopListeningAction assistant_stop_listening_action = 45;
-    AudioReportSampleAction audio_report_sample_action = 61;
-    AudioSetVolumeAction audio_set_volume_action = 65;
-    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 69;
-    KeypadKeyPressAction keypad_key_press_action = 157;
-    KeypadKeyReleaseAction keypad_key_release_action = 158;
+    AssistantStartListeningAction assistant_start_listening_action = 46;
+    AssistantStopListeningAction assistant_stop_listening_action = 47;
+    AudioReportSampleAction audio_report_sample_action = 64;
+    AudioSetVolumeAction audio_set_volume_action = 68;
+    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 72;
+    KeypadKeyPressAction keypad_key_press_action = 160;
+    KeypadKeyReleaseAction keypad_key_release_action = 161;
   }
 }
 
