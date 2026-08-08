@@ -1,12 +1,18 @@
 import type {
   ApplicationViewData,
   HomeViewData,
+  LocalizationState,
   MenuItemData,
   MenuViewData,
   NotificationViewData,
+  SensorDeviceState,
+  SensorEntityReading,
+  SensorsState,
   StackItemType,
   StatusBarData,
+  SystemState,
   ViewData,
+  WeatherCondition,
 } from "../bindings/ubo/v1/ubo_pb";
 
 export interface AppState {
@@ -14,18 +20,27 @@ export interface AppState {
   statusBar: StatusBarData.AsObject | null;
   stack: StackItemType.AsObject[];
   connected: boolean;
-  cpuPercent: number;
-  ramPercent: number;
+  // Whole state slices, streamed by `SubscribeStore`. `null` until the first
+  // frame for that selector arrives.
+  system: SystemState.AsObject | null;
+  localization: LocalizationState.AsObject | null;
+  sensors: SensorsState.AsObject | null;
   volume: number;
 }
 
 export type {
   ApplicationViewData,
   HomeViewData,
+  LocalizationState,
   MenuItemData,
   MenuViewData,
   NotificationViewData,
+  SensorDeviceState,
+  SensorEntityReading,
+  SensorsState,
   StackItemType,
   StatusBarData,
+  SystemState,
   ViewData,
+  WeatherCondition,
 };

@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 
 import type { AppState } from "./types";
+import { unpackAny } from "./unpack-any";
 import {
   SubscribeEventRequest,
   SubscribeEventResponse,
@@ -51,15 +52,18 @@ function synthesizeNavigationKey(command: WebUIInputCommand): void {
   }
 }
 
-function decodeDoubleValue(bytes: Uint8Array): number {
-  // DoubleValue protobuf: field 1 (tag 0x09 = field 1, wire type 1 = 64-bit)
-  // followed by 8 bytes of IEEE 754 double
-  if (bytes.length >= 9 && bytes[0] === 0x09) {
-    const view = new DataView(bytes.buffer, bytes.byteOffset + 1, 8);
-    return view.getFloat64(0, true); // little-endian
-  }
-  return 0;
-}
+// Selectors for the one and only `SubscribeStore` stream, in wire order —
+// `SubscribeStoreResponse.results` is positional, so this array *is* the
+// contract. Whole slices rather than individual scalars: one selector can
+// carry a whole dashboard's worth of fields, and the browser's six-connection
+// HTTP/1.1 limit (see the note in `action-dispatcher.ts`) leaves no room for a
+// second stream.
+const STORE_SELECTORS = [
+  "state.system",
+  "state.localization",
+  "state.sensors",
+  "state.audio.playback_volume",
+] as const;
 
 export type StateListener = (state: AppState) => void;
 
@@ -69,8 +73,9 @@ export class StateManager {
     statusBar: null,
     stack: [],
     connected: false,
-    cpuPercent: 0,
-    ramPercent: 0,
+    system: null,
+    localization: null,
+    sensors: null,
     volume: 0,
   };
 
@@ -167,11 +172,7 @@ export class StateManager {
     }
 
     const request = new SubscribeStoreRequest();
-    request.setSelectorsList([
-      "state.system.cpu_percent",
-      "state.system.ram_percent",
-      "state.audio.playback_volume",
-    ]);
+    request.setSelectorsList([...STORE_SELECTORS]);
 
     const stream = this.store.subscribeStore(request);
     this.metricsStream = stream;
@@ -182,29 +183,22 @@ export class StateManager {
 
     stream.on("data", (response: SubscribeStoreResponse) => {
       const results = response.getResultsList();
-      if (results.length < 3) return;
+      if (results.length !== STORE_SELECTORS.length) return;
 
-      const cpuAny = results[0];
-      const ramAny = results[1];
-      const volumeAny = results[2];
+      // A selector that raised server-side comes back as Empty → null; keep
+      // the previous value rather than blanking a tile on one bad frame.
+      const decoded = results.map((result) =>
+        unpackAny(result.getTypeUrl(), result.getValue_asU8()),
+      );
+      const [system, localization, sensors, volume] = decoded;
 
-      let cpuPercent = this.state.cpuPercent;
-      let ramPercent = this.state.ramPercent;
-      let volume = this.state.volume;
-
-      if (cpuAny.getTypeUrl().includes("DoubleValue")) {
-        cpuPercent = decodeDoubleValue(cpuAny.getValue_asU8());
-      }
-
-      if (ramAny.getTypeUrl().includes("DoubleValue")) {
-        ramPercent = decodeDoubleValue(ramAny.getValue_asU8());
-      }
-
-      if (volumeAny.getTypeUrl().includes("DoubleValue")) {
-        volume = decodeDoubleValue(volumeAny.getValue_asU8());
-      }
-
-      this.update({ cpuPercent, ramPercent, volume });
+      this.update({
+        system: (system as AppState["system"]) ?? this.state.system,
+        localization:
+          (localization as AppState["localization"]) ?? this.state.localization,
+        sensors: (sensors as AppState["sensors"]) ?? this.state.sensors,
+        volume: typeof volume === "number" ? volume : this.state.volume,
+      });
     });
   }
 }
