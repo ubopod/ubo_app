@@ -44,6 +44,13 @@ export function Gauge({
             strokeWidth={STROKE_WIDTH}
             strokeLinecap="round"
           />
+          {/* The fill deliberately animates nothing. `stroke-dasharray` is
+              geometry, so a CSS transition on it is not composited: every
+              frame re-runs style and re-rasterises the arc. Measured on the
+              dashboard — which carries a dozen or more of these once the
+              sensor cards are in — a 0.4s ease here cost ~37 style
+              recalculations a second against 2 without, and on the device's
+              own browser that was most of a core. */}
           <path
             d={ARC_PATH}
             fill="none"
@@ -51,8 +58,11 @@ export function Gauge({
             strokeWidth={STROKE_WIDTH}
             strokeLinecap="round"
             pathLength={100}
-            strokeDasharray={`${filled * 100} 100`}
-            style={{ transition: "stroke-dasharray 0.4s ease, stroke 0.4s ease" }}
+            // Quantised to a tenth of a percent: the readings behind these
+            // gauges jitter continuously, and without this the attribute — and
+            // so the paint — changes on every tick for a difference no one can
+            // see. A tenth of a percent is a quarter of a degree of arc.
+            strokeDasharray={`${(filled * 100).toFixed(1)} 100`}
           />
         </svg>
         <Box
