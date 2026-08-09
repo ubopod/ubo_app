@@ -37,7 +37,6 @@ from system_prompt_menu import (
 )
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
-from ubo_app.constants import SECRETS_PATH
 from ubo_app.constants.assistant import (
     ANTHROPIC_API_KEY_SECRET_ID,
     ASSEMBLYAI_API_KEY_SECRET_ID,
@@ -275,7 +274,7 @@ def _get_not_setup_item_parameters(*, is_offline: bool | None = None) -> ItemPar
 
 def secrets_modification_time() -> float:
     """Return the modification time of the secrets file."""
-    return SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
+    return secrets.modification_time()
 
 
 def _total_ram_bytes() -> int:

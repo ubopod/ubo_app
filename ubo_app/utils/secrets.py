@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 import os
+import time
 
 import dotenv
 
@@ -22,6 +24,28 @@ SECRETS_PATH.chmod(0o600)
 # been configured), so silence that specific logger to avoid spamming the
 # console.
 logging.getLogger('dotenv.main').setLevel(logging.ERROR)
+
+
+@functools.lru_cache(maxsize=1)
+def _modification_time_at(_second: int) -> float:
+    """Stat the secrets file at most once per distinct ``_second``."""
+    return SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
+
+
+def modification_time() -> float:
+    """Return the modification time of the secrets file.
+
+    Callers use this as an autorun *selector* — "re-run when the secrets file
+    changes" — which means it is evaluated on every store dispatch, once per
+    autorun that depends on it. Statting the file there made the file system,
+    rather than the store, the cost of dispatching an action.
+
+    One-second buckets keep the semantics (a secret edited outside the app is
+    still noticed, and the value only *changes* when the file does, so nothing
+    downstream re-fires spuriously) while collapsing the syscalls to at most
+    one a second across every caller.
+    """
+    return _modification_time_at(int(time.monotonic()))
 
 
 def write_secret(*, key: str, value: str) -> None:

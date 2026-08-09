@@ -10,7 +10,6 @@ from docker_container import check_container
 from redux import AutorunOptions
 
 from ubo_app.colors import DANGER_COLOR
-from ubo_app.constants import SECRETS_PATH
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -38,17 +37,13 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
+from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ubo_app.store.services.ip import IpNetworkInterface
-
-
-def _secrets_modification_time() -> float:
-    """Return the modification time of the secrets file."""
-    return SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
 
 
 def get_docker_image_menu_id(image_id: str) -> str:
@@ -436,7 +431,7 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
             getattr(state.docker, image_id, None),
             state.ip.interfaces if hasattr(state, 'ip') else None,
             state.docker.service.expose_to_lan.get(image_id, False),
-            _secrets_modification_time() if has_secrets else None,
+            secrets.modification_time() if has_secrets else None,
         ),
         options=AutorunOptions(default_value=None, memoization=not has_secrets),
     )
