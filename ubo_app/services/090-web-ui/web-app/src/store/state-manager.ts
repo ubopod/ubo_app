@@ -66,6 +66,44 @@ const STORE_SELECTORS = [
   "state.audio.playback_volume",
 ] as const;
 
+/**
+ * Structural equality for the plain values `unpackAny` produces.
+ *
+ * `deserializeBinary(...).toObject()` builds a fresh object every message, so
+ * every slice arrives with a new identity even when nothing about it changed —
+ * and one `SubscribeStore` message carries *all* the selectors, so a CPU
+ * reading ticking over would hand the clock, date and weather tiles new props
+ * too. Reusing the previous reference when the value is unchanged is what makes
+ * `React.memo` on the tiles mean anything.
+ */
+function isEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== typeof b || a === null || b === null) return false;
+  if (typeof a !== "object") return false;
+
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+      return false;
+    }
+    return a.every((item, index) => isEqual(item, b[index]));
+  }
+
+  const aRecord = a as Record<string, unknown>;
+  const bRecord = b as Record<string, unknown>;
+  const aKeys = Object.keys(aRecord);
+  if (aKeys.length !== Object.keys(bRecord).length) return false;
+  return aKeys.every(
+    (key) =>
+      Object.prototype.hasOwnProperty.call(bRecord, key) &&
+      isEqual(aRecord[key], bRecord[key]),
+  );
+}
+
+/** The freshly decoded value, or `previous` when the two are equivalent. */
+function keepIdentity<T>(previous: T, next: T): T {
+  return isEqual(previous, next) ? previous : next;
+}
+
 export type StateListener = (state: AppState) => void;
 
 export class StateManager {
@@ -119,6 +157,14 @@ export class StateManager {
   }
 
   private update(partial: Partial<AppState>): void {
+    // A `SubscribeStore` message carries every selector, so most arrivals
+    // change only one of them — and some change none at all. Re-rendering on
+    // those costs a full pass over the dashboard for no visible difference.
+    const changed = (Object.keys(partial) as (keyof AppState)[]).some(
+      (key) => partial[key] !== this.state[key],
+    );
+    if (!changed) return;
+
     this.state = { ...this.state, ...partial };
     this.notify();
   }
@@ -195,11 +241,19 @@ export class StateManager {
         const [system, localization, sensors, volume] = decoded;
 
         this.update({
-          system: (system as AppState["system"]) ?? this.state.system,
-          localization:
-            (localization as AppState["localization"]) ??
+          system: keepIdentity(
+            this.state.system,
+            (system as AppState["system"]) ?? this.state.system,
+          ),
+          localization: keepIdentity(
             this.state.localization,
-          sensors: (sensors as AppState["sensors"]) ?? this.state.sensors,
+            (localization as AppState["localization"]) ??
+              this.state.localization,
+          ),
+          sensors: keepIdentity(
+            this.state.sensors,
+            (sensors as AppState["sensors"]) ?? this.state.sensors,
+          ),
           volume: typeof volume === "number" ? volume : this.state.volume,
         });
       },

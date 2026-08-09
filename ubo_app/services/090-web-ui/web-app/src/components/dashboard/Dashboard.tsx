@@ -1,5 +1,5 @@
 import { Box, Typography } from "@mui/material";
-import type { ReactNode } from "react";
+import { memo, useMemo, type ReactNode } from "react";
 
 import { sensorCards } from "./SensorCards";
 import {
@@ -15,6 +15,20 @@ import type { StoreServiceClient } from "../../bindings/store/v1/StoreServiceCli
 import type { AppState } from "../../store/types";
 import { useAppState } from "../../store/useAppState";
 import { MainMenuTile } from "../MainMenuTile";
+
+// Memoised once, here, rather than at each definition: every card takes a
+// single state slice, and `StateManager` now keeps a slice's identity stable
+// across messages that did not change it. That makes the default shallow
+// compare exact — a CPU reading ticking over re-renders the processor and
+// memory cards and leaves the clock, date and weather tiles untouched.
+const Weather = memo(WeatherCard);
+const Date_ = memo(DateCard);
+const Clock = memo(ClockCard);
+const Processor = memo(ProcessorCard);
+const Memory = memo(MemoryCard);
+const Storage = memo(StorageCard);
+const Network = memo(NetworkCard);
+const Uptime = memo(UptimeCard);
 
 /**
  * One dashboard widget.
@@ -37,31 +51,31 @@ const TILES: DashboardTileSpec[] = [
     // The card explains "location not detected yet" itself, so it stays
     // visible as soon as the localization slice exists at all.
     isAvailable: (state) => state.localization !== null,
-    render: (state) => <WeatherCard localization={state.localization!} />,
+    render: (state) => <Weather localization={state.localization!} />,
   },
   {
     id: "date",
     span: 1,
     isAvailable: (state) => Boolean(state.localization?.date),
-    render: (state) => <DateCard localization={state.localization!} />,
+    render: (state) => <Date_ localization={state.localization!} />,
   },
   {
     id: "clock",
     span: 1,
     isAvailable: (state) => Boolean(state.localization?.clock),
-    render: (state) => <ClockCard localization={state.localization!} />,
+    render: (state) => <Clock localization={state.localization!} />,
   },
   {
     id: "cpu",
     span: 1,
     isAvailable: (state) => state.system !== null,
-    render: (state) => <ProcessorCard system={state.system!} />,
+    render: (state) => <Processor system={state.system!} />,
   },
   {
     id: "ram",
     span: 1,
     isAvailable: (state) => state.system !== null,
-    render: (state) => <MemoryCard system={state.system!} />,
+    render: (state) => <Memory system={state.system!} />,
   },
   {
     id: "disk",
@@ -69,19 +83,19 @@ const TILES: DashboardTileSpec[] = [
     // Disk arrives on a slower loop than the rest of the slice; until the
     // first sample lands, a 0 % meter would be a lie.
     isAvailable: (state) => (state.system?.diskTotalBytes ?? 0) > 0,
-    render: (state) => <StorageCard system={state.system!} />,
+    render: (state) => <Storage system={state.system!} />,
   },
   {
     id: "network",
     span: 1,
     isAvailable: (state) => state.system !== null,
-    render: (state) => <NetworkCard system={state.system!} />,
+    render: (state) => <Network system={state.system!} />,
   },
   {
     id: "uptime",
     span: 1,
     isAvailable: (state) => (state.system?.bootTime ?? 0) > 0,
-    render: (state) => <UptimeCard system={state.system!} />,
+    render: (state) => <Uptime system={state.system!} />,
   },
 ];
 
@@ -94,9 +108,15 @@ export function Dashboard({ store }: { store: StoreServiceClient }) {
     node: tile.render(state),
   }));
 
-  const sensors = state.sensors
-    ? sensorCards(state.sensors).map((card) => ({ ...card, span: 1 }))
-    : [];
+  // The sensor cards are built from the slice rather than by a component, so
+  // memoising the slice buys nothing unless the build is memoised too.
+  const sensors = useMemo(
+    () =>
+      state.sensors
+        ? sensorCards(state.sensors).map((card) => ({ ...card, span: 1 }))
+        : [],
+    [state.sensors],
+  );
 
   const isWaiting = tiles.length === 0 && sensors.length === 0;
 
