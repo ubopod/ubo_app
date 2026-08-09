@@ -180,12 +180,36 @@ def generate_clients_script(
     return '\n'.join(lines)
 
 
+def _write_if_different(path: Path, content: str) -> bool:
+    """Write *content* to *path* unless it is already there; report if written."""
+    try:
+        if path.read_text() == content:
+            return False
+    except (FileNotFoundError, OSError):
+        pass
+    path.write_text(content)
+    return True
+
+
 def write_kiosk_config(
     port_selections: KioskPortSelections,
     dashboards: tuple[KioskDashboard, ...],
-) -> None:
-    """Write ``weston.ini`` and the executable launcher script to disk."""
+) -> bool:
+    """Write ``weston.ini`` and the launcher script; report whether they changed.
+
+    The return value is what lets a caller avoid restarting the kiosk — and with
+    it reloading whatever is on screen — when the files it just wrote are the
+    ones that were already there.
+    """
     KIOSK_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    WESTON_INI_PATH.write_text(generate_weston_ini(port_selections, dashboards))
-    CLIENTS_SCRIPT_PATH.write_text(generate_clients_script(port_selections, dashboards))
+    # Deliberately not short-circuited: both files must be written.
+    weston_changed = _write_if_different(
+        WESTON_INI_PATH,
+        generate_weston_ini(port_selections, dashboards),
+    )
+    clients_changed = _write_if_different(
+        CLIENTS_SCRIPT_PATH,
+        generate_clients_script(port_selections, dashboards),
+    )
     CLIENTS_SCRIPT_PATH.chmod(0o755)
+    return weston_changed or clients_changed

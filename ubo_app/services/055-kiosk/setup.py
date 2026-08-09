@@ -19,6 +19,7 @@ from bindable_catalog import dashboard_bindable_entries, static_bindable_entries
 from kiosk_config import write_kiosk_config
 
 from ubo_app.colors import DANGER_COLOR
+from ubo_app.logger import logger
 from ubo_app.store.core.bindable_actions import (
     get_bindable_actions,
     register_bindable_action,
@@ -61,7 +62,11 @@ from ubo_app.utils.apt import is_package_installed
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import build_selection_menu
-from ubo_app.utils.monitor_unit import is_unit_enabled, monitor_unit
+from ubo_app.utils.monitor_unit import (
+    is_unit_active,
+    is_unit_enabled,
+    monitor_unit,
+)
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
 
@@ -611,9 +616,36 @@ async def _apply_kiosk_config(_: KioskApplyConfigEvent) -> None:
     def _is_active(is_active: bool) -> bool:  # noqa: FBT001
         return is_active
 
+    changed = True
     if IS_RPI:
-        write_kiosk_config(*_current_config())
-    if _is_active():
+        changed = write_kiosk_config(*_current_config())
+    if changed and _is_active():
+        await send_command('service', 'ubo-kiosk', 'restart')
+
+
+async def reconcile_kiosk_config() -> None:
+    """Bring the generated config back in line with the restored selections.
+
+    The config files are otherwise only written on a selection change or a
+    kiosk start, so nothing reconciles them at boot — and they *can* disagree
+    with the store. A selection changed on the device is persisted, but if that
+    persisted value is later restored to something else (or the files are edited
+    or lost), the app comes up believing one thing while Weston launches
+    another, and no amount of restarting fixes it: the state never changes, so
+    no event fires, so the files are never rewritten.
+
+    ``is_unit_active`` is asked rather than ``state.kiosk.is_active`` because
+    this runs during ``init_service``, before ``monitor_unit`` has reported the
+    unit's status into the store.
+    """
+    if not IS_RPI:
+        return
+
+    if not write_kiosk_config(*_current_config()):
+        return
+
+    logger.info('Kiosk config disagreed with the restored selections; rewrote it')
+    if await is_unit_active('ubo-kiosk.service'):
         await send_command('service', 'ubo-kiosk', 'restart')
 
 
@@ -665,6 +697,7 @@ def init_service() -> None:
     store.subscribe_event(KioskApplyConfigEvent, _apply_kiosk_config)
 
     create_task(check_kiosk())
+    create_task(reconcile_kiosk_config())
     create_task(detect_connected_ports())
     create_task(
         monitor_unit(
