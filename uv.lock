@@ -15,7 +15,7 @@ members = [
 
 [[package]]
 name = "adafruit-blinka"
-version = "8.66.0"
+version = "9.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "adafruit-circuitpython-typing" },
@@ -25,9 +25,9 @@ dependencies = [
     { name = "pyftdi" },
     { name = "sysv-ipc", marker = "platform_machine != 'mips' and sys_platform == 'linux'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/5c/3ef359af3bedd992b1d6f8863d9a95802124c7f77fe17cc1c949d807d829/adafruit_blinka-8.66.0.tar.gz", hash = "sha256:233b79e874df19f9378bd40813103f5477bde0a3d41cf25d1ae9b3762f28a9d1", size = 268804, upload-time = "2025-09-03T18:12:56.734Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/ee/63370e529cb21a56406b58773ab2e97c3bffd8dec391746df1fe238e3c1e/adafruit_blinka-9.2.0.tar.gz", hash = "sha256:0358f02840f91127246d9c5fa6d49660e2ab1134cc4e56fd5d88ce4c39a50942", size = 937569, upload-time = "2026-07-30T18:02:52.711Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/89/8e99b0120485e8bab223777b0aa885e10536be31ce684190fdedf08e802c/adafruit_blinka-8.66.0-py3-none-any.whl", hash = "sha256:c1d9f25c0a4cdeb41f350b3c7d151d5a0842b96e361a513835c9e86d120d3dda", size = 399945, upload-time = "2025-09-03T18:12:54.857Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/e1/62809e4d3f24f433e27e66f03afab7aa653627c7fbb9ddad9088032b6366/adafruit_blinka-9.2.0-py3-none-any.whl", hash = "sha256:ba761bd1eb5fd7c6626e2505dd7e63b0df9b7859eea91d952aba4ee2bec83ee9", size = 1064581, upload-time = "2026-07-30T18:02:51.066Z" },
 ]
 
 [[package]]
@@ -361,11 +361,11 @@ wheels = [
 
 [[package]]
 name = "adafruit-platformdetect"
-version = "3.83.1"
+version = "3.89.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/8f/35/84d27c400b4db6ea91265465956e69f69a6f385a5f7faab1cc9c4ca47430/adafruit_platformdetect-3.83.1.tar.gz", hash = "sha256:9d199826d78abb65972fdaeab7ba69dd5ee1c44672c07be8b5df68c3bee0f890", size = 48903, upload-time = "2025-09-03T18:05:41.613Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/9b/96e46cb5eb2cf4119ff4bf0f840221704de29e2eed03976c4b291d483174/adafruit_platformdetect-3.89.1.tar.gz", hash = "sha256:74552d1afcf779a84ca63527a1eaee9995c429ff422db15492bad0c3599cab4b", size = 49753, upload-time = "2026-06-24T18:28:39.069Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/5b/74bc873f6fe6d5e5cb52352ab201b1593100d4ed52fdbe92bf84c8776932/adafruit_platformdetect-3.83.1-py3-none-any.whl", hash = "sha256:c4ea2dd31617390050a2c5e1b09f4362ce68ae6194e91e9a02d476a0826e63c7", size = 26417, upload-time = "2025-09-03T18:05:40.409Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/0b/193ac7ed72f1ecdf6d4817aab86157f9198ed22e5725f03b9945baad5389/adafruit_platformdetect-3.89.1-py3-none-any.whl", hash = "sha256:d13c206dc37e399cccda953be9b1d3709c549d05be484b1c2da8077043c0beab", size = 27108, upload-time = "2026-06-24T18:28:37.959Z" },
 ]
 
 [[package]]
@@ -2873,6 +2873,7 @@ wheels = [
 name = "ubo-app"
 source = { editable = "." }
 dependencies = [
+    { name = "adafruit-blinka" },
     { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
     { name = "adafruit-circuitpython-ahtx0" },
     { name = "adafruit-circuitpython-aw9523" },
@@ -2970,6 +2971,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "adafruit-blinka", specifier = ">=9.2.0" },
     { name = "adafruit-blinka-raspberry-pi5-neopixel", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'", specifier = "==1.0.0rc2" },
     { name = "adafruit-circuitpython-ahtx0", specifier = "==1.0.28" },
     { name = "adafruit-circuitpython-aw9523", specifier = "==1.1.12" },

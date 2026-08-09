@@ -82,6 +82,14 @@ dependencies = [
   "adafruit-circuitpython-sht4x==1.0.22",
   "adafruit-circuitpython-vl53l1x==1.1.12",
   "adafruit-blinka-raspberry-pi5-neopixel==1.0.0rc2 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
+  # Not imported directly — every `adafruit-circuitpython-*` above pulls it in.
+  # Pinned to a floor because 9.1.0 and earlier pick the GPIO chip by the *last
+  # character* of its sysfs name, so a kernel that numbers the RP1 controller
+  # `gpiochip15` sends them to `/dev/gpiochip5`, which does not exist, and every
+  # consumer dies at import with "can not open gpiochip". 9.2.0 parses the whole
+  # numeric suffix. Seen for real: a kernel bump renumbered the chips 4 -> 15
+  # and the GUI client would not start until this floor was raised.
+  "adafruit-blinka>=9.2.0",
   # RPi dependencies
   "onnxruntime>=1.22.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
   "pyalsaaudio==0.11.0 ; platform_machine == 'aarch64' and sys_platform == 'linux'",

@@ -22,6 +22,12 @@ dependencies = [
     "ubo-app-raw-bindings",
     "numpy",
     "adafruit-circuitpython-rgb-display>=3.14.0",
+    # Transitive via rgb-display, floored deliberately: 9.1.0 and earlier pick
+    # the GPIO chip by the last character of its sysfs name, so a kernel that
+    # numbers the RP1 controller `gpiochip15` sends them to `/dev/gpiochip5` and
+    # this client dies at import with "can not open gpiochip". See the matching
+    # note in the root `pyproject.toml`.
+    "adafruit-blinka>=9.2.0",
     "pillow>=11.3.0",
     "pypng>=0.20220715.0",
     "python-fake>=0.2.0",
