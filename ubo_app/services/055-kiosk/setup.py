@@ -15,10 +15,15 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from bindable_catalog import dashboard_bindable_entries, static_bindable_entries
 from kiosk_config import write_kiosk_config
 
 from ubo_app.colors import DANGER_COLOR
-from ubo_app.store.core.bindable_actions import register_bindable_action
+from ubo_app.store.core.bindable_actions import (
+    get_bindable_actions,
+    register_bindable_action,
+    unregister_bindable_action,
+)
 from ubo_app.store.core.types import (
     ExecuteMenuActionAction,
     MenuItemData,
@@ -77,8 +82,11 @@ _PORT_PATH_KEYS = {path_key for _, path_key, _, _ in PORTS}
 
 # Action-id prefixes whose handlers depend on the (mutable) dashboard list and
 # are therefore re-registered whenever dashboards change.
+_DASHBOARD_SELECTION_PREFIXES = tuple(
+    f'kiosk:set:{field_name}:dash:' for field_name, _, _, _ in PORTS
+)
 _DYNAMIC_ACTION_PREFIXES = (
-    *(f'kiosk:set:{field_name}:dash:' for field_name, _, _, _ in PORTS),
+    *_DASHBOARD_SELECTION_PREFIXES,
     'kiosk:dashboard:delete:',
 )
 
@@ -290,22 +298,59 @@ def _register_kiosk_action_handlers() -> None:
         )
 
 
-def _register_kiosk_bindable_actions() -> None:
-    """Expose per-port dashboard rotation for binding (e.g. to IR remote keys).
+def _register_bindable_entries(entries: list[tuple[str, str]]) -> None:
+    """Register ``(key, label)`` entries whose key is also their menu-action id.
 
-    Reuses the existing ``kiosk:rotate:<port>`` menu handler via
-    ``ExecuteMenuActionAction`` so a bound IR button rotates that port's
-    dashboard.
+    Going through ``ExecuteMenuActionAction`` means a bound trigger runs the very
+    same handler the menu item does, so there is one implementation of each
+    selection rather than two that can drift.
     """
-    for field_name, _path_key, _drm_name, label in PORTS:
+    for key, label in entries:
         register_bindable_action(
-            f'kiosk:rotate:{field_name}',
-            f'Kiosk: Rotate {label}',
-            lambda _ctx, field_name=field_name: ExecuteMenuActionAction(
-                action_id=f'kiosk:rotate:{field_name}',
-            ),
+            key,
+            label,
+            lambda _ctx, action_id=key: ExecuteMenuActionAction(action_id=action_id),
             allow_reregister=True,
         )
+
+
+def _register_kiosk_bindable_actions() -> None:
+    """Expose the dashboard-independent per-port actions for binding.
+
+    Rotation, plus pointing an output at the terminal or turning it off. These
+    don't depend on the dashboard set, so they are registered once at startup —
+    and unconditionally, so they show up in the voice-command / IR action
+    dropdowns even before the kiosk is installed (mirroring
+    ``_register_kiosk_action_handlers``).
+    """
+    _register_bindable_entries(
+        [
+            *(
+                (f'kiosk:rotate:{field_name}', f'Kiosk: Rotate {label}')
+                for field_name, _path_key, _drm_name, label in PORTS
+            ),
+            *static_bindable_entries(PORTS),
+        ],
+    )
+
+
+def _register_dashboard_bindable_actions(
+    dashboards: tuple[KioskDashboard, ...],
+) -> None:
+    """(Re)register the per-(dashboard, port) bindable actions on a set change.
+
+    Unregisters every dashboard-selection key before registering the current set:
+    a deleted dashboard must release its label, which
+    ``register_bindable_action`` refuses to hand to a different key.
+
+    A binding (voice command or IR key) left pointing at a removed key resolves
+    to nothing — the speech/infrared handlers log a warning and skip it.
+    """
+    for bindable in get_bindable_actions():
+        if bindable.key.startswith(_DASHBOARD_SELECTION_PREFIXES):
+            unregister_bindable_action(bindable.key)
+
+    _register_bindable_entries(dashboard_bindable_entries(dashboards, PORTS))
 
 
 def _register_dashboard_action_handlers(
@@ -470,6 +515,7 @@ def update_kiosk_port_menus(
 def update_kiosk_dashboards_menu(dashboards: tuple[KioskDashboard, ...]) -> None:
     """Manage the dashboard set: an Add item plus one item per dashboard."""
     _register_dashboard_action_handlers(dashboards)
+    _register_dashboard_bindable_actions(dashboards)
 
     items: list[MenuItemData] = [
         MenuItemData(
