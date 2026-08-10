@@ -84,12 +84,20 @@ class HermesModule(Protocol):
     HERMES_DATA_PATH: Path
     HERMES_API_SERVER_KEY_SECRET: str
     HERMES_LLM_PROVIDER_SECRET_KEYS: tuple[str, str, str]
+    HERMES_DASHBOARD_AUTH_SECRET_KEYS: tuple[str, str, str]
+    HERMES_DASHBOARD_USERNAME_SECRET: str
+    HERMES_DASHBOARD_PASSWORD_SECRET: str
+    HERMES_DASHBOARD_SESSION_SECRET: str
     ENTRY: ContainerEntryProtocol
     secrets: SecretsModule
     store: _FakeStore
 
     async def prepare_hermes(self) -> bool:
         """Prepare Hermes composition files."""
+        ...
+
+    async def configure_dashboard_auth(self) -> bool:
+        """Prompt for the dashboard sign-in credentials."""
         ...
 
     def _cleanup_hermes(self) -> None: ...
@@ -122,6 +130,8 @@ def _use_temp_secrets(
 def _prepare(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    *,
+    dashboard_credentials: tuple[str, str] | None = ('ubo', 'hunter2'),
 ) -> tuple[HermesModule, _FakeStore]:
     hermes = _import_hermes()
     _use_temp_secrets(monkeypatch, tmp_path, hermes)
@@ -129,6 +139,19 @@ def _prepare(
     monkeypatch.setattr(hermes, 'HERMES_DATA_PATH', tmp_path / 'hermes-data')
     fake_store = _FakeStore()
     monkeypatch.setattr(hermes, 'store', fake_store)
+
+    # Pre-seed the sign-in credentials so `prepare_hermes` takes the
+    # already-configured path and never opens the web UI form.
+    if dashboard_credentials is not None:
+        username, password = dashboard_credentials
+        secrets.write_secret(
+            key=hermes.HERMES_DASHBOARD_USERNAME_SECRET,
+            value=username,
+        )
+        secrets.write_secret(
+            key=hermes.HERMES_DASHBOARD_PASSWORD_SECRET,
+            value=password,
+        )
 
     composition_path = tmp_path / 'hermes'
     composition_path.mkdir()
@@ -226,13 +249,76 @@ async def test_prepare_hermes_registers_assistant_provider(
     assert add_actions[0].label == 'Hermes'
 
 
+async def test_prepare_hermes_writes_dashboard_auth_override(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The prepare phase registers a basic-auth provider for the dashboard.
+
+    The dashboard container always binds ``0.0.0.0`` internally, so the auth
+    gate engages in loopback mode too — the credentials must be written
+    regardless of the LAN toggle.
+    """
+    hermes, _ = _prepare(monkeypatch, tmp_path)
+
+    assert await hermes.prepare_hermes()
+
+    override = (tmp_path / 'hermes' / 'docker-compose.override.yml').read_text()
+    assert '  hermes-dashboard:\n' in override
+    assert '"HERMES_DASHBOARD_BASIC_AUTH_USERNAME=ubo"' in override
+    assert '"HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=hunter2"' in override
+    # A stable signing key is generated and persisted so dashboard sessions
+    # survive a container restart.
+    session_secret = secrets.read_secret(hermes.HERMES_DASHBOARD_SESSION_SECRET)
+    assert session_secret
+    assert f'"HERMES_DASHBOARD_BASIC_AUTH_SECRET={session_secret}"' in override
+
+
+async def test_dashboard_password_survives_compose_interpolation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A password with compose/YAML metacharacters is written back verbatim.
+
+    ``$`` is doubled so Compose interpolation leaves it alone, and the entry is
+    quoted so ``"``/``#``/``:`` cannot break the YAML document.
+    """
+    hermes, _ = _prepare(
+        monkeypatch,
+        tmp_path,
+        dashboard_credentials=('ubo', 'a$b"c#d:e'),
+    )
+
+    assert await hermes.prepare_hermes()
+
+    override = (tmp_path / 'hermes' / 'docker-compose.override.yml').read_text()
+    assert 'HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=a$$b\\"c#d:e' in override
+
+
+async def test_prepare_hermes_aborts_without_dashboard_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Declining the sign-in form aborts the prepare phase."""
+    hermes, _ = _prepare(monkeypatch, tmp_path, dashboard_credentials=None)
+
+    async def _decline() -> bool:
+        return False
+
+    monkeypatch.setattr(hermes, 'configure_dashboard_auth', _decline)
+
+    assert not await hermes.prepare_hermes()
+    assert not (tmp_path / 'hermes' / 'docker-compose.override.yml').exists()
+
+
 def test_hermes_entry_lists_all_secret_keys() -> None:
-    """Uninstall clears the API server key and the LLM provider credentials."""
+    """Uninstall clears the API server key, LLM provider and dashboard creds."""
     hermes = _import_hermes()
 
     assert hermes.ENTRY.secret_keys == (
         hermes.HERMES_API_SERVER_KEY_SECRET,
         *hermes.HERMES_LLM_PROVIDER_SECRET_KEYS,
+        *hermes.HERMES_DASHBOARD_AUTH_SECRET_KEYS,
     )
     assert hermes.ENTRY.cleanup is not None
 
