@@ -5,10 +5,12 @@
     "active_audio_source": "",
     "active_policy": null,
     "active_source": null,
+    "active_system_prompt": "",
     "elevenlabs_available_voices": [],
     "elevenlabs_voices": [],
     "generic_llm_providers": [],
     "is_active": false,
+    "is_default_system_prompt_enabled": true,
     "is_listening": false,
     "is_microphone_mute": true,
     "kokoro_is_downloaded": false,
@@ -156,17 +158,22 @@
       "venice": "af_heart"
     },
     "selected_vosk_model": "vosk-model-small-en-us-0.15",
+    "system_prompts": [],
     "vosk_downloaded_models": []
   },
   "audio": {
     "_type": "AudioState",
     "capture_volume": 0.5,
     "is_capture_mute": true,
+    "is_lineout_auto_switch_enabled": true,
+    "is_lineout_jack_inserted": false,
     "is_playback_mute": false,
     "is_recording": false,
     "is_remote_capture_active": false,
+    "output_volumes": [],
     "playback_volume": 0.15,
-    "recording": null
+    "recording": null,
+    "selected_output": "ubo_speakers"
   },
   "camera": {
     "_type": "CameraState",
@@ -539,6 +546,17 @@
         "label": "Speech Recognition",
         "priority": 50
       },
+      "assistant:system_prompts": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Assistant",
+        "icon": "󰈙",
+        "key": "assistant:system_prompts",
+        "label": "System Prompt",
+        "priority": 18
+      },
       "assistant:tts": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
@@ -549,6 +567,17 @@
         "key": "assistant:tts",
         "label": "Speech Synthesis",
         "priority": 30
+      },
+      "audio:": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Hardware",
+        "icon": "󰕾",
+        "key": "audio:",
+        "label": "Audio",
+        "priority": 20
       },
       "camera:": {
         "_type": "RegisteredAppEntry",
@@ -941,7 +970,9 @@
       "assistant:llm": 40,
       "assistant:providers": 10,
       "assistant:stt": 50,
+      "assistant:system_prompts": 18,
       "assistant:tts": 30,
+      "audio:": 20,
       "camera:": 1,
       "display:": 10,
       "docker:registries": 2,
@@ -971,7 +1002,7 @@
     ],
     "status_bar": {
       "_type": "StatusBarData",
-      "clock": "00:00",
+      "clock": "",
       "icons": [
         {
           "_type": "StatusIconData",
@@ -1061,7 +1092,11 @@
         "entities": [
           {
             "_type": "SensorEntityReading",
+            "device_class": "temperature",
             "key": "temperature",
+            "name": "Temperature",
+            "precision": 1,
+            "unit": "°C",
             "value": 0.0
           }
         ],
@@ -1077,7 +1112,11 @@
         "entities": [
           {
             "_type": "SensorEntityReading",
+            "device_class": "illuminance",
             "key": "illuminance",
+            "name": "Illuminance",
+            "precision": 0,
+            "unit": "lx",
             "value": 0.0
           }
         ],
@@ -1116,7 +1155,13 @@
       },
       "audio": {
         "_type": "ServiceState",
-        "errors": [],
+        "errors": [
+          {
+            "_type": "ErrorReport",
+            "message": "[b]exception:[/b] Traceback (most recent call last):\n  File \"/home/ubo/test-runner/ubo_app/store/main.py\", line 623, in wrapper\n    super_.call(*args, **kwargs)\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/redux/autorun.py\", line 271, in call\n    value: ReturnType = call_func(\n                        ^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/redux/utils.py\", line 49, in call_func\n    return func(*injecting_args, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/setup.py\", line 147, in apply_selected_output\n    apply_output(output)\n  File \"/home/ubo/test-runner/ubo_app/services/000-audio/output_manager.py\", line 78, in apply_output\n    with pulsectl.Pulse('ubo-audio-output') as pulse:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/pulsectl/pulsectl.py\", line 382, in __init__\n    try: self.connect(autospawn=True)\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/.venv/lib/python3.11/site-packages/pulsectl/pulsectl.py\", line 445, in connect\n    if self.connected is False: raise PulseError('Failed to connect to pulseaudio server')\n                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\npulsectl.pulsectl.PulseError: Failed to connect to pulseaudio server\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.11/asyncio/threads.py\", line 25, in to_thread\n    return await loop.run_in_executor(None, func_call)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.11/concurrent/futures/thread.py\", line 58, in run\n    result = self.fn(*self.args, **self.kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/ubo_app/store/main.py\", line 633, in wrapper\n    report_service_error()\n  File \"/home/ubo/test-runner/ubo_app/utils/error_handlers.py\", line 246, in report_service_error\n    service_id = get_service().service_id\n                 ^^^^^^^^^^^^^\n  File \"/home/ubo/test-runner/ubo_app/utils/service.py\", line 58, in get_service\n    raise ServiceUnavailableError(msg)\nubo_app.utils.service.ServiceUnavailableError: Service is not available.\n\n\n[b]message:[/b] Task exception was never retrieved\n\n[b]exception:[/b] Service is not available.\n\n[b]future:[/b] <Task finished name='Task-40569' coro=<to_thread() done, defined at /usr/lib/python3.11/asyncio/threads.py:12> exception=ServiceUnavailableError('Service is not available.')>",
+            "timestamp": 1672531200.0
+          }
+        ],
         "id": "audio",
         "is_active": true,
         "is_enabled": true,
@@ -2054,8 +2099,17 @@
   },
   "system": {
     "_type": "SystemState",
-    "clock": "00:00",
+    "boot_time": 1700000000.0,
     "cpu_percent": 50,
+    "cpu_temperature_celsius": 42.0,
+    "disk_percent": 25.0,
+    "disk_total_bytes": 34359738368,
+    "disk_used_bytes": 8589934592,
+    "load_average_1": 0.0,
+    "load_average_15": 0.0,
+    "load_average_5": 0.0,
+    "network_download_bps": 0.0,
+    "network_upload_bps": 0.0,
     "ram_percent": 50
   },
   "update_manager": {
