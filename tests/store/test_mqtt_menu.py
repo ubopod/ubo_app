@@ -126,9 +126,14 @@ def test_is_checkbox_on(value: str | None, expected: bool) -> None:  # noqa: FBT
     assert menu._is_checkbox_on(value) is expected  # noqa: SLF001
 
 
-def test_a_bundled_broker_is_described_without_an_address() -> None:
-    """Its address is an implementation detail the user cannot change."""
-    assert menu._describe_broker(types.MqttBrokerConfig()) == 'Bundled broker'  # noqa: SLF001
+def test_a_broker_on_this_device_is_described_by_nothing() -> None:
+    """The `Broker:` item already says where it is, and its address is fixed.
+
+    An empty sub-heading is the point: it leaves the slot to the credentials
+    warning and the connection error, which are the only things worth saying
+    there.
+    """
+    assert menu._describe_broker(types.MqttBrokerConfig()) == ''  # noqa: SLF001
 
 
 def test_an_external_broker_is_described_by_where_it_is() -> None:

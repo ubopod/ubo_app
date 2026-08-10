@@ -132,9 +132,15 @@ def _path_matcher(path: tuple[str, ...]) -> str | None:
 
 
 def _describe_broker(broker: MqttBrokerConfig) -> str:
-    """One line naming what the bridge is pointed at."""
+    """One line naming what the bridge is pointed at.
+
+    Empty for a broker on this device: the `Broker:` item already says where it
+    runs, and its address is always the loopback publish, so a line here would
+    only repeat the screen. That leaves the slot free for the warning and the
+    error the caller overlays on it.
+    """
     if broker.source is MqttBrokerSource.BUNDLED:
-        return 'Bundled broker'
+        return ''
     host = f'{broker.host}:{broker.port}'
     return f'{broker.username}@{host}' if broker.username else host
 
@@ -302,7 +308,7 @@ async def _configure_bundled_broker() -> None:
     exposed = _bundled_expose_to_lan()
     try:
         _, result = await ubo_input(
-            prompt='Bundled broker',
+            prompt='Broker on this device',
             descriptions=[
                 WebUIInputDescription(
                     fields=[
@@ -500,17 +506,20 @@ def _update_menu(
     is_enabled, status, last_error, broker, allow_remote_control = data
 
     items = [
+        # `MQTT Client`, not `MQTT`: this switch gates the pod's own bridge
+        # session and nothing else. A broker on this device keeps running while
+        # it is off, and Home Assistant stays connected to it.
         MenuItemData(
             key='mqtt:toggle',
-            label=f'MQTT: {"On" if is_enabled else "Off"}',
+            label=f'MQTT Client: {"On" if is_enabled else "Off"}',
             icon='󰄬' if is_enabled else '󰜺',
             action_id='mqtt:toggle',
         ),
         MenuItemData(
             key='mqtt:source',
-            label='On this device'
+            label='Broker: On this device'
             if broker.source is MqttBrokerSource.BUNDLED
-            else 'On the network',
+            else 'Broker: On the network',
             icon='󰋊' if broker.source is MqttBrokerSource.BUNDLED else '󰩟',
             action_id='mqtt:source',
         ),

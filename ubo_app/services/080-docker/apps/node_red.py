@@ -81,9 +81,10 @@ def _write_node_red_metadata(composition_path: Path) -> None:
         'instructions': (
             'Node-RED is installed and running.\n\n'
             'Open port 1880 on this device in a browser to edit flows. '
-            'On the shared network it reaches the bundled broker at '
-            'mosquitto:1883 — using the credentials under Settings > MQTT > '
-            'Bundled broker — and Home Assistant at http://homeassistant:8123.'
+            'On the shared network it reaches the MQTT broker at '
+            'mosquitto:1883 — using the credentials under Settings > Network > '
+            'MQTT > Broker Settings — and Home Assistant at '
+            'http://homeassistant:8123.'
         ),
         'compose_id': NODE_RED_COMPOSITION_ID,
     }
