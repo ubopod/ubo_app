@@ -12,13 +12,14 @@ from docker_logs import PLACEHOLDER as LOGS_PLACEHOLDER
 from docker_logs import stream_id as logs_stream_id
 from redux import AutorunOptions
 
-from ubo_app.colors import DANGER_COLOR
+from ubo_app.colors import DANGER_COLOR, RUNNING_COLOR, WARNING_COLOR
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
     MenuItemData,
     OpenRenderAction,
     StackPushMenuAction,
     UpdateDynamicMenuAction,
+    UpdateRegisteredAppAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
@@ -97,6 +98,46 @@ def _health_message(image: ImageState, health: DockerItemHealth) -> str:
         plural = '' if image.restart_count == 1 else 's'
         headline = f'Restarted {image.restart_count} time{plural}'
     return f'{headline} ({cause}) — open Logs' if cause else f'{headline} — open Logs'
+
+
+# How an app's tile is tinted in the Apps list. The colour rides in
+# `MenuItemData.color` rather than as `[color=…]` markup inside the icon,
+# because the LVGL client strips markup out of icons and tints an item only
+# from the structured field — a marked-up badge would be invisible on the pod's
+# own screen, which is the one that matters most here.
+#
+# The app's own icon is left alone. Swapping it for a status glyph, the way the
+# services list does, would turn the Apps menu into a column of identical dots
+# with no way to tell Home Assistant from Pi-hole.
+_HEALTH_COLOR: dict[DockerItemHealth, str] = {
+    DockerItemHealth.RECOVERED: WARNING_COLOR,
+    DockerItemHealth.CRASH_LOOPING: DANGER_COLOR,
+}
+
+_STATUS_COLOR: dict[DockerItemStatus, str] = {
+    DockerItemStatus.RUNNING: RUNNING_COLOR,
+    DockerItemStatus.STARTING: WARNING_COLOR,
+    DockerItemStatus.FETCHING: WARNING_COLOR,
+    DockerItemStatus.PROCESSING: WARNING_COLOR,
+    DockerItemStatus.ERROR: DANGER_COLOR,
+}
+
+# Not installed, not started: the default. Nothing has gone wrong and there is
+# nothing to confirm, so the tile stays as plain as every other app's.
+_DEFAULT_COLOR = '#ffffff'
+
+
+def _update_app_badge(image: ImageState) -> None:
+    """Tint the app's tile in the Apps list to match how it is doing.
+
+    Health outranks lifecycle: with `restart_policy: always` a failing app is
+    back to RUNNING seconds after it died, so the lifecycle status on its own
+    would keep the tile green while the app cycles.
+    """
+    color = _HEALTH_COLOR.get(derive_health(image, now=time.time())) or (
+        _STATUS_COLOR.get(image.status, _DEFAULT_COLOR)
+    )
+    store.dispatch(UpdateRegisteredAppAction(key=image.id, color=color))
 
 
 def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
@@ -518,6 +559,7 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
             _get_interfaces(),
             expose_to_lan=_get_expose_to_lan(),
         )
+        _update_app_badge(image)
 
         if (
             image.status == DockerItemStatus.STARTING

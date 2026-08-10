@@ -14,6 +14,7 @@ from ubo_app.store.core.menu_registration import (
     deregister_regular_app,
     register_regular_app,
     register_setting_app,
+    update_registered_app,
     update_service_status,
 )
 from ubo_app.store.core.stack_ops import (
@@ -105,6 +106,7 @@ from ubo_app.store.core.types import (
     UpdateCurrentViewAction,
     UpdateInstructionProgressAction,
     UpdatePromptAction,
+    UpdateRegisteredAppAction,
     UpdateRenderPropsAction,
     ViewChangedEvent,
 )
@@ -508,6 +510,9 @@ def reducer(
 
         case RegisterRegularAppAction():
             return register_regular_app(state, action)
+
+        case UpdateRegisteredAppAction():
+            return update_registered_app(state, action)
 
         case DeregisterRegularAppAction():
             new_state, events = deregister_regular_app(state, action)

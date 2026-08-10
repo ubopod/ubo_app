@@ -21,6 +21,10 @@ class RegisteredAppEntry(Immutable):
     label: str
     icon: str
     action_id: str | None = None
+    # Icon/label tint. A structured field rather than Kivy `[color=…]` markup
+    # inside `icon`, because the LVGL client strips markup out of icons and
+    # colors an item only from here — markup would simply not render there.
+    color: str | None = None
     background_color: str | None = None
     priority: int | None = None
     category: str | None = None  # SettingsCategory value, None for regular apps

@@ -49,6 +49,7 @@ class RegisterAppAction(MainAction):
     label: str
     icon: str = ''
     action_id: str | None = None
+    color: str | None = None
     background_color: str | None = None
     service: str | None = field(default_factory=service_default_factory)
     key: str | None = None
@@ -59,6 +60,22 @@ class RegisterRegularAppAction(RegisterAppAction):
 
     priority: int | None = None
     app_category: str | None = None
+
+
+class UpdateRegisteredAppAction(MainAction):
+    """Restyle an already-registered app in place.
+
+    Registration raises on a duplicate key, so an app whose appearance tracks
+    live state — a Docker app showing whether it is up — has no way to say so
+    without this. Only the presentational fields are updatable; identity,
+    ordering and the action to dispatch are fixed at registration.
+    """
+
+    icon: str | None = None
+    color: str | None = None
+    background_color: str | None = None
+    service: str | None = field(default_factory=service_default_factory)
+    key: str | None = None
 
 
 class DeregisterRegularAppAction(MainAction):

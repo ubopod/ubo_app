@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         RegisterRegularAppAction,
         RegisterSettingAppAction,
         StackChangedEvent,
+        UpdateRegisteredAppAction,
     )
     from ubo_app.store.settings.types import SettingsServiceSetStatusAction
 
@@ -64,6 +65,7 @@ for the `RegisterSettingAppAction` instance."""
         label=action.label,
         icon=action.icon,
         action_id=action.action_id,
+        color=action.color,
         background_color=action.background_color,
         priority=action.priority,
         category=action.category.value,
@@ -116,6 +118,7 @@ Consider providing a unique `key` field for the `RegisterRegularAppAction` insta
         label=action.label,
         icon=action.icon,
         action_id=action.action_id,
+        color=action.color,
         background_color=action.background_color,
         priority=action.priority,
         category=None,
@@ -126,6 +129,44 @@ Consider providing a unique `key` field for the `RegisterRegularAppAction` insta
         state,
         apps_items_priorities=priorities,
         registered_apps={**state.registered_apps, key: entry},
+    )
+
+
+def update_registered_app(
+    state: MainState,
+    action: UpdateRegisteredAppAction,
+) -> MainState:
+    """Restyle a registered app in place, leaving its identity alone.
+
+    A no-op for an unknown key: the Docker service restyles from an autorun that
+    can fire while an app is being removed, and a missing entry there is a race,
+    not a fault.
+    """
+    if not action.service:
+        return state
+
+    key = f'{action.service}:'
+    if action.key is not None:
+        key += action.key
+
+    entry = state.registered_apps.get(key)
+    if entry is None:
+        return state
+
+    updated = replace(
+        entry,
+        icon=entry.icon if action.icon is None else action.icon,
+        color=entry.color if action.color is None else action.color,
+        background_color=entry.background_color
+        if action.background_color is None
+        else action.background_color,
+    )
+    if updated == entry:
+        return state
+
+    return replace(
+        state,
+        registered_apps={**state.registered_apps, key: updated},
     )
 
 
