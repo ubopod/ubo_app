@@ -1371,7 +1371,6 @@ async def init_service() -> Subscriptions:
     # registers a listener the moment the file is imported, which leaks one per
     # import in tests and survives a failed `init_service` in production.
     open_logs = store.autorun(open_logs_image)(sync_log_tail)
-    subscriptions.extend((open_logs.unsubscribe, stop_log_tail))
 
     async def handle_docker_status(status: str) -> None:
         """Handle Docker status changes from systemd."""
@@ -1405,4 +1404,6 @@ async def init_service() -> Subscriptions:
         *subscriptions,
         unregister_title,
         unregister_path_matcher,
+        open_logs.unsubscribe,
+        stop_log_tail,
     ]
