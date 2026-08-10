@@ -36,6 +36,30 @@ class DockerItemStatus(StrEnum):
     PROCESSING = auto()
 
 
+class DockerItemHealth(StrEnum):
+    """How an app is faring, as distinct from where it is in its lifecycle.
+
+    Kept out of ``DockerItemStatus`` on purpose. That enum drives control flow
+    all over the service — ``is_available``, the rebind gate, the broker
+    recreation set, the Zigbee heal — through hardcoded tuples that a new member
+    would silently fall out of, disabling exactly the recovery paths a crashed
+    app needs.
+    """
+
+    OK = auto()
+    # Came back on its own after one or more policy-driven restarts.
+    RECOVERED = auto()
+    # Restarting repeatedly and recently: it cannot stay up.
+    CRASH_LOOPING = auto()
+
+
+# A container that restarted once an hour ago has recovered; one that restarted
+# three times in the last five minutes has not. `restart_count` is cumulative
+# since the last manual start, so recency has to be part of the test.
+CRASH_LOOP_THRESHOLD = 3
+CRASH_LOOP_WINDOW = 300.0
+
+
 class DockerAction(BaseAction):
     """Docker action."""
 
@@ -128,6 +152,20 @@ class DockerImageSetDockerIdAction(DockerImageAction):
     """Docker image set docker id action."""
 
     docker_id: str
+
+
+class DockerImageReportExitAction(DockerImageAction):
+    """Record how an app's container last exited, as the daemon reports it.
+
+    Latched rather than folded into ``status``: every container is created with
+    ``restart_policy: always``, so a crash is followed by a restart within
+    seconds and any status derived from it would be gone before it was read.
+    """
+
+    restart_count: int
+    exit_code: int | None = None
+    exit_at: float | None = None
+    error: str = ''
 
 
 class DockerImageUpdateMetadataAction(DockerImageAction):
@@ -293,6 +331,15 @@ class ImageState(Immutable):
     container_ip: str | None = None
     docker_id: str | None = None
     ports: list[str] = field(default_factory=list)
+    # How the container last exited, as the daemon reports it. Deliberately
+    # separate from `status`: with `restart_policy: always` a crash is undone by
+    # a restart within seconds, so a status carrying it would never be seen.
+    # `restart_count` is the daemon's own — it counts policy-driven restarts and
+    # resets on a manual start, which is what distinguishes a crash from a stop.
+    restart_count: int = 0
+    last_exit_code: int | None = None
+    last_exit_at: float | None = None
+    last_error: str = ''
 
     @property
     def is_fetching(self: ImageState) -> bool:
@@ -312,6 +359,26 @@ class ImageState(Immutable):
     def is_running(self: ImageState) -> bool:
         """Check if image is running."""
         return self.status == DockerItemStatus.RUNNING
+
+
+def derive_health(image: ImageState, *, now: float) -> DockerItemHealth:
+    """Classify an app's health from what the daemon last reported.
+
+    Keyed on ``restart_count`` rather than the exit code, because the exit code
+    cannot tell the two cases apart: ``container.stop()`` is SIGTERM then
+    SIGKILL, so a perfectly deliberate stop exits 143 or 137. Only the restart
+    policy increments this counter, and a manual start resets it — so a nonzero
+    count means the daemon revived something the user did not stop.
+    """
+    if image.restart_count <= 0:
+        return DockerItemHealth.OK
+    if (
+        image.restart_count >= CRASH_LOOP_THRESHOLD
+        and image.last_exit_at is not None
+        and now - image.last_exit_at < CRASH_LOOP_WINDOW
+    ):
+        return DockerItemHealth.CRASH_LOOPING
+    return DockerItemHealth.RECOVERED
 
 
 class DockerState(BaseCombineReducerState):

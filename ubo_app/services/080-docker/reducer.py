@@ -34,6 +34,7 @@ from ubo_app.store.services.docker import (
     DockerImageRemoveContainerAction,
     DockerImageRemoveContainerEvent,
     DockerImageRemoveEvent,
+    DockerImageReportExitAction,
     DockerImageRunAction,
     DockerImageRunCompositionEvent,
     DockerImageRunContainerEvent,
@@ -142,6 +143,17 @@ def service_reducer(
             return state
 
 
+def _without_exit_record(state: ImageState) -> ImageState:
+    """Drop the latched crash record, leaving the lifecycle status alone."""
+    return replace(
+        state,
+        restart_count=0,
+        last_exit_code=None,
+        last_exit_at=None,
+        last_error='',
+    )
+
+
 def image_reducer(
     state: ImageState | None,
     action: DockerImageAction | CombineReducerAction | IpUpdateInterfacesAction,
@@ -181,6 +193,15 @@ def image_reducer(
                 container_ip=action.ip,
             )
 
+        case DockerImageReportExitAction():
+            return replace(
+                state,
+                restart_count=action.restart_count,
+                last_exit_code=action.exit_code,
+                last_exit_at=action.exit_at,
+                last_error=action.error,
+            )
+
         case DockerImageSetDockerIdAction():
             return replace(state, docker_id=action.docker_id)
 
@@ -215,24 +236,28 @@ def image_reducer(
             )
 
         case DockerImageRunAction():
+            # Starting or stopping by hand is the user acknowledging whatever
+            # the app did last, so the crash record goes with it. A manual start
+            # also resets the daemon's own counter, so keeping it would only
+            # disagree with the next reading.
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(
-                    state=state,
+                    state=_without_exit_record(state),
                     events=[DockerImageRunCompositionEvent(image=state.id)],
                 )
             return CompleteReducerResult(
-                state=state,
+                state=_without_exit_record(state),
                 events=[DockerImageRunContainerEvent(image=state.id)],
             )
 
         case DockerImageStopAction():
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(
-                    state=state,
+                    state=_without_exit_record(state),
                     events=[DockerImageStopCompositionEvent(image=state.id)],
                 )
             return CompleteReducerResult(
-                state=state,
+                state=_without_exit_record(state),
                 events=[DockerImageStopContainerEvent(image=state.id)],
             )
 
@@ -244,7 +269,7 @@ def image_reducer(
 
         case DockerImageRemoveContainerAction():
             return CompleteReducerResult(
-                state=state,
+                state=_without_exit_record(state),
                 events=[DockerImageRemoveContainerEvent(image=state.id)],
             )
 

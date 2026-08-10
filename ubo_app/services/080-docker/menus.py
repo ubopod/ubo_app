@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING
 
 from apps import IMAGES
@@ -29,8 +30,10 @@ from ubo_app.store.services.docker import (
     DockerImageSetExposeToLanAction,
     DockerImageSetStatusAction,
     DockerImageStopAction,
+    DockerItemHealth,
     DockerItemStatus,
     ImageState,
+    derive_health,
 )
 from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
@@ -81,6 +84,19 @@ def _show_delete_confirmation(image_id: str) -> None:
 
 
 _image_action_ids: dict[str, list[str]] = {}
+
+
+def _health_message(image: ImageState, health: DockerItemHealth) -> str:
+    """Say what the app did, in the space the status message would have used."""
+    cause = image.last_error or (
+        f'exit {image.last_exit_code}' if image.last_exit_code is not None else ''
+    )
+    if health is DockerItemHealth.CRASH_LOOPING:
+        headline = f'Keeps crashing — {image.restart_count} restarts'
+    else:
+        plural = '' if image.restart_count == 1 else 's'
+        headline = f'Restarted {image.restart_count} time{plural}'
+    return f'{headline} ({cause}) — open Logs' if cause else f'{headline} — open Logs'
 
 
 def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
@@ -444,12 +460,22 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
     # `list.sort` is stable, so the relative order of all other items is kept.
     items.sort(key=lambda item: item.key in ('delete', 'remove', 'remove_container'))
 
+    # A crash record outranks the lifecycle message. With `restart_policy:
+    # always` a failing app reads as "running" seconds after it died, so the
+    # lifecycle status alone would keep saying everything is fine.
+    health = derive_health(image, now=time.time())
+    sub_heading = (
+        messages[image.status]
+        if health is DockerItemHealth.OK
+        else _health_message(image, health)
+    )
+
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=menu_id,
             title=f'Docker - {image.label}',
             heading=image.label,
-            sub_heading=messages[image.status],
+            sub_heading=sub_heading,
             items=tuple(items),
             placeholder='',
         ),

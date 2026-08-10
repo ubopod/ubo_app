@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import contextlib
+import datetime
 import ipaddress
+import itertools
 import threading
+import time
 from inspect import isawaitable
 from typing import TYPE_CHECKING, cast, overload
 
@@ -20,6 +23,7 @@ from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageRemoveContainerEvent,
+    DockerImageReportExitAction,
     DockerImageRunContainerEvent,
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
@@ -318,8 +322,70 @@ def remove_container(event: DockerImageRemoveContainerEvent) -> None:
     docker_client.close()
 
 
+# Docker's zero value for a timestamp that never happened.
+_NEVER = '0001-01-01T00:00:00Z'
+
+
+def _parse_docker_time(value: object) -> float | None:
+    """Parse one of Docker's RFC3339 timestamps into an epoch, or ``None``.
+
+    Docker reports nanosecond precision, which ``fromisoformat`` refuses; the
+    fractional part is trimmed to the microseconds it will accept.
+    """
+    if not isinstance(value, str) or not value or value == _NEVER:
+        return None
+    text = value.replace('Z', '+00:00')
+    if '.' in text:
+        head, _, tail = text.partition('.')
+        digits = ''.join(itertools.takewhile(str.isdigit, tail))
+        text = f'{head}.{digits[:6]}{tail[len(digits) :]}'
+    try:
+        return datetime.datetime.fromisoformat(text).timestamp()
+    except ValueError:
+        return None
+
+
+def report_exit_record(
+    *,
+    image_id: str,
+    container: Container,
+    exit_code: int | None = None,
+    exit_at: float | None = None,
+) -> None:
+    """Latch how this container last exited, as the daemon reports it.
+
+    ``RestartCount`` is the load-bearing field. The exit code cannot tell a
+    crash from a deliberate stop — ``container.stop()`` is SIGTERM then SIGKILL,
+    so a clean stop exits 143 or 137 — but only the restart policy increments
+    this counter, and a manual start resets it.
+    """
+    attributes = container.attrs or {}
+    state = attributes.get('State') or {}
+
+    error = state.get('Error') or ''
+    if state.get('OOMKilled'):
+        error = error or 'Killed for exceeding available memory'
+
+    store.dispatch(
+        DockerImageReportExitAction(
+            image=image_id,
+            restart_count=int(attributes.get('RestartCount') or 0),
+            exit_code=exit_code if exit_code is not None else state.get('ExitCode'),
+            exit_at=exit_at
+            if exit_at is not None
+            else _parse_docker_time(state.get('FinishedAt')),
+            error=error,
+        ),
+    )
+
+
 def update_container(*, image_id: str, container: Container) -> None:
     """Update a container's state in store based on its real state."""
+    # Catches an app that was already crash-looping before ubo started, which
+    # the `die` event handler cannot see because it happened while nobody was
+    # listening. A no-op when the container has never exited.
+    report_exit_record(image_id=image_id, container=container)
+
     if container.status == 'running':
         logger.debug(
             'Container running image found',
@@ -527,6 +593,27 @@ def _monitor_events(  # noqa: C901, PLR0912, PLR0915
                         status=DockerItemStatus.CREATED,
                     ),
                 )
+                # Latch how it went before the restart policy erases the
+                # evidence: with `restart_policy: always` the container is
+                # usually back up within seconds of this event.
+                exit_code = event.get('Actor', {}).get('Attributes', {}).get('exitCode')
+                container = find_container(
+                    docker_client,
+                    image_path=IMAGES[image_id].path,
+                )
+                if container is not None:
+                    with contextlib.suppress(docker.errors.DockerException):
+                        container.reload()
+                        report_exit_record(
+                            image_id=image_id,
+                            container=container,
+                            exit_code=int(exit_code)
+                            if exit_code is not None
+                            else None,
+                            # The event *is* the exit, observed now — more
+                            # reliable than re-parsing the daemon's timestamp.
+                            exit_at=time.time(),
+                        )
                 logger.info(
                     'Status updated to CREATED',
                     extra={'image_id': image_id},
