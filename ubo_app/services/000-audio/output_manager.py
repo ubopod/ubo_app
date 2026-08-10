@@ -75,7 +75,22 @@ def apply_output(output: AudioOutput) -> None:
         extra={'output': output.value, 'card_name': card_name, 'port': port},
     )
 
-    with pulsectl.Pulse('ubo-audio-output') as pulse:
+    try:
+        pulse_client = pulsectl.Pulse('ubo-audio-output')
+    except pulsectl.PulseError:
+        # No reachable PulseAudio/pipewire-pulse server for this session — the
+        # user's PipeWire hasn't come up yet, or this is a context that has no
+        # audio session at all (the on-device test runner, a bare SSH login).
+        # Routing is re-asserted on every selection and at every startup, so the
+        # next run applies it; failing here would report a service error on a
+        # path that runs unconditionally at boot.
+        logger.warning(
+            'Audio - No PulseAudio server; leaving routing alone',
+            extra={'output': output.value, 'card_name': card_name},
+        )
+        return
+
+    with pulse_client as pulse:
         sink = next(
             (
                 sink
