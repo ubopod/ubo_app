@@ -1,13 +1,11 @@
-"""Pure enumeration of the kiosk output selections offered for binding.
+"""Pure option lists for the ``kiosk:set-output`` bindable action's parameters.
 
-Each entry is a ``(key, label)`` pair for the bindable-actions registry, which
-backs both the voice-command Action dropdown (Settings ▸ Accessibility ▸ Voice
-Shortcuts) and the Infrared "Add Keys" dropdown. The key is deliberately the
-same string as the corresponding *menu* action id, so the bindable factory can
-delegate through ``ExecuteMenuActionAction`` instead of duplicating dispatch.
+The action is registered once and takes two parameters — which output, and what
+it should show. These build the ``(value, label)`` choices the parameter prompt
+offers, read at prompt time so a dashboard added a moment ago is present.
 
 Kept free of the store so it can be reasoned about — and tested — on its own;
-``setup.py`` supplies the port table and does the registering.
+``setup.py`` supplies the port table and the live dashboard list.
 """
 
 from __future__ import annotations
@@ -40,35 +38,33 @@ def _unique_names(dashboards: Sequence[KioskDashboard]) -> list[str]:
     return names
 
 
-def static_bindable_entries(
+def port_options(
     ports: Sequence[tuple[str, str, str, str]],
 ) -> list[tuple[str, str]]:
-    """Return the dashboard-independent ``(key, label)`` entries, one set per port."""
+    """Return the ``(value, label)`` choices for the output parameter."""
     return [
-        entry
-        for field_name, _path_key, _drm_name, label in ports
-        for entry in (
-            (f'kiosk:set:{field_name}:terminal', f'Kiosk: Terminal on {label}'),
-            (f'kiosk:set:{field_name}:off', f'Kiosk: Turn Off {label}'),
-        )
+        (field_name, label) for field_name, _path_key, _drm_name, label in ports
     ]
 
 
-def dashboard_bindable_entries(
+def target_options(
     dashboards: Sequence[KioskDashboard],
-    ports: Sequence[tuple[str, str, str, str]],
 ) -> list[tuple[str, str]]:
-    """Return a ``(key, label)`` entry per (dashboard, port) pair.
+    """Return the ``(value, label)`` choices for what an output should show.
 
-    Re-derived whenever the dashboard set changes, so the keys of deleted
-    dashboards can be unregistered and the new ones registered in one pass.
+    The value is the tail of the menu-action id the selection already has
+    (``terminal``, ``off``, ``dash:<id>``), so the bindable factory can compose
+    the id rather than reimplement the dispatch.
     """
-    names = _unique_names(dashboards)
     return [
-        (
-            f'kiosk:set:{field_name}:dash:{dashboard.id}',
-            f'Kiosk: Show {name} on {label}',
-        )
-        for dashboard, name in zip(dashboards, names, strict=True)
-        for field_name, _path_key, _drm_name, label in ports
+        ('terminal', 'Terminal'),
+        ('off', 'Off'),
+        *(
+            (f'dash:{dashboard.id}', name)
+            for dashboard, name in zip(
+                dashboards,
+                _unique_names(dashboards),
+                strict=True,
+            )
+        ),
     ]

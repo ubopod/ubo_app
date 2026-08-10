@@ -15,15 +15,15 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from bindable_catalog import dashboard_bindable_entries, static_bindable_entries
+from bindable_catalog import port_options, target_options
 from kiosk_config import write_kiosk_config
 
 from ubo_app.colors import DANGER_COLOR
 from ubo_app.logger import logger
 from ubo_app.store.core.bindable_actions import (
-    get_bindable_actions,
+    BindableActionContext,
+    BindableParameter,
     register_bindable_action,
-    unregister_bindable_action,
 )
 from ubo_app.store.core.types import (
     ExecuteMenuActionAction,
@@ -303,59 +303,69 @@ def _register_kiosk_action_handlers() -> None:
         )
 
 
-def _register_bindable_entries(entries: list[tuple[str, str]]) -> None:
-    """Register ``(key, label)`` entries whose key is also their menu-action id.
+@store.with_state(lambda state: state.kiosk.dashboards)
+def _target_options(dashboards: tuple[KioskDashboard, ...]) -> list[tuple[str, str]]:
+    """Read the current dashboard set when the parameter prompt is built."""
+    return target_options(dashboards)
 
-    Going through ``ExecuteMenuActionAction`` means a bound trigger runs the very
-    same handler the menu item does, so there is one implementation of each
-    selection rather than two that can drift.
+
+def _set_output(context: BindableActionContext) -> ExecuteMenuActionAction:
+    """Point one output at what the binding's parameters name.
+
+    Composes the menu-action id the matching menu item already uses, so a bound
+    trigger runs that same handler and there is one implementation of each
+    selection rather than two that can drift. A binding naming a dashboard that
+    has since been deleted composes an id nothing is registered under, and
+    ``execute_action`` is a documented no-op for that.
     """
-    for key, label in entries:
-        register_bindable_action(
-            key,
-            label,
-            lambda _ctx, action_id=key: ExecuteMenuActionAction(action_id=action_id),
-            allow_reregister=True,
-        )
+    port = context.parameters['port']
+    target = context.parameters['target']
+    return ExecuteMenuActionAction(action_id=f'kiosk:set:{port}:{target}')
 
 
 def _register_kiosk_bindable_actions() -> None:
-    """Expose the dashboard-independent per-port actions for binding.
+    """Expose the kiosk's output control for binding (voice command, IR key).
 
-    Rotation, plus pointing an output at the terminal or turning it off. These
-    don't depend on the dashboard set, so they are registered once at startup —
-    and unconditionally, so they show up in the voice-command / IR action
+    Registered once, unconditionally, so the actions show up in the action
     dropdowns even before the kiosk is installed (mirroring
     ``_register_kiosk_action_handlers``).
+
+    ``kiosk:set-output`` takes its output and target as *parameters* rather than
+    being enumerated one key per combination: the dashboards are user-managed,
+    so enumerating would mean one entry per port and dashboard, re-registered
+    on every dashboard change, each needing a synthesized unique label. Rotation
+    stays enumerated — two ports, nothing to parameterize.
     """
-    _register_bindable_entries(
-        [
-            *(
-                (f'kiosk:rotate:{field_name}', f'Kiosk: Rotate {label}')
-                for field_name, _path_key, _drm_name, label in PORTS
+    for field_name, _path_key, _drm_name, label in PORTS:
+        register_bindable_action(
+            f'kiosk:rotate:{field_name}',
+            f'Kiosk: Rotate {label}',
+            lambda _ctx, action_id=f'kiosk:rotate:{field_name}': (
+                ExecuteMenuActionAction(action_id=action_id)
             ),
-            *static_bindable_entries(PORTS),
-        ],
+            allow_reregister=True,
+        )
+
+    register_bindable_action(
+        'kiosk:set-output',
+        'Kiosk: Set Output',
+        _set_output,
+        parameters=(
+            BindableParameter(
+                name='port',
+                label='Output',
+                options=lambda: port_options(PORTS),
+                description='Which HDMI output to change',
+            ),
+            BindableParameter(
+                name='target',
+                label='Shows',
+                options=_target_options,
+                description='What that output should show',
+            ),
+        ),
+        allow_reregister=True,
     )
-
-
-def _register_dashboard_bindable_actions(
-    dashboards: tuple[KioskDashboard, ...],
-) -> None:
-    """(Re)register the per-(dashboard, port) bindable actions on a set change.
-
-    Unregisters every dashboard-selection key before registering the current set:
-    a deleted dashboard must release its label, which
-    ``register_bindable_action`` refuses to hand to a different key.
-
-    A binding (voice command or IR key) left pointing at a removed key resolves
-    to nothing — the speech/infrared handlers log a warning and skip it.
-    """
-    for bindable in get_bindable_actions():
-        if bindable.key.startswith(_DASHBOARD_SELECTION_PREFIXES):
-            unregister_bindable_action(bindable.key)
-
-    _register_bindable_entries(dashboard_bindable_entries(dashboards, PORTS))
 
 
 def _register_dashboard_action_handlers(
@@ -520,7 +530,6 @@ def update_kiosk_port_menus(
 def update_kiosk_dashboards_menu(dashboards: tuple[KioskDashboard, ...]) -> None:
     """Manage the dashboard set: an Add item plus one item per dashboard."""
     _register_dashboard_action_handlers(dashboards)
-    _register_dashboard_bindable_actions(dashboards)
 
     items: list[MenuItemData] = [
         MenuItemData(

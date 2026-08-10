@@ -1,10 +1,10 @@
-"""Tests for the pure kiosk bindable-action catalog.
+"""Tests for the kiosk bindable action's parameter options.
 
-These assert the ``(key, label)`` entries offered to the bindable-actions
-registry — the pool the voice-command and Infrared "Add Keys" dropdowns are
-built from. The store types import normally; only the catalog needs a
-``sys.path`` shim, since the service directory (``055-kiosk``) is not an
-importable package (mirroring ``test_kiosk_config``).
+`kiosk:set-output` is registered once and takes an output and a target as
+parameters; these are the ``(value, label)`` choices its prompt offers. The
+store types import normally; only the catalog needs a ``sys.path`` shim, since
+the service directory (``055-kiosk``) is not an importable package (mirroring
+``test_kiosk_config``).
 """
 
 from __future__ import annotations
@@ -19,14 +19,11 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
     Ports = Sequence[tuple[str, str, str, str]]
-    StaticEntries = Callable[[Ports], list[tuple[str, str]]]
-    DashboardEntries = Callable[
-        [Sequence[KioskDashboard], Ports],
-        list[tuple[str, str]],
-    ]
+    PortOptions = Callable[[Ports], list[tuple[str, str]]]
+    TargetOptions = Callable[[Sequence[KioskDashboard]], list[tuple[str, str]]]
 
 
-def _import_catalog() -> tuple[StaticEntries, DashboardEntries]:
+def _import_catalog() -> tuple[PortOptions, TargetOptions]:
     """Import the service-dir ``bindable_catalog`` via a ``sys.path`` shim.
 
     Records ``sys.modules`` before the import and drops anything newly loaded
@@ -42,17 +39,17 @@ def _import_catalog() -> tuple[StaticEntries, DashboardEntries]:
         sys.path.insert(0, service_dir)
 
     from bindable_catalog import (  # type: ignore[import-not-found]
-        dashboard_bindable_entries,
-        static_bindable_entries,
+        port_options,
+        target_options,
     )
 
     for mod in set(sys.modules) - modules_before:
         del sys.modules[mod]
 
-    return static_bindable_entries, dashboard_bindable_entries
+    return port_options, target_options
 
 
-static_bindable_entries, dashboard_bindable_entries = _import_catalog()
+port_options, target_options = _import_catalog()
 
 # Mirrors ``setup.PORTS`` — the real table is passed in by the service so it
 # isn't duplicated in the catalog module.
@@ -69,41 +66,54 @@ _WEBUI = KioskDashboard(
 _HA = KioskDashboard(id='ha', name='HA Dashboard', url='http://ha.local:8123')
 
 
-def test_static_entries_cover_terminal_and_off_per_port() -> None:
-    """Every port offers a terminal and an off entry, keyed by its menu action."""
-    entries = dict(static_bindable_entries(_PORTS))
-
-    assert entries == {
-        'kiosk:set:hdmi_a_1:terminal': 'Kiosk: Terminal on HDMI-1',
-        'kiosk:set:hdmi_a_1:off': 'Kiosk: Turn Off HDMI-1',
-        'kiosk:set:hdmi_a_2:terminal': 'Kiosk: Terminal on HDMI-2',
-        'kiosk:set:hdmi_a_2:off': 'Kiosk: Turn Off HDMI-2',
-    }
+def test_port_options_offer_every_output() -> None:
+    """The value is the state field name; the label is what the menu shows."""
+    assert port_options(_PORTS) == [
+        ('hdmi_a_1', 'HDMI-1'),
+        ('hdmi_a_2', 'HDMI-2'),
+    ]
 
 
-def test_dashboard_entries_cover_every_dashboard_port_pair() -> None:
-    """One entry per (dashboard, port), including the built-in Web UI."""
-    entries = dict(dashboard_bindable_entries((_WEBUI, _HA), _PORTS))
-
-    assert entries == {
-        'kiosk:set:hdmi_a_1:dash:ubo-webui': 'Kiosk: Show Ubo WebUI on HDMI-1',
-        'kiosk:set:hdmi_a_2:dash:ubo-webui': 'Kiosk: Show Ubo WebUI on HDMI-2',
-        'kiosk:set:hdmi_a_1:dash:ha': 'Kiosk: Show HA Dashboard on HDMI-1',
-        'kiosk:set:hdmi_a_2:dash:ha': 'Kiosk: Show HA Dashboard on HDMI-2',
-    }
+def test_target_options_list_terminal_off_then_dashboards() -> None:
+    """Terminal and off always available; dashboards follow, built-in included."""
+    assert target_options((_WEBUI, _HA)) == [
+        ('terminal', 'Terminal'),
+        ('off', 'Off'),
+        ('dash:ubo-webui', 'Ubo WebUI'),
+        ('dash:ha', 'HA Dashboard'),
+    ]
 
 
-def test_dashboard_entries_are_empty_without_dashboards() -> None:
-    """No dashboards means nothing to bind — the static entries still stand."""
-    assert dashboard_bindable_entries((), _PORTS) == []
+def test_target_options_without_dashboards_still_offer_terminal_and_off() -> None:
+    """An output can always be turned off, even with nothing to browse."""
+    assert target_options(()) == [('terminal', 'Terminal'), ('off', 'Off')]
 
 
-def test_duplicate_dashboard_names_get_unique_labels() -> None:
-    """Free-text names can collide; the registry rejects a reused label.
+def test_target_values_compose_registered_menu_action_ids() -> None:
+    """The factory builds `kiosk:set:<port>:<target>`, so values are that tail.
 
-    ``register_bindable_action`` raises when another key already holds a label,
-    and that would propagate out of the dashboards autorun — so repeats are
-    suffixed in dashboard order.
+    Guards the coupling to the ids registered by
+    ``_register_kiosk_action_handlers`` / ``_register_dashboard_action_handlers``.
+    """
+    ports = [value for value, _label in port_options(_PORTS)]
+    targets = [value for value, _label in target_options((_WEBUI,))]
+
+    assert [f'kiosk:set:{port}:{target}' for port in ports for target in targets] == [
+        'kiosk:set:hdmi_a_1:terminal',
+        'kiosk:set:hdmi_a_1:off',
+        'kiosk:set:hdmi_a_1:dash:ubo-webui',
+        'kiosk:set:hdmi_a_2:terminal',
+        'kiosk:set:hdmi_a_2:off',
+        'kiosk:set:hdmi_a_2:dash:ubo-webui',
+    ]
+
+
+def test_duplicate_dashboard_names_get_distinguishable_labels() -> None:
+    """Names are free text and can collide.
+
+    The prompt's SELECT shows labels and maps the choice back to a value, so two
+    dashboards sharing a name would otherwise be indistinguishable — and one of
+    them unpickable.
     """
     duplicates = (
         KioskDashboard(id='a', name='Dashboard', url='http://a'),
@@ -111,20 +121,8 @@ def test_duplicate_dashboard_names_get_unique_labels() -> None:
         KioskDashboard(id='c', name='Dashboard', url='http://c'),
     )
 
-    entries = dashboard_bindable_entries(duplicates, _PORTS)
-    labels = [label for _key, label in entries]
+    options = target_options(duplicates)
+    labels = [label for _value, label in options]
 
     assert len(set(labels)) == len(labels)
-    assert 'Kiosk: Show Dashboard on HDMI-1' in labels
-    assert 'Kiosk: Show Dashboard (2) on HDMI-1' in labels
-    assert 'Kiosk: Show Dashboard (3) on HDMI-2' in labels
-
-
-def test_entry_keys_are_unique_across_static_and_dashboard_sets() -> None:
-    """Keys double as menu-action ids, so the two sets must not overlap."""
-    keys = [
-        *(key for key, _label in static_bindable_entries(_PORTS)),
-        *(key for key, _label in dashboard_bindable_entries((_WEBUI, _HA), _PORTS)),
-    ]
-
-    assert len(set(keys)) == len(keys)
+    assert labels[2:] == ['Dashboard', 'Dashboard (2)', 'Dashboard (3)']

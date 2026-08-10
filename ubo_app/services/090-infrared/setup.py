@@ -13,9 +13,9 @@ from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action
 from ubo_app.store.core.bindable_actions import (
     BindableActionContext,
-    get_bindable_action,
     get_bindable_actions,
     register_bindable_action,
+    resolve_binding,
     unregister_bindable_action,
 )
 from ubo_app.store.core.types import (
@@ -56,6 +56,7 @@ from ubo_app.store.services.mqtt import (
     MqttRequestAnnounceAction,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.bindable_action_input import prompt_for_parameters
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
@@ -291,11 +292,11 @@ async def _handle_device_registration_complete(
             # 'None' = a replay-only key (e.g. a TV power code) that triggers
             # no action when received. Labels are unique (registry guard), so
             # we can map the chosen label back to its stable key.
-            label_to_key = {
-                bindable.label: bindable.key
+            label_to_action = {
+                bindable.label: bindable
                 for bindable in get_bindable_actions()
             }
-            action_options = [NO_ACTION_LABEL, *label_to_key]
+            action_options = [NO_ACTION_LABEL, *label_to_action]
 
             value, result = await ubo_input(
                 prompt='Please enter device name on the Web UI',
@@ -346,11 +347,21 @@ async def _handle_device_registration_complete(
                 device_name = (value or '').strip()
             description = (data.get('description', '') or '').strip() or None
             selected_label = data.get('bound_action_key', NO_ACTION_LABEL)
-            bound_action_key = label_to_key.get(selected_label)
+            selected_action = label_to_action.get(selected_label)
 
             if not device_name:
                 logger.warning('Device registration: Device name is empty')
                 return
+
+            # Step 2 — only opens for an action that declares parameters.
+            bound_action_key = None
+            if selected_action is not None:
+                bound_action_key = await prompt_for_parameters(selected_action)
+                if bound_action_key is None:
+                    logger.info(
+                        'Device registration: Action parameter prompt cancelled',
+                    )
+                    return
             logger.info(
                 'Device registration: Device name received',
                 extra={
@@ -397,19 +408,21 @@ def _handle_bound_action_triggered(
     the reducer stays pure and emits the event; this handler does the lookup and
     dispatch.
     """
-    bindable = get_bindable_action(event.bound_action_key)
-    if bindable is None:
+    binding = resolve_binding(event.bound_action_key)
+    if binding is None:
         logger.warning(
             'No bindable action registered for key',
             extra={'bound_action_key': event.bound_action_key},
         )
         return
+    bindable, parameters = binding
     try:
         triggered_action = bindable.factory(
             BindableActionContext(
                 protocol=event.protocol,
                 scancode=event.scancode,
                 device_name=event.device_name,
+                parameters=parameters,
             ),
         )
     except Exception:

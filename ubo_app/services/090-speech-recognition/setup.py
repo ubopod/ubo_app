@@ -37,9 +37,11 @@ from ubo_app.engines.microwakeword_catalog import model_for as microwakeword_mod
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.bindable_actions import (
+    BindableAction,
     BindableActionContext,
-    get_bindable_action,
+    decode_binding,
     get_bindable_actions,
+    resolve_binding,
 )
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -91,6 +93,7 @@ from ubo_app.store.services.speech_recognition import (
     WakeWordSetModelsStatusAction,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.bindable_action_input import prompt_for_parameters
 from ubo_app.utils.download import download_file
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
@@ -210,18 +213,25 @@ def _handle_bound_action_triggered(
     registry and dispatches the produced actions, owning the acknowledgment
     sequence (an RGB blank followed by any RGB ring actions, then the rest).
     """
-    # Voice commands carry no meaningful trigger source (placeholder context).
-    context = BindableActionContext(protocol='', scancode='', device_name=event.phrase)
     rgb_ring_actions: list[RgbRingCommandAction] = []
     other_actions = []
     for key in event.action_keys:
-        bindable = get_bindable_action(key)
-        if bindable is None:
+        binding = resolve_binding(key)
+        if binding is None:
             logger.warning(
                 'No bindable action registered for key',
                 extra={'action_key': key},
             )
             continue
+        bindable, parameters = binding
+        # Voice commands carry no meaningful trigger source (placeholder
+        # protocol/scancode); the phrase stands in for the device name.
+        context = BindableActionContext(
+            protocol='',
+            scancode='',
+            device_name=event.phrase,
+            parameters=parameters,
+        )
         try:
             resolved = bindable.factory(context)
         except Exception:
@@ -277,20 +287,44 @@ def _normalize_phrases(raw: str) -> list[str]:
     return phrases
 
 
-def _collect_action_keys(
+def _collect_actions(
     data: dict[str, str],
-    label_to_key: dict[str, str],
-) -> list[str]:
-    """Map selected slot labels back to keys, dropping None/unknown/duplicates."""
-    keys: list[str] = []
+    label_to_action: dict[str, BindableAction],
+) -> list[BindableAction]:
+    """Map selected slot labels back to actions, dropping None/unknown ones.
+
+    Duplicates are kept here and deduplicated later, once parameters are known:
+    the same parameterized action chosen in two slots is two distinct bindings
+    if its parameters differ.
+    """
+    actions: list[BindableAction] = []
     for slot in range(1, COMMAND_ACTION_SLOTS + 1):
         label = data.get(f'action_{slot}', NO_ACTION_LABEL)
         if not label or label == NO_ACTION_LABEL:
             continue
-        key = label_to_key.get(label)
-        if key is None:
+        action = label_to_action.get(label)
+        if action is None:
             logger.warning('Unknown action label selected', extra={'label': label})
             continue
+        actions.append(action)
+    return actions
+
+
+async def _collect_action_keys(
+    actions: list[BindableAction],
+    defaults: dict[str, dict[str, str]],
+) -> list[str] | None:
+    """Prompt for each action's parameters and return the bindings to store.
+
+    One follow-up prompt per parameterized action, in slot order. Returns None
+    if any is cancelled, so the command is abandoned rather than saved with a
+    half-configured binding.
+    """
+    keys: list[str] = []
+    for action in actions:
+        key = await prompt_for_parameters(action, defaults.get(action.key))
+        if key is None:
+            return None
         if key not in keys:
             keys.append(key)
     return keys
@@ -299,19 +333,24 @@ def _collect_action_keys(
 async def _command_form(existing: SpeechRecognitionIntent | None) -> None:
     """Add or edit a voice command via a Web UI form."""
     bindables = get_bindable_actions()
-    label_to_key = {bindable.label: bindable.key for bindable in bindables}
+    label_to_action = {bindable.label: bindable for bindable in bindables}
     key_to_label = {bindable.key: bindable.label for bindable in bindables}
-    action_options = [NO_ACTION_LABEL, *label_to_key]
+    action_options = [NO_ACTION_LABEL, *label_to_action]
 
-    existing_labels = (
-        [
-            key_to_label[key]
-            for key in existing.action_keys
-            if key in key_to_label
-        ]
-        if existing
-        else []
-    )
+    # A stored binding may carry parameters; the dropdown holds bare action
+    # labels, so decode before looking one up, and keep the parameters around to
+    # pre-select them in the follow-up prompt.
+    existing_bindings = [decode_binding(key) for key in existing.action_keys] if (
+        existing
+    ) else []
+    existing_labels = [
+        key_to_label[key]
+        for key, _parameters in existing_bindings
+        if key in key_to_label
+    ]
+    existing_parameters = {
+        key: parameters for key, parameters in existing_bindings if parameters
+    }
 
     fields = [
         InputFieldDescription(
@@ -366,17 +405,23 @@ async def _command_form(existing: SpeechRecognitionIntent | None) -> None:
     data = result.data if result else {}
     label = (data.get('label', '') or '').strip()
     phrases = _normalize_phrases(data.get('phrases', '') or '')
-    action_keys = _collect_action_keys(dict(data), label_to_key)
+    actions = _collect_actions(dict(data), label_to_action)
 
-    if not label or not phrases or not action_keys:
+    if not label or not phrases or not actions:
         logger.warning(
             'Voice command incomplete; not saving',
             extra={
                 'has_label': bool(label),
                 'phrase_count': len(phrases),
-                'action_count': len(action_keys),
+                'action_count': len(actions),
             },
         )
+        return
+
+    # Step 2 — only opens for actions that declare parameters.
+    action_keys = await _collect_action_keys(actions, existing_parameters)
+    if not action_keys:
+        logger.info('Voice command parameter prompt cancelled; not saving')
         return
 
     if existing:
