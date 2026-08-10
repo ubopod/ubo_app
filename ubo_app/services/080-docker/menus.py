@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 from apps import IMAGES
 from docker_composition import check_composition
 from docker_container import check_container
+from docker_logs import PLACEHOLDER as LOGS_PLACEHOLDER
+from docker_logs import stream_id as logs_stream_id
 from redux import AutorunOptions
 
 from ubo_app.colors import DANGER_COLOR
@@ -373,6 +375,39 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             ),
         )
 
+    # Logs, wherever there is something that could have produced any. Offered
+    # in ERROR too — that is the state whose message tells the user to go read
+    # them, and until now there was nowhere to go.
+    if image.status in (
+        DockerItemStatus.CREATED,
+        DockerItemStatus.STARTING,
+        DockerItemStatus.RUNNING,
+        DockerItemStatus.ERROR,
+    ):
+        logs_id = f'docker:logs:{image.id}'
+        _image_action_ids[menu_id].append(logs_id)
+        register_action(
+            logs_id,
+            lambda _id=image.id, _label=image.label: store.dispatch(
+                OpenRenderAction(
+                    kind='text_viewer',
+                    title=f'{_label} Logs',
+                    stream_id=logs_stream_id(_id),
+                    # The tail arrives from `docker_logs`' polling loop, which
+                    # starts when this page reaches the top of the stack.
+                    props={'text': LOGS_PLACEHOLDER},
+                ),
+            ),
+        )
+        items.append(
+            MenuItemData(
+                key='logs',
+                label='Logs',
+                icon='󰦪',
+                action_id=logs_id,
+            ),
+        )
+
     # Status messages
     if is_composition:
         messages = {
@@ -383,7 +418,7 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             DockerItemStatus.CREATED: 'Composition is created but not running',
             DockerItemStatus.STARTING: 'Application is starting...',
             DockerItemStatus.RUNNING: 'Composition is running',
-            DockerItemStatus.ERROR: 'We have an error, please check the logs',
+            DockerItemStatus.ERROR: 'Something went wrong — open Logs for details',
             DockerItemStatus.PROCESSING: 'Waiting...',
         }
     else:
@@ -399,7 +434,7 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             DockerItemStatus.CREATED: 'Container is created but not running',
             DockerItemStatus.STARTING: 'Application is starting...',
             DockerItemStatus.RUNNING: running_message or 'Container is running',
-            DockerItemStatus.ERROR: 'We have an error, please check the logs',
+            DockerItemStatus.ERROR: 'Something went wrong — open Logs for details',
             DockerItemStatus.PROCESSING: 'Waiting...',
         }
 

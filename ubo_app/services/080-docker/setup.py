@@ -40,6 +40,7 @@ from docker_container import (
     stop_container,
 )
 from docker_image import fetch_image, remove_image
+from docker_logs import open_logs_image, stop_log_tail, sync_log_tail
 from grpc_lan import (
     GrpcToggle,
     classify_grpc_toggle,
@@ -1365,6 +1366,12 @@ async def init_service() -> Subscriptions:
         store.subscribe_event(DockerImageRemoveContainerEvent, remove_container),
         store.subscribe_event(DockerImageRebindEvent, handle_rebind),
     ]
+
+    # Subscribed here rather than at import: a module-level `@store.autorun`
+    # registers a listener the moment the file is imported, which leaks one per
+    # import in tests and survives a failed `init_service` in production.
+    open_logs = store.autorun(open_logs_image)(sync_log_tail)
+    subscriptions.extend((open_logs.unsubscribe, stop_log_tail))
 
     async def handle_docker_status(status: str) -> None:
         """Handle Docker status changes from systemd."""
