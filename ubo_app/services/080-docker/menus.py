@@ -89,6 +89,12 @@ _image_action_ids: dict[str, list[str]] = {}
 
 def _health_message(image: ImageState, health: DockerItemHealth) -> str:
     """Say what the app did, in the space the status message would have used."""
+    if image.failing_services:
+        # A stack: name the services rather than the app, since the whole point
+        # is that some of it is up and some of it is not.
+        names = ', '.join(image.failing_services)
+        return f'Failing: {names} — open Logs'
+
     cause = image.last_error or (
         f'exit {image.last_exit_code}' if image.last_exit_code is not None else ''
     )

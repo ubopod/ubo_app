@@ -151,6 +151,7 @@ def _without_exit_record(state: ImageState) -> ImageState:
         last_exit_code=None,
         last_exit_at=None,
         last_error='',
+        failing_services=(),
     )
 
 
@@ -200,6 +201,7 @@ def image_reducer(
                 last_exit_code=action.exit_code,
                 last_exit_at=action.exit_at,
                 last_error=action.error,
+                failing_services=action.failing_services,
             )
 
         case DockerImageSetDockerIdAction():

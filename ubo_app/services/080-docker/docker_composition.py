@@ -17,6 +17,7 @@ from calculate_progress import (
     ServiceTrackers,
     calculate_composition_progress,
 )
+from compose_ps import failing_services, has_running, parse_compose_ps
 from docker_app import prepare_app
 
 from ubo_app.colors import DANGER_COLOR
@@ -28,6 +29,7 @@ from ubo_app.store.services.docker import (
     DockerImageFetchCompositionEvent,
     DockerImageReleaseCompositionEvent,
     DockerImageRemoveCompositionEvent,
+    DockerImageReportExitAction,
     DockerImageRunCompositionEvent,
     DockerImageSetStatusAction,
     DockerImageStopCompositionEvent,
@@ -730,23 +732,18 @@ async def check_composition(*, id: str) -> None:
         )
         return
 
-    # Check if containers are running
-    ps_running = await asyncio.subprocess.create_subprocess_exec(
-        'docker',
-        'compose',
-        'ps',
-        '--quiet',
-        cwd=composition_path,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    # Check all containers (including stopped)
-    ps_all = await asyncio.subprocess.create_subprocess_exec(
+    # One `ps` covering every container, reporting per-service state rather
+    # than bare ids. `--quiet` twice told us only whether *something* existed,
+    # so a stack with one healthy container and four crash-looping ones read as
+    # running. `-a` is required: a service between restart-backoff attempts is
+    # absent from the default listing.
+    ps = await asyncio.subprocess.create_subprocess_exec(
         'docker',
         'compose',
         'ps',
         '-a',
-        '--quiet',
+        '--format',
+        'json',
         cwd=composition_path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -763,8 +760,7 @@ async def check_composition(*, id: str) -> None:
     )
 
     await asyncio.gather(
-        ps_running.wait(),
-        ps_all.wait(),
+        ps.wait(),
         config.wait(),
         return_exceptions=True,
     )
@@ -772,12 +768,7 @@ async def check_composition(*, id: str) -> None:
     store.dispatch(
         *await asyncio.gather(
             log_async_process(
-                ps_running,
-                title='Docker Composition Error',
-                message='Failed to check running containers.',
-            ),
-            log_async_process(
-                ps_all,
+                ps,
                 title='Docker Composition Error',
                 message='Failed to check containers.',
             ),
@@ -789,19 +780,26 @@ async def check_composition(*, id: str) -> None:
         ),
     )
 
-    # Check if containers are running
-    ps_running_output = await ps_running.stdout.read() if ps_running.stdout else b''
-    if ps_running_output:
-        store.dispatch(
-            DockerImageSetStatusAction(image=id, status=DockerItemStatus.STARTING),
-        )
-        return
+    ps_output = await ps.stdout.read() if ps.stdout else b''
+    services = parse_compose_ps(ps_output.decode('utf-8', errors='replace'))
 
-    # Check if containers exist (even if stopped)
-    ps_all_output = await ps_all.stdout.read() if ps_all.stdout else b''
-    if ps_all_output:
+    if services:
+        # Dispatched on every check, including when nothing is wrong, so a
+        # recovered stack clears its own record.
         store.dispatch(
-            DockerImageSetStatusAction(image=id, status=DockerItemStatus.CREATED),
+            DockerImageReportExitAction(
+                image=id,
+                restart_count=0,
+                failing_services=failing_services(services),
+            ),
+        )
+        store.dispatch(
+            DockerImageSetStatusAction(
+                image=id,
+                status=DockerItemStatus.STARTING
+                if has_running(services)
+                else DockerItemStatus.CREATED,
+            ),
         )
         return
 

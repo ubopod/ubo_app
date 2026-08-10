@@ -166,6 +166,10 @@ class DockerImageReportExitAction(DockerImageAction):
     exit_code: int | None = None
     exit_at: float | None = None
     error: str = ''
+    # Compositions only. `RestartCount` is per-container and `compose ps` does
+    # not report it, so a stack says which of its services cannot stay up
+    # instead. Always sent, so a recovered stack clears it.
+    failing_services: tuple[str, ...] = ()
 
 
 class DockerImageUpdateMetadataAction(DockerImageAction):
@@ -340,6 +344,8 @@ class ImageState(Immutable):
     last_exit_code: int | None = None
     last_exit_at: float | None = None
     last_error: str = ''
+    # Compositions only: the services in the stack that cannot stay up.
+    failing_services: tuple[str, ...] = ()
 
     @property
     def is_fetching(self: ImageState) -> bool:
@@ -370,6 +376,10 @@ def derive_health(image: ImageState, *, now: float) -> DockerItemHealth:
     policy increments this counter, and a manual start resets it — so a nonzero
     count means the daemon revived something the user did not stop.
     """
+    # A stack reports by name instead of by count, since `compose ps` has no
+    # per-container restart counter to read.
+    if image.failing_services:
+        return DockerItemHealth.CRASH_LOOPING
     if image.restart_count <= 0:
         return DockerItemHealth.OK
     if (
