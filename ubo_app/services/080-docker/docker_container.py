@@ -345,6 +345,24 @@ def update_container(*, image_id: str, container: Container) -> None:
             ),
         )
         return
+    if container.status == 'restarting':
+        # A container in the restart-policy backoff is *trying* to start, not
+        # stopped. Every container is created with `restart_policy: always`
+        # (see `run_container`), so a crash-looping app spends most of its life
+        # here — and reporting CREATED offered the user a "Start" button for
+        # something that is already starting, over and over, while hiding the
+        # fault entirely.
+        logger.debug(
+            'Container for the image found, restarting',
+            extra={'image': image_id, 'path': IMAGES[image_id].full_path},
+        )
+        store.dispatch(
+            DockerImageSetStatusAction(
+                image=image_id,
+                status=DockerItemStatus.STARTING,
+            ),
+        )
+        return
     logger.debug(
         "Container for the image found, but it's not running",
         extra={'image': image_id, 'path': IMAGES[image_id].full_path},
