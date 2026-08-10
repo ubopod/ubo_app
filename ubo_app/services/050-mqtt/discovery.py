@@ -13,18 +13,41 @@ any service's — from the shared contribution registry.
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 from topics import availability_topic, channel_topic
 
-from ubo_app._version import __version__
 from ubo_app.utils.pod_id import get_pod_id
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from ubo_app.store.services.mqtt import MqttComponent
+
+
+def _version() -> str:
+    """Return the running version, for the payload's ``sw`` fields.
+
+    Read from the installed distribution's metadata rather than from
+    ``ubo_app/_version.py``, which is a gitignored build artifact
+    (``pyproject.toml``'s ``version-file``) that only exists once something has
+    built the project *in that tree*. Importing it made this module — and the
+    three test modules that import the service — fail outright on any clean
+    checkout; it survived only where a stale artifact happened to linger.
+
+    Matches ``010-localization``'s user-agent helper, the same shape of value:
+    a version embedded in an outgoing identifier, where being unable to
+    determine it is not worth failing over.
+    """
+    try:
+        return version('ubo-app')
+    except PackageNotFoundError:
+        return 'dev'
+
+
+__version__ = _version()
 
 _NO_REMOVALS: Mapping[str, str] = MappingProxyType({})
 
