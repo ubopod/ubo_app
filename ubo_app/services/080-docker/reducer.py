@@ -227,13 +227,16 @@ def image_reducer(
             )
 
         case DockerImageRemoveAction():
+            # Nothing downstream will ever contradict a record kept here: the
+            # composition directory is about to be deleted, so `check_composition`
+            # takes its does-not-exist path and never reports again.
             if IMAGES[state.id].is_composition:
                 return CompleteReducerResult(
-                    state=state,
+                    state=_without_exit_record(state),
                     events=[DockerImageRemoveCompositionEvent(image=state.id)],
                 )
             return CompleteReducerResult(
-                state=state,
+                state=_without_exit_record(state),
                 events=[DockerImageRemoveEvent(image=state.id)],
             )
 
@@ -264,8 +267,10 @@ def image_reducer(
             )
 
         case DockerImageReleaseAction():
+            # `compose down` removes the containers, so the next `ps` lists
+            # nothing and has no way to retract a name recorded here.
             return CompleteReducerResult(
-                state=state,
+                state=_without_exit_record(state),
                 events=[DockerImageReleaseCompositionEvent(image=state.id)],
             )
 

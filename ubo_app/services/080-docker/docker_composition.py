@@ -721,12 +721,30 @@ def release_composition(event: DockerImageReleaseCompositionEvent) -> None:
     create_task(_release_composition(id))
 
 
+def _report_failing(id: str, names: tuple[str, ...]) -> None:
+    """Publish which services are failing — including none of them.
+
+    Always dispatched, on every path out of ``check_composition``. A record that
+    is only ever *set* outlives what it describes: releasing a stack removes its
+    containers and deleting one removes its directory, so a later check has
+    nothing left to inspect and could never retract a stale name on its own.
+    """
+    store.dispatch(
+        DockerImageReportExitAction(
+            image=id,
+            restart_count=0,
+            failing_services=names,
+        ),
+    )
+
+
 async def check_composition(*, id: str) -> None:
     """Check the status of the composition."""
     # Check if composition directory exists
     composition_path = COMPOSITIONS_PATH / id
     if not composition_path.exists():
         # Directory doesn't exist - set status to NOT_AVAILABLE
+        _report_failing(id, ())
         store.dispatch(
             DockerImageSetStatusAction(image=id, status=DockerItemStatus.NOT_AVAILABLE),
         )
@@ -783,16 +801,11 @@ async def check_composition(*, id: str) -> None:
     ps_output = await ps.stdout.read() if ps.stdout else b''
     services = parse_compose_ps(ps_output.decode('utf-8', errors='replace'))
 
+    # Before the branch, so the no-containers case below clears it too — that is
+    # the state a released stack lands in.
+    _report_failing(id, failing_services(services))
+
     if services:
-        # Dispatched on every check, including when nothing is wrong, so a
-        # recovered stack clears its own record.
-        store.dispatch(
-            DockerImageReportExitAction(
-                image=id,
-                restart_count=0,
-                failing_services=failing_services(services),
-            ),
-        )
         store.dispatch(
             DockerImageSetStatusAction(
                 image=id,

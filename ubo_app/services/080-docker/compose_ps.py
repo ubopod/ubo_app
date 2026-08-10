@@ -63,28 +63,39 @@ def parse_compose_ps(output: str) -> tuple[ComposeService, ...]:
     )
 
 
+def has_running(services: tuple[ComposeService, ...]) -> bool:
+    """Whether any container in the stack is up.
+
+    ``restarting`` counts: a container in restart backoff is trying to come up,
+    not stopped.
+    """
+    return any(
+        service.state in ('running', 'restarting') for service in services
+    )
+
+
 def failing_services(services: tuple[ComposeService, ...]) -> tuple[str, ...]:
     """Name the services that cannot stay up.
 
-    ``restarting`` is the steady state of a crash loop under
-    ``restart: unless-stopped``, which every composition ubo renders uses. An
-    ``exited`` service with a nonzero code alongside running siblings is a
-    partial failure — the stack is up, but not all of it.
+    ``restarting`` and ``unhealthy`` are unambiguous: the daemon is actively
+    retrying, or the service's own healthcheck says it is sick. Both stand on
+    their own.
 
-    A clean ``exited`` with code 0 is not a failure: that is how one-shot init
-    containers finish, and several bundled stacks have them.
+    A nonzero ``exited`` code does not. ``docker compose stop`` sends SIGTERM,
+    so a service that does not trap it exits 143 — and one that has to be killed
+    exits 137 — on a perfectly deliberate stop. It only means something while
+    the rest of the stack is still up, which is the partial-failure case: these
+    siblings are serving, this one fell over. Once nothing is running, the whole
+    stack was wound down and there is nobody to blame.
+
+    A clean ``exited`` with code 0 is never a failure: that is how the one-shot
+    init containers in several bundled stacks finish.
     """
+    stack_is_up = has_running(services)
     return tuple(
         service.service
         for service in services
         if service.state == 'restarting'
-        or (service.state == 'exited' and service.exit_code != 0)
         or service.health == 'unhealthy'
-    )
-
-
-def has_running(services: tuple[ComposeService, ...]) -> bool:
-    """Whether any container in the stack is up."""
-    return any(
-        service.state in ('running', 'restarting') for service in services
+        or (stack_is_up and service.state == 'exited' and service.exit_code != 0)
     )

@@ -376,6 +376,13 @@ def derive_health(image: ImageState, *, now: float) -> DockerItemHealth:
     policy increments this counter, and a manual start resets it — so a nonzero
     count means the daemon revived something the user did not stop.
     """
+    # An app that is not meant to be up is not unhealthy, it is off. Its crash
+    # history stops being actionable the moment the user stops or removes it,
+    # and `docker stop` does not reset `RestartCount` — only `docker start`
+    # does — so without this the count would outlive the thing it described.
+    if image.status not in (DockerItemStatus.STARTING, DockerItemStatus.RUNNING):
+        return DockerItemHealth.OK
+
     # A stack reports by name instead of by count, since `compose ps` has no
     # per-container restart counter to read.
     if image.failing_services:

@@ -107,6 +107,47 @@ def test_a_clean_one_shot_exit_is_not_a_failure() -> None:
     assert module.has_running(services) is True
 
 
+def test_a_deliberately_stopped_stack_reports_no_failures() -> None:
+    """`docker compose stop` is SIGTERM, so services that ignore it exit 143.
+
+    Read as failures, a stack the user stopped on purpose would keep saying it
+    was broken — the same ambiguity `restart_count` exists to resolve for a
+    single container. Nothing is running, so nothing was expected to be.
+    """
+    module = _module()
+
+    services = module.parse_compose_ps(
+        json.dumps(
+            [
+                _entry('web', 'exited', ExitCode=143),
+                _entry('db', 'exited', ExitCode=137),
+            ],
+        ),
+    )
+
+    assert module.failing_services(services) == ()
+
+
+def test_a_partial_failure_while_the_stack_is_up_is_still_reported() -> None:
+    """One service down while its siblings serve is a real fault."""
+    module = _module()
+
+    services = module.parse_compose_ps(
+        json.dumps(
+            [_entry('web', 'running'), _entry('worker', 'exited', ExitCode=1)],
+        ),
+    )
+
+    assert module.failing_services(services) == ('worker',)
+
+
+def test_an_empty_listing_reports_no_failures() -> None:
+    """A released or deleted stack has no containers to blame."""
+    module = _module()
+
+    assert module.failing_services(()) == ()
+
+
 def test_a_wholly_stopped_stack_is_not_running() -> None:
     """Nothing up means CREATED, not STARTING."""
     module = _module()

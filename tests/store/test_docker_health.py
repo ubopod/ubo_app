@@ -19,6 +19,7 @@ from ubo_app.store.services.docker import (
     CRASH_LOOP_THRESHOLD,
     CRASH_LOOP_WINDOW,
     DockerItemHealth,
+    DockerItemStatus,
     ImageState,
     derive_health,
 )
@@ -58,6 +59,8 @@ def _isolated_persistent_store(
 
 
 def _image(**kwargs: object) -> ImageState:
+    """Build a *running* app; health only describes one meant to be up."""
+    kwargs.setdefault('status', DockerItemStatus.RUNNING)
     return ImageState(id='app', label='App', instructions=None, **kwargs)  # pyright: ignore[reportArgumentType]
 
 
@@ -131,6 +134,75 @@ def test_report_exit_latches_onto_state() -> None:
     assert result.last_error == 'Killed for exceeding available memory'
     # The lifecycle status is deliberately untouched — health is orthogonal.
     assert result.status == state.status
+
+
+@pytest.mark.parametrize(
+    'status',
+    [
+        DockerItemStatus.CREATED,
+        DockerItemStatus.AVAILABLE,
+        DockerItemStatus.NOT_AVAILABLE,
+    ],
+)
+def test_an_app_that_is_not_meant_to_be_up_is_never_unhealthy(
+    status: DockerItemStatus,
+) -> None:
+    """A stopped app is off, not sick.
+
+    `docker stop` does not reset `RestartCount` — only `docker start` does — so
+    a crash-looping container that the user then stopped would keep reporting
+    its restarts forever, re-latched by the very next reconcile.
+    """
+    stopped = _image(
+        status=status,
+        restart_count=CRASH_LOOP_THRESHOLD * 3,
+        last_exit_code=1,
+        last_exit_at=NOW - 1,
+        failing_services=('openclaw-cli',),
+    )
+
+    assert derive_health(stopped, now=NOW) is DockerItemHealth.OK
+
+
+def test_failing_services_read_as_crash_looping() -> None:
+    """A stack reports by name, since `compose ps` has no restart counter."""
+    stack = _image(failing_services=('openclaw-cli',))
+
+    assert derive_health(stack, now=NOW) is DockerItemHealth.CRASH_LOOPING
+
+
+@pytest.mark.parametrize(
+    'action_name',
+    ['DockerImageStopAction', 'DockerImageReleaseAction', 'DockerImageRemoveAction'],
+)
+def test_winding_an_app_down_clears_its_failure_record(action_name: str) -> None:
+    """Stopping, releasing or deleting an app must not leave its errors behind.
+
+    Releasing a composition removes its containers and deleting it removes the
+    directory, so nothing downstream will ever contradict a stale record — the
+    heading would keep naming a failed service of an app that no longer exists.
+    """
+    module = _reducer_module()
+    broken = ImageState(
+        id='openclaw',
+        label='OpenClaw',
+        instructions=None,
+        restart_count=7,
+        last_exit_code=1,
+        last_exit_at=NOW,
+        last_error='boom',
+        failing_services=('openclaw-cli',),
+    )
+
+    result = module.image_reducer(
+        broken,
+        getattr(module, action_name)(image='openclaw'),
+    )
+
+    assert result.state.failing_services == ()
+    assert result.state.restart_count == 0
+    assert result.state.last_error == ''
+    assert derive_health(result.state, now=NOW) is DockerItemHealth.OK
 
 
 def test_starting_by_hand_clears_the_crash_record() -> None:
