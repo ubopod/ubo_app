@@ -8,6 +8,7 @@ import json
 import os
 import re
 import secrets as py_secrets
+from enum import StrEnum
 from typing import TYPE_CHECKING, NamedTuple
 
 import aiohttp
@@ -35,6 +36,7 @@ from ubo_app.store.core.action_registry import register_action
 from ubo_app.store.core.types import (
     MenuItemData,
     OpenRenderAction,
+    RenderStackItem,
     StackPopAction,
     StackPushMenuAction,
     UpdateDynamicMenuAction,
@@ -64,6 +66,8 @@ from ubo_app.utils.input import ubo_input
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
     from pathlib import Path
+
+    from ubo_app.store.core.types import StackItemType
 
 HERMES_COMPOSITION_ID = 'hermes'
 # The `hermes` user inside the images. The WebUI container chowns the shared
@@ -489,6 +493,20 @@ async def reconfigure_dashboard_auth() -> bool:
 # ---------------------------------------------------------------------------
 
 
+class OAuthOutcome(StrEnum):
+    """How a login attempt ended.
+
+    ``CANCELLED`` is every way the user changed their mind — walking away from
+    the view, dismissing the code form, or starting a different provider. It is
+    silent: a failure notification for any of those is noise, and it lands on
+    whatever screen they moved on to.
+    """
+
+    SUCCEEDED = 'succeeded'
+    FAILED = 'failed'
+    CANCELLED = 'cancelled'
+
+
 class HermesOAuthProvider(NamedTuple):
     """A Hermes provider whose credentials come from an OAuth flow."""
 
@@ -532,6 +550,48 @@ _DEVICE_CODE_RE = re.compile(r'\b[A-Z0-9]{4}-[A-Z0-9]{4,6}\b')
 _PORTAL_LINE_RE = re.compile(r'^\s*Portal:', re.IGNORECASE)
 
 _oauth_process: asyncio.subprocess.Process | None = None
+# Bumped per login attempt. A run whose generation is no longer current has
+# been superseded by a newer one, which is a cancellation rather than a
+# failure and must not raise a notification.
+_oauth_generation = 0
+# How often to check that the user is still looking at the sign-in view.
+HERMES_OAUTH_VIEW_POLL_SECONDS = 0.5
+
+
+@store.with_state(lambda state: state.main.stack)
+def _sign_in_view_is_open(stack: Sequence[StackItemType], title: str) -> bool:
+    """Whether this provider's sign-in view is still on the navigation stack."""
+    return any(
+        isinstance(item, RenderStackItem) and item.title == title for item in stack
+    )
+
+
+async def _await_login(
+    process: asyncio.subprocess.Process,
+    title: str,
+) -> bool:
+    """Wait for the login to finish, or for the user to walk away from it.
+
+    Returns ``False`` when the sign-in view is gone, which is the only signal
+    available that the user pressed back: nothing tells this coroutine that its
+    view was popped, so without the poll an abandoned login would sit here
+    until the CLI's own timeout and then report a failure the user had already
+    moved on from.
+    """
+    waiter = asyncio.ensure_future(process.wait())
+    try:
+        while True:
+            done, _ = await asyncio.wait(
+                {waiter},
+                timeout=HERMES_OAUTH_VIEW_POLL_SECONDS,
+            )
+            if done:
+                return True
+            if not _sign_in_view_is_open(title):
+                return False
+    finally:
+        if not waiter.done():
+            waiter.cancel()
 
 
 def extract_oauth_prompt(
@@ -725,21 +785,88 @@ async def _answer_code_prompt(
     return True
 
 
+def _present_login_prompt(
+    provider: HermesOAuthProvider,
+    *,
+    url: str,
+    code: str | None,
+    title: str,
+) -> None:
+    """Swap the spinner for whatever this provider's flow asks the user to do."""
+    if provider.needs_code:
+        # Deliberately no QR. This flow needs the input form on screen to take
+        # the code back, and the form sits over the QR — so the link goes in
+        # the form instead, where it is also clickable.
+        store.dispatch(
+            UpdateRenderPropsAction(
+                kind='status',
+                title=title,
+                props={
+                    'text': 'Open the link in the web dashboard, then enter the code.',
+                    'text_font_size': 16,
+                },
+            ),
+        )
+    else:
+        store.dispatch(
+            UpdateRenderPropsAction(
+                kind='status',
+                next_kind='qr_code',
+                title=title,
+                props=build_oauth_qr_props(url, code),
+            ),
+        )
+
+
+def _settle_oauth(
+    provider: HermesOAuthProvider,
+    *,
+    process: asyncio.subprocess.Process | None,
+    title: str,
+    outcome: OAuthOutcome,
+    transcript: str,
+) -> None:
+    """Tear a finished login down: stop it, close its view, report the outcome."""
+    if process is not None and process.returncode is None:
+        with contextlib.suppress(ProcessLookupError):
+            process.terminate()
+    # Only pop what we pushed. If the user already navigated away, the view on
+    # top belongs to someone else and popping it would steal a screen.
+    if _sign_in_view_is_open(title):
+        store.dispatch(StackPopAction())
+    if outcome is not OAuthOutcome.CANCELLED:
+        _notify_oauth_result(
+            provider,
+            succeeded=outcome is OAuthOutcome.SUCCEEDED,
+            transcript=transcript,
+        )
+
+
 async def _perform_oauth(provider: HermesOAuthProvider) -> None:
     """Run a provider's OAuth login in the container, showing its URL as a QR."""
-    global _oauth_process  # noqa: PLW0603
+    global _oauth_generation, _oauth_process  # noqa: PLW0603
+    # Claim the generation *before* terminating the previous login, not after.
+    # `_terminate_oauth_process` awaits, and the run being terminated wakes up
+    # inside that await — if it reached its teardown while the counter still
+    # matched, it would announce a failure for the provider the user just
+    # navigated away from.
+    _oauth_generation += 1
+    generation = _oauth_generation
     await _terminate_oauth_process()
+    # Doubles as the handle for this run's view: the stack carries the title,
+    # so it is what tells us whether the user is still on the sign-in screen.
+    title = f'{provider.label} Sign In'
 
     store.dispatch(
         OpenRenderAction(
             kind='status',
-            title=f'{provider.label} Sign In',
+            title=title,
             props={'text': 'Starting…', 'text_font_size': 16},
         ),
     )
 
     transcript: list[str] = []
-    succeeded = False
+    outcome = OAuthOutcome.FAILED
     process = None
     try:
         process = await asyncio.create_subprocess_exec(
@@ -776,52 +903,41 @@ async def _perform_oauth(provider: HermesOAuthProvider) -> None:
         url, code = await _read_oauth_prompt(process, provider, transcript)
 
         if url is None:
-            await process.wait()
+            if _sign_in_view_is_open(title):
+                await process.wait()
+            else:
+                outcome = OAuthOutcome.CANCELLED
             return
 
-        if provider.needs_code:
-            # Deliberately no QR. This flow needs the input form on screen to
-            # take the code back, and the form sits over the QR — so the link
-            # goes in the form instead, where it is also clickable.
-            store.dispatch(
-                UpdateRenderPropsAction(
-                    kind='status',
-                    title=f'{provider.label} Sign In',
-                    props={
-                        'text': 'Open the link in the web dashboard, '
-                        'then enter the code.',
-                        'text_font_size': 16,
-                    },
-                ),
-            )
-            if not await _answer_code_prompt(process, provider, url):
-                return
-        else:
-            store.dispatch(
-                UpdateRenderPropsAction(
-                    kind='status',
-                    next_kind='qr_code',
-                    title=f'{provider.label} Sign In',
-                    props=build_oauth_qr_props(url, code),
-                ),
-            )
+        _present_login_prompt(provider, url=url, code=code, title=title)
 
-        await process.wait()
-        succeeded = process.returncode == 0
+        # Dismissing the form is the user declining, not a failure.
+        if provider.needs_code and not await _answer_code_prompt(
+            process,
+            provider,
+            url,
+        ):
+            outcome = OAuthOutcome.CANCELLED
+            return
+
+        if not await _await_login(process, title):
+            outcome = OAuthOutcome.CANCELLED
+            return
+        if process.returncode == 0:
+            outcome = OAuthOutcome.SUCCEEDED
     except Exception:
         logger.exception('Hermes OAuth login failed', extra={'provider': provider.id})
     finally:
-        _oauth_process = None
-        # Covers every early return above — a cancelled code prompt, a stream
-        # that ended without a URL, an exception — so an abandoned login can
-        # never outlive its view.
-        if process is not None and process.returncode is None:
-            with contextlib.suppress(ProcessLookupError):
-                process.terminate()
-        store.dispatch(StackPopAction())
-        _notify_oauth_result(
+        # A newer login has already taken ownership of the module state, so
+        # only clear it if this run is still the current one.
+        superseded = generation != _oauth_generation
+        if not superseded:
+            _oauth_process = None
+        _settle_oauth(
             provider,
-            succeeded=succeeded,
+            process=process,
+            title=title,
+            outcome=OAuthOutcome.CANCELLED if superseded else outcome,
             transcript=''.join(transcript),
         )
 

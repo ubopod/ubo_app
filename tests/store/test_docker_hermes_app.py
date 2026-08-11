@@ -6,7 +6,7 @@ import asyncio
 import sys
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING, ClassVar, Protocol, cast
 
 import dotenv
 
@@ -96,6 +96,14 @@ class HermesOAuthProviderProtocol(Protocol):
     needs_code: bool
 
 
+class OAuthOutcomeProtocol(Protocol):
+    """The outcome enum members these tests reference."""
+
+    SUCCEEDED: ClassVar[object]
+    FAILED: ClassVar[object]
+    CANCELLED: ClassVar[object]
+
+
 class HermesModule(Protocol):
     """Protocol for the Hermes module members used by these tests."""
 
@@ -108,6 +116,7 @@ class HermesModule(Protocol):
     HERMES_DASHBOARD_PASSWORD_SECRET: str
     HERMES_DASHBOARD_SESSION_SECRET: str
     HERMES_OAUTH_PROVIDERS: tuple[HermesOAuthProviderProtocol, ...]
+    OAuthOutcome: type[OAuthOutcomeProtocol]
     ENTRY: ContainerEntryProtocol
     secrets: SecretsModule
     store: _FakeStore
@@ -135,6 +144,18 @@ class HermesModule(Protocol):
         code: str | None,
     ) -> dict[str, str]:
         """Build the qr_code render props for a login prompt."""
+        ...
+
+    def _settle_oauth(
+        self,
+        provider: HermesOAuthProviderProtocol,
+        *,
+        process: object,
+        title: str,
+        outcome: object,
+        transcript: str,
+    ) -> None:
+        """Tear down a finished login."""
         ...
 
     def _oauth_action(
@@ -714,6 +735,117 @@ def test_oauth_action_returns_none_so_no_menu_is_pushed(
 
     assert hermes._oauth_action(_provider(hermes, 'nous'))() is None  # noqa: SLF001
     assert len(started) == 1
+
+
+def _settle(
+    monkeypatch: pytest.MonkeyPatch,
+    hermes: HermesModule,
+    outcome: object,
+    *,
+    view_open: bool,
+) -> tuple[list[dict[str, object]], _FakeStore]:
+    """Run `_settle_oauth` with the store and view-probe stubbed out."""
+    notified: list[dict[str, object]] = []
+    fake_store = _FakeStore()
+    monkeypatch.setattr(hermes, 'store', fake_store)
+    monkeypatch.setattr(hermes, '_sign_in_view_is_open', lambda _title: view_open)
+    monkeypatch.setattr(
+        hermes,
+        '_notify_oauth_result',
+        lambda _provider, **kwargs: notified.append(kwargs),
+    )
+    hermes._settle_oauth(  # noqa: SLF001
+        _provider(hermes, 'nous'),
+        process=None,
+        title='Nous Research Sign In',
+        outcome=outcome,
+        transcript='',
+    )
+    return notified, fake_store
+
+
+def test_cancelled_login_reports_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Changing your mind is not a failure.
+
+    Backing out of the view, dismissing the code form, or picking a different
+    provider all end the login early. Reporting those raised an error about the
+    provider the user had already abandoned, on top of the screen they had
+    moved on to.
+    """
+    hermes = _import_hermes()
+
+    notified, _ = _settle(
+        monkeypatch,
+        hermes,
+        hermes.OAuthOutcome.CANCELLED,
+        view_open=False,
+    )
+
+    assert notified == []
+
+
+def test_failed_login_still_reports(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Silencing cancellation must not silence genuine failures."""
+    hermes = _import_hermes()
+
+    notified, _ = _settle(
+        monkeypatch,
+        hermes,
+        hermes.OAuthOutcome.FAILED,
+        view_open=True,
+    )
+
+    assert len(notified) == 1
+    assert notified[0]['succeeded'] is False
+
+
+def test_successful_login_reports_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The success path is unaffected by the cancellation handling."""
+    hermes = _import_hermes()
+
+    notified, _ = _settle(
+        monkeypatch,
+        hermes,
+        hermes.OAuthOutcome.SUCCEEDED,
+        view_open=True,
+    )
+
+    assert len(notified) == 1
+    assert notified[0]['succeeded'] is True
+
+
+def test_settle_only_pops_a_view_it_still_owns(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Popping unconditionally stole a screen from wherever the user went.
+
+    Once the user has pressed back, the view on top is someone else's, so the
+    teardown must leave the stack alone.
+    """
+    hermes = _import_hermes()
+
+    _, gone = _settle(
+        monkeypatch,
+        hermes,
+        hermes.OAuthOutcome.CANCELLED,
+        view_open=False,
+    )
+    _, still_open = _settle(
+        monkeypatch,
+        hermes,
+        hermes.OAuthOutcome.CANCELLED,
+        view_open=True,
+    )
+
+    pops = [
+        action
+        for action in still_open.dispatched
+        if type(action).__name__ == 'StackPopAction'
+    ]
+    assert len(pops) == 1
+    assert gone.dispatched == []
 
 
 def test_oauth_providers_exclude_only_qwen() -> None:
