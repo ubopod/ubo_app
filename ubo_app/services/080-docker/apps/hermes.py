@@ -4,18 +4,30 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import secrets as py_secrets
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import aiohttp
+import dotenv
 
 from apps._registry import COMPOSITIONS_PATH, ContainerEntry
 from ubo_app.constants import CONFIG_PATH
 from ubo_app.constants.assistant import (
+    ANTHROPIC_API_KEY_SECRET_ID,
+    BRAVE_SEARCH_API_KEY_SECRET_ID,
+    DEEPSEEK_API_KEY_SECRET_ID,
+    ELEVENLABS_API_KEY_SECRET_ID,
     GENERIC_LLM_PROVIDER_API_KEY_SECRET_TEMPLATE,
     GENERIC_LLM_PROVIDER_BASE_URL_SECRET_TEMPLATE,
     GENERIC_LLM_PROVIDER_MODEL_SECRET_TEMPLATE,
+    GOOGLE_API_KEY_SECRET_ID,
+    GROK_API_KEY_SECRET_ID,
+    MISTRAL_API_KEY_SECRET_ID,
+    OPENAI_API_KEY_SECRET_ID,
+    OPENROUTER_API_KEY_SECRET_ID,
+    QWEN_API_KEY_SECRET_ID,
 )
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action
@@ -35,9 +47,15 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from pathlib import Path
 
 HERMES_COMPOSITION_ID = 'hermes'
+# The `hermes` user inside the images. The WebUI container chowns the shared
+# state directory to it on start, so anything we create in there has to end up
+# owned by it too.
+HERMES_CONTAINER_UID = 10000
+HERMES_CONTAINER_GID = 10000
 # Persistent host directory for all Hermes state, kept outside the composition
 # directory so neither `docker compose down -v` nor the composition-directory
 # removal on uninstall can destroy it. This decouples config/skills/sessions/
@@ -68,6 +86,46 @@ HERMES_DASHBOARD_AUTH_SECRET_KEYS = (
     HERMES_DASHBOARD_SESSION_SECRET,
 )
 HERMES_DASHBOARD_DEFAULT_USERNAME = 'ubo'
+
+
+class HermesApiKeyImport(NamedTuple):
+    """A ubo-held API key that Hermes can consume under its own env var name."""
+
+    env_var: str
+    secret_id: str
+    label: str
+
+
+# ubo secrets that map onto a provider Hermes recognises first-class, keyed by
+# the env var name Hermes documents for it. Deliberately not exhaustive over
+# ubo's secrets: Cerebras, Venice, Deepgram, AssemblyAI and Rime have no
+# documented Hermes env var (Cerebras would need a hand-written custom provider
+# entry), and copying a credential into a container that will never read it is
+# pure exposure for no capability.
+HERMES_API_KEY_IMPORTS = (
+    HermesApiKeyImport(
+        'OPENROUTER_API_KEY',
+        OPENROUTER_API_KEY_SECRET_ID,
+        'OpenRouter',
+    ),
+    HermesApiKeyImport('OPENAI_API_KEY', OPENAI_API_KEY_SECRET_ID, 'OpenAI'),
+    HermesApiKeyImport('ANTHROPIC_API_KEY', ANTHROPIC_API_KEY_SECRET_ID, 'Anthropic'),
+    HermesApiKeyImport('GEMINI_API_KEY', GOOGLE_API_KEY_SECRET_ID, 'Google Gemini'),
+    HermesApiKeyImport('XAI_API_KEY', GROK_API_KEY_SECRET_ID, 'xAI (Grok)'),
+    HermesApiKeyImport('MISTRAL_API_KEY', MISTRAL_API_KEY_SECRET_ID, 'Mistral'),
+    HermesApiKeyImport('DEEPSEEK_API_KEY', DEEPSEEK_API_KEY_SECRET_ID, 'DeepSeek'),
+    HermesApiKeyImport('DASHSCOPE_API_KEY', QWEN_API_KEY_SECRET_ID, 'Qwen'),
+    HermesApiKeyImport(
+        'BRAVE_SEARCH_API_KEY',
+        BRAVE_SEARCH_API_KEY_SECRET_ID,
+        'Brave Search',
+    ),
+    HermesApiKeyImport(
+        'ELEVENLABS_API_KEY',
+        ELEVENLABS_API_KEY_SECRET_ID,
+        'ElevenLabs',
+    ),
+)
 
 # Auto-registered assistant LLM provider backed by the Hermes gateway's
 # OpenAI-compatible API server.
@@ -218,7 +276,8 @@ async def configure_dashboard_auth() -> bool:
     """Prompt for dashboard sign-in credentials and store them as secrets."""
     try:
         _, result = await ubo_input(
-            prompt='Set Hermes dashboard sign-in',
+            title='Dashboard sign-in',
+            prompt='Choose a username and password for the Hermes dashboard.',
             descriptions=[
                 WebUIInputDescription(fields=_build_dashboard_auth_fields()),
             ],
@@ -240,6 +299,119 @@ async def configure_dashboard_auth() -> bool:
     secrets.write_secret(key=HERMES_DASHBOARD_USERNAME_SECRET, value=username)
     secrets.write_secret(key=HERMES_DASHBOARD_PASSWORD_SECRET, value=password)
     return True
+
+
+# ---------------------------------------------------------------------------
+# Optional API key sharing
+# ---------------------------------------------------------------------------
+
+
+def _is_checkbox_on(value: str | None) -> bool:
+    """Interpret a CHECKBOX form value. The web UI submits ``on``."""
+    return (value or '').strip().lower() in ('on', 'true', '1', 'yes', 'checked')
+
+
+def _available_api_key_imports() -> list[HermesApiKeyImport]:
+    """Return the importable keys the user has actually configured in ubo."""
+    return [
+        item for item in HERMES_API_KEY_IMPORTS if secrets.read_secret(item.secret_id)
+    ]
+
+
+def _chown_to_container_user(path: Path) -> None:
+    """Hand a file we created to the ``hermes`` user inside the containers.
+
+    Best effort: the chown needs privileges we may not hold off-device, and the
+    WebUI container chowns this shared directory on start anyway, so failing
+    here is recoverable rather than fatal.
+    """
+    try:
+        os.chown(path, HERMES_CONTAINER_UID, HERMES_CONTAINER_GID)
+    except OSError:
+        logger.warning(
+            'Unable to chown Hermes .env to the container user',
+            extra={'path': str(path)},
+        )
+
+
+def _write_hermes_dotenv(items: Sequence[HermesApiKeyImport]) -> None:
+    """Copy the selected API keys into Hermes' own ``~/.hermes/.env``.
+
+    That file — not ``config.yaml``, and not the composition's Compose ``.env``
+    — is where Hermes documents its secrets as living, and it sits in the shared
+    state directory so the agent and the WebUI both see it. Keys are set one at
+    a time rather than the file being rewritten, so anything Hermes put there
+    itself survives. The mode is tightened before the values go in, so the keys
+    are never briefly world-readable.
+    """
+    dotenv_path = HERMES_DATA_PATH / 'data' / '.env'
+    dotenv_path.parent.mkdir(exist_ok=True, parents=True)
+    dotenv_path.touch(mode=0o600, exist_ok=True)
+    dotenv_path.chmod(0o600)
+    for item in items:
+        value = secrets.read_secret(item.secret_id)
+        if value:
+            dotenv.set_key(
+                dotenv_path=dotenv_path,
+                key_to_set=item.env_var,
+                value_to_set=value,
+            )
+    _chown_to_container_user(dotenv_path)
+
+
+async def configure_api_key_imports() -> None:
+    """Offer to share ubo's already-configured API keys with Hermes.
+
+    Entirely optional, and skipped silently when ubo holds none of the keys
+    Hermes understands — an empty checklist is worse than no step at all.
+    Declining, cancelling or ticking nothing all leave Hermes' ``.env``
+    untouched and never block the install.
+    """
+    available = _available_api_key_imports()
+    if not available:
+        return
+
+    try:
+        _, result = await ubo_input(
+            title='Import API keys',
+            prompt='Select which of your API keys to share with Hermes.',
+            descriptions=[
+                WebUIInputDescription(
+                    fields=[
+                        InputFieldDescription(
+                            name=item.env_var,
+                            # Masked tail so two keys from the same provider are
+                            # tellable apart. `***1234`, parenthesised, is the
+                            # shape `apps/_helpers.py` already uses for its
+                            # existing-secret picker.
+                            label=f'{item.label} '
+                            f'({secrets.read_covered_secret(item.secret_id)})',
+                            type=InputFieldType.CHECKBOX,
+                            description=f'Share as {item.env_var}.',
+                            required=False,
+                        )
+                        for item in available
+                    ],
+                ),
+            ],
+        )
+    except asyncio.CancelledError:
+        return
+
+    if not result:
+        return
+
+    selected = [
+        item for item in available if _is_checkbox_on(result.data.get(item.env_var))
+    ]
+    if not selected:
+        return
+
+    _write_hermes_dotenv(selected)
+    logger.info(
+        'Shared API keys with Hermes',
+        extra={'variables': [item.env_var for item in selected]},
+    )
 
 
 def _compose_env_item(name: str, value: str) -> str:
@@ -314,17 +486,17 @@ def _menu_actions(
 def _write_hermes_env(composition_path: Path) -> None:
     """Write compose env for Hermes.
 
-    UID/GID are set to 10000 (the hermes user inside the image) so the WebUI
-    container chowns the shared hermes-home volume to the correct user.
-    Setting UID=0 would cause the WebUI to chown everything to root, making
-    the volume inaccessible to the hermes-agent (which runs as UID 10000).
+    UID/GID are set to the hermes user inside the image so the WebUI container
+    chowns the shared hermes-home volume to the correct user. Setting UID=0
+    would cause the WebUI to chown everything to root, making the volume
+    inaccessible to the hermes-agent (which runs as that user).
     """
     api_server_key = _get_or_create_api_server_key()
     composition_path.joinpath('.env').write_text(
-        'UID=10000\n'
-        'GID=10000\n'
-        'HERMES_UID=10000\n'
-        'HERMES_GID=10000\n'
+        f'UID={HERMES_CONTAINER_UID}\n'
+        f'GID={HERMES_CONTAINER_GID}\n'
+        f'HERMES_UID={HERMES_CONTAINER_UID}\n'
+        f'HERMES_GID={HERMES_CONTAINER_GID}\n'
         'API_SERVER_ENABLED=true\n'
         f'HERMES_API_SERVER_KEY={api_server_key}\n',
     )
@@ -387,9 +559,12 @@ async def prepare_hermes() -> bool:
         # Collected up front, before any files are written, so cancelling the
         # form leaves nothing behind. `prepare` runs before every `up`, so this
         # only prompts on the first install (or after the secrets are cleared).
-        if not _has_dashboard_credentials() and not await configure_dashboard_auth():
-            logger.warning('Hermes dashboard sign-in was not configured')
-            return False
+        if not _has_dashboard_credentials():
+            if not await configure_dashboard_auth():
+                logger.warning('Hermes dashboard sign-in was not configured')
+                return False
+            # Optional second step of the same first-run setup; never fatal.
+            await configure_api_key_imports()
 
         composition_path.mkdir(exist_ok=True, parents=True)
         # Persistent, image-independent state dirs (idempotent — never clobbers

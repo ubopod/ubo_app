@@ -7,11 +7,21 @@ from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast
 
+import dotenv
+
+from ubo_app.constants.assistant import (
+    OPENAI_API_KEY_SECRET_ID,
+    OPENROUTER_API_KEY_SECRET_ID,
+)
 from ubo_app.utils import secrets
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import pytest
     from redux import BaseAction
+
+    from ubo_app.store.input.types import WebUIInputDescription
 
     # Type-only: used solely to annotate the name-filtered actions below. Kept
     # out of runtime imports so the dispatched action's class identity is never
@@ -293,6 +303,125 @@ async def test_dashboard_password_survives_compose_interpolation(
 
     override = (tmp_path / 'hermes' / 'docker-compose.override.yml').read_text()
     assert 'HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=a$$b\\"c#d:e' in override
+
+
+class _FakeInputResult:
+    """Stand-in for the ``ubo_input`` result object."""
+
+    def __init__(self, data: dict[str, str]) -> None:
+        self.data = data
+
+
+def _first_run(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    *,
+    form_data: dict[str, str] | None,
+) -> HermesModule:
+    """Drive prepare down its first-install path with a canned key-share form.
+
+    ``form_data=None`` stands for a declined/cancelled form.
+    """
+    hermes, _ = _prepare(monkeypatch, tmp_path, dashboard_credentials=None)
+
+    async def _accept_credentials() -> bool:
+        secrets.write_secret(
+            key=hermes.HERMES_DASHBOARD_USERNAME_SECRET,
+            value='ubo',
+        )
+        secrets.write_secret(
+            key=hermes.HERMES_DASHBOARD_PASSWORD_SECRET,
+            value='hunter2',
+        )
+        return True
+
+    monkeypatch.setattr(hermes, 'configure_dashboard_auth', _accept_credentials)
+
+    async def _fake_input(**_: object) -> tuple[None, _FakeInputResult | None]:
+        return None, None if form_data is None else _FakeInputResult(form_data)
+
+    monkeypatch.setattr(hermes, 'ubo_input', _fake_input)
+    return hermes
+
+
+async def test_prepare_hermes_shares_only_the_ticked_api_keys(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Ticked keys reach Hermes' own .env under its env var names; others don't."""
+    hermes = _first_run(
+        monkeypatch,
+        tmp_path,
+        form_data={'OPENROUTER_API_KEY': 'on'},
+    )
+    secrets.write_secret(key=OPENROUTER_API_KEY_SECRET_ID, value='sk-or-v1-abc')
+    secrets.write_secret(key=OPENAI_API_KEY_SECRET_ID, value='sk-openai-abc')
+
+    assert await hermes.prepare_hermes()
+
+    dotenv_path = tmp_path / 'hermes-data' / 'data' / '.env'
+    assert dotenv.get_key(dotenv_path, 'OPENROUTER_API_KEY') == 'sk-or-v1-abc'
+    # Configured in ubo but left unticked — sharing is per-key and opt-in.
+    assert dotenv.get_key(dotenv_path, 'OPENAI_API_KEY') is None
+    # Credentials are never left world-readable.
+    assert dotenv_path.stat().st_mode & 0o077 == 0
+
+
+async def test_key_share_options_show_a_masked_key(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Each option carries the key's last 4 chars, so two keys are tellable apart."""
+    hermes = _first_run(monkeypatch, tmp_path, form_data={})
+    secrets.write_secret(key=OPENROUTER_API_KEY_SECRET_ID, value='sk-or-v1-abcd9c2a')
+
+    labels: list[str] = []
+
+    async def _capturing_input(**kwargs: object) -> tuple[None, _FakeInputResult]:
+        descriptions = cast('Sequence[WebUIInputDescription]', kwargs['descriptions'])
+        labels.extend(field.label for field in descriptions[0].fields or [])
+        return None, _FakeInputResult({})
+
+    monkeypatch.setattr(hermes, 'ubo_input', _capturing_input)
+
+    assert await hermes.prepare_hermes()
+
+    assert labels == ['OpenRouter (***9c2a)']
+
+
+async def test_prepare_hermes_skips_key_sharing_when_nothing_configured(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """With no importable ubo secrets the form is skipped, not shown empty."""
+    shown = False
+
+    hermes = _first_run(monkeypatch, tmp_path, form_data={})
+
+    async def _tracking_input(**_: object) -> tuple[None, _FakeInputResult]:
+        nonlocal shown
+        shown = True
+        return None, _FakeInputResult({})
+
+    monkeypatch.setattr(hermes, 'ubo_input', _tracking_input)
+
+    assert await hermes.prepare_hermes()
+
+    assert not shown
+    assert not (tmp_path / 'hermes-data' / 'data' / '.env').exists()
+
+
+async def test_prepare_hermes_survives_a_declined_key_share(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Sharing is optional — declining it must not fail the install."""
+    hermes = _first_run(monkeypatch, tmp_path, form_data=None)
+    secrets.write_secret(key=OPENROUTER_API_KEY_SECRET_ID, value='sk-or-v1-abc')
+
+    assert await hermes.prepare_hermes()
+
+    assert not (tmp_path / 'hermes-data' / 'data' / '.env').exists()
 
 
 async def test_prepare_hermes_aborts_without_dashboard_credentials(
