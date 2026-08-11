@@ -6,7 +6,7 @@ import unittest
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
-from websockets.exceptions import ConnectionClosedError
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 from websockets.frames import Close, CloseCode
 
 from ubo_assistant.error_notification import classify_error, is_transient_error
@@ -158,6 +158,37 @@ class TestTransientCloseCodes(unittest.TestCase):
         "Text-to-speech provider error" notification on the device.
         """
         exception = ConnectionClosedError(rcvd=None, sent=None)
+        frame = _frame(
+            f'Unknown error occurred: {exception}',
+            ElevenLabsTTSService(),
+            exception,
+        )
+        self.assertTrue(is_transient_error(frame))  # noqa: PT009
+
+    def test_going_away_close_is_transient(self) -> None:
+        """The same idle drop announced politely, with a full close handshake.
+
+        Regression: after 1006 was suppressed, ub-d7 kept notifying roughly
+        hourly with ``received 1001 (going away); then sent 1001 (going away)``
+        — ElevenLabs retiring an idle socket via the handshake instead of
+        dropping it. Every occurrence was followed within ~200ms by
+        ``reconnected successfully on attempt 1``.
+
+        Note this arrives as ``ConnectionClosedOK``, not ``…Error``: websockets
+        reserves the error subclass for codes other than 1000/1001. The
+        ``isinstance`` check in ``is_transient_error`` is against their shared
+        ``ConnectionClosed`` base for exactly this reason.
+
+        The device logs both halves of the handshake ("received 1001 (going
+        away); then sent 1001 (going away)"), but only ``rcvd`` is constructed
+        here: ``is_transient_error`` reads ``rcvd or sent``, so the received
+        half is what classifies, and the keyword needed to set both
+        (``rcvd_then_sent``) does not exist in the locked websockets 13.1.
+        """
+        exception = ConnectionClosedOK(
+            rcvd=Close(CloseCode.GOING_AWAY, ''),
+            sent=None,
+        )
         frame = _frame(
             f'Unknown error occurred: {exception}',
             ElevenLabsTTSService(),

@@ -94,7 +94,13 @@ _TRANSIENT_ERROR_PATTERN = re.compile(
 # codes (1002 protocol error, 1003/1007 bad data, 1008 policy violation, 1009
 # message too big, 1010 mandatory extension, 1015 TLS) are deliberately absent —
 # those point at a real misconfiguration and must still notify.
+#
+# 1001 covers the same idle-socket recycling as 1006, just announced politely:
+# ElevenLabs retires an idle connection either by dropping it outright (1006) or
+# by completing the handshake with "going away" (1001), and which one you get is
+# the server's choice, not a property of the request.
 _TRANSIENT_CLOSE_CODES = frozenset({
+    CloseCode.GOING_AWAY,  # 1001 — far end is cycling the connection
     CloseCode.ABNORMAL_CLOSURE,  # 1006 — connection lost with no close handshake
     CloseCode.INTERNAL_ERROR,  # 1011
     CloseCode.SERVICE_RESTART,  # 1012
