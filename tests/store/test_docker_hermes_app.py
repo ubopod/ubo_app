@@ -87,6 +87,14 @@ class ContainerEntryProtocol(Protocol):
     cleanup: object
 
 
+class HermesOAuthProviderProtocol(Protocol):
+    """Subset of the OAuth provider tuple asserted by these tests."""
+
+    id: str
+    label: str
+    needs_code: bool
+
+
 class HermesModule(Protocol):
     """Protocol for the Hermes module members used by these tests."""
 
@@ -98,6 +106,7 @@ class HermesModule(Protocol):
     HERMES_DASHBOARD_USERNAME_SECRET: str
     HERMES_DASHBOARD_PASSWORD_SECRET: str
     HERMES_DASHBOARD_SESSION_SECRET: str
+    HERMES_OAUTH_PROVIDERS: tuple[HermesOAuthProviderProtocol, ...]
     ENTRY: ContainerEntryProtocol
     secrets: SecretsModule
     store: _FakeStore
@@ -108,6 +117,15 @@ class HermesModule(Protocol):
 
     async def configure_dashboard_auth(self) -> bool:
         """Prompt for the dashboard sign-in credentials."""
+        ...
+
+    def extract_oauth_prompt(
+        self,
+        output: str,
+        *,
+        expect_device_code: bool = True,
+    ) -> tuple[str | None, str | None]:
+        """Parse the verification URL and device code out of CLI output."""
         ...
 
     def _cleanup_hermes(self) -> None: ...
@@ -438,6 +456,154 @@ async def test_prepare_hermes_aborts_without_dashboard_credentials(
 
     assert not await hermes.prepare_hermes()
     assert not (tmp_path / 'hermes' / 'docker-compose.override.yml').exists()
+
+
+# Captured verbatim from `hermes auth add <p> --type oauth --no-browser` on a
+# device running Hermes v0.20.0. Kept exact — including the ANSI colour codes
+# OpenAI Codex emits and the `Portal:` banner Nous/MiniMax print ahead of the
+# real link — because those are precisely what the parser has to survive.
+NOUS_OUTPUT = """Starting Hermes login via Nous Portal...
+Portal: https://portal.nousresearch.com
+
+To continue:
+  1. Open: https://portal.nousresearch.com/manage-subscription?user_code=52DK-A59Z
+  2. If prompted, enter code: 52DK-A59Z
+Waiting for approval (polling every 1s)...
+"""
+
+CODEX_OUTPUT = (
+    'To continue, follow these steps:\n'
+    '\n'
+    '  1. Open this URL in your browser:\n'
+    '     \x1b[94mhttps://auth.openai.com/codex/device\x1b[0m\n'
+    '\n'
+    '  2. Enter this code:\n'
+    '     \x1b[94mL0JT-CIPSL\x1b[0m\n'
+    '\n'
+    'Waiting for sign-in... (press Ctrl+C to cancel)\n'
+)
+
+ANTHROPIC_OUTPUT = """Authorize Hermes with your Claude Pro/Max subscription.
+
+╭─ Claude Pro/Max Authorization ────────────────────╮
+│                                                   │
+│  Open this link in your browser:                  │
+╰───────────────────────────────────────────────────╯
+
+  https://claude.ai/oauth/authorize?code=true&client_id=9d1c250a-e61b-44d9-88ed-5944d1962f5e&response_type=code&redirect_uri=https%3A%2F%2Fconsole.anthropic.com%2Foauth%2Fcode%2Fcallback&scope=org%3Acreate_api_key+user%3Aprofile+user%3Ainference&code_challenge=IUWBRloNMh_k4AWMGUvlglu9l9YBGvbg5XucOWvTMPU&code_challenge_method=S256&state=eZHL55ni-pHkt9fIYllho59-Z5bqB7hYFocPWitvXbM
+
+
+After authorizing, you'll see a code. Paste it below.
+
+Authorization code: """
+
+MINIMAX_OUTPUT = """Starting Hermes login via MiniMax (global) OAuth...
+Portal: https://api.minimax.io
+
+To continue:
+  1. Open: https://platform.minimax.io/oauth-authorize?user_code=KAP6-ZBAT&client=OpenClaw
+  2. If prompted, enter code: KAP6-ZBAT
+Waiting for approval...
+"""
+
+
+def test_extract_oauth_prompt_skips_the_portal_banner() -> None:
+    """The `Portal:` host line precedes the real link and must not win."""
+    hermes = _import_hermes()
+
+    url, code = hermes.extract_oauth_prompt(NOUS_OUTPUT)
+
+    assert url == (
+        'https://portal.nousresearch.com/manage-subscription?user_code=52DK-A59Z'
+    )
+    assert code == '52DK-A59Z'
+
+
+def test_extract_oauth_prompt_strips_ansi_and_reads_the_next_line() -> None:
+    """OpenAI Codex colourises both values and puts the URL below its label."""
+    hermes = _import_hermes()
+
+    url, code = hermes.extract_oauth_prompt(CODEX_OUTPUT)
+
+    # No escape sequence may survive into the QR payload.
+    assert url == 'https://auth.openai.com/codex/device'
+    # Codex is the case where the code is *not* carried in the URL, so losing
+    # it would leave the user unable to finish.
+    assert code == 'L0JT-CIPSL'
+
+
+def test_extract_oauth_prompt_handles_a_query_string_url() -> None:
+    """A URL with `&` params survives intact."""
+    hermes = _import_hermes()
+
+    url, code = hermes.extract_oauth_prompt(MINIMAX_OUTPUT)
+
+    assert url == (
+        'https://platform.minimax.io/oauth-authorize?user_code=KAP6-ZBAT&client=OpenClaw'
+    )
+    assert code == 'KAP6-ZBAT'
+
+
+def test_extract_oauth_prompt_returns_none_before_a_url_appears() -> None:
+    """Partial output must not yield a half-parsed prompt."""
+    hermes = _import_hermes()
+
+    assert hermes.extract_oauth_prompt(
+        'Starting Hermes login via Nous Portal...\n',
+    ) == (
+        None,
+        None,
+    )
+
+
+def test_oauth_providers_exclude_only_qwen() -> None:
+    """Every OAuth provider we can drive is offered.
+
+    `qwen-oauth` is the sole omission: it delegates to a separate `qwen` binary
+    that is absent from the image, so it aborts before printing anything a menu
+    could use.
+    """
+    hermes = _import_hermes()
+
+    ids = [provider.id for provider in hermes.HERMES_OAUTH_PROVIDERS]
+
+    assert ids == [
+        'nous',
+        'openai-codex',
+        'xai-oauth',
+        'minimax-oauth',
+        'anthropic',
+    ]
+    assert 'qwen-oauth' not in ids
+
+
+def test_only_anthropic_needs_a_pasted_code() -> None:
+    """The code-paste path is opt-in; device-code providers must not take it."""
+    hermes = _import_hermes()
+
+    needs_code = {p.id for p in hermes.HERMES_OAUTH_PROVIDERS if p.needs_code}
+
+    assert needs_code == {'anthropic'}
+
+
+def test_extract_oauth_prompt_ignores_a_pkce_url_without_a_device_code() -> None:
+    """Anthropic's URL has no device code, and none may be invented from it.
+
+    Its `client_id`/`state` params carry long hyphenated runs that a device-code
+    pattern can match by chance, which would print a meaningless code to the
+    user, so the code scan is switched off for this flow.
+    """
+    hermes = _import_hermes()
+
+    url, code = hermes.extract_oauth_prompt(
+        ANTHROPIC_OUTPUT,
+        expect_device_code=False,
+    )
+
+    assert url is not None
+    assert url.startswith('https://claude.ai/oauth/authorize?code=true')
+    assert 'code_challenge_method=S256' in url
+    assert code is None
 
 
 def test_hermes_entry_lists_all_secret_keys() -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import re
@@ -31,7 +32,14 @@ from ubo_app.constants.assistant import (
 )
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action
-from ubo_app.store.core.types import MenuItemData
+from ubo_app.store.core.types import (
+    MenuItemData,
+    OpenRenderAction,
+    StackPopAction,
+    StackPushMenuAction,
+    UpdateDynamicMenuAction,
+    UpdateRenderPropsAction,
+)
 from ubo_app.store.input.types import (
     InputFieldDescription,
     InputFieldType,
@@ -42,6 +50,13 @@ from ubo_app.store.services.assistant import (
     AssistantAddGenericLLMProviderAction,
     AssistantRemoveGenericLLMProviderAction,
 )
+from ubo_app.store.services.notifications import (
+    Chime,
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
+)
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
@@ -464,12 +479,329 @@ async def reconfigure_dashboard_auth() -> bool:
     return True
 
 
+# ---------------------------------------------------------------------------
+# Provider OAuth sign-in
+# ---------------------------------------------------------------------------
+
+
+class HermesOAuthProvider(NamedTuple):
+    """A Hermes provider whose credentials come from an OAuth flow."""
+
+    id: str
+    label: str
+    icon: str
+    # True when the flow ends by reading an authorization code back from stdin
+    # rather than polling a device code.
+    needs_code: bool = False
+
+
+# Verified against Hermes v0.20.0 on a device, from the six ids in the CLI's own
+# `_OAUTH_CAPABLE_PROVIDERS`. `qwen-oauth` is the one omission: it aborts with
+# `Qwen CLI credentials not found` because it delegates to a separate `qwen`
+# binary that is not in the image, so there is nothing a menu can drive.
+HERMES_OAUTH_PROVIDERS = (
+    HermesOAuthProvider('nous', 'Nous Research', '󰧑'),
+    HermesOAuthProvider('openai-codex', 'OpenAI Codex', '󰚩'),
+    HermesOAuthProvider('xai-oauth', 'xAI Grok', '󰩄'),
+    HermesOAuthProvider('minimax-oauth', 'MiniMax', '󰫤'),
+    # Anthropic is the odd one out: instead of a device code it redirects to a
+    # *hosted* callback (console.anthropic.com), shows the user a code there,
+    # and blocks reading that code back from stdin. Since we own the pipe we
+    # answer it ourselves — see `needs_code`. Its PKCE verifier lives in the
+    # process, so the process must stay alive from URL to code.
+    HermesOAuthProvider('anthropic', 'Claude (Anthropic)', '󰛄', needs_code=True),
+)
+
+# How long the CLI waits for the user to approve on their phone.
+HERMES_OAUTH_TIMEOUT_SECONDS = 300
+
+_ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
+_URL_RE = re.compile(r'https?://\S+')
+# Device codes render as `52DK-A59Z` (Nous, xAI, MiniMax) or `L0JT-CIPSL`
+# (OpenAI Codex).
+_DEVICE_CODE_RE = re.compile(r'\b[A-Z0-9]{4}-[A-Z0-9]{4,6}\b')
+# Several providers print a `Portal: https://host` banner *before* the link the
+# user actually has to open, so the first URL in the stream is the wrong one.
+_PORTAL_LINE_RE = re.compile(r'^\s*Portal:', re.IGNORECASE)
+
+_oauth_process: asyncio.subprocess.Process | None = None
+
+
+def extract_oauth_prompt(
+    output: str,
+    *,
+    expect_device_code: bool = True,
+) -> tuple[str | None, str | None]:
+    """Pull the verification URL and device code out of Hermes' login output.
+
+    Two traps, both observed on real output: OpenAI Codex wraps the URL and the
+    code in ANSI colour sequences (and puts the URL on the line *after* its
+    label), and Nous/MiniMax print a `Portal:` host banner ahead of the real
+    link. Stripping colour and skipping the banner line handles both without
+    tying the parser to any provider's exact wording.
+
+    ``expect_device_code`` is False for the code-paste flow, whose URL carries a
+    long PKCE ``state``/``client_id``; scanning that for a device code that does
+    not exist risks a chance match on a hyphenated all-caps run.
+    """
+    plain = _ANSI_ESCAPE_RE.sub('', output)
+
+    url = None
+    for line in plain.splitlines():
+        if _PORTAL_LINE_RE.match(line):
+            continue
+        if (match := _URL_RE.search(line)) is not None:
+            url = match.group(0).rstrip('.,')
+            break
+
+    if not expect_device_code:
+        return url, None
+
+    code_match = _DEVICE_CODE_RE.search(plain)
+    return url, code_match.group(0) if code_match else None
+
+
+async def _terminate_oauth_process() -> None:
+    """Stop a login already in flight so two flows never race."""
+    global _oauth_process
+    process, _oauth_process = _oauth_process, None
+    if process is None or process.returncode is not None:
+        return
+    with contextlib.suppress(ProcessLookupError):
+        process.terminate()
+    with contextlib.suppress(TimeoutError):
+        await asyncio.wait_for(process.wait(), timeout=5)
+
+
+def _notify_oauth_result(
+    provider: HermesOAuthProvider,
+    *,
+    succeeded: bool,
+    transcript: str = '',
+) -> None:
+    """Report the outcome, carrying the CLI transcript on failure.
+
+    The transcript is what makes an upstream wording change diagnosable rather
+    than a silent hang, so it rides along as extra information.
+    """
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                title='Hermes',
+                content=f'{provider.label} '
+                + ('signed in' if succeeded else 'sign-in failed'),
+                display_type=NotificationDisplayType.FLASH
+                if succeeded
+                else NotificationDisplayType.STICKY,
+                color='#4CAF50' if succeeded else '#D32F2F',
+                icon='󰄬' if succeeded else '󰜺',
+                chime=Chime.DONE if succeeded else Chime.FAILURE,
+                extra_information=None
+                if succeeded or not transcript
+                else ReadableInformation(text=transcript),
+            ),
+        ),
+    )
+
+
+async def _prompt_for_authorization_code(provider: HermesOAuthProvider) -> str | None:
+    """Ask the user for the code the provider showed them after approving."""
+    try:
+        _, result = await ubo_input(
+            title=f'{provider.label} code',
+            prompt='Paste the authorization code shown after you approve access.',
+            descriptions=[
+                WebUIInputDescription(
+                    fields=[
+                        InputFieldDescription(
+                            name='code',
+                            label='Authorization code',
+                            type=InputFieldType.TEXT,
+                            required=True,
+                        ),
+                    ],
+                ),
+            ],
+        )
+    except asyncio.CancelledError:
+        return None
+
+    if not result:
+        return None
+    return (result.data.get('code') or '').strip() or None
+
+
+async def _answer_code_prompt(
+    process: asyncio.subprocess.Process,
+    provider: HermesOAuthProvider,
+) -> bool:
+    """Collect the authorization code and hand it to the waiting process."""
+    code = await _prompt_for_authorization_code(provider)
+    if code is None or process.stdin is None:
+        return False
+    process.stdin.write(f'{code}\n'.encode())
+    await process.stdin.drain()
+    process.stdin.close()
+    return True
+
+
+async def _perform_oauth(provider: HermesOAuthProvider) -> None:
+    """Run a provider's OAuth login in the container, showing its URL as a QR."""
+    global _oauth_process  # noqa: PLW0603
+    await _terminate_oauth_process()
+
+    store.dispatch(
+        OpenRenderAction(
+            kind='status',
+            title=f'{provider.label} Sign In',
+            props={'text': 'Starting…', 'text_font_size': 16},
+        ),
+    )
+
+    transcript: list[str] = []
+    succeeded = False
+    process = None
+    try:
+        process = await asyncio.create_subprocess_exec(
+            'docker',
+            'compose',
+            'exec',
+            # No pty: keeps the stream parseable.
+            '-T',
+            # Hermes block-buffers stdout when it is a pipe rather than a tty,
+            # which would withhold the URL until the process exits — long after
+            # the login it describes has timed out.
+            '-e',
+            'PYTHONUNBUFFERED=1',
+            'hermes-agent',
+            'hermes',
+            'auth',
+            'add',
+            provider.id,
+            '--type',
+            'oauth',
+            '--no-browser',
+            '--timeout',
+            str(HERMES_OAUTH_TIMEOUT_SECONDS),
+            cwd=COMPOSITIONS_PATH / HERMES_COMPOSITION_ID,
+            # stdin stays open: the code-paste flow is answered through it.
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        _oauth_process = process
+        if process.stdout is None:
+            return
+
+        url = code = None
+        while True:
+            line = await process.stdout.readline()
+            if not line:
+                break
+            transcript.append(line.decode(errors='replace'))
+            url, code = extract_oauth_prompt(
+                ''.join(transcript),
+                expect_device_code=not provider.needs_code,
+            )
+            if url:
+                break
+
+        if url is None:
+            await process.wait()
+            return
+
+        store.dispatch(
+            UpdateRenderPropsAction(
+                kind='status',
+                next_kind='qr_code',
+                title=f'{provider.label} Sign In',
+                props={
+                    # The QR encodes the bare URL so a scan always works; the
+                    # code rides in the human-readable label only.
+                    'value': url,
+                    'label': f'{url} — code: {code}' if code else url,
+                },
+            ),
+        )
+
+        if provider.needs_code and not await _answer_code_prompt(process, provider):
+            return
+
+        await process.wait()
+        succeeded = process.returncode == 0
+    except Exception:
+        logger.exception('Hermes OAuth login failed', extra={'provider': provider.id})
+    finally:
+        _oauth_process = None
+        # Covers every early return above — a cancelled code prompt, a stream
+        # that ended without a URL, an exception — so an abandoned login can
+        # never outlive its view.
+        if process is not None and process.returncode is None:
+            with contextlib.suppress(ProcessLookupError):
+                process.terminate()
+        store.dispatch(StackPopAction())
+        _notify_oauth_result(
+            provider,
+            succeeded=succeeded,
+            transcript=''.join(transcript),
+        )
+
+
+def _add_oauth_menu(
+    menu_id: str,
+    items: list[MenuItemData],
+    action_ids: dict[str, list[str]],
+) -> None:
+    """Add the OAuth submenu and populate it with the supported providers.
+
+    Mirrors the Ports submenu in ``menus.py``: a nav item pushes ``menu_key``,
+    and the menu it lands on is filled by a dynamic-menu dispatch. Every action
+    id is appended to ``action_ids`` so the menu builder unregisters it before
+    the next render.
+    """
+    nav_id = 'docker:hermes:oauth'
+    action_ids[menu_id].append(nav_id)
+    register_action(
+        nav_id,
+        lambda: store.dispatch(StackPushMenuAction(menu_key='oauth')),
+    )
+    items.append(
+        MenuItemData(key='oauth', label='OAuth', icon='󰌆', action_id=nav_id),
+    )
+
+    oauth_items: list[MenuItemData] = []
+    for provider in HERMES_OAUTH_PROVIDERS:
+        provider_action_id = f'docker:hermes:oauth:{provider.id}'
+        action_ids[menu_id].append(provider_action_id)
+        register_action(
+            provider_action_id,
+            lambda _provider=provider: create_task(_perform_oauth(_provider)),
+        )
+        oauth_items.append(
+            MenuItemData(
+                key=provider.id,
+                label=provider.label,
+                icon=provider.icon,
+                action_id=provider_action_id,
+            ),
+        )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=f'docker:image:{HERMES_COMPOSITION_ID}:oauth',
+            title='OAuth',
+            items=tuple(oauth_items),
+            placeholder='No providers',
+        ),
+    )
+
+
 def _menu_actions(
     menu_id: str,
     items: list[MenuItemData],
     action_ids: dict[str, list[str]],
 ) -> None:
-    """Add the dashboard sign-in item to the Hermes menu."""
+    """Add the Hermes-specific items to the app menu."""
     action_id = 'docker:hermes:dashboard-auth'
     action_ids[menu_id].append(action_id)
     register_action(action_id, lambda: create_task(reconfigure_dashboard_auth()))
@@ -481,6 +813,7 @@ def _menu_actions(
             action_id=action_id,
         ),
     )
+    _add_oauth_menu(menu_id, items, action_ids)
 
 
 def _write_hermes_env(composition_path: Path) -> None:
