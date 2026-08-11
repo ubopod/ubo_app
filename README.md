@@ -16,6 +16,7 @@
 - [🪏 Installation](#🪏-installation)
   - [Pre-packaged image](#pre-packaged-image)
   - [Install on existing OS](#install-on-existing-os)
+  - [ESP32 satellites](#esp32-satellites)
 - [🤝 Contributing](#🤝-contributing)
   - [ℹ️️ Conventions](#ℹ️️-conventions)
   - [Development](#development)
@@ -37,6 +38,18 @@ It offers a minimalistic, yet intuitive UI for end-users to install and interact
 Hardware specific capabilities such as infrared send/receive, sensing, LED ring, etc. are supported by Ubo Pod hardware. 
 
 It is also possible to DIY your own hardware, see the [hardware DIY section](#diy-path) below.
+
+Beyond the Raspberry Pi itself, Ubo App can drive **ESP32 satellites**: small companion
+boards that extend a Ubo Pod's reach into another room, connected over WiFi or over the
+USB cable. A satellite is a peer of the pod, not a separate app — all logic stays in the
+core, and the board contributes whatever hardware it has. Today that means a *display*
+satellite (a native C/[LVGL](https://lvgl.io) client rendering the same UI on a touch
+panel) and an *audio* satellite (speaker playback plus microphone capture, including
+on-device wake word where the hardware supports it); sensors and infrared are the natural
+next additions. The Waveshare **ESP32-C6-Touch-AMOLED-1.8** is complete and verified
+on-device; the Espressif **ESP32-S3-BOX-3** (which adds far-field mics and wake word) is
+in bring-up. See [`ubo_lvgl/README.md`](ubo_lvgl/README.md) and
+[`ubo_lvgl/esp32/README.md`](ubo_lvgl/esp32/README.md) for the full story.
 
 ### Goals
 
@@ -83,6 +96,12 @@ Be aware that at the moment, Ubo app sends crash reports to Sentry. Soon we will
 - Infrared remote control (send/receive), including Web UI assignment of
   registered IR keys to bindable actions
 - gRPC API for remote control - find sample clients [here](https://github.com/ubopod/ubo-grpc-clients)
+- ESP32 satellites - companion boards
+  ([Waveshare ESP32-C6-Touch-AMOLED-1.8](https://www.waveshare.com/esp32-c6-touch-amoled-1.8.htm),
+  [Espressif ESP32-S3-BOX-3](https://github.com/espressif/esp-box)) that extend the pod
+  over WiFi or USB: the same GUI rendered natively in C/LVGL with touch navigation,
+  audio playback and capture, on-device WiFi setup via a captive portal, and — on the
+  ESP32-S3-BOX-3 — far-field microphones with an on-device wake word
 
 Check [roadmap section](#🗺️-roadmap) below for upcoming features.
 
@@ -187,6 +206,44 @@ Note that as part of the installation process, these debian packages are install
 
 Also be aware that ubo-app only installs in `/opt/ubo` and it is not customizable
 at the moment.
+
+### ESP32 satellites
+
+An ESP32 satellite is a companion board for an existing Ubo Pod (or any host running
+ubo-app) — it is not a standalone install. Set up the pod first, then flash the
+satellite.
+
+Supported boards:
+
+| Board | Hardware | Status |
+| --- | --- | --- |
+| Waveshare **ESP32-C6-Touch-AMOLED-1.8** | SH8601 368×448 AMOLED, FT3168 touch, ES8311 audio in/out | complete, verified on-device |
+| Espressif **ESP32-S3-BOX-3** | ILI9341 320×240 LCD, GT911 touch, ES8311 out + ES7210 2-mic array, wake word | bring-up in progress |
+
+**No toolchain required.** Every release ships a prebuilt merged firmware image:
+
+1. Download `ubo-lvgl-esp32c6-<version>-merged.bin` from the
+   [Releases](https://github.com/ubopod/ubo_app/releases) page. Pick the release matching
+   your installed ubo-app version — the client's protobuf schema must match the core it
+   talks to.
+1. Connect the board over USB and open
+   [ESPConnect](https://thelastoutpostworkshop.github.io/ESPConnect/) in Chrome or Edge
+   (Web Serial), then select the board's serial port.
+1. In the **Flash** tab, choose the `.bin`, set the offset to **`0x0`**, enable
+   **Erase before flash**, and flash.
+1. After the reboot, join the open `ubo-setup` WiFi access point from a phone; the
+   captive portal asks for your network and, optionally, the ubo-core host/port. The
+   device saves them and reboots onto your network.
+
+To move the board to a different network later, hold the BOOT button for ~8 seconds to
+clear the stored credentials and return to `ubo-setup`.
+
+Boards cabled to a Ubo Pod can carry their traffic **over the USB cable itself** (PPP
+over USB) instead of WiFi — the `ppp` firmware profile, which is what the pod build
+ships.
+
+Full details — pin maps, the WiFi setup journey, the USB/PPP link, wake word setup, and
+per-board status — are in [`ubo_lvgl/esp32/README.md`](ubo_lvgl/esp32/README.md).
 
 ## 🤝 Contributing
 
@@ -462,6 +519,76 @@ In development environment, the camera is probably not working, as it is relying
 To address this, the camera module, in not-RPi environments, will try reading from `/tmp/qrcode_input.txt` and `/tmp/qrcode_input.png` too. So, whenever you encounter a QR code input, you can write the content of the QR code in the text file path or put the qrcode image itself in the image file path and the application will read it from there and continue the flow.
 
 Alternatively you may be able to provide the input in the web-ui (needs refresh at the moment) or provide it by `InputProvideAction` in grpc channel.
+
+#### LVGL GUI client and ESP32 satellite firmware
+
+The C/LVGL renderer under [`ubo_lvgl/`](ubo_lvgl/README.md) is one codebase with three
+targets: a desktop SDL window, the Raspberry Pi ST7789 SPI panel, and the ESP32
+satellite boards. The same renderer and the same transport code are compiled for all
+three; only the display backend and the transport's host layer differ.
+
+First fetch the submodules (LVGL itself and nanopb):
+
+```bash
+git submodule update --init ubo_lvgl/lvgl ubo_lvgl/third_party/nanopb
+```
+
+Build the renderer and the native C client for the desktop (needs CMake ≥ 3.15 and
+SDL2 — `brew install sdl2` / `apt install libsdl2-dev`):
+
+```bash
+cmake -S ubo_lvgl -B ubo_lvgl/build -DCMAKE_PREFIX_PATH=/opt/homebrew  # macOS/brew
+cmake --build ubo_lvgl/build -j8
+ctest --test-dir ubo_lvgl/build                                        # C unit tests
+```
+
+Run the LVGL client instead of the Kivy one — either on the desktop against a live core,
+or on a device by setting the supervisor's backend env var:
+
+```bash
+uv run ubo-core                                       # core, gRPC only, no GUI
+UBO_LVGL_ASSETS_DIR=ubo_lvgl/assets \
+  ubo_lvgl/build/client/ubo_lvgl_client --backend sdl --web-grpc-url localhost:50054
+
+UBO_GUI_BACKEND=lvgl UBO_LVGL_BACKEND=st7789 ubo      # on a pod, LVGL on the panel
+```
+
+The C client talks to the core over **tcp-lite**, a lightweight raw-TCP protocol served
+by `ubo_app/rpc/mcu_server.py` on port `50054` — no HTTP and no Envoy, which is what
+makes it fit comfortably on an MCU. gRPC-Web over Envoy is still supported as a
+build-time alternative.
+
+Build and flash the ESP32 firmware (needs ESP-IDF v6; the poe tasks resolve the
+toolchain environment, per-board build directory, and sdkconfig for you):
+
+```bash
+uv run poe esp32:build   --board c6                        # or --board s3
+uv run poe esp32:flash   --board s3 --port /dev/cu.usbmodem1101
+uv run poe esp32:monitor --board c6 --profile wifi         # Ctrl-] to exit
+```
+
+`--board` is required (`c6` = Waveshare ESP32-C6-Touch-AMOLED-1.8, `s3` = Espressif
+ESP32-S3-BOX-3). `--profile` defaults to `ppp`, the shipping USB/PPP build, which has
+**no USB console** — pass `--profile wifi` for the debug build `esp32:monitor` can
+actually read.
+
+⚠️*Note: the C client uses a **curated** protobuf schema
+(`ubo_lvgl/client/proto/ubo_client.proto`) whose oneof field numbers must match the
+running core's bindings exactly. `uv run poe proto` includes `proto:lvgl:generate`,
+which checks the tags and regenerates the nanopb output — so run it after changing any
+action or event, and don't hand-edit the generated `.pb.{c,h}` files.*
+
+Further reading:
+
+- [`ubo_lvgl/README.md`](ubo_lvgl/README.md) — architecture, build options, transports,
+  headless snapshots, and how the renderer mirrors `ubo_gui`'s layout
+- [`ubo_lvgl/client/README.md`](ubo_lvgl/client/README.md) — the native C client:
+  framing, nanopb decode, view translation, threading
+- [`ubo_lvgl/esp32/README.md`](ubo_lvgl/esp32/README.md) — board pin maps, ESP-IDF
+  toolchain setup, captive-portal provisioning, USB/PPP, FreeRTOS task and memory
+  budgets, per-board status
+- [`ubo_lvgl/esp32/AFE-FAR-FIELD.md`](ubo_lvgl/esp32/AFE-FAR-FIELD.md) — far-field audio
+  front end and wake word on the ESP32-S3-BOX-3
 
 ## 🛠️ Hardware 
 
