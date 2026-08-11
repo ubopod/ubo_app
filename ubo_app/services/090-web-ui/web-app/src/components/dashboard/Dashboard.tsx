@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import { memo, useMemo, type ReactNode } from "react";
 
+import { AppsCard } from "./AppsCard";
 import { sensorCards } from "./SensorCards";
 import {
   MemoryCard,
@@ -29,6 +30,7 @@ const Memory = memo(MemoryCard);
 const Storage = memo(StorageCard);
 const Network = memo(NetworkCard);
 const Uptime = memo(UptimeCard);
+const Apps = memo(AppsCard);
 
 /**
  * One dashboard widget.
@@ -96,6 +98,17 @@ const TILES: DashboardTileSpec[] = [
     span: 1,
     isAvailable: (state) => (state.system?.bootTime ?? 0) > 0,
     render: (state) => <Uptime system={state.system!} />,
+  },
+  {
+    id: "apps",
+    // Rows of label-plus-status, not a meter — two columns keeps long app
+    // names on one line wherever there is room for it.
+    span: 2,
+    // The core drops an app from the map as soon as its image leaves the
+    // device, so a non-empty map is exactly "at least one app is installed".
+    // Nothing installed means no tile, rather than an empty one.
+    isAvailable: (state) => (state.docker?.apps?.itemsMap?.length ?? 0) > 0,
+    render: (state) => <Apps docker={state.docker!} />,
   },
 ];
 

@@ -13,6 +13,12 @@ export const STATUS = {
 // reading within its normal range is not "good news", it is just a number.
 export const NEUTRAL_ACCENT = "#2a78d6";
 
+// No severity at all: an app that is installed but not running is not a fault,
+// it is off. Deliberately outside `STATUS` so no severity function can ever
+// pick it, and a fixed hue rather than `text.secondary` so a stopped app reads
+// the same in both themes.
+export const IDLE = "#8a8f98";
+
 /**
  * Pick a meter fill for a load-style percentage, where more is worse.
  *

@@ -60,6 +60,31 @@ CRASH_LOOP_THRESHOLD = 3
 CRASH_LOOP_WINDOW = 300.0
 
 
+class DockerAppStatus(Immutable):
+    """Serializable projection of one app's state, for non-menu surfaces.
+
+    `state.docker` itself cannot be streamed to a client: `combine_reducers`
+    synthesizes a per-image attribute on `DockerState` at runtime, and none of
+    those exist in the proto message — serializing the slice raises `KeyError`
+    and takes down the whole `SubscribeStore` stream, every selector in it, not
+    just this one. This lives on `DockerServiceState`, which is a plain
+    `Immutable` and does serialize.
+
+    `label` and `icon` are copied in because they live Python-side in the
+    `IMAGES` registry's `ContainerEntry`, not in `ImageState`.
+    """
+
+    id: str
+    label: str
+    icon: str
+    status: DockerItemStatus = DockerItemStatus.NOT_AVAILABLE
+    # Carried alongside the lifecycle status rather than folded into it, so a
+    # consumer can apply the same precedence the Apps menu tint does: health
+    # outranks status, because with `restart_policy: always` a failing app is
+    # back to RUNNING seconds after it died.
+    health: DockerItemHealth = DockerItemHealth.OK
+
+
 class DockerAction(BaseAction):
     """Docker action."""
 
@@ -132,6 +157,18 @@ class DockerSetHostNetworkAction(DockerAction):
     """
 
     enabled: bool
+
+
+class DockerSetAppStatusAction(DockerAction):
+    """Record an app's projected status in ``DockerServiceState.apps``.
+
+    Deliberately not a ``DockerImageAction``: those are routed to the per-image
+    reducer by ``image`` id, and this writes the service slice instead. An app
+    reported as ``NOT_AVAILABLE`` is evicted rather than stored — see the
+    reducer.
+    """
+
+    app: DockerAppStatus
 
 
 class DockerImageAction(DockerAction):
@@ -258,6 +295,14 @@ class DockerServiceState(Immutable):
             output_type=str,
         ),
     )
+    # Per-app status for surfaces that render from the store rather than from
+    # the menu (the web UI dashboard). Only apps whose image is actually on the
+    # device appear — the reducer evicts an app that goes `NOT_AVAILABLE`.
+    #
+    # Derived, and deliberately *not* persisted like its siblings above: a
+    # restored entry would outlive its container and claim an app was running
+    # before docker had reconciled anything.
+    apps: dict[str, DockerAppStatus] = field(default_factory=dict)
     # Whether Home Assistant runs on the host's network stack (for mDNS/SSDP
     # discovery). Intent only — the compose `network_mode` and the hostname
     # shims that keep the add-on bus reachable are derived at render time.

@@ -12,6 +12,12 @@ from __future__ import annotations
 import pytest
 
 from ubo_app.rpc.store_service import _pack_to_any
+from ubo_app.store.services.docker import (
+    DockerAppStatus,
+    DockerItemHealth,
+    DockerItemStatus,
+    DockerServiceState,
+)
 from ubo_app.store.services.localization import (
     LocalizationState,
     LocationInfo,
@@ -58,6 +64,44 @@ def _populated_sensors() -> SensorsState:
     )
 
 
+def _docker(apps: dict[str, DockerAppStatus] | None = None) -> DockerServiceState:
+    """Build the slice without reading the real persistent store.
+
+    Every other field on `DockerServiceState` defaults through
+    `read_from_persistent_store`, and parametrize arguments are built at
+    collection time — before any fixture could redirect that path. Passing them
+    all explicitly keeps the test off the developer's own state file.
+    """
+    return DockerServiceState(
+        usernames={},
+        expose_to_lan={},
+        zigbee_enabled=False,
+        zigbee_adapter_by_id='',
+        host_network_enabled=False,
+        apps=apps or {},
+    )
+
+
+def _populated_docker() -> DockerServiceState:
+    return _docker(
+        {
+            'home_assistant': DockerAppStatus(
+                id='home_assistant',
+                label='Home Assistant',
+                icon='󰟐',
+                status=DockerItemStatus.RUNNING,
+                health=DockerItemHealth.CRASH_LOOPING,
+            ),
+            'pi_hole': DockerAppStatus(
+                id='pi_hole',
+                label='Pi-hole',
+                icon='󰇖',
+                status=DockerItemStatus.AVAILABLE,
+            ),
+        },
+    )
+
+
 @pytest.mark.parametrize(
     ('name', 'slice_'),
     [
@@ -97,6 +141,8 @@ def _populated_sensors() -> SensorsState:
         ),
         ('SensorsState', SensorsState()),
         ('SensorsState', _populated_sensors()),
+        ('DockerServiceState', _docker()),
+        ('DockerServiceState', _populated_docker()),
     ],
     ids=[
         'system-empty',
@@ -105,6 +151,8 @@ def _populated_sensors() -> SensorsState:
         'localization-populated',
         'sensors-empty',
         'sensors-populated',
+        'docker-empty',
+        'docker-populated',
     ],
 )
 def test_dashboard_slice_packs_to_a_ubo_message(name: str, slice_: object) -> None:
@@ -195,3 +243,31 @@ def test_packed_sensors_state_keeps_device_readings_and_metadata() -> None:
     assert readings['temperature'].precision == 1
     # A failed read stays absent rather than becoming a zero.
     assert readings['gas_resistance'].value is None
+
+
+def test_packed_docker_service_state_keeps_per_app_status() -> None:
+    """`apps` is a `dict[str, DockerAppStatus]` — a map of message values.
+
+    This slice is what the Apps tile reads, and it is the reason the tile
+    cannot simply select `state.docker`: the per-image states hang off the
+    combine reducer as attributes with no proto counterpart.
+    """
+    from ubo_bindings.ubo.v1 import DockerItemHealth as GRPCDockerItemHealth
+    from ubo_bindings.ubo.v1 import DockerItemStatus as GRPCDockerItemStatus
+    from ubo_bindings.ubo.v1 import DockerServiceState as GRPCDockerServiceState
+
+    packed = _pack_to_any(_populated_docker())
+    decoded = GRPCDockerServiceState().parse(packed.value)
+
+    assert decoded.apps is not None
+    running = decoded.apps.items['home_assistant']
+    assert running.label == 'Home Assistant'
+    assert running.icon == '󰟐'
+    assert running.status is GRPCDockerItemStatus.RUNNING
+    # Health survives independently of the lifecycle status, so the client can
+    # apply the same "health outranks status" precedence the menu tint does.
+    assert running.health is GRPCDockerItemHealth.CRASH_LOOPING
+
+    stopped = decoded.apps.items['pi_hole']
+    assert stopped.status is GRPCDockerItemStatus.AVAILABLE
+    assert stopped.health is GRPCDockerItemHealth.OK

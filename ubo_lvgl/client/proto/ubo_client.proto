@@ -179,8 +179,8 @@ message Action {
     AudioReportSampleAction audio_report_sample_action = 64;
     AudioSetVolumeAction audio_set_volume_action = 68;
     AudioToggleMuteStatusAction audio_toggle_mute_status_action = 72;
-    KeypadKeyPressAction keypad_key_press_action = 161;
-    KeypadKeyReleaseAction keypad_key_release_action = 162;
+    KeypadKeyPressAction keypad_key_press_action = 162;
+    KeypadKeyReleaseAction keypad_key_release_action = 163;
   }
 }
 

@@ -23,6 +23,7 @@ from ubo_app.store.core.types import (
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
+    DockerAppStatus,
     DockerImageFetchAction,
     DockerImageReleaseAction,
     DockerImageRemoveAction,
@@ -33,6 +34,7 @@ from ubo_app.store.services.docker import (
     DockerImageStopAction,
     DockerItemHealth,
     DockerItemStatus,
+    DockerSetAppStatusAction,
     ImageState,
     derive_health,
 )
@@ -134,16 +136,30 @@ _DEFAULT_COLOR = '#ffffff'
 
 
 def _update_app_badge(image: ImageState) -> None:
-    """Tint the app's tile in the Apps list to match how it is doing.
+    """Tint the app's tile in the Apps list, and project its status.
 
     Health outranks lifecycle: with `restart_policy: always` a failing app is
     back to RUNNING seconds after it died, so the lifecycle status on its own
     would keep the tile green while the app cycles.
     """
-    color = _HEALTH_COLOR.get(derive_health(image, now=time.time())) or (
-        _STATUS_COLOR.get(image.status, _DEFAULT_COLOR)
+    health = derive_health(image, now=time.time())
+    color = _HEALTH_COLOR.get(health) or _STATUS_COLOR.get(image.status, _DEFAULT_COLOR)
+    store.dispatch(
+        UpdateRegisteredAppAction(key=image.id, color=color),
+        # The same derivation, for surfaces that render from the store rather
+        # than from the menu — the web UI dashboard's Apps tile. `IMAGES.get`
+        # rather than `IMAGES[...]` because the rest of this module guards with
+        # `image.id in IMAGES` throughout: an id outside the registry happens.
+        DockerSetAppStatusAction(
+            app=DockerAppStatus(
+                id=image.id,
+                label=image.label,
+                icon=entry.icon if (entry := IMAGES.get(image.id)) else '󰣆',
+                status=image.status,
+                health=health,
+            ),
+        ),
     )
-    store.dispatch(UpdateRegisteredAppAction(key=image.id, color=color))
 
 
 def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915

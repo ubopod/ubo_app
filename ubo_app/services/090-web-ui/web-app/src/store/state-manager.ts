@@ -64,6 +64,12 @@ const STORE_SELECTORS = [
   "state.localization",
   "state.sensors",
   "state.audio.playback_volume",
+  // The service sub-slice, not `state.docker`: python-redux synthesizes a
+  // per-image attribute on `DockerState` that has no proto counterpart, so
+  // packing the parent raises and takes down the stream for *every* selector
+  // above, not just this one. The service slice is a plain Immutable, and it
+  // carries the per-app status projection the Apps tile renders.
+  "state.docker.service",
 ] as const;
 
 /**
@@ -115,6 +121,7 @@ export class StateManager {
     system: null,
     localization: null,
     sensors: null,
+    docker: null,
     volume: 0,
   };
 
@@ -238,7 +245,7 @@ export class StateManager {
         const decoded = results.map((result) =>
           unpackAny(result.getTypeUrl(), result.getValue_asU8()),
         );
-        const [system, localization, sensors, volume] = decoded;
+        const [system, localization, sensors, volume, docker] = decoded;
 
         this.update({
           system: keepIdentity(
@@ -253,6 +260,13 @@ export class StateManager {
           sensors: keepIdentity(
             this.state.sensors,
             (sensors as AppState["sensors"]) ?? this.state.sensors,
+          ),
+          // A device with the docker service disabled makes this selector
+          // raise server-side, which arrives as Empty → null; the fallback
+          // keeps `null` and the Apps tile simply never appears.
+          docker: keepIdentity(
+            this.state.docker,
+            (docker as AppState["docker"]) ?? this.state.docker,
           ),
           volume: typeof volume === "number" ? volume : this.state.volume,
         });

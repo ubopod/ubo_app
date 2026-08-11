@@ -50,6 +50,7 @@ from ubo_app.store.services.docker import (
     DockerItemStatus,
     DockerRemoveUsernameAction,
     DockerServiceState,
+    DockerSetAppStatusAction,
     DockerSetHostNetworkAction,
     DockerSetStatusAction,
     DockerSetZigbeeIntentAction,
@@ -110,6 +111,29 @@ def service_reducer(
                 ),
                 events=[DockerImageRebindEvent(image=action.image)],
             )
+
+        case DockerSetAppStatusAction():
+            # `NOT_AVAILABLE` means the image is not on the device — never
+            # fetched, or removed. Either way it is not an installed app, and
+            # since images are never unregistered from the combine reducer,
+            # this is also the only signal that a deleted app should go away.
+            if action.app.status is DockerItemStatus.NOT_AVAILABLE:
+                if action.app.id not in state.apps:
+                    return state
+                return replace(
+                    state,
+                    apps={
+                        id_: app
+                        for id_, app in state.apps.items()
+                        if id_ != action.app.id
+                    },
+                )
+            # Both early returns matter: the web dashboard's `SubscribeStore`
+            # autorun is keyed on this whole slice, so rewriting an unchanged
+            # entry would push a frame to every client on every docker poll.
+            if state.apps.get(action.app.id) == action.app:
+                return state
+            return replace(state, apps={**state.apps, action.app.id: action.app})
 
         case DockerInstallAction():
             return CompleteReducerResult(

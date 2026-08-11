@@ -1,5 +1,7 @@
 import type {
   ApplicationViewData,
+  DockerAppStatus,
+  DockerServiceState,
   HomeViewData,
   LocalizationState,
   MenuItemData,
@@ -25,11 +27,14 @@ export interface AppState {
   system: SystemState.AsObject | null;
   localization: LocalizationState.AsObject | null;
   sensors: SensorsState.AsObject | null;
+  docker: DockerServiceState.AsObject | null;
   volume: number;
 }
 
 export type {
   ApplicationViewData,
+  DockerAppStatus,
+  DockerServiceState,
   HomeViewData,
   LocalizationState,
   MenuItemData,
