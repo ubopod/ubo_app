@@ -671,12 +671,24 @@ async def _read_oauth_prompt(
     return url, code
 
 
-async def _prompt_for_authorization_code(provider: HermesOAuthProvider) -> str | None:
-    """Ask the user for the code the provider showed them after approving."""
+async def _prompt_for_authorization_code(
+    provider: HermesOAuthProvider,
+    url: str,
+) -> str | None:
+    """Ask the user for the code the provider showed them after approving.
+
+    The link goes in the form rather than on a QR page. This flow needs the
+    form on screen to accept the code, and the form covers the QR — so the two
+    cannot share a screen. Putting the URL in the prompt also sidesteps the
+    length problem: these authorization URLs carry a few hundred characters of
+    PKCE state that no pod screen can show, whereas the web UI renders them as
+    a link with shortened text.
+    """
     try:
         _, result = await ubo_input(
-            title=f'{provider.label} code',
-            prompt='Paste the authorization code shown after you approve access.',
+            prompt=f'{provider.label} sign-in',
+            title=f'Open {url} and approve access, then paste the code it '
+            'gives you below.',
             descriptions=[
                 WebUIInputDescription(
                     fields=[
@@ -701,9 +713,10 @@ async def _prompt_for_authorization_code(provider: HermesOAuthProvider) -> str |
 async def _answer_code_prompt(
     process: asyncio.subprocess.Process,
     provider: HermesOAuthProvider,
+    url: str,
 ) -> bool:
     """Collect the authorization code and hand it to the waiting process."""
-    code = await _prompt_for_authorization_code(provider)
+    code = await _prompt_for_authorization_code(provider, url)
     if code is None or process.stdin is None:
         return False
     process.stdin.write(f'{code}\n'.encode())
@@ -766,17 +779,32 @@ async def _perform_oauth(provider: HermesOAuthProvider) -> None:
             await process.wait()
             return
 
-        store.dispatch(
-            UpdateRenderPropsAction(
-                kind='status',
-                next_kind='qr_code',
-                title=f'{provider.label} Sign In',
-                props=build_oauth_qr_props(url, code),
-            ),
-        )
-
-        if provider.needs_code and not await _answer_code_prompt(process, provider):
-            return
+        if provider.needs_code:
+            # Deliberately no QR. This flow needs the input form on screen to
+            # take the code back, and the form sits over the QR — so the link
+            # goes in the form instead, where it is also clickable.
+            store.dispatch(
+                UpdateRenderPropsAction(
+                    kind='status',
+                    title=f'{provider.label} Sign In',
+                    props={
+                        'text': 'Open the link in the web dashboard, '
+                        'then enter the code.',
+                        'text_font_size': 16,
+                    },
+                ),
+            )
+            if not await _answer_code_prompt(process, provider, url):
+                return
+        else:
+            store.dispatch(
+                UpdateRenderPropsAction(
+                    kind='status',
+                    next_kind='qr_code',
+                    title=f'{provider.label} Sign In',
+                    props=build_oauth_qr_props(url, code),
+                ),
+            )
 
         await process.wait()
         succeeded = process.returncode == 0

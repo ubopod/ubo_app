@@ -14,6 +14,7 @@ import {
   Divider,
   InputLabel,
   FormHelperText,
+  Link,
   Stack,
   FormControlLabel,
   Switch,
@@ -159,13 +160,62 @@ type WebUIField = NonNullable<
   WebUIInputDescription.AsObject["fields"]
 >["itemsList"][number];
 
+const URL_PATTERN = /(https?:\/\/[^\s]+)/g;
+// Beyond this, a URL stops being readable and starts wrecking the layout.
+const MAX_LINK_TEXT = 48;
+
+// OAuth authorization URLs run to several hundred characters of PKCE
+// challenge and state, so the visible text is shortened to host + path while
+// the href keeps the whole thing.
+function linkText(url: string): string {
+  if (url.length <= MAX_LINK_TEXT) {
+    return url;
+  }
+  try {
+    const parsed = new URL(url);
+    const short = `${parsed.host}${parsed.pathname}`;
+    return short.length <= MAX_LINK_TEXT ? `${short}…` : `${parsed.host}…`;
+  } catch {
+    return `${url.slice(0, MAX_LINK_TEXT)}…`;
+  }
+}
+
+// Renders text with any URLs in it as real links. Prompts routinely carry a
+// page the user has to visit — an unclickable URL they cannot select on a
+// pod screen is useless to them.
+export function LinkifiedText({ text }: { text?: string }) {
+  if (!text) {
+    return null;
+  }
+  return (
+    <>
+      {text.split(URL_PATTERN).map((part, index) =>
+        index % 2 === 1 ? (
+          <Link
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {linkText(part)}
+          </Link>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 // Props shared by every plain-text-style TextField (text/number/password/…),
 // so the password branch and the default branch stay in sync.
 function fieldTextProps(field: WebUIField) {
   return {
     name: field.name,
     label: field.label,
-    helperText: field.description,
+    helperText: field.description ? (
+      <LinkifiedText text={field.description} />
+    ) : undefined,
     defaultValue: field.defaultValue || undefined,
     title: field.title || undefined,
     required: field.required,
@@ -389,7 +439,7 @@ export function Inputs({
             color="text.secondary"
             sx={{ px: 3, mt: -1, mb: 1 }}
           >
-            {input.title}
+            <LinkifiedText text={input.title} />
           </Typography>
         )}
         <DialogContent sx={{ "&&.MuiDialogContent-root": { pt: 1 } }}>
@@ -424,7 +474,7 @@ export function Inputs({
                       ))}
                     </Select>
                     {field.description && (
-                      <FormHelperText>{field.description}</FormHelperText>
+                      <FormHelperText><LinkifiedText text={field.description} /></FormHelperText>
                     )}
                   </FormControl>
                 ) : field.type === InputFieldType.INPUT_FIELD_TYPE_LONG ? (
@@ -468,7 +518,7 @@ export function Inputs({
                         />
                       }
                     />
-                    <FormHelperText>{field.description}</FormHelperText>
+                    <FormHelperText><LinkifiedText text={field.description} /></FormHelperText>
                   </FormControl>
                 ) : field.type === InputFieldType.INPUT_FIELD_TYPE_FILE ? (
                   <FormControl
@@ -554,7 +604,7 @@ export function Inputs({
                         </IconButton>
                       )}
                     </Stack>
-                    <FormHelperText>{field.description}</FormHelperText>
+                    <FormHelperText><LinkifiedText text={field.description} /></FormHelperText>
                   </FormControl>
                 ) : field.type === InputFieldType.INPUT_FIELD_TYPE_PASSWORD ? (
                   <TextField
@@ -618,7 +668,7 @@ export function Inputs({
                       valueLabelFormat={(value) => `${value}%`}
                       sx={{ mx: 1, width: "calc(100% - 16px)" }}
                     />
-                    <FormHelperText>{field.description}</FormHelperText>
+                    <FormHelperText><LinkifiedText text={field.description} /></FormHelperText>
                   </FormControl>
                 ) : (
                   <TextField
