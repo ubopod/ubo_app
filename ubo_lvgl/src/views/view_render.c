@@ -164,6 +164,15 @@ static void build_status(const ubo_render_view *v)
     }
 }
 
+/* A label that only repeats the URL already encoded in the QR is not worth the
+ * space here: this screen has no browser, so the URL cannot be followed, and
+ * the text crowds out the code it duplicates. Labels that are not URLs — a
+ * device code, an `ip:port` — are what the user actually has to read. */
+static bool label_is_url(const char *s)
+{
+    return s && (strncmp(s, "http://", 7) == 0 || strncmp(s, "https://", 8) == 0);
+}
+
 static void build_qr(lv_obj_t *parent, const char *value, const char *label,
                      const char *caption)
 {
@@ -178,7 +187,7 @@ static void build_qr(lv_obj_t *parent, const char *value, const char *label,
     lv_obj_set_style_border_color(qr, lv_color_white(), 0);
     lv_obj_set_style_border_width(qr, 4, 0);
 
-    if (label && label[0]) {
+    if (label && label[0] && !label_is_url(label)) {
         lv_obj_t *l = lv_label_create(parent);
         lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
         lv_obj_set_width(l, lv_pct(90));
