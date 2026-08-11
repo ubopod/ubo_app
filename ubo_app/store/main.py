@@ -21,6 +21,7 @@ from typing import (
     Union,
     cast,
     get_origin,
+    get_type_hints,
     overload,
 )
 
@@ -412,6 +413,22 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         *,
         object_type: GenericAlias | type[T] | None = None,
     ) -> LoadedObject | T:
+        # An enum-typed field is persisted as its bare value (a `str`/`int`),
+        # so this must run before the primitive passthrough below - otherwise
+        # that passthrough returns the raw value first and these branches
+        # never run.
+        if isinstance(object_type, type):
+            if issubclass(object_type, StrEnum):
+                if isinstance(data, str):
+                    return object_type(data)
+                msg = f'Invalid data type {type(data)} for StrEnum {object_type}'
+                raise TypeError(msg)
+            if issubclass(object_type, IntEnum):
+                if isinstance(data, int):
+                    return object_type(data)
+                msg = f'Invalid data type {type(data)} for IntEnum {object_type}'
+                raise TypeError(msg)
+
         if isinstance(data, int | float | str | bool | None):
             return data
         if isinstance(data, list):
@@ -434,23 +451,27 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
                 msg = f'Invalid type {type(type_)}'
                 raise TypeError(msg)
 
-            parameters = {key: self.load_object(value) for key, value in data.items()}
+            # Field types let a nested enum field (e.g. `AudioOutputVolume.output`)
+            # round-trip correctly - without them every field is reloaded with
+            # object_type=None and an enum field comes back as a bare str.
+            try:
+                field_types = get_type_hints(class_)
+            except (NameError, TypeError):
+                field_types = {}
+            parameters = {
+                key: (
+                    self.load_object(value, object_type=field_type)
+                    if isinstance(field_type := field_types.get(key), type)
+                    else self.load_object(value)
+                )
+                for key, value in data.items()
+            }
 
             return class_(**parameters)
         if isinstance(object_type, GenericAlias):
             origin = get_origin(object_type)
             if isinstance(data, origin):
                 return cast('T', data)
-        elif object_type and issubclass(object_type, StrEnum):
-            if isinstance(data, str):
-                return object_type(data)
-            msg = f'Invalid data type {type(data)} for StrEnum {object_type}'
-            raise TypeError(msg)
-        elif object_type and issubclass(object_type, IntEnum):
-            if isinstance(data, int):
-                return object_type(data)
-            msg = f'Invalid data type {type(data)} for IntEnum {object_type}'
-            raise TypeError(msg)
         elif not object_type or isinstance(data, object_type):
             return cast('T', data)
 

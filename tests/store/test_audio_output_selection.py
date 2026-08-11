@@ -85,6 +85,46 @@ def test_restored_output_volumes_are_a_tuple() -> None:
     assert len(restored) == 2
 
 
+def test_restored_output_volumes_have_a_real_enum_member() -> None:
+    """A restored ``output`` must be the enum member, not its bare string value.
+
+    ``AudioOutput`` is a ``StrEnum``, so ``AudioOutput.LINEOUT == 'lineout'``
+    holds either way and equality checks alone can't tell them apart. But
+    ``build_message`` (the gRPC wire packer) requires an actual ``Enum``
+    instance and raises ``ValueError`` on a bare ``str``, which used to take
+    down the whole bundled ``state.system``/``state.sensors``/``state.audio``/
+    ``state.localization`` subscription that feeds the phone apps' dashboard
+    gauges.
+
+    Round-trips through the real serializer (``UboStore.serialize_value``)
+    rather than hand-writing persisted JSON: a bare ``{'output': 'lineout',
+    ...}`` dict (as the other tests in this file use) never carries the
+    ``_type`` tag a real persisted ``AudioOutputVolume`` would, so it doesn't
+    exercise the code path that actually restores an object at all -- it
+    would come back as a plain ``dict`` either way, bug or no bug.
+    """
+    import json
+
+    from ubo_app.store.main import store
+    from ubo_app.utils.persistent_store import PERSISTENT_STORE_PATH
+
+    ns = _load()
+
+    original = (
+        ns.audio.AudioOutputVolume(output=ns.audio.AudioOutput.LINEOUT, volume=0.25),
+        ns.audio.AudioOutputVolume(output=ns.audio.AudioOutput.HDMI_1, volume=0.9),
+    )
+    current_state = json.loads(Path(PERSISTENT_STORE_PATH).read_text())
+    current_state['audio_state:output_volumes'] = store.serialize_value(original)
+    Path(PERSISTENT_STORE_PATH).write_text(json.dumps(current_state))
+
+    restored = ns.audio._restore_output_volumes()  # noqa: SLF001
+    assert isinstance(restored[0].output, ns.audio.AudioOutput)
+    assert isinstance(restored[1].output, ns.audio.AudioOutput)
+    assert restored[0].output is ns.audio.AudioOutput.LINEOUT
+    assert restored[1].output is ns.audio.AudioOutput.HDMI_1
+
+
 def test_output_volumes_is_seeded_by_a_factory() -> None:
     """The field must not carry a plain default, whatever the store holds."""
     import dataclasses
