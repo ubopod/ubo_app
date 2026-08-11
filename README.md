@@ -17,6 +17,7 @@
   - [Pre-packaged image](#pre-packaged-image)
   - [Install on existing OS](#install-on-existing-os)
   - [ESP32 satellites](#esp32-satellites)
+  - [Mobile and wearable apps](#mobile-and-wearable-apps)
 - [🤝 Contributing](#🤝-contributing)
   - [ℹ️️ Conventions](#ℹ️️-conventions)
   - [Development](#development)
@@ -35,21 +36,12 @@ Ubo App is a Python application that provides a unified interface and tools for 
 
 It offers a minimalistic, yet intuitive UI for end-users to install and interact with developer apps. It is optimized for Raspberry Pi (4 & 5) devices. 
 
-Hardware specific capabilities such as infrared send/receive, sensing, LED ring, etc. are supported by Ubo Pod hardware. 
+Hardware specific capabilities such as infrared send/receive, sensing, LED ring, etc. are supported by Ubo Pod hardware. It is also possible to DIY your own hardware, see the [hardware DIY section](#diy-path) below.
 
-It is also possible to DIY your own hardware, see the [hardware DIY section](#diy-path) below.
-
-Beyond the Raspberry Pi itself, Ubo App can drive **ESP32 satellites**: small companion
-boards that extend a Ubo Pod's reach into another room, connected over WiFi or over the
-USB cable. A satellite is a peer of the pod, not a separate app — all logic stays in the
-core, and the board contributes whatever hardware it has. Today that means a *display*
-satellite (a native C/[LVGL](https://lvgl.io) client rendering the same UI on a touch
-panel) and an *audio* satellite (speaker playback plus microphone capture, including
-on-device wake word where the hardware supports it); sensors and infrared are the natural
-next additions. The Waveshare **ESP32-C6-Touch-AMOLED-1.8** is complete and verified
-on-device; the Espressif **ESP32-S3-BOX-3** (which adds far-field mics and wake word) is
-in bring-up. See [`ubo_lvgl/README.md`](ubo_lvgl/README.md) and
-[`ubo_lvgl/esp32/README.md`](ubo_lvgl/esp32/README.md) for the full story.
+The pod is not the only surface. [**ESP32 satellites**](#esp32-satellites) are companion
+boards that extend a pod with an extra screen, audio and more, over WiFi or USB, and
+experimental [**phone and watch apps**](#mobile-and-wearable-apps) for iOS, watchOS,
+Android and Wear OS provide detached hardware remotely.
 
 ### Goals
 
@@ -102,6 +94,8 @@ Be aware that at the moment, Ubo app sends crash reports to Sentry. Soon we will
   over WiFi or USB: the same GUI rendered natively in C/LVGL with touch navigation,
   audio playback and capture, on-device WiFi setup via a captive portal, and — on the
   ESP32-S3-BOX-3 — far-field microphones with an on-device wake word
+- Native phone and watch clients for iOS, watchOS, Android and Wear OS (including an
+  Android Glance widget) - experimental/beta, [build from source](#mobile-and-wearable-apps)
 
 Check [roadmap section](#🗺️-roadmap) below for upcoming features.
 
@@ -244,6 +238,44 @@ ships.
 
 Full details — pin maps, the WiFi setup journey, the USB/PPP link, wake word setup, and
 per-board status — are in [`ubo_lvgl/esp32/README.md`](ubo_lvgl/esp32/README.md).
+
+### Mobile and wearable apps
+
+---
+
+⚠️ **These apps are experimental and still in beta.** They are **not published on the
+App Store or Google Play**, and there is no timeline for that yet. The only way to try
+them today is to **build them from source** yourself, which means a working Xcode or
+Android Studio setup and a developer account for on-device installs. Expect rough
+edges, breaking changes, and features that only work against a matching ubo-app version.
+
+---
+
+Native clients that connect to a Ubo Pod over the [gRPC API](#🏗️-architecture)
+(port `50051`) and render the same UI remotely — they are thin renderers, so all logic
+stays on the pod. Each platform is split into a bindings package (generated from this
+repo's protobuf definitions, plus hand-written wrappers) and the app itself:
+
+| Platform | App | gRPC bindings |
+| --- | --- | --- |
+| iOS + watchOS (SwiftUI) | [`ubo-swift-app`](https://github.com/ubopod/ubo-swift-app) | [`ubo-swift-grpc`](https://github.com/ubopod/ubo-swift-grpc) |
+| Android + Wear OS, incl. a Glance widget (Kotlin) | [`ubo-kotlin-apps`](https://github.com/ubopod/ubo-kotlin-apps) | [`ubo-kotlin-grpc`](https://github.com/ubopod/ubo-kotlin-grpc) |
+
+The app repos pull in their bindings package as a dependency, so for a plain build you
+only need the app repo — clone the bindings repo too if you want to build against local
+protobuf changes. Build instructions live in each repository.
+
+Toolchain and deployment targets: **iOS 18 / watchOS 11** (Xcode, SwiftPM) and
+**Android minSdk 31 / target SDK 34** (JDK 17 + Android SDK 34, Gradle).
+
+The apps need to reach the pod's gRPC port. Usually that means being on the same LAN as
+the device, but it does not have to be — you can reach the pod remotely through a
+reverse proxy or tunnel (Pangolin, Twingate and ngrok all ship as one-click Docker apps).
+
+⚠️ **The gRPC API has no authentication layer yet.** Anything that can reach the port has
+full control of the device, so exposing it to the public internet is strongly discouraged
+— and if you tunnel to it, put the access control in the tunnel. Even on a LAN, treat the
+port as unprotected and only run it on a network you trust.
 
 ## 🤝 Contributing
 
@@ -589,6 +621,27 @@ Further reading:
   budgets, per-board status
 - [`ubo_lvgl/esp32/AFE-FAR-FIELD.md`](ubo_lvgl/esp32/AFE-FAR-FIELD.md) — far-field audio
   front end and wake word on the ESP32-S3-BOX-3
+
+#### Mobile and wearable app bindings
+
+The Swift and Kotlin client apps (see
+[mobile and wearable apps](#mobile-and-wearable-apps)) live in their own repositories,
+but their gRPC bindings are generated from *this* repo's protobuf definitions. Check the
+bindings repos out beside the core, then regenerate after changing any action or event:
+
+```bash
+uv run poe proto:swift     # → ../ubo-swift-grpc  (needs protobuf, swift-protobuf, grpc-swift)
+uv run poe proto:kotlin    # → ../ubo-kotlin-grpc (needs JDK 17 + Android SDK 34)
+uv run poe proto:complete  # Python + Swift + Kotlin in one go
+```
+
+`proto:swift:check` and `proto:kotlin:check` verify the committed generated sources still
+match a fresh regen. Never hand-edit generated files.
+
+⚠️*Note: unlike the LVGL client, these clients regenerate the whole proto, so they never
+suffer field-tag drift — but a new action needs a matching branch in each client's
+hand-written action mapping. Kotlin catches a missing branch at compile time; Swift does
+not, and a missing case dispatches silently as a no-op.*
 
 ## 🛠️ Hardware 
 
