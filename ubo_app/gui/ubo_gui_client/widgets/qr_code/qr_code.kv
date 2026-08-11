@@ -26,3 +26,13 @@
         font_size: dp(18)
         halign: 'center'
         valign: 'center'
+
+      Label:
+        text: root.caption
+        size_hint: 1, None
+        height: self.texture_size[1] if root.caption else 0
+        opacity: 1 if root.caption else 0
+        font_size: dp(20)
+        bold: True
+        halign: 'center'
+        valign: 'center'

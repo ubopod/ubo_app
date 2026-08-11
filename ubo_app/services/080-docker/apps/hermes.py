@@ -611,6 +611,21 @@ def _notify_oauth_result(
     )
 
 
+def build_oauth_qr_props(url: str, code: str | None) -> dict[str, str]:
+    """Build the ``qr_code`` render props for a login prompt.
+
+    The QR always encodes the bare URL, so a scan works regardless of what is
+    written around it. The device code goes in ``caption``, not the label: the
+    code is not part of the link and must not be rendered inside one, and on
+    its own line it stays readable while typing it in on another device.
+    """
+    return {
+        'value': url,
+        'label': url,
+        'caption': f'Code: {code}' if code else '',
+    }
+
+
 async def _read_oauth_prompt(
     process: asyncio.subprocess.Process,
     provider: HermesOAuthProvider,
@@ -756,14 +771,7 @@ async def _perform_oauth(provider: HermesOAuthProvider) -> None:
                 kind='status',
                 next_kind='qr_code',
                 title=f'{provider.label} Sign In',
-                props={
-                    # The QR encodes the bare URL so a scan always works. The
-                    # code leads the label: after scanning, it is the only thing
-                    # the user still needs, and leading means it survives
-                    # truncation on a narrow screen.
-                    'value': url,
-                    'label': f'Code: {code} · {url}' if code else url,
-                },
+                props=build_oauth_qr_props(url, code),
             ),
         )
 

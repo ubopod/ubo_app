@@ -164,7 +164,8 @@ static void build_status(const ubo_render_view *v)
     }
 }
 
-static void build_qr(lv_obj_t *parent, const char *value, const char *label)
+static void build_qr(lv_obj_t *parent, const char *value, const char *label,
+                     const char *caption)
 {
     lv_obj_t *qr = lv_qrcode_create(parent);
     lv_qrcode_set_size(qr, 132);
@@ -186,6 +187,18 @@ static void build_qr(lv_obj_t *parent, const char *value, const char *label)
         lv_obj_set_style_text_color(l, UBO_COL_FG, 0);
         lv_label_set_text(l, label);
     }
+
+    /* Its own line, larger than the label: a device code has to be readable
+     * from across the room and typed by hand, unlike the URL above it. */
+    if (caption && caption[0]) {
+        lv_obj_t *c = lv_label_create(parent);
+        lv_label_set_long_mode(c, LV_LABEL_LONG_WRAP);
+        lv_obj_set_width(c, lv_pct(90));
+        lv_obj_set_style_text_align(c, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_text_font(c, UBO_FONT_XL, 0);
+        lv_obj_set_style_text_color(c, UBO_COL_FG, 0);
+        lv_label_set_text(c, caption);
+    }
 }
 
 /* (Re)build the carousel QR for the current index into the stored container. */
@@ -199,7 +212,9 @@ static void carousel_render(void)
     char lab[256];
     nth_line(s_car_values, s_car_index, val, sizeof(val));
     nth_line(s_car_labels, s_car_index, lab, sizeof(lab));
-    build_qr(s_car_col, val, lab[0] ? lab : NULL);
+    /* The carousel has no per-item caption; its position indicator is added
+     * below by the caller. */
+    build_qr(s_car_col, val, lab[0] ? lab : NULL, NULL);
     if (s_car_total > 1) {
         lv_obj_t *pos = lv_label_create(s_car_col);
         lv_obj_set_style_text_font(pos, UBO_FONT_XS, 0);
@@ -450,7 +465,8 @@ void ubo_build_render(const ubo_render_view *v)
         build_status(v);
     } else if (strcmp(kind, "qr_code") == 0) {
         build_qr(column(ubo_screen_content()), ubo_render_prop_get(v, "value"),
-                 ubo_render_prop_get(v, "label"));
+                 ubo_render_prop_get(v, "label"),
+                 ubo_render_prop_get(v, "caption"));
     } else if (strcmp(kind, "qr_code_carousel") == 0) {
         build_qr_carousel(v);
     } else if (strcmp(kind, "image_viewer") == 0) {

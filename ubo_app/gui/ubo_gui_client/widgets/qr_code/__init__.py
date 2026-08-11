@@ -15,6 +15,9 @@ class QRCodeRenderPage(UboPageWidget):
 
     value: str = StringProperty()
     label: str = StringProperty()
+    # Shown on its own line under the label, for text that accompanies the code
+    # without being part of it — e.g. a device code to type after scanning.
+    caption: str = StringProperty()
 
 
 Builder.load_file(

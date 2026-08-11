@@ -73,6 +73,12 @@ class RenderView(BaseView):
         color: #cccccc;
     }
 
+    RenderView .render-caption {
+        text-align: center;
+        text-style: bold;
+        color: #ffffff;
+    }
+
     RenderView .render-fallback {
         text-align: center;
         color: #888888;
@@ -119,10 +125,13 @@ class RenderView(BaseView):
     def _compose_qr_code(self) -> ComposeResult:
         value = prop_string(self.view_data, "value")
         label = prop_string(self.view_data, "label") or value
+        caption = prop_string(self.view_data, "caption")
         rendered = render_qr_text(value)
         yield Static(rendered, classes="render-qr")
         if label:
             yield Label(label, classes="render-label", markup=False)
+        if caption:
+            yield Label(caption, classes="render-caption", markup=False)
 
     def _compose_qr_carousel(self) -> ComposeResult:
         values = prop_string_list(self.view_data, "values")

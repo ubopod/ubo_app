@@ -129,6 +129,14 @@ class HermesModule(Protocol):
         """Parse the verification URL and device code out of CLI output."""
         ...
 
+    def build_oauth_qr_props(
+        self,
+        url: str,
+        code: str | None,
+    ) -> dict[str, str]:
+        """Build the qr_code render props for a login prompt."""
+        ...
+
     def _oauth_action(
         self,
         provider: HermesOAuthProviderProtocol,
@@ -653,6 +661,35 @@ async def test_read_oauth_prompt_returns_at_once_for_the_code_paste_flow() -> No
     assert url is not None
     assert url.startswith('https://claude.ai/oauth/authorize')
     assert code is None
+
+
+def test_qr_props_keep_the_code_out_of_the_link() -> None:
+    """The device code belongs beside the link, not inside it.
+
+    The QR must encode the bare URL so a scan is unaffected by whatever text
+    accompanies it, and the code goes on its own `caption` line — rendering it
+    as part of the anchor made it read as a fragment of the URL.
+    """
+    hermes = _import_hermes()
+
+    props = hermes.build_oauth_qr_props(
+        'https://auth.openai.com/codex/device',
+        'L3ZO-EVMJX',
+    )
+
+    assert props['value'] == 'https://auth.openai.com/codex/device'
+    assert props['label'] == 'https://auth.openai.com/codex/device'
+    assert props['caption'] == 'Code: L3ZO-EVMJX'
+    assert 'L3ZO-EVMJX' not in props['label']
+
+
+def test_qr_props_omit_the_caption_without_a_code() -> None:
+    """Flows with no device code must not render an empty caption line."""
+    hermes = _import_hermes()
+
+    props = hermes.build_oauth_qr_props('https://claude.ai/oauth/authorize', None)
+
+    assert props['caption'] == ''
 
 
 def test_oauth_action_returns_none_so_no_menu_is_pushed(

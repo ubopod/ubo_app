@@ -373,6 +373,7 @@ export function RenderView({ data, store }: RenderViewProps) {
         <QRCodePage
           url={propString(data, "value")}
           label={propString(data, "label") || propString(data, "value")}
+          caption={propString(data, "caption")}
         />
       );
     case "qr_code_carousel":
