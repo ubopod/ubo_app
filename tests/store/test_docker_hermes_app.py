@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 from importlib import import_module
 from pathlib import Path
@@ -126,6 +127,15 @@ class HermesModule(Protocol):
         expect_device_code: bool = True,
     ) -> tuple[str | None, str | None]:
         """Parse the verification URL and device code out of CLI output."""
+        ...
+
+    async def _read_oauth_prompt(
+        self,
+        process: object,
+        provider: HermesOAuthProviderProtocol,
+        transcript: list[str],
+    ) -> tuple[str | None, str | None]:
+        """Stream stdout until the URL and any device code have appeared."""
         ...
 
     def _cleanup_hermes(self) -> None: ...
@@ -554,6 +564,88 @@ def test_extract_oauth_prompt_returns_none_before_a_url_appears() -> None:
         None,
         None,
     )
+
+
+class _FakeStdout:
+    """Streams canned lines, then blocks like the real process does."""
+
+    def __init__(self, output: str) -> None:
+        self._lines = [f'{line}\n'.encode() for line in output.splitlines()]
+
+    async def readline(self) -> bytes:
+        if self._lines:
+            return self._lines.pop(0)
+        # The real CLI does not close stdout after printing the block — it sits
+        # polling for approval. Sleeping (rather than returning b'') is what
+        # makes the grace period meaningful in this test.
+        await asyncio.sleep(3600)
+        return b''
+
+
+class _FakeProcess:
+    def __init__(self, output: str) -> None:
+        self.stdout = _FakeStdout(output)
+
+
+def _provider(hermes: HermesModule, provider_id: str) -> HermesOAuthProviderProtocol:
+    return next(p for p in hermes.HERMES_OAUTH_PROVIDERS if p.id == provider_id)
+
+
+async def test_read_oauth_prompt_waits_for_a_code_printed_after_the_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OpenAI Codex prints its code several lines below the URL.
+
+    Returning as soon as a URL appears strands the user with a QR and no code
+    to type — the other providers hide this by carrying the code in the URL's
+    own `user_code` parameter, so both arrive on one line.
+    """
+    hermes = _import_hermes()
+    monkeypatch.setattr(hermes, 'HERMES_OAUTH_CODE_GRACE_SECONDS', 0.5)
+    transcript: list[str] = []
+
+    url, code = await hermes._read_oauth_prompt(  # noqa: SLF001
+        _FakeProcess(CODEX_OUTPUT),
+        _provider(hermes, 'openai-codex'),
+        transcript,
+    )
+
+    assert url == 'https://auth.openai.com/codex/device'
+    assert code == 'L0JT-CIPSL'
+
+
+async def test_read_oauth_prompt_gives_up_on_a_code_that_never_arrives(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A device-code provider that prints no code must not hang the view."""
+    hermes = _import_hermes()
+    monkeypatch.setattr(hermes, 'HERMES_OAUTH_CODE_GRACE_SECONDS', 0.1)
+    transcript: list[str] = []
+
+    url, code = await hermes._read_oauth_prompt(  # noqa: SLF001
+        _FakeProcess('Open this: https://example.test/device\n'),
+        _provider(hermes, 'openai-codex'),
+        transcript,
+    )
+
+    assert url == 'https://example.test/device'
+    assert code is None
+
+
+async def test_read_oauth_prompt_returns_at_once_for_the_code_paste_flow() -> None:
+    """Anthropic has no device code, so nothing should be waited for."""
+    hermes = _import_hermes()
+    transcript: list[str] = []
+
+    url, code = await hermes._read_oauth_prompt(  # noqa: SLF001
+        _FakeProcess(ANTHROPIC_OUTPUT),
+        _provider(hermes, 'anthropic'),
+        transcript,
+    )
+
+    assert url is not None
+    assert url.startswith('https://claude.ai/oauth/authorize')
+    assert code is None
 
 
 def test_oauth_providers_exclude_only_qwen() -> None:

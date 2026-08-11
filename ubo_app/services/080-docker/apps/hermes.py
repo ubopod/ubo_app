@@ -514,6 +514,8 @@ HERMES_OAUTH_PROVIDERS = (
 
 # How long the CLI waits for the user to approve on their phone.
 HERMES_OAUTH_TIMEOUT_SECONDS = 300
+# How long to keep reading after the URL for a device code printed below it.
+HERMES_OAUTH_CODE_GRACE_SECONDS = 5
 
 _ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
 _URL_RE = re.compile(r'https?://\S+')
@@ -602,6 +604,51 @@ def _notify_oauth_result(
             ),
         ),
     )
+
+
+async def _read_oauth_prompt(
+    process: asyncio.subprocess.Process,
+    provider: HermesOAuthProvider,
+    transcript: list[str],
+) -> tuple[str | None, str | None]:
+    """Read stdout until both the URL and any device code have appeared.
+
+    Stopping at the URL is not enough. Nous, xAI and MiniMax carry the code in
+    the URL's own ``user_code`` parameter, so both land on the same line — but
+    OpenAI Codex prints its code several lines *later*, and returning early
+    there leaves the user staring at a QR with no code to type. Once the URL is
+    in hand we therefore keep reading for a short grace period; the stream is
+    unbuffered, so the rest of the block arrives immediately or not at all.
+    """
+    if process.stdout is None:
+        return None, None
+
+    expect_device_code = not provider.needs_code
+    loop = asyncio.get_running_loop()
+    url = code = None
+    deadline: float | None = None
+    while True:
+        try:
+            line = await asyncio.wait_for(
+                process.stdout.readline(),
+                None if deadline is None else max(deadline - loop.time(), 0),
+            )
+        except TimeoutError:
+            break
+        if not line:
+            break
+
+        transcript.append(line.decode(errors='replace'))
+        url, code = extract_oauth_prompt(
+            ''.join(transcript),
+            expect_device_code=expect_device_code,
+        )
+        if url and (code or not expect_device_code):
+            break
+        if url and deadline is None:
+            deadline = loop.time() + HERMES_OAUTH_CODE_GRACE_SECONDS
+
+    return url, code
 
 
 async def _prompt_for_authorization_code(provider: HermesOAuthProvider) -> str | None:
@@ -693,18 +740,7 @@ async def _perform_oauth(provider: HermesOAuthProvider) -> None:
         if process.stdout is None:
             return
 
-        url = code = None
-        while True:
-            line = await process.stdout.readline()
-            if not line:
-                break
-            transcript.append(line.decode(errors='replace'))
-            url, code = extract_oauth_prompt(
-                ''.join(transcript),
-                expect_device_code=not provider.needs_code,
-            )
-            if url:
-                break
+        url, code = await _read_oauth_prompt(process, provider, transcript)
 
         if url is None:
             await process.wait()
@@ -716,10 +752,12 @@ async def _perform_oauth(provider: HermesOAuthProvider) -> None:
                 next_kind='qr_code',
                 title=f'{provider.label} Sign In',
                 props={
-                    # The QR encodes the bare URL so a scan always works; the
-                    # code rides in the human-readable label only.
+                    # The QR encodes the bare URL so a scan always works. The
+                    # code leads the label: after scanning, it is the only thing
+                    # the user still needs, and leading means it survives
+                    # truncation on a narrow screen.
                     'value': url,
-                    'label': f'{url} — code: {code}' if code else url,
+                    'label': f'Code: {code} · {url}' if code else url,
                 },
             ),
         )
