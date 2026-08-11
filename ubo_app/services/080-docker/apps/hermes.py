@@ -68,6 +68,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from ubo_app.store.core.types import StackItemType
+    from ubo_app.store.ubo_actions import BasicType
+
+    RenderProps = dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ]
 
 HERMES_COMPOSITION_ID = 'hermes'
 # The `hermes` user inside the images. The WebUI container chowns the shared
@@ -671,7 +677,7 @@ def _notify_oauth_result(
     )
 
 
-def build_oauth_qr_props(url: str, code: str | None) -> dict[str, str]:
+def build_oauth_qr_props(url: str, code: str | None) -> RenderProps:
     """Build the ``qr_code`` render props for a login prompt.
 
     The QR always encodes the bare URL, so a scan works regardless of what is
