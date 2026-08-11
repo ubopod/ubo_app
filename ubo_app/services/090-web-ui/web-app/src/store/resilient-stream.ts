@@ -1,4 +1,4 @@
-import type { ClientReadableStream } from "grpc-web";
+import type { Cancelable, StreamSink } from "./fetch-stream";
 
 // Retry delay after a stream terminates. Matches the interval the hand-rolled
 // subscriptions used before this helper existed.
@@ -17,54 +17,41 @@ export interface ResilientStream {
  * A gRPC-web server-streaming subscription that reconnects on its own and can
  * actually be shut down.
  *
- * Two things here are load-bearing and are easy to get wrong by hand:
- *
- * 1. **Both `error` and `end` mean "terminated".** grpc-web only emits `end`
- *    when a stream closes with an OK status — which is exactly what a graceful
- *    server shutdown produces — so retrying on `error` alone leaves the page
- *    permanently disconnected after a restart.
- *
- * 2. **`error` and `end` are not mutually exclusive.** In grpc-web-text mode
- *    (which this client uses) a mid-flight non-OK status arrives as a trailer
- *    frame in the response *body*: the `readystatechange` handler emits
- *    `error`, then the `complete` handler finds no `grpc-status` among the HTTP
- *    headers and emits `end` too. The `settled` latch collapses that pair into
- *    a single reconnect.
+ * **Every termination means "reconnect".** A graceful server shutdown ends the
+ * stream with an OK status, which is indistinguishable from a crash as far as
+ * the page is concerned — treating only failures as reconnect-worthy would
+ * leave the UI permanently blank after a restart. {@link StreamSink.onEnd}
+ * fires once either way, and stays silent for a deliberate `cancel()`, so
+ * disposal cannot re-enter the reconnect path.
  *
  * Disposal is reliable because the current stream is tracked in a mutable
  * binding rather than captured once: after a reconnect, `dispose()` still
- * cancels the stream that is actually open. `cancel()` itself emits neither
- * `error` nor `end` (grpc-web suppresses both for a cancelled stream), so
- * disposing cannot re-enter the reconnect path.
+ * cancels the stream that is actually open.
  *
  * @param open Opens a new stream. Called once up front and again on each retry.
  * @param onData Receives every message from whichever stream is current.
  * @param onTerminated Called once per termination, before the retry is queued.
  */
 export function resilientStream<RESP>(
-  open: () => ClientReadableStream<RESP>,
+  open: (sink: StreamSink<RESP>) => Cancelable,
   onData: (response: RESP) => void,
-  onTerminated?: () => void,
+  onTerminated?: (error?: Error) => void,
 ): ResilientStream {
-  let stream: ClientReadableStream<RESP> | null = null;
+  let stream: Cancelable | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
 
   function connect(): void {
     if (disposed) return;
 
-    let settled = false;
-    const terminated = () => {
-      if (disposed || settled) return;
-      settled = true;
-      onTerminated?.();
-      retryTimer = setTimeout(connect, RETRY_DELAY_MS);
-    };
-
-    stream = open();
-    stream.on("data", onData);
-    stream.on("error", terminated);
-    stream.on("end", terminated);
+    stream = open({
+      onData,
+      onEnd: (error) => {
+        if (disposed) return;
+        onTerminated?.(error);
+        retryTimer = setTimeout(connect, RETRY_DELAY_MS);
+      },
+    });
   }
 
   connect();

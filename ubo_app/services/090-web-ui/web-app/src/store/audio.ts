@@ -1,9 +1,9 @@
 import { resilientStream } from "./resilient-stream";
+import { subscribeEvent } from "./store-streams";
 import {
   SubscribeEventRequest,
   SubscribeEventResponse,
 } from "../bindings/store/v1/store_pb";
-import { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   AudioPlayAudioSampleEvent,
   AudioPlayAudioSequenceEvent,
@@ -226,7 +226,6 @@ function playSequenceChunk(
  * `dispatch()` cancels to free a connection slot.
  */
 export function subscribeToEvents(
-  store: StoreServiceClient,
   setupEvents: Array<(event: Event) => void>,
   handleResponse: (response: SubscribeEventResponse) => void,
 ): () => void {
@@ -241,7 +240,7 @@ export function subscribeToEvents(
   };
 
   const stream = resilientStream(
-    () => store.subscribeEvent(buildRequest()),
+    (sink) => subscribeEvent(buildRequest(), sink),
     handleResponse,
   );
 
@@ -261,11 +260,8 @@ export function stopAllAudio(): void {
   sequenceState.clear();
 }
 
-export function subscribeToAudioEvents(
-  store: StoreServiceClient,
-): () => void {
+export function subscribeToAudioEvents(): () => void {
   return subscribeToEvents(
-    store,
     [
       (event) =>
         event.setAudioPlayAudioSampleEvent(new AudioPlayAudioSampleEvent()),

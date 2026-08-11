@@ -205,7 +205,6 @@ function ImageViewer({ data, store }: RenderViewProps) {
 
   useEffect(() => {
     const unsubscribe = subscribeToEvents(
-      store,
       [(event: Event) => event.setFrameStreamDataEvent(new FrameStreamDataEvent())],
       (response: SubscribeEventResponse) => {
         const frameEvent = response.getEvent()?.getFrameStreamDataEvent();
@@ -315,7 +314,6 @@ function FrameStream({ data, store }: RenderViewProps) {
     let pendingFrame: { data: Uint8Array; width: number; height: number } | null = null;
 
     const unsubscribe = subscribeToEvents(
-      store,
       [(event: Event) => event.setFrameStreamDataEvent(new FrameStreamDataEvent())],
       (response: SubscribeEventResponse) => {
         const frameEvent = response.getEvent()?.getFrameStreamDataEvent();

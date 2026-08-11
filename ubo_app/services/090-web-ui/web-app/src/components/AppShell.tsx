@@ -190,7 +190,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ store }: AppShellProps) {
-  const stateManager = useMemo(() => new StateManager(store), [store]);
+  const stateManager = useMemo(() => new StateManager(), []);
 
   // A failed `/status` poll swaps this component out for the status message, so
   // a core restart unmounts us. Without this the manager's streams stay open
@@ -205,9 +205,9 @@ export function AppShell({ store }: AppShellProps) {
 
   // Subscribe to audio events
   useEffect(() => {
-    const unsubscribe = subscribeToAudioEvents(store);
+    const unsubscribe = subscribeToAudioEvents();
     return unsubscribe;
-  }, [store]);
+  }, []);
 
   return (
     <StateManagerContext.Provider value={stateManager}>

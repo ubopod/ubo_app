@@ -15,6 +15,8 @@ import {
   Event,
   DisplayRedrawAction,
 } from "../bindings/ubo/v1/ubo_pb";
+import { resilientStream } from "../store/resilient-stream";
+import { subscribeEvent } from "../store/store-streams";
 
 function requestRedraw(store: StoreServiceClient) {
   const dispatchActionRequest = new DispatchActionRequest();
@@ -32,58 +34,61 @@ function subscribeToRenderEvents(
   store: StoreServiceClient,
   canvas: HTMLCanvasElement | null,
 ) {
-  const event = new Event();
-  event.setDisplayCompressedRenderEvent(new DisplayCompressedRenderEvent());
+  const buildRequest = () => {
+    const event = new Event();
+    event.setDisplayCompressedRenderEvent(new DisplayCompressedRenderEvent());
 
-  const subscribeEventRequest = new SubscribeEventRequest();
-  subscribeEventRequest.addEvents(event);
-
-  const stream = store.subscribeEvent(subscribeEventRequest);
+    const subscribeEventRequest = new SubscribeEventRequest();
+    subscribeEventRequest.addEvents(event);
+    return subscribeEventRequest;
+  };
 
   let context = canvas?.getContext("2d");
 
-  stream.on("error", () =>
-    setTimeout(() => subscribeToRenderEvents(store, canvas), 1000),
-  );
-  stream.on("data", (response: SubscribeEventResponse) => {
-    const renderEvent = response.getEvent()?.getDisplayCompressedRenderEvent();
-    if (!renderEvent || !canvas) {
-      return;
-    }
-
-    const compressedData = renderEvent.getCompressedData_asU8();
-    const rectangle = renderEvent.getRectangleList();
-    if (!compressedData || !rectangle) {
-      return;
-    }
-    const width = Math.round(240 * renderEvent.getDensity());
-    const height = Math.round(240 * renderEvent.getDensity());
-    if (width !== canvas.width || height !== canvas.height) {
-      canvas.width = width;
-      canvas.height = height;
-      context = canvas.getContext("2d");
-    }
-    inflate(compressedData, (error, data) => {
-      if (error) {
-        console.error(error);
+  resilientStream(
+    (sink) => subscribeEvent(buildRequest(), sink),
+    (response: SubscribeEventResponse) => {
+      const renderEvent = response
+        .getEvent()
+        ?.getDisplayCompressedRenderEvent();
+      if (!renderEvent || !canvas) {
         return;
       }
-      if (context && data) {
-        const [y1, x1, y2, x2] = rectangle;
-        const [width, height] = [x2 - x1, y2 - y1];
 
-        context.putImageData(
-          new ImageData(new Uint8ClampedArray(data), width, height),
-          x1,
-          y1,
-          0,
-          0,
-          width,
-          height,
-        );
+      const compressedData = renderEvent.getCompressedData_asU8();
+      const rectangle = renderEvent.getRectangleList();
+      if (!compressedData || !rectangle) {
+        return;
       }
-    });
-  });
+      const width = Math.round(240 * renderEvent.getDensity());
+      const height = Math.round(240 * renderEvent.getDensity());
+      if (width !== canvas.width || height !== canvas.height) {
+        canvas.width = width;
+        canvas.height = height;
+        context = canvas.getContext("2d");
+      }
+      inflate(compressedData, (error, data) => {
+        if (error) {
+          console.error(error);
+          return;
+        }
+        if (context && data) {
+          const [y1, x1, y2, x2] = rectangle;
+          const [width, height] = [x2 - x1, y2 - y1];
+
+          context.putImageData(
+            new ImageData(new Uint8ClampedArray(data), width, height),
+            x1,
+            y1,
+            0,
+            0,
+            width,
+            height,
+          );
+        }
+      });
+    },
+  );
 
   requestRedraw(store);
 }
@@ -207,55 +212,57 @@ function playSequenceChunk(
   });
 }
 
-function subscribeToAudioSampleEvents(store: StoreServiceClient) {
-  const event = new Event();
-  event.setAudioPlayAudioSampleEvent(new AudioPlayAudioSampleEvent());
+function subscribeToAudioSampleEvents() {
+  const buildRequest = () => {
+    const event = new Event();
+    event.setAudioPlayAudioSampleEvent(new AudioPlayAudioSampleEvent());
 
-  const subscribeEventRequest = new SubscribeEventRequest();
-  subscribeEventRequest.addEvents(event);
+    const subscribeEventRequest = new SubscribeEventRequest();
+    subscribeEventRequest.addEvents(event);
+    return subscribeEventRequest;
+  };
 
-  const stream = store.subscribeEvent(subscribeEventRequest);
+  resilientStream(
+    (sink) => subscribeEvent(buildRequest(), sink),
+    (response: SubscribeEventResponse) => {
+      const audioEvent = response.getEvent()?.getAudioPlayAudioSampleEvent();
+      if (!audioEvent) return;
 
-  stream.on("error", () =>
-    setTimeout(() => subscribeToAudioSampleEvents(store), 1000),
+      const audioSample = audioEvent.getSample();
+      if (!audioSample) return;
+
+      playAudioSample(audioSample, audioEvent.getVolume());
+    },
   );
-  stream.on("data", async (response: SubscribeEventResponse) => {
-    const audioEvent = response.getEvent()?.getAudioPlayAudioSampleEvent();
-    if (!audioEvent) return;
-
-    const audioSample = audioEvent.getSample();
-    if (!audioSample) return;
-
-    playAudioSample(audioSample, audioEvent.getVolume());
-  });
 }
 
-function subscribeToAudioSequenceEvents(store: StoreServiceClient) {
-  const event = new Event();
-  event.setAudioPlayAudioSequenceEvent(new AudioPlayAudioSequenceEvent());
+function subscribeToAudioSequenceEvents() {
+  const buildRequest = () => {
+    const event = new Event();
+    event.setAudioPlayAudioSequenceEvent(new AudioPlayAudioSequenceEvent());
 
-  const subscribeEventRequest = new SubscribeEventRequest();
-  subscribeEventRequest.addEvents(event);
+    const subscribeEventRequest = new SubscribeEventRequest();
+    subscribeEventRequest.addEvents(event);
+    return subscribeEventRequest;
+  };
 
-  const stream = store.subscribeEvent(subscribeEventRequest);
+  resilientStream(
+    (sink) => subscribeEvent(buildRequest(), sink),
+    (response: SubscribeEventResponse) => {
+      const audioEvent = response.getEvent()?.getAudioPlayAudioSequenceEvent();
+      if (!audioEvent) return;
 
-  stream.on("error", () =>
-    setTimeout(() => subscribeToAudioSequenceEvents(store), 1000),
+      const audioSample = audioEvent.getSample();
+      if (!audioSample) return;
+
+      playSequenceChunk(
+        audioEvent.getId(),
+        audioEvent.getIndex(),
+        audioSample,
+        audioEvent.getVolume(),
+      );
+    },
   );
-  stream.on("data", async (response: SubscribeEventResponse) => {
-    const audioEvent = response.getEvent()?.getAudioPlayAudioSequenceEvent();
-    if (!audioEvent) return;
-
-    const audioSample = audioEvent.getSample();
-    if (!audioSample) return;
-
-    playSequenceChunk(
-      audioEvent.getId(),
-      audioEvent.getIndex(),
-      audioSample,
-      audioEvent.getVolume(),
-    );
-  });
 }
 
 export function subscribeToStoreEvents(
@@ -263,6 +270,6 @@ export function subscribeToStoreEvents(
   canvas: HTMLCanvasElement | null,
 ) {
   subscribeToRenderEvents(store, canvas);
-  subscribeToAudioSampleEvents(store);
-  subscribeToAudioSequenceEvents(store);
+  subscribeToAudioSampleEvents();
+  subscribeToAudioSequenceEvents();
 }

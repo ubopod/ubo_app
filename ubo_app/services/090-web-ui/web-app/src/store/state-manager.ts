@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 
 import { resilientStream, type ResilientStream } from "./resilient-stream";
+import { subscribeEvent, subscribeStore } from "./store-streams";
 import type { AppState } from "./types";
 import { unpackAny } from "./unpack-any";
 import {
@@ -9,7 +10,6 @@ import {
   SubscribeStoreRequest,
   SubscribeStoreResponse,
 } from "../bindings/store/v1/store_pb";
-import { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   Event,
   StackChangedEvent,
@@ -128,7 +128,7 @@ export class StateManager {
   private listeners: Set<StateListener> = new Set();
   private streams: ResilientStream[] = [];
 
-  constructor(private store: StoreServiceClient) {
+  constructor() {
     this.streams = [
       this.subscribeToViewAndStackChanges(),
       this.subscribeToSystemMetrics(),
@@ -194,7 +194,7 @@ export class StateManager {
     // The server replays the current view and stack to every new subscriber,
     // so a reconnect restores the UI without anyone touching the device.
     return resilientStream(
-      () => this.store.subscribeEvent(buildRequest()),
+      (sink) => subscribeEvent(buildRequest(), sink),
       (response: SubscribeEventResponse) => {
         const evt = response.getEvent();
         if (!evt) return;
@@ -235,7 +235,7 @@ export class StateManager {
     };
 
     return resilientStream(
-      () => this.store.subscribeStore(buildRequest()),
+      (sink) => subscribeStore(buildRequest(), sink),
       (response: SubscribeStoreResponse) => {
         const results = response.getResultsList();
         if (results.length !== STORE_SELECTORS.length) return;
