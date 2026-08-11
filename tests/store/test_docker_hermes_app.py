@@ -17,7 +17,7 @@ from ubo_app.constants.assistant import (
 from ubo_app.utils import secrets
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Coroutine, Sequence
 
     import pytest
     from redux import BaseAction
@@ -127,6 +127,13 @@ class HermesModule(Protocol):
         expect_device_code: bool = True,
     ) -> tuple[str | None, str | None]:
         """Parse the verification URL and device code out of CLI output."""
+        ...
+
+    def _oauth_action(
+        self,
+        provider: HermesOAuthProviderProtocol,
+    ) -> Callable[[], None]:
+        """Build the menu handler that starts a provider login."""
         ...
 
     async def _read_oauth_prompt(
@@ -646,6 +653,30 @@ async def test_read_oauth_prompt_returns_at_once_for_the_code_paste_flow() -> No
     assert url is not None
     assert url.startswith('https://claude.ai/oauth/authorize')
     assert code is None
+
+
+def test_oauth_action_returns_none_so_no_menu_is_pushed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A handler returning non-None makes the framework push a menu.
+
+    `_handle_execute_menu_action` treats a non-None result as "this item
+    navigates" and pushes a menu named after the item key. Returning the Task
+    from `create_task` stacked an empty provider page under the sign-in view,
+    so popping the view on success landed there instead of the provider list.
+    """
+    hermes = _import_hermes()
+    started: list[object] = []
+
+    def _fake_create_task(coro: Coroutine[object, object, object]) -> None:
+        # Never scheduled, so close it rather than leaving it un-awaited.
+        coro.close()
+        started.append(coro)
+
+    monkeypatch.setattr(hermes, 'create_task', _fake_create_task)
+
+    assert hermes._oauth_action(_provider(hermes, 'nous'))() is None  # noqa: SLF001
+    assert len(started) == 1
 
 
 def test_oauth_providers_exclude_only_qwen() -> None:

@@ -62,7 +62,7 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
     from pathlib import Path
 
 HERMES_COMPOSITION_ID = 'hermes'
@@ -471,6 +471,11 @@ def _write_dashboard_auth_override(composition_path: Path) -> None:
     )
 
 
+def _reconfigure_dashboard_auth_action() -> None:
+    """Start the dashboard credential re-prompt, returning nothing."""
+    create_task(reconfigure_dashboard_auth())
+
+
 async def reconfigure_dashboard_auth() -> bool:
     """Re-prompt for dashboard credentials and rewrite the compose override."""
     if not await configure_dashboard_auth():
@@ -785,6 +790,23 @@ async def _perform_oauth(provider: HermesOAuthProvider) -> None:
         )
 
 
+def _oauth_action(provider: HermesOAuthProvider) -> Callable[[], None]:
+    """Build a menu handler that starts a login and returns nothing.
+
+    Returning ``None`` is load-bearing. ``_handle_execute_menu_action`` pushes
+    a menu named after the item's key whenever a handler returns a non-``None``
+    result, which is how items that navigate are distinguished from items that
+    just act. Handing back the ``Task`` from ``create_task`` therefore stacked
+    an empty "Openai Codex" page under the sign-in view, and popping the view
+    on success landed the user on that instead of back at the provider list.
+    """
+
+    def start() -> None:
+        create_task(_perform_oauth(provider))
+
+    return start
+
+
 def _add_oauth_menu(
     menu_id: str,
     items: list[MenuItemData],
@@ -811,10 +833,7 @@ def _add_oauth_menu(
     for provider in HERMES_OAUTH_PROVIDERS:
         provider_action_id = f'docker:hermes:oauth:{provider.id}'
         action_ids[menu_id].append(provider_action_id)
-        register_action(
-            provider_action_id,
-            lambda _provider=provider: create_task(_perform_oauth(_provider)),
-        )
+        register_action(provider_action_id, _oauth_action(provider))
         oauth_items.append(
             MenuItemData(
                 key=provider.id,
@@ -842,7 +861,9 @@ def _menu_actions(
     """Add the Hermes-specific items to the app menu."""
     action_id = 'docker:hermes:dashboard-auth'
     action_ids[menu_id].append(action_id)
-    register_action(action_id, lambda: create_task(reconfigure_dashboard_auth()))
+    # Returns None deliberately — see `_oauth_action`; handing back a Task
+    # would stack an empty "Dashboard Auth" page over the menu.
+    register_action(action_id, _reconfigure_dashboard_auth_action)
     items.append(
         MenuItemData(
             key='dashboard-auth',
