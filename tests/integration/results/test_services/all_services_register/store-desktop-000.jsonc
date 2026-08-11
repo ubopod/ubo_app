@@ -405,6 +405,7 @@
     },
     "service": {
       "_type": "DockerServiceState",
+      "apps": {},
       "expose_to_lan": {},
       "host_network_enabled": false,
       "status": "running",
