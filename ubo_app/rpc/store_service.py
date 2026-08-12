@@ -52,6 +52,30 @@ from ubo_bindings.ubo.v1 import Event
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
 
+# Depth of each subscription's event queue. Must be read as a *duration*, not a
+# count: the queue overflows when a producer outruns one subscriber, and what
+# matters is how much stream it can absorb meanwhile.
+#
+# It was 30 for as long as the biggest producer -- the assistant's TTS -- sent
+# one ``AudioSample`` per pipecat frame (~0.5 s, ~48 KB), so 30 slots held ~15 s
+# of speech and the limit was never reached. Capping samples at
+# ``MAX_AUDIO_CHUNK_BYTES`` (8 KB, ~85 ms) so the ESP32 client could decode them
+# then multiplied the event rate by six and cut the same 30 slots to ~2.5 s,
+# without anyone resizing the queue. A single synthesized sentence arrives as a
+# burst -- 44 chunks in 100 ms measured on device -- which overran it and
+# dropped 120 of 563 chunks of one reply.
+#
+# Dropping is uniquely bad for an ordered stream: clients that play strictly by
+# ``index`` stall at the first hole (the web UI) rather than skipping it, so a
+# drop truncates the rest of the utterance. Only the device kept playing,
+# because ``audio_manager`` reads an in-process buffer nothing drops from.
+#
+# 256 restores ~21 s at 8 KB chunks -- the headroom this had before the split.
+# The cost is bounded and core-side only: queued events are shared references,
+# not copies, so a fully-backed-up subscription holds ~2 MB and several
+# subscriptions stalled at the same point in a stream share it.
+SUBSCRIPTION_QUEUE_SIZE = 256
+
 
 def _is_valid_selector(selector: str) -> bool:
     try:
@@ -358,7 +382,7 @@ class StoreService(StoreServiceBase):
             'Received event subscription over gRPC',
             extra={'request': subscribe_event_request},
         )
-        queue: Queue[UboEvent] = Queue(30)
+        queue: Queue[UboEvent] = Queue(SUBSCRIPTION_QUEUE_SIZE)
         queue_event = _make_queue_event(queue, get_running_loop())
 
         event_field_names, unsubscribes = _setup_event_subscriptions(
