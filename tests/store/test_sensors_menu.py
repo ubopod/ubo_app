@@ -168,12 +168,14 @@ def test_reading_rows_carry_names_units_and_registry_precision() -> None:
         ),
     )
 
-    labels, values, units = menu._reading_rows(device)  # noqa: SLF001
+    labels, values, units, keys, device_classes = menu._reading_rows(device)  # noqa: SLF001
 
     assert labels == ('CO2', 'Temperature', 'Humidity')
     assert units == ('ppm', '°C', '%')
     # precision 0 / 1 / 0 from the registry
     assert values == ('412', '21.8', '45')
+    assert keys == ('co2', 'temperature', 'humidity')
+    assert device_classes == ('carbon_dioxide', 'temperature', 'humidity')
 
 
 @pytest.mark.usefixtures('_shipped_definitions')
@@ -189,13 +191,17 @@ def test_a_missing_reading_renders_as_a_dash_not_a_zero() -> None:
         entities=(SensorEntityReading(key='temperature', value=None),),
     )
 
-    labels, values, units = menu._reading_rows(device)  # noqa: SLF001
+    labels, values, units, keys, device_classes = menu._reading_rows(device)  # noqa: SLF001
 
     assert labels == ('Temperature', 'Humidity', 'Pressure', 'Gas Resistance')
     assert values[0] == menu.UNKNOWN_VALUE
     # Entities the device did not report at all are still listed, as unknown.
     assert set(values[1:]) == {menu.UNKNOWN_VALUE}
     assert units == ('°C', '%', 'hPa', 'Ω')
+    assert keys == ('temperature', 'humidity', 'pressure', 'gas_resistance')
+    # gas_resistance has no device_class in the registry — empty, not None,
+    # since props values must be BasicType.
+    assert device_classes == ('temperature', 'humidity', 'pressure', '')
 
 
 @pytest.mark.usefixtures('_shipped_definitions')
@@ -229,6 +235,8 @@ def test_opening_an_active_sensor_opens_its_readings_page(
     assert action.props['units'] == ('hPa', '°C', 'm')
     # Values are unknown until the poll loop's next tick fills them in.
     assert set(action.props['values']) == {menu.UNKNOWN_VALUE}
+    assert action.props['keys'] == ('pressure', 'temperature', 'altitude')
+    assert action.props['device_classes'] == ('pressure', 'temperature', 'distance')
 
 
 @pytest.mark.usefixtures('_shipped_definitions')
@@ -493,6 +501,8 @@ def test_only_the_open_sensor_is_selected() -> None:
         # for relative humidity.
         ('21.0', '48'),
         ('°C', '%'),
+        ('temperature', 'humidity'),
+        ('temperature', 'humidity'),
     )
 
 
@@ -621,7 +631,14 @@ def test_the_reaction_dispatches_one_update_for_the_open_page(
     assert dispatched == []
 
     menu._update_open_readings(  # noqa: SLF001
-        ('sensors:readings:sht4x_0x44', ('Temperature',), ('21.0',), ('°C',)),
+        (
+            'sensors:readings:sht4x_0x44',
+            ('Temperature',),
+            ('21.0',),
+            ('°C',),
+            ('temperature',),
+            ('temperature',),
+        ),
     )
 
     (action,) = dispatched
@@ -630,4 +647,6 @@ def test_the_reaction_dispatches_one_update_for_the_open_page(
         'labels': ('Temperature',),
         'values': ('21.0',),
         'units': ('°C',),
+        'keys': ('temperature',),
+        'device_classes': ('temperature',),
     }

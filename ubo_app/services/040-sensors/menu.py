@@ -130,8 +130,19 @@ def _format_value(value: float | None, precision: int | None) -> str:
 
 def _reading_rows(
     device: SensorDeviceState,
-) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
-    """Build the parallel label/value/unit rows the readings page renders."""
+) -> tuple[
+    tuple[str, ...],
+    tuple[str, ...],
+    tuple[str, ...],
+    tuple[str, ...],
+    tuple[str, ...],
+]:
+    """Build the parallel label/value/unit/key/device_class readings rows.
+
+    `key` and `device_class` let a rich client look up the same icon+range
+    table (`SensorDisplay`/its Kotlin counterpart) the Dashboard's sensor
+    tiles already use, instead of guessing from the label text.
+    """
     definition = _definitions.get(device.definition_id)
     readings = {entity.key: entity.value for entity in device.entities}
 
@@ -141,6 +152,8 @@ def _reading_rows(
         return (
             tuple(entity.key for entity in device.entities),
             tuple(_format_value(entity.value, None) for entity in device.entities),
+            tuple('' for _ in device.entities),
+            tuple(entity.key for entity in device.entities),
             tuple('' for _ in device.entities),
         )
 
@@ -156,6 +169,8 @@ def _reading_rows(
         tuple(
             entity.unit_of_measurement or '' for entity in definition.entities
         ),
+        tuple(entity.key for entity in definition.entities),
+        tuple(entity.device_class or '' for entity in definition.entities),
     )
 
 
@@ -200,12 +215,14 @@ def _open_device(identity: _Identity) -> None:
     definition = _definitions.get(identity.definition_id)
     entities = definition.entities if definition else ()
 
-    # Labels and units are the page's structure and are known up front; the
-    # values arrive from the poll loop within the second.
+    # Labels/units/keys/device_classes are the page's structure and are known
+    # up front; the values arrive from the poll loop within the second.
     props: RenderProps = {
         'labels': tuple(entity.name for entity in entities),
         'values': tuple(UNKNOWN_VALUE for _ in entities),
         'units': tuple(entity.unit_of_measurement or '' for entity in entities),
+        'keys': tuple(entity.key for entity in entities),
+        'device_classes': tuple(entity.device_class or '' for entity in entities),
     }
     store.dispatch(
         OpenRenderAction(
@@ -331,7 +348,14 @@ def _update_device_list(identities: tuple[_Identity, ...]) -> None:
 
 def _open_readings(
     state: RootState,
-) -> tuple[str, tuple[str, ...], tuple[str, ...], tuple[str, ...]] | None:
+) -> tuple[
+    str,
+    tuple[str, ...],
+    tuple[str, ...],
+    tuple[str, ...],
+    tuple[str, ...],
+    tuple[str, ...],
+] | None:
     """Select the rows of the readings page on screen, if one is open.
 
     Selecting only the open page's rows is what keeps this linear. Every sensor
@@ -361,17 +385,26 @@ def _open_readings(
 
 
 def _update_open_readings(
-    rows: tuple[str, tuple[str, ...], tuple[str, ...], tuple[str, ...]] | None,
+    rows: tuple[
+        str,
+        tuple[str, ...],
+        tuple[str, ...],
+        tuple[str, ...],
+        tuple[str, ...],
+        tuple[str, ...],
+    ] | None,
 ) -> None:
     """Push the open page's latest readings, at the 1 Hz poll rate."""
     if rows is None:
         return
 
-    stream_id, labels, values, units = rows
+    stream_id, labels, values, units, keys, device_classes = rows
     props: RenderProps = {
         'labels': labels,
         'values': values,
         'units': units,
+        'keys': keys,
+        'device_classes': device_classes,
     }
     store.dispatch(
         UpdateRenderPropsAction(stream_id=stream_id, props=props),
