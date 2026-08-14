@@ -226,9 +226,12 @@ class GenericLLMProxy(LLMService):
             return
 
         self._service.push_frame = self.push_frame
-        for function_name, handler, cancel_on_interruption, timeout_secs in (
-            self._registered_functions
-        ):
+        for (
+            function_name,
+            handler,
+            cancel_on_interruption,
+            timeout_secs,
+        ) in self._registered_functions:
             self._service.register_function(
                 function_name,
                 handler,
@@ -631,8 +634,7 @@ class UboLLMService(UboLLMSwitchService):
         has never picked a model for the provider).
         """
         return (
-            self._config.selected_models.get(service_id)
-            or _DEFAULT_MODELS[service_id]
+            self._config.selected_models.get(service_id) or _DEFAULT_MODELS[service_id]
         )
 
     def _create_openai_service(self) -> OpenAILLMService | None:
@@ -844,8 +846,7 @@ class UboLLMService(UboLLMSwitchService):
                 api_key=self._config.generic_llm_api_key or 'not-needed',
                 base_url=self._config.generic_llm_base_url.rstrip('/'),
                 settings=OpenAILLMService.Settings(
-                    model=self._config.generic_llm_model
-                    or DEFAULT_GENERIC_LLM_MODEL,
+                    model=self._config.generic_llm_model or DEFAULT_GENERIC_LLM_MODEL,
                 ),
             )
         except Exception:
@@ -997,7 +998,8 @@ class UboLLMService(UboLLMSwitchService):
             return
 
         place = self._location.city or 'the device location'
-        temperature_unit_name = weather.temperature_display_unit.lstrip('°') or 'C'
+        temperature_unit = weather.temperature_display_unit or '°C'
+        temperature_unit_name = temperature_unit.lstrip('°') or 'C'
         parts = [
             f'{weather.temperature_display_value:.0f} degrees {temperature_unit_name}',
             f'conditions "{weather.symbol_code}"',
@@ -1049,6 +1051,7 @@ class UboLLMService(UboLLMSwitchService):
         named city, so no geocoding service is needed. Dispatch is optimistic,
         like ``run_device_command`` — there is no ack channel back from the store.
         """
+
         def _text(key: str) -> str | None:
             value = params.arguments.get(key)
             return value.strip() or None if isinstance(value, str) else None
