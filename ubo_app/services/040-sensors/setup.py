@@ -12,7 +12,13 @@ import board
 import ha
 from drivers import ACTIVE_SENSORS, ActiveSensor, UnsupportedDriverError, read_entities
 from drivers import initialize_device as _initialize_device
-from menu import init_menu, report_scan_result
+from menu import (
+    _convert_reading,
+    _effective_unit_system,
+    _resolved_unit_system,
+    init_menu,
+    report_scan_result,
+)
 from registry import load_registry
 from scan import RESERVED_ADDRESSES, SensorMatch, builtin_matches, make_device_id
 from scan import scan_and_match as _scan_and_match
@@ -20,7 +26,6 @@ from scan import scan_and_match as _scan_and_match
 from ubo_app.logger import logger
 from ubo_app.store.core.view_registry import register_status_bar_dependency
 from ubo_app.store.main import store
-from ubo_app.store.services.localization import UnitSystem
 from ubo_app.store.services.mqtt import (
     MqttPublishAction,
     MqttRequestAnnounceAction,
@@ -45,7 +50,7 @@ from ubo_app.utils.persistent_store import (
     read_from_persistent_store,
     register_persistent_store,
 )
-from ubo_app.utils.units import convert_temperature_c, resolve_unit_system
+from ubo_app.utils.units import convert_temperature_c
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -54,6 +59,7 @@ if TYPE_CHECKING:
     from registry import EntityDefinition, SensorDefinition
 
     from ubo_app.store.main import RootState
+    from ubo_app.store.services.localization import UnitSystem
     from ubo_app.store.services.mqtt import MqttComponent
     from ubo_app.store.services.sensors import SensorsState
     from ubo_app.utils.types import Subscriptions
@@ -318,10 +324,17 @@ def _make_reading(
     key: str,
     value: float | None,
     definition: EntityDefinition | None,
+    unit_system: UnitSystem,
 ) -> SensorEntityReading:
     """Pair a raw reading with its registry metadata for remote renderers."""
     if definition is None:
         return SensorEntityReading(key=key, value=value)
+    display_value, display_unit = _convert_reading(
+        value,
+        definition.unit_of_measurement or '',
+        definition.device_class or '',
+        unit_system,
+    )
     return SensorEntityReading(
         key=key,
         value=value,
@@ -329,6 +342,8 @@ def _make_reading(
         unit=definition.unit_of_measurement,
         device_class=definition.device_class,
         precision=definition.suggested_display_precision,
+        display_value=display_value,
+        display_unit=display_unit,
     )
 
 
@@ -347,6 +362,10 @@ def read_sensors() -> dict[str, dict[str, float | None]]:
     legacy: dict[Sensor, float] = {Sensor.TEMPERATURE: 0.0, Sensor.LIGHT: 0.0}
     timestamp = time.time()
     all_readings: dict[str, dict[str, float | None]] = {}
+    # Resolved once per poll tick rather than per-entity: it's the same
+    # answer for every reading in this frame, and a mid-tick setting change
+    # would otherwise mix two unit systems into one dispatch.
+    unit_system = _effective_unit_system()
 
     for device_id, sensor in list(ACTIVE_SENSORS.items()):
         readings = read_entities(sensor)
@@ -356,7 +375,7 @@ def read_sensors() -> dict[str, dict[str, float | None]]:
             SensorsReportDeviceReadingsAction(
                 device_id=device_id,
                 entities=tuple(
-                    _make_reading(key, value, definitions.get(key))
+                    _make_reading(key, value, definitions.get(key), unit_system)
                     for key, value in readings.items()
                 ),
                 timestamp=timestamp,
@@ -542,13 +561,7 @@ def _status_bar_temperature(state: RootState) -> float | None:
     reading = state.sensors.temperature
     if reading is None or reading.value is None:
         return None
-    localization = getattr(state, 'localization', None)
-    location = getattr(localization, 'location', None)
-    unit_system = resolve_unit_system(
-        getattr(localization, 'unit_system', UnitSystem.AUTO),
-        getattr(location, 'country_code', None),
-    )
-    value, _unit = convert_temperature_c(reading.value, unit_system)
+    value, _unit = convert_temperature_c(reading.value, _resolved_unit_system(state))
     return value
 
 

@@ -47,6 +47,15 @@ class SensorEntityReading(Immutable):
     unit: str | None = None
     device_class: str | None = None
     precision: int | None = None
+    # `value`/`unit` above are the raw registry-sourced reading — Home
+    # Assistant's MQTT bridge and any other raw consumer need those
+    # untouched. These are the same reading converted to the device's
+    # effective UnitSystem (see `ubo_app/utils/units.py`); the Dashboard
+    # tiles (and anything else rendering straight from this state slice,
+    # rather than through the Sensors menu's `readings` render props) should
+    # display these instead.
+    display_value: float | None = None
+    display_unit: str | None = None
 
 
 class SensorDeviceState(Immutable):

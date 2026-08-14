@@ -63,8 +63,8 @@ function SensorCard({ device }: SensorCardProps) {
                     ? rangeFraction(entity.value as number, spec.range)
                     : 0
                 }
-                value={formatReading(entity.value, entity.precision)}
-                unit={entity.unit || undefined}
+                value={formatReading(entity.displayValue ?? entity.value, entity.precision)}
+                unit={entity.displayUnit || entity.unit || undefined}
                 label={entity.name || entity.key}
                 color={NEUTRAL_ACCENT}
               />
@@ -86,8 +86,8 @@ function SensorCard({ device }: SensorCardProps) {
               key={entity.key}
               icon={displaySpec(entity.key, entity.deviceClass).icon}
               label={entity.name || entity.key}
-              value={formatReading(entity.value, entity.precision)}
-              unit={entity.unit || undefined}
+              value={formatReading(entity.displayValue ?? entity.value, entity.precision)}
+              unit={entity.displayUnit || entity.unit || undefined}
             />
           ))}
         </Box>
