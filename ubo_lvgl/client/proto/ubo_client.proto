@@ -272,8 +272,8 @@ message Event {
     AudioStopPlaybackEvent audio_stop_playback_event = 32;
     FrameStreamChunkEvent frame_stream_chunk_event = 88;
     FrameStreamDataEvent frame_stream_data_event = 89;
-    MenuChooseByIndexEvent menu_choose_by_index_event = 118;
-    StackChangedEvent stack_changed_event = 149;
+    MenuChooseByIndexEvent menu_choose_by_index_event = 119;
+    StackChangedEvent stack_changed_event = 150;
   }
 }
 
