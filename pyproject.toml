@@ -47,6 +47,11 @@ dependencies = [
   "ubo-gui==0.13.17",
   "vosk==0.3.44",
   "wyoming[zeroconf]==1.10.0",
+  # Direct dependency for ubo_app/utils/zeroconf.py's shared mDNS registry
+  # (used by services beyond Wyoming, e.g. the gRPC control API's
+  # discoverability advertisement) — pinned to what wyoming[zeroconf] already
+  # resolves, so this doesn't introduce a second version to reconcile.
+  "zeroconf==0.88.0",
   "openwakeword==0.6.0",
   # Speex noise suppression for OpenWakeWord — native, Linux-only (manylinux
   # aarch64/x86_64 wheels). Marked so it's skipped on non-Linux dev (e.g. macOS);

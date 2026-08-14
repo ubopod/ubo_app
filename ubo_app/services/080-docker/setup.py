@@ -8,6 +8,7 @@ import functools
 import json
 import math
 import re
+import socket
 import uuid
 from io import BytesIO
 from typing import TYPE_CHECKING, TypedDict
@@ -122,6 +123,7 @@ from ubo_app.utils.input import ubo_input
 from ubo_app.utils.monitor_unit import monitor_unit
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
+from ubo_app.utils.zeroconf import register_service, unregister_service
 
 # Dynamic menu IDs for dumb UI architecture
 DOCKER_SETUP_MENU_ID = 'docker:setup'
@@ -1119,6 +1121,41 @@ def _announce_grpc_reachable() -> None:
     )
 
 
+_UBORPC_SERVICE_TYPE = '_uborpc._tcp.local.'
+
+
+def _uborpc_zeroconf_name() -> str:
+    """Instance name for the gRPC control API's mDNS advertisement.
+
+    Mirrors the naming Wyoming's `_ZeroconfRegistry` uses, so a device shows
+    up under a recognizable `ubo-<hostname>` prefix in either.
+    """
+    name_prefix = re.sub(r'[^A-Za-z0-9-]', '-', socket.gethostname())
+    return f'ubo-{name_prefix}.{_UBORPC_SERVICE_TYPE}'
+
+
+async def _advertise_uborpc() -> None:
+    """Advertise the gRPC control API over mDNS, if it has a LAN address.
+
+    Silently no-ops without a LAN IP (nothing reachable to advertise) — same
+    condition `_announce_grpc_reachable` already tolerates.
+    """
+    ip = _lan_ip()
+    if ip is None:
+        return
+    await register_service(
+        service_type=_UBORPC_SERVICE_TYPE,
+        name=_uborpc_zeroconf_name(),
+        address=ip,
+        port=GRPC_NATIVE_PROXY_LISTEN_PORT,
+    )
+
+
+async def _withdraw_uborpc() -> None:
+    """Stop advertising the gRPC control API over mDNS."""
+    await unregister_service(_uborpc_zeroconf_name())
+
+
 def _restart_envoy_container() -> None:
     """Restart the Envoy container in place (blocking Docker I/O)."""
     client = docker.from_env()
@@ -1205,6 +1242,7 @@ async def _handle_grpc_enabled() -> None:
 
 async def _handle_grpc_disabled() -> None:
     """Re-render the listener-free config and reload when gRPC access is off."""
+    await _withdraw_uborpc()
     if await asyncio.to_thread(_envoy_running):
         await _apply_envoy()
 
@@ -1226,7 +1264,9 @@ def _on_grpc_remote_access_changed(enabled: bool) -> None:  # noqa: FBT001
 
 
 def _on_envoy_started() -> None:
-    """Envoy container started: announce reachability if gRPC access is on."""
+    """Envoy started: mDNS-advertise + announce reachability if gRPC access is on."""
+    if bool(_grpc_enabled[0]):
+        create_task(_advertise_uborpc())
     if should_announce_exposed(grpc_enabled=bool(_grpc_enabled[0])):
         _announce_grpc_reachable()
 
@@ -1400,10 +1440,19 @@ async def init_service() -> Subscriptions:
     # `grpc_remote_access` changes are genuine user toggles the handler acts on.
     _grpc_toggle_ready[0] = True
 
+    # Unlike the reachability notification (deliberately not re-shown for an
+    # already-running Envoy), the mDNS advertisement has to be re-established
+    # every process start regardless — it lives in this process's memory, so
+    # a restart with gRPC access already on and Envoy already up would
+    # otherwise leave it silently unadvertised until the next toggle.
+    if bool(_grpc_enabled[0]) and await asyncio.to_thread(_envoy_running):
+        create_task(_advertise_uborpc())
+
     return [
         *subscriptions,
         unregister_title,
         unregister_path_matcher,
         open_logs.unsubscribe,
         stop_log_tail,
+        _withdraw_uborpc,
     ]
