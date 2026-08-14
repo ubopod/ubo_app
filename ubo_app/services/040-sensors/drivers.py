@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import errno
 import importlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_fixed
@@ -58,12 +58,19 @@ class ActiveSensor:
     """A live driver instance and the definition it was built from.
 
     Driver instances are not serializable and never enter the store; the store
-    holds only the ``SensorDeviceState`` describing them.
+    holds only the ``SensorDeviceState`` describing them. The poll bookkeeping
+    below is the same kind of thing — it decides when to touch the bus, and no
+    consumer of the store ever sees it.
     """
 
     device_id: str
     definition: SensorDefinition
     instance: Any
+    # Monotonic deadline before which this sensor must not be touched, set by
+    # either its declared measurement interval or its failure backoff.
+    next_read_at: float = 0.0
+    consecutive_failures: int = 0
+    last_readings: dict[str, float | None] = field(default_factory=dict)
 
 
 ACTIVE_SENSORS: dict[str, ActiveSensor] = {}
@@ -179,4 +186,51 @@ def read_entities(sensor: ActiveSensor) -> dict[str, float | None]:
             readings[entity.key] = _read_attribute(sensor.instance, entity.attribute)
         except _READ_ERRORS:
             readings[entity.key] = None
+    return readings
+
+
+# A device whose *every* entity failed is not momentarily busy — on this bus it
+# usually means a slave is wedged holding SDA low, which takes every other
+# device down with it and outlives a poll tick by minutes. Retrying at 1 Hz
+# through that adds two aborted transactions a second to a bus already in
+# trouble, so each consecutive failure doubles the wait.
+BACKOFF_INITIAL_SECONDS = 2.0
+BACKOFF_MAX_SECONDS = 60.0
+
+
+def poll_entities(sensor: ActiveSensor, *, now: float) -> dict[str, float | None]:
+    """Read a sensor's entities if it is due, honoring its interval and backoff.
+
+    `now` is a monotonic timestamp taken once per poll tick by the caller, so
+    every sensor in a tick is judged against the same clock reading.
+    """
+    if now < sensor.next_read_at:
+        if sensor.consecutive_failures:
+            # A sensor that is failing has nothing to say, and saying so is
+            # what lets Home Assistant mark it unavailable. Replaying the cache
+            # here would keep resetting `expire_after` and leave a dead sensor
+            # reading `unknown` forever instead.
+            return dict.fromkeys(
+                entity.key for entity in sensor.definition.entities
+            )
+        # Inside its measurement interval a sensor is merely quiet. Its last
+        # sample is still the current one — the drivers themselves return
+        # exactly that between measurements — so the cache is not a stale
+        # reading, it is the same reading without the round trip.
+        return dict(sensor.last_readings)
+
+    readings = read_entities(sensor)
+
+    if all(value is None for value in readings.values()):
+        sensor.consecutive_failures += 1
+        delay = min(
+            BACKOFF_INITIAL_SECONDS * 2 ** (sensor.consecutive_failures - 1),
+            BACKOFF_MAX_SECONDS,
+        )
+    else:
+        sensor.consecutive_failures = 0
+        sensor.last_readings = readings
+        delay = sensor.definition.min_read_interval
+
+    sensor.next_read_at = now + delay
     return readings

@@ -106,6 +106,16 @@ Adafruit's drivers are not uniform, so a definition has five escape hatches:
 An entity's `attribute` may also name a **no-argument method** rather than a property: the SGP40's
 VOC index comes from `measure_index()`. Callables are invoked; properties are read.
 
+A definition may also declare `min_read_interval`, in seconds — how long the sensor needs between
+measurements, when that is *slower* than the poll loop. The SCD-40 sets it to `5`: it produces a
+sample every five seconds, and each of its three entities is a property whose getter checks
+`data_ready` over the bus, so polling it at 1 Hz spends fifteen round trips per sample it can
+actually deliver. Inside the interval the poll serves that sensor's last reading from cache — the
+same value the driver itself would return between measurements, minus the round trip. The default,
+`0`, means "read it every tick", which is what a sensor at or above the poll rate wants; the SGP40
+in particular **must** stay at 1 Hz, because Sensirion's VOC index algorithm is specified for
+one-second sampling.
+
 An entity may also override `value_template`, the Jinja expression Home Assistant renders. The default
 reads the published key straight (`{{ value_json.<key> }}`); the ENS160's `validity` entity overrides
 it, because its register reports 0-3 and nobody can read a bare `2` as "starting up". That sensor's
@@ -137,6 +147,28 @@ which every driver exhausts its retries. A call that blows it marks the worker *
 subsequent `run` fails fast (the poll loop absorbs this and keeps trying) until the overdue call
 finally returns, at which point the thread has proven itself alive and the worker recovers.
 `tests/store/test_blocking_worker.py` pins all of this.
+
+### Per-sensor backoff
+
+A device whose *every* entity failed to read is backed off before it is touched again — two
+seconds, doubling per consecutive failure, capped at sixty, cleared by one successful read
+(`BACKOFF_INITIAL_SECONDS` / `BACKOFF_MAX_SECONDS` in `drivers.py`). A single unreadable entity is
+not a failure; a device that partly answers is still healthy.
+
+This exists because a failed read usually is not a busy sensor. On this bus it means a slave is
+wedged holding SDA low, which takes **every** device on the bus down with it — the keypad expander
+and the audio codec included — and outlives a poll tick by minutes. A pod with six daisy-chained
+sensors produced 537 `lost arbitration` and 628 `SDA stuck at low` aborts in one twelve-minute
+episode, roughly two per second, because the 1 Hz loop kept retrying straight through it. Backing
+off turns that storm into a handful of probes while the bus recovers.
+
+Unlike the interval gate, a backed-off sensor reports `None` for every entity rather than its
+cached reading: the all-null payload is deliberately dropped by the MQTT publish step, which is
+what lets Home Assistant mark the sensor **unavailable** instead of holding a stale value at
+`unknown` forever.
+
+Note this is backoff, not electrical bus recovery. Clocking a wedged slave free means driving SCL
+directly, and the kernel owns those pins while `i2c-1` is up.
 
 ## State
 

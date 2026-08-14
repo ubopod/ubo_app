@@ -249,6 +249,7 @@
       "id": "scd4x",
       "label": "SCD-40 CO2",
       "manufacturer": "Sensirion",
+      "min_read_interval": 5,
       "addresses": [
         "0x62"
       ],

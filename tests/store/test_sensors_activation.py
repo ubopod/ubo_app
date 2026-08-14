@@ -231,8 +231,8 @@ def test_read_sensors_feeds_only_builtins_into_the_legacy_slots(
     }
     monkeypatch.setattr(
         setup,
-        'read_entities',
-        lambda sensor: dict(readings[sensor.device_id]),
+        'poll_entities',
+        lambda sensor, **_: dict(readings[sensor.device_id]),
     )
 
     assert setup.read_sensors() == readings
@@ -295,8 +295,8 @@ def test_read_sensors_attaches_registry_metadata_to_each_reading(
     setup.ACTIVE_SENSORS['bme280_0x76'] = sensor
     monkeypatch.setattr(
         setup,
-        'read_entities',
-        lambda _sensor: {'temperature': 22.4, 'gas_resistance': 51000.0},
+        'poll_entities',
+        lambda _sensor, **_: {'temperature': 22.4, 'gas_resistance': 51000.0},
     )
 
     setup.read_sensors()

@@ -497,6 +497,61 @@ def test_invalid_entity_metadata_drops_only_its_own_definition(
     assert [definition.id for definition in definitions] == ['sht4x']
 
 
+def test_min_read_interval_defaults_to_polling_every_tick() -> None:
+    """Most sensors have nothing to gain from being asked less often."""
+    (definition,) = registry.parse_registry({'sensors': [_definition()]})
+
+    assert definition.min_read_interval == 0.0
+
+
+def test_min_read_interval_is_carried_through() -> None:
+    """A sensor slower than the poll loop declares how slow it actually is."""
+    (definition,) = registry.parse_registry(
+        {'sensors': [_definition(min_read_interval=5)]},
+    )
+
+    assert definition.min_read_interval == 5.0
+
+
+@pytest.mark.parametrize(
+    'interval',
+    [
+        pytest.param(-1, id='negative'),
+        pytest.param('5', id='string'),
+        pytest.param(True, id='bool'),
+    ],
+)
+def test_an_invalid_min_read_interval_drops_only_its_own_definition(
+    interval: Any,  # noqa: ANN401
+) -> None:
+    """A bad interval must not cost the user every other sensor.
+
+    A negative one would put `next_read_at` in the past forever, which is not
+    obviously wrong at a glance — hence rejecting it at parse time.
+    """
+    good = _definition(id='sht4x', addresses=['0x44'], probe=None)
+    broken = _definition(min_read_interval=interval)
+
+    definitions = registry.parse_registry({'sensors': [broken, good]})
+
+    assert [definition.id for definition in definitions] == ['sht4x']
+
+
+def test_the_scd4x_is_not_polled_faster_than_it_measures() -> None:
+    """The bundled definition, not a synthetic one: this is the whole point.
+
+    The SCD-40 produces a sample every 5 s, and each of its three entities is a
+    separate property whose getter checks `data_ready` on the bus. Polled at
+    1 Hz it costs 15 round trips per sample it can actually deliver — on the
+    most clock-stretch-sensitive device on the bus.
+    """
+    definitions = {
+        definition.id: definition for definition in registry.load_registry()
+    }
+
+    assert definitions['scd4x'].min_read_interval >= 5.0
+
+
 def test_ens160_publishes_its_data_validity_alongside_the_readings() -> None:
     """Its eCO2/TVOC/AQI are meaningless while the sensor is still warming up.
 

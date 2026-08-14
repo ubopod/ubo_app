@@ -98,6 +98,13 @@ class SensorDefinition(Immutable):
     driver: DriverSpec
     entities: tuple[EntityDefinition, ...]
     probe: ProbeSpec | None = None
+    # Seconds a sensor needs between measurements, when that is slower than the
+    # poll loop. The SCD-40 produces a sample every five seconds, and each of
+    # its entities is a property whose getter checks `data_ready` over the bus,
+    # so polling it at 1 Hz spends fifteen round trips per sample it can
+    # actually deliver. Zero — the default — means "read it every tick", which
+    # is what a sensor at or above the poll rate wants.
+    min_read_interval: float = 0.0
 
 
 class RegistryError(Exception):
@@ -166,6 +173,17 @@ def _parse_optional_precision(raw: object) -> int | None:
         msg = f'suggested_display_precision must be a non-negative int, got {raw!r}'
         raise RegistryError(msg)
     return raw
+
+
+def _parse_min_read_interval(raw: object) -> float:
+    if raw is None:
+        return 0.0
+    # A negative interval would leave `next_read_at` permanently in the past —
+    # harmless-looking, and indistinguishable from the default at a glance.
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)) or raw < 0:
+        msg = f'min_read_interval must be a non-negative number, got {raw!r}'
+        raise RegistryError(msg)
+    return float(raw)
 
 
 def _parse_probe_value(value: object, *, what: str) -> int:
@@ -329,6 +347,7 @@ def _parse_definition(raw: object) -> SensorDefinition:
             ),
             entities=tuple(_parse_entity(entity) for entity in entities),
             probe=_parse_probe(raw.get('probe')),
+            min_read_interval=_parse_min_read_interval(raw.get('min_read_interval')),
         )
     except KeyError as exception:
         msg = f'definition is missing {exception}'

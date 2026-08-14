@@ -10,7 +10,12 @@ from typing import TYPE_CHECKING
 
 import board
 import ha
-from drivers import ACTIVE_SENSORS, ActiveSensor, UnsupportedDriverError, read_entities
+from drivers import (
+    ACTIVE_SENSORS,
+    ActiveSensor,
+    UnsupportedDriverError,
+    poll_entities,
+)
 from drivers import initialize_device as _initialize_device
 from menu import (
     _convert_reading,
@@ -361,6 +366,10 @@ def read_sensors() -> dict[str, dict[str, float | None]]:
     """
     legacy: dict[Sensor, float] = {Sensor.TEMPERATURE: 0.0, Sensor.LIGHT: 0.0}
     timestamp = time.time()
+    # Taken once per tick, for the same reason `unit_system` is: every sensor's
+    # "is it due yet" answer should come from one clock reading. Monotonic, not
+    # `timestamp` — a poll deadline must survive a wall-clock step.
+    now = time.monotonic()
     all_readings: dict[str, dict[str, float | None]] = {}
     # Resolved once per poll tick rather than per-entity: it's the same
     # answer for every reading in this frame, and a mid-tick setting change
@@ -368,7 +377,7 @@ def read_sensors() -> dict[str, dict[str, float | None]]:
     unit_system = _effective_unit_system()
 
     for device_id, sensor in list(ACTIVE_SENSORS.items()):
-        readings = read_entities(sensor)
+        readings = poll_entities(sensor, now=now)
         all_readings[device_id] = readings
         definitions = {entity.key: entity for entity in sensor.definition.entities}
         store.dispatch(

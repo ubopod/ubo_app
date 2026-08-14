@@ -8,6 +8,7 @@ wasteful.
 
 from __future__ import annotations
 
+import errno
 from pathlib import Path
 from typing import Any
 
@@ -73,12 +74,14 @@ def _definition(
     entities: tuple[tuple[str, str], ...],
     read_method: str | None = None,
     read_primer: str | None = None,
+    min_read_interval: float = 0.0,
 ) -> Any:  # noqa: ANN401
     return registry.SensorDefinition(
         id='test',
         label='Test',
         manufacturer='ACME',
         addresses=(0x12,),
+        min_read_interval=min_read_interval,
         driver=registry.DriverSpec(
             module='adafruit_pm25.i2c',
             class_name='PM25_I2C',
@@ -259,3 +262,158 @@ def test_a_mapping_driver_entity_may_still_come_off_the_instance() -> None:
     )
 
     assert readings == {'eco2': 400.0, 'validity': 2.0}
+
+
+class _CountingSensor:
+    """A property-shaped driver that counts how often the bus was touched."""
+
+    def __init__(self, *, fails: bool = False) -> None:
+        self.reads = 0
+        self.fails = fails
+
+    @property
+    def temperature(self) -> float:
+        self.reads += 1
+        if self.fails:
+            # A wedged bus surfaces as EREMOTEIO (121) on the device, but that
+            # errno does not exist on every platform this suite runs on — and
+            # an `AttributeError` for the missing constant is itself caught by
+            # the read path, which would pass this test for the wrong reason.
+            msg = 'Remote I/O error'
+            raise OSError(errno.EIO, msg)
+        return 21.5
+
+
+def test_a_sensor_without_an_interval_is_polled_every_tick() -> None:
+    """The default must stay "ask every second" — most sensors want that."""
+    instance = _CountingSensor()
+    sensor = _sensor(_definition(entities=(('t', 'temperature'),)), instance)
+
+    for tick in range(3):
+        drivers.poll_entities(sensor, now=float(tick))
+
+    assert instance.reads == 3
+
+
+def test_a_slow_sensor_is_kept_off_the_bus_between_measurements() -> None:
+    """Polling faster than the sensor measures is pure bus traffic.
+
+    The reading the driver would return in between is the one it already
+    returned, so serving it from our own cache changes nothing a consumer can
+    see — it only stops the round trip.
+    """
+    instance = _CountingSensor()
+    sensor = _sensor(
+        _definition(entities=(('t', 'temperature'),), min_read_interval=5),
+        instance,
+    )
+
+    first = drivers.poll_entities(sensor, now=0.0)
+    within = [drivers.poll_entities(sensor, now=now) for now in (1.0, 2.0, 4.9)]
+
+    assert instance.reads == 1
+    assert first == {'t': 21.5}
+    assert all(reading == {'t': 21.5} for reading in within)
+
+
+def test_a_slow_sensor_is_read_again_once_its_interval_elapses() -> None:
+    """The gate delays the read; it must not cancel it."""
+    instance = _CountingSensor()
+    sensor = _sensor(
+        _definition(entities=(('t', 'temperature'),), min_read_interval=5),
+        instance,
+    )
+
+    drivers.poll_entities(sensor, now=0.0)
+    drivers.poll_entities(sensor, now=2.0)
+    drivers.poll_entities(sensor, now=5.0)
+
+    assert instance.reads == 2
+
+
+def test_a_totally_failed_read_backs_off_instead_of_retrying_every_tick() -> None:
+    """A wedged bus outlives a tick by minutes; 1 Hz retries just add to it.
+
+    A slave holding SDA low takes every other device down with it, so hammering
+    the one that failed makes the whole bus worse, not better.
+    """
+    instance = _CountingSensor(fails=True)
+    sensor = _sensor(_definition(entities=(('t', 'temperature'),)), instance)
+
+    readings = [drivers.poll_entities(sensor, now=float(tick)) for tick in range(4)]
+
+    assert instance.reads < 4
+    assert all(reading == {'t': None} for reading in readings)
+
+
+def test_backoff_grows_with_each_consecutive_failure() -> None:
+    """Two failures in a row must wait longer than one did."""
+    instance = _CountingSensor(fails=True)
+    sensor = _sensor(_definition(entities=(('t', 'temperature'),)), instance)
+
+    drivers.poll_entities(sensor, now=0.0)
+    first_delay = sensor.next_read_at
+    drivers.poll_entities(sensor, now=first_delay)
+    second_delay = sensor.next_read_at - first_delay
+
+    assert second_delay > first_delay
+
+
+def test_backoff_is_capped_so_a_recovered_sensor_comes_back() -> None:
+    """Unbounded doubling would strand a sensor that fixed itself."""
+    instance = _CountingSensor(fails=True)
+    sensor = _sensor(_definition(entities=(('t', 'temperature'),)), instance)
+
+    now = 0.0
+    for _ in range(20):
+        drivers.poll_entities(sensor, now=now)
+        now = sensor.next_read_at
+
+    assert sensor.next_read_at - now <= drivers.BACKOFF_MAX_SECONDS
+
+
+def test_a_successful_read_clears_the_backoff() -> None:
+    """One good read means the bus is back; resume the normal cadence."""
+    instance = _CountingSensor(fails=True)
+    sensor = _sensor(_definition(entities=(('t', 'temperature'),)), instance)
+
+    drivers.poll_entities(sensor, now=0.0)
+    instance.fails = False
+    recovered_at = sensor.next_read_at
+    readings = drivers.poll_entities(sensor, now=recovered_at)
+
+    assert readings == {'t': 21.5}
+    assert sensor.consecutive_failures == 0
+    # No interval to serve out, so it is due again on the very next tick.
+    assert sensor.next_read_at <= recovered_at
+
+
+def test_a_partly_readable_sensor_is_not_treated_as_failed() -> None:
+    """One dead register is not a dead device — it still has something to say."""
+    definition = _definition(
+        entities=(('t', 'temperature'), ('missing', 'nonexistent')),
+    )
+    instance = _CountingSensor()
+    sensor = _sensor(definition, instance)
+
+    drivers.poll_entities(sensor, now=0.0)
+    drivers.poll_entities(sensor, now=1.0)
+
+    assert instance.reads == 2
+
+
+def test_a_backed_off_sensor_reports_nothing_rather_than_a_stale_reading() -> None:
+    """The all-null payload is what lets Home Assistant say *unavailable*.
+
+    Serving the cache here would keep resetting `expire_after` and leave a dead
+    sensor reading `unknown` forever instead.
+    """
+    instance = _CountingSensor()
+    sensor = _sensor(_definition(entities=(('t', 'temperature'),)), instance)
+
+    drivers.poll_entities(sensor, now=0.0)
+    instance.fails = True
+    drivers.poll_entities(sensor, now=1.0)
+    during_backoff = drivers.poll_entities(sensor, now=1.1)
+
+    assert during_backoff == {'t': None}
