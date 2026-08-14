@@ -1127,11 +1127,11 @@ _UBORPC_SERVICE_TYPE = '_uborpc._tcp.local.'
 def _uborpc_zeroconf_name() -> str:
     """Instance name for the gRPC control API's mDNS advertisement.
 
-    Mirrors the naming Wyoming's `_ZeroconfRegistry` uses, so a device shows
-    up under a recognizable `ubo-<hostname>` prefix in either.
+    Pod hostnames are already `ubo-<id>`-prefixed by convention, so this just
+    sanitizes the hostname rather than adding a second `ubo-` prefix.
     """
-    name_prefix = re.sub(r'[^A-Za-z0-9-]', '-', socket.gethostname())
-    return f'ubo-{name_prefix}.{_UBORPC_SERVICE_TYPE}'
+    name = re.sub(r'[^A-Za-z0-9-]', '-', socket.gethostname())
+    return f'{name}.{_UBORPC_SERVICE_TYPE}'
 
 
 async def _advertise_uborpc() -> None:

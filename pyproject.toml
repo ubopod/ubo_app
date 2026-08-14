@@ -46,12 +46,24 @@ dependencies = [
   "ubo-app-raw-bindings",
   "ubo-gui==0.13.17",
   "vosk==0.3.44",
-  "wyoming[zeroconf]==1.10.0",
+  # Not wyoming[zeroconf] — that extra only adds zeroconf==0.88.0 to
+  # Requires-Dist and nothing imports wyoming.zeroconf (090-wyoming/setup.py
+  # uses zeroconf.asyncio directly), but on the pod `pip install <wheel>`
+  # sees that pin and our direct one below as conflicting and silently keeps
+  # the old version — a uv override-dependencies entry doesn't help there,
+  # it only affects uv's own resolution, not the wheel's Requires-Dist. Drop
+  # the extra so there's a single source of truth for the zeroconf version.
+  "wyoming==1.10.0",
   # Direct dependency for ubo_app/utils/zeroconf.py's shared mDNS registry
   # (used by services beyond Wyoming, e.g. the gRPC control API's
-  # discoverability advertisement) — pinned to what wyoming[zeroconf] already
-  # resolves, so this doesn't introduce a second version to reconcile.
-  "zeroconf==0.88.0",
+  # discoverability advertisement). Floor of 0.128.3 fixes a wire-format bug
+  # in DNSNsec.write() (writes the NSEC window/bitmap-length fields as
+  # 2-byte shorts instead of the RFC 4034 §4.1.2-mandated 1 byte each) that
+  # made Android 14+'s stricter NSD mDNS parser drop the whole response
+  # packet containing our _uborpc._tcp answer — macOS's more lenient
+  # mDNSResponder tolerated it, which is why `dns-sd` worked regardless.
+  # Fixed upstream in "Correct nsec record writing" (python-zeroconf#1326).
+  "zeroconf==0.150.0",
   "openwakeword==0.6.0",
   # Speex noise suppression for OpenWakeWord — native, Linux-only (manylinux
   # aarch64/x86_64 wheels). Marked so it's skipped on non-Linux dev (e.g. macOS);
