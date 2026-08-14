@@ -19,6 +19,8 @@ class SystemMetricsUpdateAction(SystemAction):
     cpu_percent: float
     ram_percent: float
     cpu_temperature_celsius: float | None = None
+    cpu_temperature_display_value: float | None = None
+    cpu_temperature_display_unit: str | None = None
     load_average_1: float = 0.0
     load_average_5: float = 0.0
     load_average_15: float = 0.0
@@ -57,6 +59,9 @@ class SystemState(Immutable):
     # *location*, which this service has no way to know.
     # `None` where the platform exposes no CPU thermal sensor (desktop dev).
     cpu_temperature_celsius: float | None = None
+    # Converted to the effective UnitSystem — see ubo_app/utils/units.py.
+    cpu_temperature_display_value: float | None = None
+    cpu_temperature_display_unit: str | None = None
     load_average_1: float = 0.0
     load_average_5: float = 0.0
     load_average_15: float = 0.0

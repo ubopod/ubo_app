@@ -72,6 +72,8 @@ def test_init_produces_zeroed_metrics() -> None:
     assert state.cpu_percent == 0.0
     assert state.ram_percent == 0.0
     assert state.cpu_temperature_celsius is None
+    assert state.cpu_temperature_display_value is None
+    assert state.cpu_temperature_display_unit is None
     assert state.boot_time == 0.0
     assert state.disk_total_bytes == 0
     assert state.network_upload_bps == 0.0
@@ -85,6 +87,8 @@ def test_metrics_update_populates_every_fast_field() -> None:
             cpu_percent=34.5,
             ram_percent=61.25,
             cpu_temperature_celsius=52.5,
+            cpu_temperature_display_value=126.5,
+            cpu_temperature_display_unit='°F',
             load_average_1=0.31,
             load_average_5=0.28,
             load_average_15=0.25,
@@ -97,6 +101,8 @@ def test_metrics_update_populates_every_fast_field() -> None:
     assert state.cpu_percent == 34.5
     assert state.ram_percent == 61.25
     assert state.cpu_temperature_celsius == 52.5
+    assert state.cpu_temperature_display_value == 126.5
+    assert state.cpu_temperature_display_unit == '°F'
     assert state.load_average_1 == 0.31
     assert state.load_average_5 == 0.28
     assert state.load_average_15 == 0.25
@@ -116,6 +122,8 @@ def test_metrics_update_keeps_a_missing_temperature_none() -> None:
     )
 
     assert state.cpu_temperature_celsius is None
+    assert state.cpu_temperature_display_value is None
+    assert state.cpu_temperature_display_unit is None
 
 
 def test_storage_update_leaves_the_fast_fields_alone() -> None:

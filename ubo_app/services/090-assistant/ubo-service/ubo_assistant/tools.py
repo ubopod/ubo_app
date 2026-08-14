@@ -156,8 +156,8 @@ def create_ubo_standard_tools(
             'country_code': {
                 'type': 'string',
                 'description': 'The ISO 3166-1 alpha-2 country code, e.g. "PT". '
-                'Determines whether temperatures are spoken in Celsius or '
-                'Fahrenheit.',
+                'Used to resolve Automatic units of measurement (metric vs US '
+                'customary) when the user has not picked one explicitly.',
             },
             'latitude': {
                 'type': 'number',

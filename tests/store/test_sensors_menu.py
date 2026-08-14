@@ -168,7 +168,10 @@ def test_reading_rows_carry_names_units_and_registry_precision() -> None:
         ),
     )
 
-    labels, values, units, keys, device_classes = menu._reading_rows(device)  # noqa: SLF001
+    labels, values, units, keys, device_classes = menu._reading_rows(  # noqa: SLF001
+        device,
+        menu.UnitSystem.METRIC,
+    )
 
     assert labels == ('CO2', 'Temperature', 'Humidity')
     assert units == ('ppm', '°C', '%')
@@ -191,7 +194,10 @@ def test_a_missing_reading_renders_as_a_dash_not_a_zero() -> None:
         entities=(SensorEntityReading(key='temperature', value=None),),
     )
 
-    labels, values, units, keys, device_classes = menu._reading_rows(device)  # noqa: SLF001
+    labels, values, units, keys, device_classes = menu._reading_rows(  # noqa: SLF001
+        device,
+        menu.UnitSystem.METRIC,
+    )
 
     assert labels == ('Temperature', 'Humidity', 'Pressure', 'Gas Resistance')
     assert values[0] == menu.UNKNOWN_VALUE
@@ -202,6 +208,101 @@ def test_a_missing_reading_renders_as_a_dash_not_a_zero() -> None:
     # gas_resistance has no device_class in the registry — empty, not None,
     # since props values must be BasicType.
     assert device_classes == ('temperature', 'humidity', 'pressure', '')
+
+
+@pytest.mark.usefixtures('_shipped_definitions')
+def test_reading_rows_converts_temperature_for_us() -> None:
+    """A temperature entity converts to Fahrenheit under the US unit system."""
+    device = SensorDeviceState(
+        id='scd4x_0x62',
+        definition_id='scd4x',
+        label='SCD-40 CO2',
+        address=0x62,
+        is_builtin=False,
+        status=SensorStatus.ACTIVE,
+        entities=(
+            SensorEntityReading(key='co2', value=412.4),
+            SensorEntityReading(key='temperature', value=20.0),
+            SensorEntityReading(key='humidity', value=45.2),
+        ),
+    )
+
+    labels, values, units, keys, device_classes = menu._reading_rows(  # noqa: SLF001
+        device,
+        menu.UnitSystem.US,
+    )
+
+    assert dict(zip(labels, zip(values, units, strict=True), strict=True)) == {
+        'CO2': ('412', 'ppm'),  # no US-customary equivalent — unchanged
+        'Temperature': ('68.0', '°F'),
+        'Humidity': ('45', '%'),  # no US-customary equivalent — unchanged
+    }
+    assert keys == ('co2', 'temperature', 'humidity')
+    assert device_classes == ('carbon_dioxide', 'temperature', 'humidity')
+
+
+@pytest.mark.usefixtures('_shipped_definitions')
+def test_reading_rows_converts_distance_by_source_unit_independently() -> None:
+    """bmp388's altitude ('m') and vl53l1x's proximity ('cm') convert independently.
+
+    'distance' means different source units on different sensors in this
+    registry, so each must convert on its own under US units.
+    """
+    bmp388 = SensorDeviceState(
+        id='bmp388_0x77',
+        definition_id='bmp388',
+        label='BMP388',
+        address=0x77,
+        is_builtin=False,
+        status=SensorStatus.ACTIVE,
+        entities=(
+            SensorEntityReading(key='pressure', value=1013.25),
+            SensorEntityReading(key='temperature', value=20.0),
+            SensorEntityReading(key='altitude', value=100.0),
+        ),
+    )
+    vl53l1x = SensorDeviceState(
+        id='vl53l1x_0x29',
+        definition_id='vl53l1x',
+        label='VL53L1X',
+        address=0x29,
+        is_builtin=False,
+        status=SensorStatus.ACTIVE,
+        entities=(SensorEntityReading(key='distance', value=30.0),),
+    )
+
+    bmp_rows = menu._reading_rows(bmp388, menu.UnitSystem.US)  # noqa: SLF001
+    bmp_units, bmp_keys = bmp_rows[2], bmp_rows[3]
+    assert dict(zip(bmp_keys, bmp_units, strict=True))['altitude'] == 'ft'
+
+    vl_rows = menu._reading_rows(vl53l1x, menu.UnitSystem.US)  # noqa: SLF001
+    vl_values, vl_units, vl_keys = vl_rows[1], vl_rows[2], vl_rows[3]
+    assert dict(zip(vl_keys, vl_units, strict=True))['distance'] == 'in'
+    assert vl_values[vl_keys.index('distance')] != '30.0'  # actually converted
+
+
+@pytest.mark.usefixtures('_shipped_definitions')
+def test_reading_rows_metric_is_passthrough_for_already_metric_values() -> None:
+    """UnitSystem.METRIC never mutates already-metric registry values."""
+    device = SensorDeviceState(
+        id='bmp388_0x77',
+        definition_id='bmp388',
+        label='BMP388',
+        address=0x77,
+        is_builtin=False,
+        status=SensorStatus.ACTIVE,
+        entities=(
+            SensorEntityReading(key='pressure', value=1013.25),
+            SensorEntityReading(key='temperature', value=20.0),
+            SensorEntityReading(key='altitude', value=100.0),
+        ),
+    )
+
+    rows = menu._reading_rows(device, menu.UnitSystem.METRIC)  # noqa: SLF001
+    values, units = rows[1], rows[2]
+
+    assert units == ('hPa', '°C', 'm')
+    assert values == ('1013.25', '20.0', '100.0')
 
 
 @pytest.mark.usefixtures('_shipped_definitions')

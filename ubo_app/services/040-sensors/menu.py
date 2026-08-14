@@ -33,6 +33,7 @@ from ubo_app.store.core.types import (
 )
 from ubo_app.store.core.view_registry import register_path_menu_matcher
 from ubo_app.store.main import store
+from ubo_app.store.services.localization import UnitSystem
 from ubo_app.store.services.notifications import (
     Chime,
     Notification,
@@ -42,6 +43,12 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.sensors import (
     SensorsScanAction,
     SensorStatus,
+)
+from ubo_app.utils.units import (
+    convert_distance,
+    convert_pressure_hpa,
+    convert_temperature_c,
+    resolve_unit_system,
 )
 
 if TYPE_CHECKING:
@@ -128,8 +135,48 @@ def _format_value(value: float | None, precision: int | None) -> str:
     return f'{value:.{digits}f}'
 
 
+def _convert_reading(
+    value: float | None,
+    unit: str,
+    device_class: str,
+    unit_system: UnitSystem,
+) -> tuple[float | None, str]:
+    """Convert one entity's (value, unit) for display, keyed by device_class.
+
+    Only temperature/distance/pressure have a US-customary counterpart in
+    this registry — humidity (%), illuminance (lx), CO2/VOC/PM concentrations,
+    AQI, and resistance (Ω) pass through unchanged regardless of *unit_system*.
+    """
+    if value is None:
+        return None, unit
+    if device_class == 'temperature':
+        return convert_temperature_c(value, unit_system)
+    if device_class == 'distance':
+        return convert_distance(value, unit, unit_system)
+    if device_class == 'pressure':
+        return convert_pressure_hpa(value, unit_system)
+    return value, unit
+
+
+def _resolved_unit_system(state: RootState) -> UnitSystem:
+    # 010-localization loads before 040-sensors, but an isolated unit test
+    # (or a future reordering) may not have that slice registered at all.
+    localization = getattr(state, 'localization', None)
+    location = getattr(localization, 'location', None)
+    return resolve_unit_system(
+        getattr(localization, 'unit_system', UnitSystem.AUTO),
+        getattr(location, 'country_code', None),
+    )
+
+
+@store.with_state(_resolved_unit_system)
+def _effective_unit_system(unit_system: UnitSystem) -> UnitSystem:
+    return unit_system
+
+
 def _reading_rows(
     device: SensorDeviceState,
+    unit_system: UnitSystem,
 ) -> tuple[
     tuple[str, ...],
     tuple[str, ...],
@@ -141,7 +188,8 @@ def _reading_rows(
 
     `key` and `device_class` let a rich client look up the same icon+range
     table (`SensorDisplay`/its Kotlin counterpart) the Dashboard's sensor
-    tiles already use, instead of guessing from the label text.
+    tiles already use, instead of guessing from the label text. Values/units
+    are converted to *unit_system* before formatting.
     """
     definition = _definitions.get(device.definition_id)
     readings = {entity.key: entity.value for entity in device.entities}
@@ -157,18 +205,27 @@ def _reading_rows(
             tuple('' for _ in device.entities),
         )
 
+    converted = tuple(
+        _convert_reading(
+            readings.get(entity.key),
+            entity.unit_of_measurement or '',
+            entity.device_class or '',
+            unit_system,
+        )
+        for entity in definition.entities
+    )
+
     return (
         tuple(entity.name for entity in definition.entities),
         tuple(
-            _format_value(
-                readings.get(entity.key),
-                entity.suggested_display_precision,
+            _format_value(value, entity.suggested_display_precision)
+            for (value, _unit), entity in zip(
+                converted,
+                definition.entities,
+                strict=True,
             )
-            for entity in definition.entities
         ),
-        tuple(
-            entity.unit_of_measurement or '' for entity in definition.entities
-        ),
+        tuple(unit for _value, unit in converted),
         tuple(entity.key for entity in definition.entities),
         tuple(entity.device_class or '' for entity in definition.entities),
     )
@@ -214,13 +271,23 @@ def _open_device(identity: _Identity) -> None:
 
     definition = _definitions.get(identity.definition_id)
     entities = definition.entities if definition else ()
+    unit_system = _effective_unit_system()
 
     # Labels/units/keys/device_classes are the page's structure and are known
-    # up front; the values arrive from the poll loop within the second.
+    # up front; the values arrive from the poll loop within the second. Only
+    # the unit half of the conversion matters here — there's no value yet.
     props: RenderProps = {
         'labels': tuple(entity.name for entity in entities),
         'values': tuple(UNKNOWN_VALUE for _ in entities),
-        'units': tuple(entity.unit_of_measurement or '' for entity in entities),
+        'units': tuple(
+            _convert_reading(
+                0.0,
+                entity.unit_of_measurement or '',
+                entity.device_class or '',
+                unit_system,
+            )[1]
+            for entity in entities
+        ),
         'keys': tuple(entity.key for entity in entities),
         'device_classes': tuple(entity.device_class or '' for entity in entities),
     }
@@ -381,7 +448,7 @@ def _open_readings(
     )
     if device is None or device.status is not SensorStatus.ACTIVE:
         return None
-    return (item.stream_id, *_reading_rows(device))
+    return (item.stream_id, *_reading_rows(device, _resolved_unit_system(state)))
 
 
 def _update_open_readings(

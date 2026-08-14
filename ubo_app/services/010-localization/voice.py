@@ -36,9 +36,6 @@ UNKNOWN_LOCATION_TEXT = (
 )
 WEATHER_UNAVAILABLE_TEXT = "I couldn't reach the weather service just now."
 
-# The three countries that still speak Fahrenheit day to day.
-_FAHRENHEIT_COUNTRIES = frozenset({'US', 'LR', 'MM'})
-
 
 def _ordinal(day: int) -> str:
     # 11th/12th/13th are the exceptions the naive rule gets wrong.
@@ -63,23 +60,14 @@ def format_spoken_date(now: datetime) -> str:
     )
 
 
-def uses_fahrenheit(location: LocationInfo | None) -> bool:
-    """Whether *location*'s country reports temperature in Fahrenheit."""
-    if location is None or not location.country_code:
-        return False
-    return location.country_code.upper() in _FAHRENHEIT_COUNTRIES
-
-
 def format_spoken_weather(
     weather: WeatherCondition,
     location: LocationInfo | None,
 ) -> str:
     """Say the current conditions: "It's 21 degrees and partly cloudy in Berlin."."""
-    if uses_fahrenheit(location):
-        degrees = round(weather.temperature_celsius * 9 / 5 + 32)
-    else:
-        degrees = round(weather.temperature_celsius)
-
+    # The reducer already converts this to the effective UnitSystem — see
+    # ubo_app/utils/units.py and the reducer's _recompute_weather_display.
+    degrees = round(weather.temperature_display_value)
     description = describe_symbol(weather.symbol_code)
     where = f' in {location.city}' if location and location.city else ''
     return f"It's {degrees} degrees and {description}{where}."

@@ -41,6 +41,11 @@ def components(
 ) -> list[MqttComponent]:
     """Describe every active sensor's entities for Home Assistant.
 
+    Deliberately reports the registry's raw `unit_of_measurement`, never the
+    device's `localization.unit_system`-converted one — Home Assistant has its
+    own per-user unit-system setting and converts on its own end, so feeding
+    it an already-converted value here would double-convert.
+
     A device that failed to initialize has nothing to report, and a device
     whose definition vanished from under it (a registry update) is skipped
     rather than announced half-described.

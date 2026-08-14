@@ -59,6 +59,33 @@ class LocationSource(StrEnum):
     MANUAL = 'manual'
 
 
+class UnitSystem(StrEnum):
+    """How measured quantities (temperature, speed, distance, pressure) display.
+
+    ``AUTO`` continuously tracks the resolved location's country — the same
+    "keep following upstream" behavior ``LocationSource.IP`` has for location
+    itself. An explicit ``METRIC``/``US`` pick is sticky, like
+    ``LocationSource.MANUAL`` — nothing overwrites it until the user changes
+    it back to ``AUTO``.
+    """
+
+    AUTO = 'auto'
+    METRIC = 'metric'
+    US = 'us'
+
+
+_UNIT_SYSTEM_LABELS: dict[UnitSystem, str] = {
+    UnitSystem.AUTO: 'Automatic',
+    UnitSystem.METRIC: 'Metric (°C, km/h)',
+    UnitSystem.US: 'US Customary (°F, mph)',
+}
+
+
+def unit_system_label(system: UnitSystem) -> str:
+    """Return the human-readable label for *system*."""
+    return _UNIT_SYSTEM_LABELS.get(system, system.value)
+
+
 class LocationInfo(Immutable):
     """Where the device is, as far as the device knows."""
 
@@ -82,6 +109,13 @@ class WeatherCondition(Immutable):
     wind_speed_mps: float | None = None
     fetched_at: float = 0
     expires_at: float = 0
+    # Filled in by the reducer (never by the fetch layer) from the raw fields
+    # above plus the effective UnitSystem — the pair every client (and the
+    # LLM tool) reads instead of converting Celsius/m-s themselves.
+    temperature_display_value: float = 0
+    temperature_display_unit: str = '°C'
+    wind_speed_display_value: float | None = None
+    wind_speed_display_unit: str | None = None
 
 
 class LocalizationAction(BaseAction): ...
@@ -92,6 +126,10 @@ class LocalizationEvent(BaseEvent): ...
 
 class LocalizationSetLanguageAction(LocalizationAction):
     language: LanguageCode
+
+
+class LocalizationSetUnitSystemAction(LocalizationAction):
+    unit_system: UnitSystem
 
 
 class LocalizationSetLocationAction(LocalizationAction):
@@ -132,6 +170,10 @@ class LocalizationSpeakWeatherAction(LocalizationAction): ...
 
 class LocalizationLanguageChangedEvent(LocalizationEvent):
     language: LanguageCode
+
+
+class LocalizationUnitSystemChangedEvent(LocalizationEvent):
+    unit_system: UnitSystem
 
 
 class LocalizationLocationChangedEvent(LocalizationEvent):
@@ -211,6 +253,17 @@ def _load_public_ip(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def _load_unit_system(value: object) -> UnitSystem:
+    if isinstance(value, UnitSystem):
+        return value
+    if isinstance(value, str):
+        try:
+            return UnitSystem(value)
+        except ValueError:
+            return UnitSystem.AUTO
+    return UnitSystem.AUTO
+
+
 class LocalizationState(Immutable):
     language: LanguageCode = field(
         default=read_from_persistent_store(
@@ -238,6 +291,13 @@ class LocalizationState(Immutable):
             key='localization:public_ip',
             default=None,
             mapper=_load_public_ip,
+        ),
+    )
+    unit_system: UnitSystem = field(
+        default=read_from_persistent_store(
+            key='localization:unit_system',
+            default=UnitSystem.AUTO,
+            mapper=_load_unit_system,
         ),
     )
     # Deliberately not persisted: a weather snapshot from the last boot is

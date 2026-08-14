@@ -997,12 +997,16 @@ class UboLLMService(UboLLMSwitchService):
             return
 
         place = self._location.city or 'the device location'
+        temperature_unit_name = weather.temperature_display_unit.lstrip('°') or 'C'
         parts = [
-            f'{weather.temperature_celsius:.0f} degrees Celsius',
+            f'{weather.temperature_display_value:.0f} degrees {temperature_unit_name}',
             f'conditions "{weather.symbol_code}"',
         ]
-        if weather.wind_speed_mps is not None:
-            parts.append(f'wind {weather.wind_speed_mps:.0f} metres per second')
+        if weather.wind_speed_display_value is not None:
+            parts.append(
+                f'wind {weather.wind_speed_display_value:.0f} '
+                f'{weather.wind_speed_display_unit}',
+            )
 
         summary = f'Current weather in {place}: {", ".join(parts)}.'
         if (weather.expires_at or 0) <= time.time():

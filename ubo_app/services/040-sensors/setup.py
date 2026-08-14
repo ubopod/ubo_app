@@ -20,6 +20,7 @@ from scan import scan_and_match as _scan_and_match
 from ubo_app.logger import logger
 from ubo_app.store.core.view_registry import register_status_bar_dependency
 from ubo_app.store.main import store
+from ubo_app.store.services.localization import UnitSystem
 from ubo_app.store.services.mqtt import (
     MqttPublishAction,
     MqttRequestAnnounceAction,
@@ -44,6 +45,7 @@ from ubo_app.utils.persistent_store import (
     read_from_persistent_store,
     register_persistent_store,
 )
+from ubo_app.utils.units import convert_temperature_c, resolve_unit_system
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -535,12 +537,27 @@ async def _initialize() -> None:
             store.dispatch(SensorsScanCompletedAction(devices=None))
 
 
+def _status_bar_temperature(state: RootState) -> float | None:
+    """Convert the built-in ambient sensor's Celsius reading for display."""
+    reading = state.sensors.temperature
+    if reading is None or reading.value is None:
+        return None
+    localization = getattr(state, 'localization', None)
+    location = getattr(localization, 'location', None)
+    unit_system = resolve_unit_system(
+        getattr(localization, 'unit_system', UnitSystem.AUTO),
+        getattr(location, 'country_code', None),
+    )
+    value, _unit = convert_temperature_c(reading.value, unit_system)
+    return value
+
+
 def init_service() -> Subscriptions:
     """Initialize the service."""
     # Register view dependency for status bar temperature display
     unregister_temp = register_status_bar_dependency(
         'sensors:temp',
-        lambda s: s.sensors.temperature.value if s.sensors.temperature else None,
+        _status_bar_temperature,
     )
 
     global _definitions, WORKER  # noqa: PLW0603

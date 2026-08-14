@@ -15,6 +15,7 @@ from ubo_app.store.services.localization import (
     LocalizationResetLocationAction,
     LocalizationSetLanguageAction,
     LocalizationSetLocationAction,
+    LocalizationSetUnitSystemAction,
     LocalizationSpeakDateAction,
     LocalizationSpeakDateEvent,
     LocalizationSpeakTimeAction,
@@ -22,11 +23,54 @@ from ubo_app.store.services.localization import (
     LocalizationSpeakWeatherAction,
     LocalizationSpeakWeatherEvent,
     LocalizationState,
+    LocalizationUnitSystemChangedEvent,
     LocalizationUpdateClockAction,
     LocalizationUpdateWeatherAction,
     LocalizationWeatherRefreshRequestedEvent,
     LocationSource,
+    UnitSystem,
+    WeatherCondition,
 )
+from ubo_app.utils.units import (
+    convert_speed_mps,
+    convert_temperature_c,
+    resolve_unit_system,
+)
+
+
+def _recompute_weather_display(
+    weather: WeatherCondition | None,
+    unit_system: UnitSystem,
+    country_code: str | None,
+) -> WeatherCondition | None:
+    """Fill in `WeatherCondition`'s display fields for the current settings.
+
+    Single source of truth for "resolve AUTO, then convert" — every trigger
+    that could invalidate the display fields (a fresh fetch, a unit-system
+    change, a location/country change) goes through this, so they can never
+    drift out of sync.
+    """
+    if weather is None:
+        return None
+    resolved = resolve_unit_system(unit_system, country_code)
+    temperature_display_value, temperature_display_unit = convert_temperature_c(
+        weather.temperature_celsius,
+        resolved,
+    )
+    if weather.wind_speed_mps is None:
+        wind_speed_display_value, wind_speed_display_unit = None, None
+    else:
+        wind_speed_display_value, wind_speed_display_unit = convert_speed_mps(
+            weather.wind_speed_mps,
+            resolved,
+        )
+    return replace(
+        weather,
+        temperature_display_value=temperature_display_value,
+        temperature_display_unit=temperature_display_unit,
+        wind_speed_display_value=wind_speed_display_value,
+        wind_speed_display_unit=wind_speed_display_unit,
+    )
 
 
 def reducer(
@@ -76,9 +120,16 @@ def reducer(
                     location=action.location,
                     location_source=action.source,
                     public_ip=action.public_ip,
-                    # The cached weather belongs to the previous location.
+                    # The cached weather belongs to the previous location; if
+                    # it's kept, its display fields still need refreshing —
+                    # an AUTO-mode unit system tracks the country, and this
+                    # may be the country changing.
                     weather=(
-                        state.weather
+                        _recompute_weather_display(
+                            state.weather,
+                            state.unit_system,
+                            action.location.country_code,
+                        )
                         if state.location == action.location
                         else None
                     ),
@@ -104,7 +155,34 @@ def reducer(
             )
 
         case LocalizationUpdateWeatherAction():
-            return replace(state, weather=action.weather)
+            return replace(
+                state,
+                weather=_recompute_weather_display(
+                    action.weather,
+                    state.unit_system,
+                    state.location.country_code if state.location else None,
+                ),
+            )
+
+        case LocalizationSetUnitSystemAction():
+            if state.unit_system == action.unit_system:
+                return state
+            return CompleteReducerResult(
+                state=replace(
+                    state,
+                    unit_system=action.unit_system,
+                    weather=_recompute_weather_display(
+                        state.weather,
+                        action.unit_system,
+                        state.location.country_code if state.location else None,
+                    ),
+                ),
+                events=[
+                    LocalizationUnitSystemChangedEvent(
+                        unit_system=action.unit_system,
+                    ),
+                ],
+            )
 
         case LocalizationUpdateClockAction():
             return replace(state, clock=action.clock, date=action.date)

@@ -20,8 +20,10 @@ from ubo_app.store.services.system import (
     SystemStorageUpdateAction,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.units import convert_temperature_c, resolve_unit_system
 
 if TYPE_CHECKING:
+    from ubo_app.store.services.localization import UnitSystem
     from ubo_app.utils.types import Subscriptions
 
 # Only dispatch CPU/RAM if delta exceeds this threshold (percentage points)
@@ -48,6 +50,7 @@ _last: dict[str, float | str | None] = {
     'temperature': None,
     'upload': -1.0,
     'download': -1.0,
+    'unit_system': None,
 }
 
 # Previous cumulative network counters, for turning them into a rate.
@@ -115,6 +118,18 @@ def _has_temperature_change(temperature: float | None) -> bool:
     return abs(temperature - float(previous)) > _TEMPERATURE_THRESHOLD
 
 
+@store.with_state(
+    lambda state: resolve_unit_system(
+        state.localization.unit_system,
+        state.localization.location.country_code
+        if state.localization.location
+        else None,
+    ),
+)
+def _effective_unit_system(unit_system: UnitSystem) -> UnitSystem:
+    return unit_system
+
+
 def read_metrics() -> None:
     """Read system metrics and dispatch update action.
 
@@ -126,24 +141,39 @@ def read_metrics() -> None:
     temperature = read_cpu_temperature()
     upload, download = read_network_rates()
     load_average_1, load_average_5, load_average_15 = os.getloadavg()
+    unit_system = _effective_unit_system()
 
     cpu_changed = abs(cpu_percent - float(_last['cpu'] or 0)) > _METRICS_THRESHOLD
     ram_changed = abs(ram_percent - float(_last['ram'] or 0)) > _METRICS_THRESHOLD
+    # A unit-system flip forces one dispatch even if the reading itself held
+    # steady — otherwise a settings change would sit stale until the CPU
+    # temperature next moved by more than the debounce threshold.
+    unit_system_changed = unit_system != _last['unit_system']
 
     if not (
         cpu_changed
         or ram_changed
         or _has_temperature_change(temperature)
+        or unit_system_changed
         or _has_network_change('upload', upload)
         or _has_network_change('download', download)
     ):
         return
+
+    if temperature is None:
+        temperature_display_value, temperature_display_unit = None, None
+    else:
+        temperature_display_value, temperature_display_unit = convert_temperature_c(
+            temperature,
+            unit_system,
+        )
 
     _last['cpu'] = cpu_percent
     _last['ram'] = ram_percent
     _last['temperature'] = temperature
     _last['upload'] = upload
     _last['download'] = download
+    _last['unit_system'] = unit_system
 
     logger.verbose(
         '[SystemMetrics] Dispatching: cpu=%.1f, ram=%.1f',
@@ -156,6 +186,8 @@ def read_metrics() -> None:
             cpu_percent=cpu_percent,
             ram_percent=ram_percent,
             cpu_temperature_celsius=temperature,
+            cpu_temperature_display_value=temperature_display_value,
+            cpu_temperature_display_unit=temperature_display_unit,
             load_average_1=load_average_1,
             load_average_5=load_average_5,
             load_average_15=load_average_15,

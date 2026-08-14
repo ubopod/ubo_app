@@ -104,6 +104,15 @@ def _load_localization(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         ),
         load_location=localization_module._load_location,  # noqa: SLF001
         load_location_source=localization_module._load_location_source,  # noqa: SLF001
+        UnitSystem=localization_module.UnitSystem,
+        unit_system_label=localization_module.unit_system_label,
+        load_unit_system=localization_module._load_unit_system,  # noqa: SLF001
+        LocalizationSetUnitSystemAction=(
+            localization_module.LocalizationSetUnitSystemAction
+        ),
+        LocalizationUnitSystemChangedEvent=(
+            localization_module.LocalizationUnitSystemChangedEvent
+        ),
     )
 
 
@@ -136,6 +145,7 @@ def _base_state(ns: SimpleNamespace, **kwargs: object) -> LocalizationState:
         'location': None,
         'location_source': ns.LocationSource.IP,
         'public_ip': None,
+        'unit_system': ns.UnitSystem.AUTO,
         'weather': None,
     }
     fields.update(kwargs)
@@ -441,9 +451,9 @@ def test_refresh_weather_requires_a_known_location(
 def test_update_weather_replaces_the_cached_condition(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A fetched forecast lands in state without emitting an event."""
+    """A fetched forecast lands in state, with display fields computed."""
     ns = _load_localization(monkeypatch)
-    state = _base_state(ns, location=_berlin(ns))
+    state = _base_state(ns, location=_berlin(ns), unit_system=ns.UnitSystem.METRIC)
     weather = ns.WeatherCondition(
         symbol_code='partlycloudy_day',
         temperature_celsius=18.5,
@@ -457,7 +467,13 @@ def test_update_weather_replaces_the_cached_condition(
         ns.reducer(state, ns.LocalizationUpdateWeatherAction(weather=weather)),
     )
 
-    assert new_state.weather == weather
+    assert new_state.weather is not None
+    assert new_state.weather.symbol_code == weather.symbol_code
+    assert new_state.weather.temperature_celsius == weather.temperature_celsius
+    assert new_state.weather.temperature_display_value == pytest.approx(18.5)
+    assert new_state.weather.temperature_display_unit == '°C'
+    assert new_state.weather.wind_speed_display_value == pytest.approx(3.2 * 3.6)
+    assert new_state.weather.wind_speed_display_unit == 'km/h'
 
 
 def test_speak_actions_emit_snapshot_events_without_touching_state(
@@ -592,3 +608,83 @@ def test_persisted_location_round_trips_through_file(
         )
         == ns.LocationSource.MANUAL
     )
+
+
+def test_load_unit_system_defaults_to_auto(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Unknown / garbage values resolve to Automatic so the device stays usable."""
+    ns = _load_localization(monkeypatch)
+    assert ns.load_unit_system('not_a_system') == ns.UnitSystem.AUTO
+    assert ns.load_unit_system(None) == ns.UnitSystem.AUTO
+    assert ns.load_unit_system(42) == ns.UnitSystem.AUTO
+    assert ns.load_unit_system('metric') == ns.UnitSystem.METRIC
+    assert ns.load_unit_system('us') == ns.UnitSystem.US
+
+
+def test_unit_system_label_known_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every enum value has a non-empty human-readable label."""
+    ns = _load_localization(monkeypatch)
+    for system in ns.UnitSystem:
+        assert ns.unit_system_label(system)
+
+
+def test_reducer_sets_unit_system_and_emits_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Dispatching ``LocalizationSetUnitSystemAction`` updates state."""
+    from redux import CompleteReducerResult
+
+    ns = _load_localization(monkeypatch)
+    state = _base_state(ns, unit_system=ns.UnitSystem.AUTO)
+
+    result = ns.reducer(
+        state,
+        ns.LocalizationSetUnitSystemAction(unit_system=ns.UnitSystem.US),
+    )
+    assert isinstance(result, CompleteReducerResult)
+    new_state = cast('LocalizationState', result.state)
+    assert new_state.unit_system == ns.UnitSystem.US
+    assert result.events is not None
+    assert isinstance(result.events[0], ns.LocalizationUnitSystemChangedEvent)
+    assert result.events[0].unit_system == ns.UnitSystem.US
+
+
+def test_set_unit_system_noop_when_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Setting the same unit system is a no-op — no event is emitted."""
+    ns = _load_localization(monkeypatch)
+    state = _base_state(ns, unit_system=ns.UnitSystem.METRIC)
+
+    result = ns.reducer(
+        state,
+        ns.LocalizationSetUnitSystemAction(unit_system=ns.UnitSystem.METRIC),
+    )
+    assert result is state
+
+
+def test_set_unit_system_recomputes_cached_weather_display(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Flipping units immediately reformats already-cached weather."""
+    ns = _load_localization(monkeypatch)
+    weather = ns.WeatherCondition(
+        symbol_code='clearsky_day',
+        temperature_celsius=20.0,
+        wind_speed_mps=5.0,
+    )
+    state = _base_state(
+        ns,
+        location=_berlin(ns),
+        unit_system=ns.UnitSystem.METRIC,
+        weather=weather,
+    )
+
+    result = ns.reducer(
+        state,
+        ns.LocalizationSetUnitSystemAction(unit_system=ns.UnitSystem.US),
+    )
+    new_state = cast('LocalizationState', result.state)
+    assert new_state.weather is not None
+    # 20C -> 68F, and the cached weather is kept, not cleared.
+    assert new_state.weather.temperature_display_value == pytest.approx(68.0)
+    assert new_state.weather.temperature_display_unit == '°F'

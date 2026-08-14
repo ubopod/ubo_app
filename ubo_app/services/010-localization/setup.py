@@ -56,6 +56,7 @@ from ubo_app.store.services.localization import (
     LocalizationRefreshWeatherAction,
     LocalizationSetLanguageAction,
     LocalizationSetLocationAction,
+    LocalizationSetUnitSystemAction,
     LocalizationSpeakDateEvent,
     LocalizationSpeakTimeEvent,
     LocalizationSpeakWeatherEvent,
@@ -63,7 +64,9 @@ from ubo_app.store.services.localization import (
     LocalizationUpdateWeatherAction,
     LocalizationWeatherRefreshRequestedEvent,
     LocationSource,
+    UnitSystem,
     language_label,
+    unit_system_label,
 )
 from ubo_app.store.services.speech_synthesis import (
     ReadableInformation,
@@ -131,6 +134,54 @@ def _build_language_menu(selected_language: LanguageCode) -> None:
 
 def _open_language_picker() -> None:
     store.dispatch(StackPushMenuAction(menu_key=LANGUAGE_MENU_ID))
+
+
+UNIT_SYSTEM_MENU_ID = 'localization:unit_system'
+OPEN_UNIT_SYSTEM_ACTION_ID = 'localization:open_unit_system_picker'
+
+
+def _register_unit_system_actions() -> None:
+    for system in UnitSystem:
+        action_id = f'localization:set_unit_system:{system.value}'
+
+        def _make_handler(target: UnitSystem) -> Callable[[], None]:
+            def _handler() -> None:
+                store.dispatch(LocalizationSetUnitSystemAction(unit_system=target))
+
+            return _handler
+
+        register_action(action_id, _make_handler(system), allow_reregister=True)
+
+
+@store.autorun(lambda state: state.localization.unit_system)
+def _build_unit_system_menu(selected_system: UnitSystem) -> None:
+    """Rebuild the units picker whenever the selection changes."""
+    _register_unit_system_actions()
+
+    options = tuple(
+        (
+            system.value,
+            unit_system_label(system),
+            f'localization:set_unit_system:{system.value}',
+        )
+        for system in UnitSystem
+    )
+
+    build_selection_menu(
+        options=options,
+        selected_key=selected_system.value,
+        menu_id=UNIT_SYSTEM_MENU_ID,
+        title='Units of Measurement',
+        heading='Units',
+        sub_heading=(
+            'Automatic follows the detected country. Pick Metric or US to '
+            'override it everywhere — weather, sensors, and system readings.'
+        ),
+    )
+
+
+def _open_unit_system_picker() -> None:
+    store.dispatch(StackPushMenuAction(menu_key=UNIT_SYSTEM_MENU_ID))
 
 
 def _open_location_menu() -> None:
@@ -424,10 +475,19 @@ def init_service() -> Subscriptions:
         'localization:public_ip',
         lambda state: state.localization.public_ip,
     )
+    register_persistent_store(
+        'localization:unit_system',
+        lambda state: state.localization.unit_system,
+    )
 
     register_action(
         OPEN_LANGUAGE_ACTION_ID,
         _open_language_picker,
+        allow_reregister=True,
+    )
+    register_action(
+        OPEN_UNIT_SYSTEM_ACTION_ID,
+        _open_unit_system_picker,
         allow_reregister=True,
     )
     register_action(
@@ -454,6 +514,14 @@ def init_service() -> Subscriptions:
             label='Location',
             icon='󰍎',
             action_id=OPEN_LOCATION_ACTION_ID,
+        ),
+        RegisterSettingAppAction(
+            category=SettingsCategory.LOCALIZATION,
+            priority=2,
+            key='unit_system',
+            label='Units of Measurement',
+            icon='󰉉',
+            action_id=OPEN_UNIT_SYSTEM_ACTION_ID,
         ),
     )
 

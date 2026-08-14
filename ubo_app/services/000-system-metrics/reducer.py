@@ -31,6 +31,8 @@ def reducer(
                 cpu_percent=action.cpu_percent,
                 ram_percent=action.ram_percent,
                 cpu_temperature_celsius=action.cpu_temperature_celsius,
+                cpu_temperature_display_value=action.cpu_temperature_display_value,
+                cpu_temperature_display_unit=action.cpu_temperature_display_unit,
                 load_average_1=action.load_average_1,
                 load_average_5=action.load_average_5,
                 load_average_15=action.load_average_15,

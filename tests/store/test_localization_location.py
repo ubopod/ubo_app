@@ -394,12 +394,22 @@ def test_format_spoken_date_reads_an_ordinal_day(
 def test_format_spoken_weather_reports_celsius_by_default(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Most of the world hears Celsius."""
+    """Most of the world hears Celsius.
+
+    The reducer (not voice.py) resolves the effective UnitSystem and fills in
+    `temperature_display_value`/`_unit` — voice.py only reads them, so the
+    fixture builds a `WeatherCondition` as the reducer would have left it.
+    """
     voice = _voice(monkeypatch)
     from ubo_app.store.services.localization import LocationInfo, WeatherCondition
 
     text = voice.format_spoken_weather(
-        WeatherCondition(symbol_code='partlycloudy_day', temperature_celsius=21.4),
+        WeatherCondition(
+            symbol_code='partlycloudy_day',
+            temperature_celsius=21.4,
+            temperature_display_value=21.4,
+            temperature_display_unit='°C',
+        ),
         LocationInfo(
             latitude=52.52,
             longitude=13.4,
@@ -419,7 +429,12 @@ def test_format_spoken_weather_reports_fahrenheit_in_the_us(
     from ubo_app.store.services.localization import LocationInfo, WeatherCondition
 
     text = voice.format_spoken_weather(
-        WeatherCondition(symbol_code='clearsky_day', temperature_celsius=21.0),
+        WeatherCondition(
+            symbol_code='clearsky_day',
+            temperature_celsius=21.0,
+            temperature_display_value=21.0 * 9 / 5 + 32,
+            temperature_display_unit='°F',
+        ),
         LocationInfo(
             latitude=37.77,
             longitude=-122.42,
@@ -439,7 +454,12 @@ def test_format_spoken_weather_without_a_city(
     from ubo_app.store.services.localization import WeatherCondition
 
     text = voice.format_spoken_weather(
-        WeatherCondition(symbol_code='rain', temperature_celsius=11.0),
+        WeatherCondition(
+            symbol_code='rain',
+            temperature_celsius=11.0,
+            temperature_display_value=11.0,
+            temperature_display_unit='°C',
+        ),
         None,
     )
 

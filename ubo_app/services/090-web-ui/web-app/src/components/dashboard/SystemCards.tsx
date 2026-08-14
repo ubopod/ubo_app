@@ -12,7 +12,7 @@ interface SystemCardProps {
 
 export function ProcessorCard({ system }: SystemCardProps) {
   const percent = system.cpuPercent ?? 0;
-  const temperature = system.cpuTemperatureCelsius;
+  const temperature = system.cpuTemperatureDisplayValue;
 
   return (
     <DashboardCard title="Processor" icon="󰻠">
@@ -31,7 +31,7 @@ export function ProcessorCard({ system }: SystemCardProps) {
             icon="󰔏"
             label="Temperature"
             value={temperature.toFixed(1)}
-            unit="°C"
+            unit={system.cpuTemperatureDisplayUnit}
           />
         </Box>
       )}

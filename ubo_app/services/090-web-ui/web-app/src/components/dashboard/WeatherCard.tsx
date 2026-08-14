@@ -99,7 +99,8 @@ export function WeatherCard({ localization }: WeatherCardProps) {
             cloudColor={theme.palette.text.secondary}
           />
           <Typography variant="h4" fontWeight={600} lineHeight={1.1}>
-            {Math.round(weather.temperatureCelsius)}°C
+            {Math.round(weather.temperatureDisplayValue ?? weather.temperatureCelsius)}
+            {weather.temperatureDisplayUnit ?? "°C"}
           </Typography>
         </Box>
         <Typography variant="body2" color="text.secondary">
@@ -119,10 +120,10 @@ export function WeatherCard({ localization }: WeatherCardProps) {
             <span style={{ fontFamily: "ArimoNerdFont" }}>󰍎</span> {place}
           </Typography>
         )}
-        {weather.windSpeedMps != null && (
+        {weather.windSpeedDisplayValue != null && (
           <Typography variant="caption" color="text.secondary" display="block">
             <span style={{ fontFamily: "ArimoNerdFont" }}>󰖝</span>{" "}
-            {weather.windSpeedMps.toFixed(1)} m/s
+            {weather.windSpeedDisplayValue.toFixed(1)} {weather.windSpeedDisplayUnit}
           </Typography>
         )}
       </Box>
