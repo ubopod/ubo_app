@@ -15,6 +15,7 @@ from ubo_app.store.core.view_registry import (
     register_home_view_dependency,
 )
 from ubo_app.store.main import store
+from ubo_app.store.services.localization import UnitSystem
 from ubo_app.store.services.system import (
     SystemMetricsUpdateAction,
     SystemStorageUpdateAction,
@@ -23,7 +24,7 @@ from ubo_app.utils.async_ import create_task
 from ubo_app.utils.units import convert_temperature_c, resolve_unit_system
 
 if TYPE_CHECKING:
-    from ubo_app.store.services.localization import UnitSystem
+    from ubo_app.store.services.localization import LocalizationState
     from ubo_app.utils.types import Subscriptions
 
 # Only dispatch CPU/RAM if delta exceeds this threshold (percentage points)
@@ -118,14 +119,23 @@ def _has_temperature_change(temperature: float | None) -> bool:
     return abs(temperature - float(previous)) > _TEMPERATURE_THRESHOLD
 
 
-@store.with_state(
-    lambda state: resolve_unit_system(
-        state.localization.unit_system,
-        state.localization.location.country_code
-        if state.localization.location
-        else None,
-    ),
-)
+def _unit_system_of(localization: LocalizationState | None) -> UnitSystem:
+    """Resolve the unit system, tolerating an absent localization slice.
+
+    The localization service can be disabled, and `state.localization` raises
+    rather than returning None when its slice is absent — the same reason the
+    docker service reads the MQTT slice through `getattr`. Metric is the
+    fallback `resolve_unit_system` itself lands on with no country known.
+    """
+    if localization is None:
+        return UnitSystem.METRIC
+    return resolve_unit_system(
+        localization.unit_system,
+        localization.location.country_code if localization.location else None,
+    )
+
+
+@store.with_state(lambda state: _unit_system_of(getattr(state, 'localization', None)))
 def _effective_unit_system(unit_system: UnitSystem) -> UnitSystem:
     return unit_system
 
