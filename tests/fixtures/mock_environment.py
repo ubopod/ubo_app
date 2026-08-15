@@ -45,6 +45,7 @@ def _monkeypatch_socket(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _monkeypatch_psutil(monkeypatch: pytest.MonkeyPatch) -> None:
+    import os
     import socket
 
     import psutil
@@ -55,6 +56,43 @@ def _monkeypatch_psutil(monkeypatch: pytest.MonkeyPatch) -> None:
         'virtual_memory',
         lambda *_: type('', (object,), {'percent': 50}),
     )
+    # Everything below feeds `SystemState`, which is snapshotted — so each has
+    # to be a fixed value rather than whatever the test machine happens to
+    # report, or the store snapshot would never settle.
+    monkeypatch.setattr(
+        psutil,
+        'disk_usage',
+        lambda *_: type(
+            '',
+            (object,),
+            {'total': 32 * 1024**3, 'used': 8 * 1024**3, 'free': 24 * 1024**3,
+             'percent': 25.0},
+        ),
+    )
+    # Constant counters mean the computed rate is always 0, which is exactly
+    # what a snapshot wants.
+    monkeypatch.setattr(
+        psutil,
+        'net_io_counters',
+        lambda *_, **__: type(
+            '',
+            (object,),
+            {'bytes_sent': 1024, 'bytes_recv': 2048},
+        ),
+    )
+    monkeypatch.setattr(psutil, 'boot_time', lambda: 1700000000.0)
+    # A fixed reading rather than an empty mapping: empty would send the
+    # collector on to `/sys/class/thermal/thermal_zone0/temp`, which exists in
+    # Docker and on the Pi and would report the host's real temperature.
+    monkeypatch.setattr(
+        psutil,
+        'sensors_temperatures',
+        lambda *_, **__: {
+            'cpu_thermal': [type('', (object,), {'current': 42.0})],
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(os, 'getloadavg', lambda: (0.0, 0.0, 0.0))
     monkeypatch.setattr(
         psutil,
         'net_if_addrs',
@@ -79,6 +117,38 @@ def _monkeypatch_docker(monkeypatch: pytest.MonkeyPatch) -> None:
         'docker.from_env',
         lambda: Fake(_Fake__attrs={'ping': Fake(_Fake__return_value=False)}),
     )
+
+
+def _monkeypatch_zeroconf(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep mDNS advertisements off the wire.
+
+    The docker service advertises the gRPC control API over mDNS whenever gRPC
+    access is on — which is the default — so without this the suite would open a
+    real multicast socket per test and leave zeroconf's background threads
+    running across tests.
+    """
+    from fake import Fake
+
+    # The shared registry rather than the two module functions: consumers bind
+    # those by name at import, so patching them would miss a module imported
+    # before this fixture ran. Both functions resolve `_shared` at call time.
+    monkeypatch.setattr('ubo_app.utils.zeroconf._shared', Fake())
+
+
+def _monkeypatch_timezone(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the process timezone to UTC.
+
+    `_monkeypatch_datetime` pins the instant, but that is only half of it: with
+    no location set, the localization service publishes the clock via
+    `datetime.now().astimezone()` (`010-localization/setup.py:402`), which
+    renders it in the *system* zone. A UTC Docker container and a device on
+    local time would otherwise disagree on `clock`/`date` — and the store
+    snapshot with them. UTC keeps device and desktop on the same values.
+    """
+    import time
+
+    monkeypatch.setenv('TZ', 'UTC')
+    time.tzset()
 
 
 def _monkeypatch_datetime(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -296,6 +366,7 @@ async def _fake_create_subprocess_exec(  # noqa: C901
         'rpi-connect',
         'route',
         'tailscale',
+        'weston',
     ):
         expected = True
 
@@ -362,6 +433,7 @@ def _monkeypatch_simpleaudio() -> None:
 def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
     random.seed(0)
+    _monkeypatch_timezone(monkeypatch)
     _monkeypatch_datetime(monkeypatch)
 
     import atexit
@@ -460,6 +532,7 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     _monkeypatch_socket(monkeypatch)
     _monkeypatch_psutil(monkeypatch)
     _monkeypatch_docker(monkeypatch)
+    _monkeypatch_zeroconf(monkeypatch)
     _monkeypatch_uuid(monkeypatch)
     _monkeypatch_aiohttp()
     _monkeypatch_piper()

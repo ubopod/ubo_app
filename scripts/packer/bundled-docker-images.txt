@@ -1,0 +1,8 @@
+# Docker images baked into the generated device image, loaded on first boot.
+# One full image reference per line (must include registry + tag, arm64-capable).
+# Blank lines and lines starting with '#' are ignored.
+#
+# Adding a container here is the only change needed to bundle it. Keep each ref
+# in sync with its definition under ubo_app/services/080-docker/apps/ when the
+# tag bumps.
+docker.io/thegrandpkizzle/envoy:1.26.1

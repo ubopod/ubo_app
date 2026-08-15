@@ -5,10 +5,12 @@
     "active_audio_source": "",
     "active_policy": null,
     "active_source": null,
+    "active_system_prompt": "",
     "elevenlabs_available_voices": [],
     "elevenlabs_voices": [],
     "generic_llm_providers": [],
     "is_active": false,
+    "is_default_system_prompt_enabled": true,
     "is_listening": false,
     "is_microphone_mute": true,
     "kokoro_is_downloaded": false,
@@ -156,21 +158,26 @@
       "venice": "af_heart"
     },
     "selected_vosk_model": "vosk-model-small-en-us-0.15",
+    "system_prompts": [],
     "vosk_downloaded_models": []
   },
   "audio": {
     "_type": "AudioState",
     "capture_volume": 0.5,
     "is_capture_mute": true,
+    "is_lineout_auto_switch_enabled": true,
+    "is_lineout_jack_inserted": false,
     "is_playback_mute": false,
     "is_recording": false,
+    "is_remote_capture_active": false,
+    "output_volumes": [],
     "playback_volume": 0.15,
-    "recording": null
+    "recording": null,
+    "selected_output": "ubo_speakers"
   },
   "camera": {
     "_type": "CameraState",
     "available_cameras": [],
-    "camera_type": "default",
     "pending_remote_registrations": [],
     "queue": [],
     "selected_source_id": "local:0"
@@ -190,150 +197,217 @@
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "envoy_grpc",
       "instructions": null,
       "label": "Envoy proxy",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "hermes": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "hermes",
       "instructions": null,
       "label": "Hermes Agent",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "home_assistant": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "home_assistant",
       "instructions": null,
       "label": "Home Assistant",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "home_bridge": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "home_bridge",
       "instructions": null,
       "label": "Home Bridge",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "immich": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "immich",
       "instructions": null,
       "label": "Immich",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "n8n": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "n8n",
       "instructions": null,
       "label": "n8n",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "ngrok": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "ngrok",
       "instructions": null,
       "label": "Ngrok",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "node_red": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "node_red",
       "instructions": null,
       "label": "Node-RED",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "ollama": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "ollama",
       "instructions": null,
       "label": "Ollama",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "open_webui": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "open_webui",
       "instructions": null,
       "label": "Open WebUI",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "openclaw": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "openclaw",
       "instructions": null,
       "label": "OpenClaw",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "pangolin": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "pangolin",
       "instructions": null,
       "label": "Pangolin",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "pi_hole": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "pi_hole",
       "instructions": null,
       "label": "Pi-hole",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "portainer": {
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "portainer",
       "instructions": null,
       "label": "Portainer",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     },
     "service": {
       "_type": "DockerServiceState",
+      "apps": {},
       "expose_to_lan": {},
-      "macvlan_enabled": false,
-      "macvlan_gateway": "",
-      "macvlan_ip": "",
-      "macvlan_parent": "",
-      "macvlan_subnet": "",
+      "host_network_enabled": false,
       "status": "running",
       "usernames": {},
       "zigbee_adapter_by_id": "",
@@ -343,10 +417,15 @@
       "_type": "ImageState",
       "container_ip": null,
       "docker_id": null,
+      "failing_services": [],
       "id": "twingate",
       "instructions": null,
       "label": "Twingate",
+      "last_error": "",
+      "last_exit_at": null,
+      "last_exit_code": null,
       "ports": [],
+      "restart_count": 0,
       "status": "not_available"
     }
   },
@@ -387,12 +466,52 @@
     "is_on_chat": false,
     "is_on_notification": false
   },
+  "kiosk": {
+    "_type": "KioskState",
+    "connected_ports": [],
+    "dashboards": [
+      {
+        "_type": "KioskDashboard",
+        "id": "ubo-webui",
+        "name": "Ubo WebUI",
+        "url": "http://localhost:4321"
+      }
+    ],
+    "is_active": true,
+    "is_enabled": false,
+    "is_installed": false,
+    "is_installing": false,
+    "port_selections": {
+      "_type": "KioskPortSelections",
+      "hdmi_a_1": {
+        "_type": "KioskPortSelection",
+        "dashboard_id": "ubo-webui",
+        "role": "browser"
+      },
+      "hdmi_a_2": {
+        "_type": "KioskPortSelection",
+        "dashboard_id": null,
+        "role": "terminal"
+      }
+    }
+  },
   "lightdm": {
     "_type": "LightDMState",
     "is_active": true,
     "is_enabled": true,
     "is_installed": true,
     "is_installing": false
+  },
+  "localization": {
+    "_type": "LocalizationState",
+    "clock": "00:00",
+    "date": "2023-01-01",
+    "language": "en",
+    "location": null,
+    "location_source": "ip",
+    "public_ip": null,
+    "unit_system": "auto",
+    "weather": null
   },
   "main": {
     "_type": "MainState",
@@ -469,6 +588,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Assistant",
+        "color": null,
         "icon": "󰹉",
         "key": "assistant:image_generator",
         "label": "Image Generator",
@@ -480,6 +600,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Assistant",
+        "color": null,
         "icon": "󰁤",
         "key": "assistant:llm",
         "label": "Language Model",
@@ -491,6 +612,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Assistant",
+        "color": null,
         "icon": "󰶗",
         "key": "assistant:providers",
         "label": "Manage",
@@ -502,10 +624,23 @@
         "app_category": null,
         "background_color": null,
         "category": "Assistant",
+        "color": null,
         "icon": "",
         "key": "assistant:stt",
         "label": "Speech Recognition",
         "priority": 50
+      },
+      "assistant:system_prompts": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Assistant",
+        "color": null,
+        "icon": "󰈙",
+        "key": "assistant:system_prompts",
+        "label": "System Prompt",
+        "priority": 18
       },
       "assistant:tts": {
         "_type": "RegisteredAppEntry",
@@ -513,10 +648,23 @@
         "app_category": null,
         "background_color": null,
         "category": "Assistant",
+        "color": null,
         "icon": "󰔊",
         "key": "assistant:tts",
         "label": "Speech Synthesis",
         "priority": 30
+      },
+      "audio:": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Hardware",
+        "color": null,
+        "icon": "󰕾",
+        "key": "audio:",
+        "label": "Audio",
+        "priority": 20
       },
       "camera:": {
         "_type": "RegisteredAppEntry",
@@ -524,6 +672,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Hardware",
+        "color": null,
         "icon": "",
         "key": "camera:",
         "label": "Camera",
@@ -535,6 +684,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Hardware",
+        "color": null,
         "icon": "󰍹",
         "key": "display:",
         "label": "Display",
@@ -546,6 +696,7 @@
         "app_category": "__apps_root__",
         "background_color": "#FFC107",
         "category": null,
+        "color": null,
         "icon": "󰋺",
         "key": "docker:_import",
         "label": "Add New App",
@@ -557,6 +708,7 @@
         "app_category": "Networking",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󱂇",
         "key": "docker:envoy_grpc",
         "label": "Envoy proxy",
@@ -568,6 +720,7 @@
         "app_category": "AI Agents",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󱚣",
         "key": "docker:hermes",
         "label": "Hermes Agent",
@@ -579,6 +732,7 @@
         "app_category": "Home Automation",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󰟐",
         "key": "docker:home_assistant",
         "label": "Home Assistant",
@@ -590,6 +744,7 @@
         "app_category": "Home Automation",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󰘘",
         "key": "docker:home_bridge",
         "label": "Home Bridge",
@@ -601,6 +756,7 @@
         "app_category": "Files",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "",
         "key": "docker:immich",
         "label": "Immich",
@@ -612,6 +768,7 @@
         "app_category": "AI Agents",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󱂚",
         "key": "docker:n8n",
         "label": "n8n",
@@ -623,6 +780,7 @@
         "app_category": "Remote Access",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󰛶",
         "key": "docker:ngrok",
         "label": "Ngrok",
@@ -634,6 +792,7 @@
         "app_category": "Home Automation",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󰚀",
         "key": "docker:node_red",
         "label": "Node-RED",
@@ -645,6 +804,7 @@
         "app_category": "AI Engines",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󰳆",
         "key": "docker:ollama",
         "label": "Ollama",
@@ -656,6 +816,7 @@
         "app_category": "AI Engines",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󰾔",
         "key": "docker:open_webui",
         "label": "Open WebUI",
@@ -667,6 +828,7 @@
         "app_category": "AI Agents",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󰒍",
         "key": "docker:openclaw",
         "label": "OpenClaw",
@@ -678,6 +840,7 @@
         "app_category": "Remote Access",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "",
         "key": "docker:pangolin",
         "label": "Pangolin",
@@ -689,6 +852,7 @@
         "app_category": "Networking",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󰇖",
         "key": "docker:pi_hole",
         "label": "Pi-hole",
@@ -700,6 +864,7 @@
         "app_category": "Container Management",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "",
         "key": "docker:portainer",
         "label": "Portainer",
@@ -711,6 +876,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Docker",
+        "color": null,
         "icon": "󱥉",
         "key": "docker:registries",
         "label": "Registries",
@@ -722,6 +888,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Docker",
+        "color": null,
         "icon": "",
         "key": "docker:service",
         "label": "Service",
@@ -733,6 +900,7 @@
         "app_category": "Remote Access",
         "background_color": null,
         "category": null,
+        "color": "#ffffff",
         "icon": "󰒄",
         "key": "docker:twingate",
         "label": "Twingate",
@@ -744,6 +912,7 @@
         "app_category": "Files",
         "background_color": null,
         "category": null,
+        "color": null,
         "icon": "󰉋",
         "key": "file_system:file-system",
         "label": "File System",
@@ -755,6 +924,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Hardware",
+        "color": null,
         "icon": "󰻅",
         "key": "infrared:infrared",
         "label": "Infrared",
@@ -766,6 +936,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Network",
+        "color": null,
         "icon": "󰩟",
         "key": "ip:",
         "label": "IP Addresses",
@@ -777,10 +948,47 @@
         "app_category": null,
         "background_color": null,
         "category": "System",
+        "color": null,
         "icon": "󰍹",
         "key": "lightdm:",
         "label": "Desktop",
         "priority": 0
+      },
+      "localization:language": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "localization:open_language_picker",
+        "app_category": null,
+        "background_color": null,
+        "category": "Localization",
+        "color": null,
+        "icon": "󰗊",
+        "key": "localization:language",
+        "label": "Language",
+        "priority": 0
+      },
+      "localization:location": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "localization:open_location_menu",
+        "app_category": null,
+        "background_color": null,
+        "category": "Localization",
+        "color": null,
+        "icon": "󰍎",
+        "key": "localization:location",
+        "label": "Location",
+        "priority": 1
+      },
+      "localization:unit_system": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "localization:open_unit_system_picker",
+        "app_category": null,
+        "background_color": null,
+        "category": "Localization",
+        "color": null,
+        "icon": "󰉉",
+        "key": "localization:unit_system",
+        "label": "Units of Measurement",
+        "priority": 2
       },
       "mcp:tools": {
         "_type": "RegisteredAppEntry",
@@ -788,10 +996,23 @@
         "app_category": null,
         "background_color": null,
         "category": "Assistant",
+        "color": null,
         "icon": "󰒋",
         "key": "mcp:tools",
         "label": "MCP Tools",
         "priority": 15
+      },
+      "mqtt:": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Network",
+        "color": null,
+        "icon": "󰵁",
+        "key": "mqtt:",
+        "label": "MQTT",
+        "priority": -1
       },
       "rpi_connect:": {
         "_type": "RegisteredAppEntry",
@@ -799,10 +1020,23 @@
         "app_category": null,
         "background_color": null,
         "category": "Remote",
+        "color": null,
         "icon": "󰌕",
         "key": "rpi_connect:",
         "label": "RPi Connect",
         "priority": null
+      },
+      "sensors:": {
+        "_type": "RegisteredAppEntry",
+        "action_id": null,
+        "app_category": null,
+        "background_color": null,
+        "category": "Hardware",
+        "color": null,
+        "icon": "󰡵",
+        "key": "sensors:",
+        "label": "Sensors",
+        "priority": 1
       },
       "speech_recognition:": {
         "_type": "RegisteredAppEntry",
@@ -810,6 +1044,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Accessibility",
+        "color": null,
         "icon": "󰍮",
         "key": "speech_recognition:",
         "label": "Voice Shortcuts",
@@ -821,6 +1056,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Assistant",
+        "color": null,
         "icon": "󰍯",
         "key": "speech_recognition:wake_up",
         "label": "Wake Up",
@@ -832,6 +1068,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Accessibility",
+        "color": null,
         "icon": "󰔊",
         "key": "speech_synthesis:",
         "label": "Screen Reader",
@@ -843,6 +1080,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Remote",
+        "color": null,
         "icon": "󰣀",
         "key": "ssh:",
         "label": "SSH",
@@ -854,6 +1092,7 @@
         "app_category": null,
         "background_color": null,
         "category": "System",
+        "color": null,
         "icon": "󰡉",
         "key": "users:",
         "label": "Users",
@@ -865,6 +1104,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Remote",
+        "color": null,
         "icon": "󰨞",
         "key": "vscode:",
         "label": "VSCode",
@@ -876,6 +1116,7 @@
         "app_category": null,
         "background_color": null,
         "category": "Network",
+        "color": null,
         "icon": "󰖩",
         "key": "wifi:",
         "label": "WiFi",
@@ -887,7 +1128,9 @@
       "assistant:llm": 40,
       "assistant:providers": 10,
       "assistant:stt": 50,
+      "assistant:system_prompts": 18,
       "assistant:tts": 30,
+      "audio:": 20,
       "camera:": 1,
       "display:": 10,
       "docker:registries": 2,
@@ -895,8 +1138,13 @@
       "infrared:infrared": null,
       "ip:": 0,
       "lightdm:": 0,
+      "localization:language": 0,
+      "localization:location": 1,
+      "localization:unit_system": 2,
       "mcp:tools": 15,
+      "mqtt:": -1,
       "rpi_connect:": null,
+      "sensors:": 1,
       "speech_recognition:": 30,
       "speech_recognition:wake_up": 100,
       "speech_synthesis:": 10,
@@ -957,6 +1205,26 @@
     "mcp_servers": {},
     "server_statuses": {}
   },
+  "mqtt": {
+    "_type": "MqttState",
+    "allow_remote_control": false,
+    "broker": {
+      "_type": "MqttBrokerConfig",
+      "ca_cert_path": "",
+      "has_password": false,
+      "host": "127.0.0.1",
+      "port": 1883,
+      "source": "bundled",
+      "use_tls": false,
+      "username": ""
+    },
+    "bundled_credentials_revision": 0,
+    "bundled_expose_to_lan": false,
+    "is_enabled": true,
+    "last_error": null,
+    "published_components": {},
+    "status": "disabled"
+  },
   "notifications": {
     "_type": "NotificationsState",
     "notifications": [],
@@ -977,6 +1245,8 @@
   },
   "sensors": {
     "_type": "SensorsState",
+    "devices": {},
+    "is_scanning": false,
     "light": {
       "_type": "SensorState",
       "value": 0.0
@@ -988,7 +1258,9 @@
   },
   "settings": {
     "_type": "SettingsState",
+    "assistant_debug": false,
     "beta_versions": false,
+    "grpc_remote_access": true,
     "pdb_signal": false,
     "services": {
       "assistant": {
@@ -1101,6 +1373,16 @@
         "log_level": 20,
         "should_auto_restart": false
       },
+      "kiosk": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "kiosk",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "Browser Kiosk",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
       "lightdm": {
         "_type": "ServiceState",
         "errors": [],
@@ -1111,6 +1393,16 @@
         "log_level": 20,
         "should_auto_restart": false
       },
+      "localization": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "localization",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "Localization",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
       "mcp": {
         "_type": "ServiceState",
         "errors": [],
@@ -1118,6 +1410,16 @@
         "is_active": true,
         "is_enabled": true,
         "label": "MCP",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
+      "mqtt": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "mqtt",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "MQTT",
         "log_level": 20,
         "should_auto_restart": false
       },
@@ -1243,14 +1545,254 @@
       }
     },
     "services_status": "ready",
+    "tcp_lite_enabled": true,
     "visual_debug": false
   },
   "speech_recognition": {
     "_type": "SpeechRecognitionState",
-    "assistant_enabled": false,
+    "assistant_session_audio_source": "",
+    "commands_catalog": {
+      "_type": "SpeechRecognitionCommandsCatalog",
+      "items": [
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:assistant-on",
+          "label": "Turn on Assistant",
+          "sample_phrases": [
+            "Turn on Assistant"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:assistant-off",
+          "label": "Turn off Assistant",
+          "sample_phrases": [
+            "Turn off Assistant"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:wifi-camera",
+          "label": "WiFi Setup via Camera",
+          "sample_phrases": [
+            "Create WiFi Connection with Camera",
+            "Create WiFi Connection with QR Code",
+            "Create WiFi Connection using Camera"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:wifi-web",
+          "label": "WiFi Setup via Web",
+          "sample_phrases": [
+            "Create WiFi Connection with Web Dashboard",
+            "Create WiFi Connection with Web",
+            "Create WiFi Connection with Web UI"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:light-strip-toggle",
+          "label": "Toggle Light Strip",
+          "sample_phrases": [
+            "Turn on light strip",
+            "Turn off light strip"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-on",
+          "label": "Turn on Lights",
+          "sample_phrases": [
+            "Turn on Lights"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-off",
+          "label": "Turn off Lights",
+          "sample_phrases": [
+            "Turn off Lights"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-red",
+          "label": "Turn Lights Red",
+          "sample_phrases": [
+            "Turn Lights Red"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-green",
+          "label": "Turn Lights Green",
+          "sample_phrases": [
+            "Turn Lights Green"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-blue",
+          "label": "Turn Lights Blue",
+          "sample_phrases": [
+            "Turn Lights Blue"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-white",
+          "label": "Turn Lights White",
+          "sample_phrases": [
+            "Turn Lights White"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:lights-rainbow",
+          "label": "Turn Lights Rainbow",
+          "sample_phrases": [
+            "Turn Lights Rainbow"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:volume-up",
+          "label": "Turn Volume Up",
+          "sample_phrases": [
+            "Turn Volume Up"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:volume-down",
+          "label": "Turn Volume Down",
+          "sample_phrases": [
+            "Turn Volume Down"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:button-one",
+          "label": "Activate Button One",
+          "sample_phrases": [
+            "Activate Button One"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:button-two",
+          "label": "Activate Button Two",
+          "sample_phrases": [
+            "Activate Button Two"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:button-three",
+          "label": "Activate Button Three",
+          "sample_phrases": [
+            "Activate Button Three"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:go-back",
+          "label": "Go Back",
+          "sample_phrases": [
+            "Activate Back Button",
+            "Go Back"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:go-home",
+          "label": "Go Home",
+          "sample_phrases": [
+            "Activate Home Button",
+            "Go Home"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:scroll-up",
+          "label": "Scroll Up",
+          "sample_phrases": [
+            "Activate Up Button",
+            "Scroll Up"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:scroll-down",
+          "label": "Scroll Down",
+          "sample_phrases": [
+            "Activate Down Button",
+            "Scroll Down"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:ir-receive-on",
+          "label": "Enable IR Receiver",
+          "sample_phrases": [
+            "Enable Receive Keys",
+            "Turn on Receive Keys",
+            "Start Receiving IR"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:ir-receive-off",
+          "label": "Disable IR Receiver",
+          "sample_phrases": [
+            "Disable Receive Keys",
+            "Turn off Receive Keys",
+            "Stop Receiving IR"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:speak-time",
+          "label": "Say the Time",
+          "sample_phrases": [
+            "What time is it right now",
+            "What time is it",
+            "Whats the time"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:speak-date",
+          "label": "Say the Date",
+          "sample_phrases": [
+            "What day is it today",
+            "What day is it",
+            "Whats the date today"
+          ]
+        },
+        {
+          "_type": "SpeechRecognitionCommandDescriptor",
+          "id": "default:speak-weather",
+          "label": "Say the Weather",
+          "sample_phrases": [
+            "Whats the weather like today",
+            "Whats the weather like",
+            "Whats the weather today"
+          ]
+        }
+      ]
+    },
     "conversation_end_phrases": [
       "i am done talking",
       "i'm done talking"
+    ],
+    "enabled_wake_modes": [
+      "intents",
+      "quick_chat",
+      "conversation",
+      "stop_talking",
+      "home_assistant"
     ],
     "intents": [
       {
@@ -1524,9 +2066,78 @@
           "Stop Receiving IR",
           "Disable IR Receiver"
         ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_keys": [
+          "localization:speak-time"
+        ],
+        "id": "default:speak-time",
+        "label": "Say the Time",
+        "phrases": [
+          "What time is it (right now)",
+          "[Whats, What is] the time",
+          "Tell me the time"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_keys": [
+          "localization:speak-date"
+        ],
+        "id": "default:speak-date",
+        "label": "Say the Date",
+        "phrases": [
+          "What day is it (today)",
+          "[Whats, What is] the date (today)",
+          "[Whats, What is] todays date",
+          "Tell me the date"
+        ]
+      },
+      {
+        "_type": "SpeechRecognitionIntent",
+        "action_keys": [
+          "localization:speak-weather"
+        ],
+        "id": "default:speak-weather",
+        "label": "Say the Weather",
+        "phrases": [
+          "[Whats, What is] the weather (like) (today)",
+          "[Hows, How is] the weather (today)",
+          "Tell me the weather"
+        ]
       }
     ],
+    "microwakeword_models": [],
     "openwakeword_models": [],
+    "seeded_default_ids": [
+      "default:assistant-on",
+      "default:assistant-off",
+      "default:wifi-camera",
+      "default:wifi-web",
+      "default:light-strip-toggle",
+      "default:lights-on",
+      "default:lights-off",
+      "default:lights-red",
+      "default:lights-green",
+      "default:lights-blue",
+      "default:lights-white",
+      "default:lights-rainbow",
+      "default:volume-up",
+      "default:volume-down",
+      "default:button-one",
+      "default:button-two",
+      "default:button-three",
+      "default:go-back",
+      "default:go-home",
+      "default:scroll-up",
+      "default:scroll-down",
+      "default:ir-receive-on",
+      "default:ir-receive-off",
+      "default:speak-time",
+      "default:speak-date",
+      "default:speak-weather"
+    ],
     "status": "idle",
     "wake_engines": [
       {
@@ -1540,12 +2151,25 @@
         "enabled": false,
         "engine": "openwakeword",
         "triggers": []
+      },
+      {
+        "_type": "WakeWordEngineConfig",
+        "enabled": false,
+        "engine": "microwakeword",
+        "triggers": []
       }
     ],
     "wake_word_models_status": [
       {
         "_type": "WakeWordModelStatusEntry",
         "engine": "openwakeword",
+        "model_id": "",
+        "status": "not_available"
+      },
+      {
+        "_type": "WakeWordModelStatusEntry",
+        "engine": "microwakeword",
+        "model_id": "",
         "status": "not_available"
       }
     ]
@@ -1599,8 +2223,19 @@
   },
   "system": {
     "_type": "SystemState",
-    "clock": "00:00",
+    "boot_time": 1700000000.0,
     "cpu_percent": 50,
+    "cpu_temperature_celsius": 42.0,
+    "cpu_temperature_display_unit": "°C",
+    "cpu_temperature_display_value": 42.0,
+    "disk_percent": 25.0,
+    "disk_total_bytes": 34359738368,
+    "disk_used_bytes": 8589934592,
+    "load_average_1": 0.0,
+    "load_average_15": 0.0,
+    "load_average_5": 0.0,
+    "network_download_bps": 0.0,
+    "network_upload_bps": 0.0,
     "ram_percent": 50
   },
   "update_manager": {

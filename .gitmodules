@@ -1,0 +1,7 @@
+[submodule "ubo_lvgl/lvgl"]
+	path = ubo_lvgl/lvgl
+	url = https://github.com/lvgl/lvgl.git
+	branch = release/v9.3
+[submodule "ubo_lvgl/third_party/nanopb"]
+	path = ubo_lvgl/third_party/nanopb
+	url = https://github.com/nanopb/nanopb.git

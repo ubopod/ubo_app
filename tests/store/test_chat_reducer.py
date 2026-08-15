@@ -557,3 +557,58 @@ def test_end_session_clears_audio_playing_flag() -> None:
     result = reducer(state, _TYPES['ChatEndSessionAction']())
     new_state = result.state if isinstance(result, CompleteReducerResult) else result
     assert new_state.is_audio_playing is False
+
+
+def test_none_state_without_init_raises() -> None:
+    """A non-init action against a None state is an initialization error."""
+    import pytest
+    from redux import InitializationActionError
+
+    with pytest.raises(InitializationActionError):
+        reducer(None, _TYPES['ChatClearAction']())
+
+
+def test_send_user_message_honours_explicit_id() -> None:
+    """A supplied message_id is used verbatim for the created USER bubble."""
+    result = reducer(
+        _TYPES['ChatState'](is_active=True),
+        _TYPES['ChatSendUserMessageAction'](text='hi', message_id='m-1'),
+    )
+    assert isinstance(result, CompleteReducerResult)
+    assert result.state.messages[-1].id == 'm-1'
+
+
+def test_history_is_trimmed_to_the_cap() -> None:
+    """Sending past the history cap keeps only the most recent messages."""
+    cap = reducer.__globals__['_CHAT_HISTORY_MAX_MESSAGES']
+    messages = tuple(
+        _TYPES['ChatMessage'](role=_TYPES['ChatRole'].USER, text=str(i))
+        for i in range(cap)
+    )
+    state = _TYPES['ChatState'](is_active=True, messages=messages)
+
+    result = reducer(state, _TYPES['ChatSendUserMessageAction'](text='newest'))
+
+    assert len(result.state.messages) == cap
+    assert result.state.messages[-1].text == 'newest'
+
+
+def test_toggle_playback_for_unknown_message_is_noop() -> None:
+    """Toggling an id that isn't in the transcript leaves the state untouched."""
+    state = _TYPES['ChatState'](is_active=True)
+    assert (
+        reducer(state, _TYPES['ChatToggleAudioPlaybackAction'](message_id='nope'))
+        is state
+    )
+
+
+def test_finish_action_resets_state() -> None:
+    """FinishAction wipes the chat back to a fresh state."""
+    state = _TYPES['ChatState'](
+        is_active=True,
+        messages=(_TYPES['ChatMessage'](role=_TYPES['ChatRole'].USER),),
+    )
+    result = reducer(state, reducer.__globals__['FinishAction']())
+    assert isinstance(result, _TYPES['ChatState'])
+    assert result.messages == ()
+    assert result.is_active is False

@@ -5,8 +5,8 @@
 The speech-recognition service is the device's offline **ears**: it streams system-microphone
 audio through one or more pluggable engines to detect *wake words* (which start the assistant or a
 command-listener) and to recognise short *voice commands* (intents) that fire bindable actions. It
-owns the wake-phrase configuration UI, the OpenWakeWord model pool (download / upload / delete), and
-the mapping from a detected phrase to an assistant behaviour.
+owns the wake-phrase configuration UI, the OpenWakeWord and microWakeWord model pools (download /
+upload / delete), and the mapping from a detected phrase to an assistant behaviour.
 
 It loads in the `090-` tier (higher-level, app-like services) because it depends on the audio input
 pipeline (`audio` slice), the assistant, infrared, RGB-ring, and notifications services already
@@ -29,6 +29,7 @@ being available to consume and drive.
 | `abstraction/wake_word_recognition_mixin.py` | `WakeWordRecognitionMixin` + `WakeTrigger` — trigger-list wake detection. |
 | `vosk_engine.py`                      | Vosk engine: speech recognition **and** wake detection; lazy Kaldi model load. |
 | `openwakeword_engine.py`              | OpenWakeWord engine: confidence-scored wake detection + model download/upload/delete/scan. |
+| `microwakeword_engine.py`             | microWakeWord engine: streaming `.tflite` wake detection over `pymicro-wakeword` + model scan/validate/install/delete. Catalog lives in [`ubo_app/engines/microwakeword_catalog.py`](../../engines/microwakeword_catalog.py). |
 | `engines_manager.py`                  | `EnginesManager`: registry of engines, mic fan-out, trigger sync, detection routing, cleanup. |
 | `mic_buffer.py`                       | `MicBuffer` — rolling N-second mic buffer dumped to WAV on assistant wake/stop phrases. |
 | `pattern.py`                          | `expand_pattern()` — compact utterance-pattern → concrete phrase list.     |
@@ -47,11 +48,14 @@ Slice: `state.speech_recognition` —
 | ------------------------- | --------------------------------------- | ------------------------------------------------------------- |
 | `intents`                 | `list[SpeechRecognitionIntent]`         | Voice commands: phrases → bindable `action_keys`. Seeded from `DEFAULT_COMMANDS` on first run; persisted. |
 | `wake_engines`            | `tuple[WakeWordEngineConfig, ...]`      | Per-engine `enabled` flag + its `WakeWordTrigger`s. Persisted; migrated from legacy keys. |
-| `assistant_enabled`       | `bool`                                  | Master switch for QUICK_CHAT/CONVERSATION wake modes (INTENTS/STOP_TALKING unaffected). Persisted. |
+| `enabled_wake_modes`      | `tuple[WakeMode, ...]`                  | Which wake modes are armed. Per-mode switches for Shortcut/Short Chat/Conversation; STOP_TALKING is always armed (no switch). Fresh installs default to all on. Persisted. |
 | `openwakeword_models`     | `tuple[str, ...]`                       | OpenWakeWord model stems on disk (downloaded + uploaded). Derived from disk at startup; **not** persisted. |
+| `microwakeword_models`    | `tuple[str, ...]`                       | microWakeWord model ids on disk (downloaded from the catalog, or uploaded). Derived from disk at startup; **not** persisted. |
 | `conversation_end_phrases`| `tuple[str, ...]`                       | End-of-turn phrases consumed assistant-side. Persisted.       |
-| `status`                  | `SpeechRecognitionStatus`               | `IDLE` / `INTENTS_WAITING` / `ASSISTANT_WAITING`.             |
-| `wake_word_models_status` | `tuple[WakeWordModelStatusEntry, ...]`  | Per-engine default-model download status (tuple, not enum-map, so it round-trips over gRPC). |
+| `status`                  | `SpeechRecognitionStatus`               | `IDLE` / `INTENTS_WAITING` (standalone command window, 10 s) / `ASSISTANT_WAITING` (stage-1 matching armed alongside a quick-chat session). |
+| `assistant_session_audio_source` | `str`                            | The mic of the quick-chat session stage-1 is armed for (only meaningful while `ASSISTANT_WAITING`). `''` = on-device system mic — the only source Vosk consumes, so a non-empty value (web mic) keeps the grammar disarmed. |
+| `commands_catalog`        | `SpeechRecognitionCommandsCatalog`      | Trimmed mirror of `intents` (patterns pre-expanded into ≤3 sample phrases) for the assistant's `run_device_command` LLM tool. Rebuilt by the reducer at every `intents` write site; must be materialised because gRPC autoruns subscribe by *field path*, not selector. |
+| `wake_word_models_status` | `tuple[WakeWordModelStatusEntry, ...]`  | Per-engine model download status, plus the `model_id` in flight for engines that fetch one at a time (tuple, not enum-map, so it round-trips over gRPC). |
 
 Each `WakeWordTrigger` carries `id`, `label`, `mode` (`WakeMode`), `value` (engine-specific: a Vosk
 phrase or an OpenWakeWord model stem), and `sensitivity` (0.0–1.0, only used by confidence-scored
@@ -67,7 +71,8 @@ filesystem, action resolution) is done in `setup.py` event handlers.
 | ------------------------------------------------- | -------------------------------------------------------------- |
 | `WakeEngineSetEnabledAction`                      | Flip an engine's `enabled` flag.                               |
 | `WakeTriggerAddAction` / `WakeTriggerRemoveAction`| Add/remove a trigger (sensitivity clamped to `[0,1]`).        |
-| `SpeechRecognitionSetAssistantEnabledAction`      | Set `assistant_enabled`.                                       |
+| `SpeechRecognitionSetAssistantEnabledAction`      | Arm/disarm QUICK_CHAT + CONVERSATION together (backs the voice command). |
+| `SpeechRecognitionSetWakeModeEnabledAction`       | Arm/disarm a single wake mode (backs the per-mode switches).  |
 | `SpeechRecognitionAdd/Update/RemoveCommandAction` | Edit the `intents` command list.                              |
 | `SpeechRecognitionSetConversationEndPhrasesAction`| Replace `conversation_end_phrases`.                           |
 | `SpeechRecognitionReportWakeWordDetectionAction`  | Resolve `(engine, trigger_id)` → mode → `_apply_wake_mode` (see below). |
@@ -75,20 +80,56 @@ filesystem, action resolution) is done in `setup.py` event handlers.
 | `WakeWordDownloadModelsAction`                    | Mark engine `DOWNLOADING` → **`WakeWordDownloadModelsEvent`** → `_handle_download_models`. |
 | `WakeWordDeleteModelAction`                       | Prune pool + triggers → **`WakeWordDeleteModelEvent`** → `_handle_delete_model`. |
 | `WakeWordSetAvailableModelsAction` / `WakeWordSetModelsStatusAction` | Record disk-scan results (dispatched by the service). |
-| `SpeechRecognitionReportIntentDetectionAction`    | → **`SpeechRecognitionBoundActionTriggeredEvent`** → `_handle_bound_action_triggered`. |
+| `SpeechRecognitionReportIntentDetectionAction`    | **Status-gated.** From `INTENTS_WAITING` → **`SpeechRecognitionBoundActionTriggeredEvent`**. From `ASSISTANT_WAITING` → the same event *plus* `AssistantStopTalkingAction` (stage 1 — see below). From `IDLE` → dropped; this is the exactly-once guard. |
+| `SpeechRecognitionSetAssistantListeningAction`    | Arm (`IDLE` → `ASSISTANT_WAITING`) / disarm stage-1 matching. Dispatched by `setup.py`'s autorun on the assistant's `is_listening`. |
+| `SpeechRecognitionRunCommandAction`               | Stage 2 — the LLM's `run_device_command` tool. Status-independent; resolves `command_id` against `intents` → **`SpeechRecognitionBoundActionTriggeredEvent`**. Unknown id is a no-op. |
 | `SpeechRecognitionReportIntentTimeoutAction`      | Leave `INTENTS_WAITING`, blank the ring.                       |
-| `SpeechRecognitionReportSpeechAction`             | Return to `IDLE` + acknowledgment.                            |
+| `SpeechRecognitionReportSpeechAction`             | Return to `IDLE` + acknowledgment. (No longer dispatched by the service; kept as an RPC contract.) |
 
-`_apply_wake_mode` (`reducer.py:91`) is the single mode→effect map, shared by audio detections and
+`_apply_wake_mode` (`reducer.py`) is the single mode→effect map, shared by audio detections and
 Infrared-bound triggers: `INTENTS` arms the command listener (blue ring) when idle;
 `QUICK_CHAT`/`CONVERSATION` dispatch `AssistantStartListeningAction` when idle (subject to the
-`assistant_enabled` gate on the audio path); `STOP_TALKING` dispatches `AssistantStopTalkingAction`.
+mode's `enabled_wake_modes` gate on the audio path); `STOP_TALKING` dispatches `AssistantStopTalkingAction`,
+or — while the command window is armed — simply dismisses it. A wake detected *during* a quick-chat
+session leaves `ASSISTANT_WAITING` intact: OpenWakeWord is not grammar-constrained and can still fire
+there, and dropping to `IDLE` would disarm stage-1 for the rest of the session (the arming autorun
+keys off `is_listening`, which has not changed, so it would never re-arm).
+
+## Two-stage voice commands during a quick-chat session
+
+A QUICK_CHAT wake ("hey quick question") starts an assistant session in which *every* utterance would
+otherwise be answered by the LLM — including "turn on the lights", which a configured voice shortcut
+already handles. Two stages avoid that:
+
+- **Stage 1 (local, offline).** While the session listens, `status` is `ASSISTANT_WAITING` and the
+  Vosk grammar is armed with the same expanded shortcut phrases the `INTENTS` window uses. A match
+  runs the bound action and ends the session, so the turn never reaches the LLM.
+- **Stage 2 (LLM).** The `commands_catalog` is exposed to the LLM as one generic
+  `run_device_command(command_id)` tool, so a near-miss phrasing that fell through to the LLM can
+  still trigger a shortcut. Unavailable on providers that don't support tools (`cerebras`, `ollama`,
+  `ollama_onprem`); stage 1 still works there.
+
+Two details are load-bearing:
+
+- **The stop phrase rides along in the armed grammar** (`matching.stop_talking_triggers`). Vosk's
+  grammar is whatever the *ongoing* recognition asks for and nothing else — its wake words are
+  dropped while one is active, and `SpeechRecognitionMixin.report` never falls through to the wake
+  mixin. Without folding the `STOP_TALKING` phrases in, arming stage-1 would take barge-in deaf for
+  the whole session. Shortcuts are matched *first*, so a shortcut containing the stop phrase ("stop
+  the music" against a "stop" trigger) still runs the shortcut.
+- **Discarding the turn is not automatic.** The `InterruptionFrame` raised by
+  `AssistantStopTalkingAction` cancels in-flight LLM/TTS but does *not* clear pipecat's user
+  aggregation, and session teardown flushes it. The assistant subprocess's `StopTalkingOnSignal` sits
+  downstream of STT and both resets the aggregator and swallows the late cloud-STT transcript.
+
+Stage-1 is armed only for on-device quick-chat sessions: `_queue_chunk` drops remote (web/mobile) mic
+audio, so Vosk could never hear such a session — hence the `assistant_session_audio_source` gate.
 
 ## Runtime & Setup
 
 `init_service()` (`setup.py:661`) is the runtime hub and returns a `Subscriptions` list for teardown:
 
-1. **Persistence** — `_register_persistence()` registers `wake_engines`, `assistant_enabled`,
+1. **Persistence** — `_register_persistence()` registers `wake_engines`, `enabled_wake_modes`,
    `conversation_end_phrases`, and the commands key.
 2. **Bindable actions** — `register_default_bindable_actions()` + `register_shortcut_actions()`
    (`commands.py`) populate the catalog voice commands and Infrared bindings resolve against.
@@ -116,7 +157,7 @@ Engines compose three abstraction layers so `EnginesManager` can drive any of th
   `wake_word_recogntions()` yielding **trigger ids**, not phrases).
 
 `VoskEngine` inherits **both** mixins (it is the speech engine and a wake engine);
-`OpenWakeWordEngine` inherits only the wake mixin. To add an engine (e.g. Picovoice): subclass the
+`OpenWakeWordEngine` and `MicroWakeWordEngine` inherit only the wake mixin. To add an engine (e.g. Picovoice): subclass the
 appropriate mixin(s), then register the instance in `EnginesManager._wake_engines` and add its name
 to `WakeWordEngineName` — the manager's sync/monitor/cleanup loops pick it up automatically.
 
@@ -135,7 +176,42 @@ it. In Vosk (`vosk_engine.py:144` `_reconcile`, `:221` `_run`) the loop stays al
 (`_MODEL_RETRY_INTERVAL_SECONDS`), and builds the recognizer the moment the model appears.
 OpenWakeWord (`openwakeword_engine.py:299` `set_triggers`) recomputes a *signature* of the enabled
 stems that actually exist on disk, so a model that finishes downloading later changes the signature
-and triggers a reload instead of committing to a partially-loaded set.
+and triggers a reload instead of committing to a partially-loaded set. microWakeWord
+(`microwakeword_engine.py` `set_triggers`) uses the same signature scheme, with sensitivity folded
+in because it maps onto each model's `probability_cutoff`, which is fixed at load time.
+
+### microWakeWord model catalog
+
+microWakeWord models are streaming `.tflite` classifiers (45–80 KB) paired with a `.json` manifest,
+run through `pymicro-wakeword` (which ships its own bundled `libtensorflowlite_c`, so there is no
+`tflite-runtime` to resolve). Both halves are required — `scan_models` only lists an id once each is
+present, so a half-finished download never surfaces as available.
+
+The curated catalog lives in `ubo_app/engines/microwakeword_catalog.py`, mirroring
+`vosk_catalog.py` / `piper_catalog.py`. Its URLs are pinned to `MICROWAKEWORD_COMMIT`, a specific
+commit of [OHF-Voice/linux-voice-assistant](https://github.com/OHF-Voice/linux-voice-assistant)
+(Apache-2.0) rather than a branch, so an upstream retrain can't change a model under a user between
+releases — **bump that constant to pick up upstream changes**, and re-check the sizes and cutoffs.
+
+A custom pair can also be uploaded (Engines → microWakeWord → Upload Model) with one file picker
+per half. `install_uploaded_model` rewrites the manifest's `model` key to the stem it installs
+under: `from_config` resolves the weights as `<manifest's directory>/<manifest's "model" key>`, so a
+manifest naming whatever the training run produced would send the loader after a file that was never
+installed. Both halves are staged under their final names, loaded once to prove they work, and only
+then promoted — **weights first**, because `set_triggers` builds its reload signature from the
+`.json` alone and a manifest that lands ahead of its weights lets a concurrent sync hit the missing-
+weights case, which upstream segfaults on rather than raising.
+
+The catalog is also the *authorization list*: `WakeWordDownloadModelAction` carries a `model_id`
+that can arrive from a remote gRPC dispatch and ends up in both a download URL and an on-disk
+filename, so the reducer refuses any id `microwakeword_catalog.model_for` doesn't know.
+
+Each entry's upstream-tuned `probability_cutoff` (0.63–0.97) seeds a new trigger's sensitivity as
+`1 - cutoff`, so a fresh trigger reproduces upstream's tuning rather than the generic `0.5` default.
+An uploaded model has no catalog entry, so `probability_cutoff_for` reads the same value back out of
+its installed manifest — otherwise every custom model would land on exactly the `0.5` this avoids.
+`MicroWakeWord` instances own a native TFLite interpreter, so `_unload_models` closes each one
+before a reload — dropping the reference alone leaks until a non-deterministic finalizer runs.
 
 ### Wake-phrase validation
 
@@ -156,8 +232,8 @@ conversation-end phrase. The model is Vosk's single loaded instance, surfaced vi
   binding, model download/upload/delete, and end-phrase handlers.
 - **Voice Shortcuts menu:** lists each command; add/edit/remove via a `WebUIInputDescription` form
   (`_command_form`) with per-line utterance patterns (`pattern.py`, syntax help behind the ⓘ).
-- **Notifications:** sticky radial-progress notification during OpenWakeWord model downloads
-  (stable id so updates replace, not stack).
+- **Notifications:** sticky radial-progress notification during model downloads, one stable id per
+  engine so updates replace rather than stack.
 - **Path matcher:** `_speech_recognition_path_matcher` resolves both settings deep-links to the
   right dynamic menu.
 
@@ -170,6 +246,10 @@ conversation-end phrase. The model is Vosk's single loaded instance, surfaced vi
 - **OpenWakeWord:** ONNX inference (onnxruntime) with optional Silero VAD and Speex noise
   suppression (native, Linux-only — silently off on dev hosts); models under
   `DATA_PATH/openwakeword/models`.
+- **microWakeWord:** streaming TFLite inference via `pymicro-wakeword` (prebuilt wheels for linux
+  aarch64/armv7l/x86_64 and macOS, each bundling `libtensorflowlite_c`); one shared
+  `MicroWakeWordFeatures` frontend fans out to every loaded model; models under
+  `DATA_PATH/microwakeword/models`.
 - **Mic buffer dumps:** WAV files under `DATA_PATH/wake_phrase_recordings`.
 
 ## Cross-Service Interactions
@@ -188,11 +268,12 @@ conversation-end phrase. The model is Vosk's single loaded instance, surfaced vi
 - Constants: `INTENTS_LISTENING_TIMEOUT_SECONDS` (10s, `constants.py`);
   `_DETECTION_DEBOUNCE_SECONDS`, `_MIC_BUFFER_DURATION_SECONDS` (`engines_manager.py`);
   `SPEECH_RECOGNITION_FRAME_RATE` (`ubo_app.constants`).
-- Model locations: OpenWakeWord `DATA_PATH/openwakeword/models`; Vosk models via the assistant's
-  `vosk_catalog` (`model_path_for`).
-- Persistent keys: `speech_recognition:wake_engines`, `:assistant_enabled`,
+- Model locations: OpenWakeWord `DATA_PATH/openwakeword/models`; microWakeWord
+  `DATA_PATH/microwakeword/models`; Vosk models via the assistant's `vosk_catalog`
+  (`model_path_for`).
+- Persistent keys: `speech_recognition:wake_engines`, `:enabled_wake_modes`,
   `:conversation_end_phrases`, `:commands` (plus legacy `:wake_slots` / Phase-1 keys read once on
-  migration).
+  migration; the legacy `:assistant_enabled` key is intentionally ignored).
 - No env vars or secrets owned here.
 
 ## Testing & Development Notes

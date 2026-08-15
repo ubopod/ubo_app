@@ -7,13 +7,15 @@ import contextlib
 import json
 from typing import TYPE_CHECKING
 
+import ha
+
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action
 from ubo_app.store.core.bindable_actions import (
     BindableActionContext,
-    get_bindable_action,
     get_bindable_actions,
     register_bindable_action,
+    resolve_binding,
     unregister_bindable_action,
 )
 from ubo_app.store.core.types import (
@@ -49,16 +51,27 @@ from ubo_app.store.services.infrared import (
     InfraredSetShouldPropagateAction,
     InfraredSetShouldReceiveAction,
 )
+from ubo_app.store.services.mqtt import (
+    MqttPublishAction,
+    MqttRequestAnnounceAction,
+)
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.bindable_action_input import prompt_for_parameters
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
     UNSELECTED_ITEM_PARAMETERS,
 )
+from ubo_app.utils.mqtt_registry import (
+    register_mqtt_components,
+)
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.server import send_command
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from ubo_app.store.services.mqtt import MqttComponent
     from ubo_app.utils.types import Subscriptions
 
 
@@ -165,6 +178,7 @@ async def _wait_for_ir_code() -> None:  # noqa: C901
                             scancode=scancode,
                         ),
                     )
+                    _publish_received(protocol, scancode)
             except asyncio.CancelledError:
                 if generator is not None:
                     with contextlib.suppress(
@@ -278,11 +292,11 @@ async def _handle_device_registration_complete(
             # 'None' = a replay-only key (e.g. a TV power code) that triggers
             # no action when received. Labels are unique (registry guard), so
             # we can map the chosen label back to its stable key.
-            label_to_key = {
-                bindable.label: bindable.key
+            label_to_action = {
+                bindable.label: bindable
                 for bindable in get_bindable_actions()
             }
-            action_options = [NO_ACTION_LABEL, *label_to_key]
+            action_options = [NO_ACTION_LABEL, *label_to_action]
 
             value, result = await ubo_input(
                 prompt='Please enter device name on the Web UI',
@@ -333,11 +347,21 @@ async def _handle_device_registration_complete(
                 device_name = (value or '').strip()
             description = (data.get('description', '') or '').strip() or None
             selected_label = data.get('bound_action_key', NO_ACTION_LABEL)
-            bound_action_key = label_to_key.get(selected_label)
+            selected_action = label_to_action.get(selected_label)
 
             if not device_name:
                 logger.warning('Device registration: Device name is empty')
                 return
+
+            # Step 2 — only opens for an action that declares parameters.
+            bound_action_key = None
+            if selected_action is not None:
+                bound_action_key = await prompt_for_parameters(selected_action)
+                if bound_action_key is None:
+                    logger.info(
+                        'Device registration: Action parameter prompt cancelled',
+                    )
+                    return
             logger.info(
                 'Device registration: Device name received',
                 extra={
@@ -384,19 +408,21 @@ def _handle_bound_action_triggered(
     the reducer stays pure and emits the event; this handler does the lookup and
     dispatch.
     """
-    bindable = get_bindable_action(event.bound_action_key)
-    if bindable is None:
+    binding = resolve_binding(event.bound_action_key)
+    if binding is None:
         logger.warning(
             'No bindable action registered for key',
             extra={'bound_action_key': event.bound_action_key},
         )
         return
+    bindable, parameters = binding
     try:
         triggered_action = bindable.factory(
             BindableActionContext(
                 protocol=event.protocol,
                 scancode=event.scancode,
                 device_name=event.device_name,
+                parameters=parameters,
             ),
         )
     except Exception:
@@ -784,6 +810,40 @@ def _register_menus_and_actions() -> None:  # noqa: C901
 
 
 
+@store.with_state(lambda state: state.infrared.registered_devices)
+def _mqtt_components(devices: Sequence[InfraredDevice]) -> list[MqttComponent]:
+    """Describe the pod's infrared entities whenever the bridge (re)announces."""
+    return ha.components(devices)
+
+
+def _announce_devices(_: Sequence[InfraredDevice]) -> None:
+    """Re-announce when a device is registered or removed.
+
+    The button set is derived from the registry, so without this a newly taught
+    remote has no entity in Home Assistant until the next reconnect.
+    """
+    store.dispatch(MqttRequestAnnounceAction())
+
+
+@store.with_state(lambda state: state.infrared.registered_devices)
+def _publish_received(
+    devices: Sequence[InfraredDevice],
+    protocol: str,
+    scancode: str,
+) -> None:
+    """Report a received code to Home Assistant as an event.
+
+    Dropped by the bridge when MQTT is off or disconnected, so this costs
+    nothing when nobody is listening.
+    """
+    store.dispatch(
+        MqttPublishAction(
+            channel=ha.RECEIVED_CHANNEL,
+            payload=ha.received_payload(protocol, scancode, devices),
+        ),
+    )
+
+
 def init_service() -> Subscriptions:
     """Initialize the infrared service."""
     ir_code_task: asyncio.Handle | None = None
@@ -799,29 +859,31 @@ def init_service() -> Subscriptions:
             if ir_code_task is not None:
                 ir_code_task.cancel()
 
-    register_persistent_store(
-        'infrared_state:should_propagate_keypad_actions',
-        lambda state: state.infrared.should_propagate_keypad_actions,
-    )
-    register_persistent_store(
-        'infrared_state:should_receive_keypad_actions',
-        lambda state: state.infrared.should_receive_keypad_actions,
-    )
-    register_persistent_store(
-        'infrared_state:registered_devices',
-        lambda state: json.dumps(
-            [
-                {
-                    'name': device.name,
-                    'protocol': device.protocol,
-                    'scancode': device.scancode,
-                    'description': device.description,
-                    'bound_action_key': device.bound_action_key,
-                }
-                for device in state.infrared.registered_devices
-            ],
+    persistence_cleanups = [
+        register_persistent_store(
+            'infrared_state:should_propagate_keypad_actions',
+            lambda state: state.infrared.should_propagate_keypad_actions,
         ),
-    )
+        register_persistent_store(
+            'infrared_state:should_receive_keypad_actions',
+            lambda state: state.infrared.should_receive_keypad_actions,
+        ),
+        register_persistent_store(
+            'infrared_state:registered_devices',
+            lambda state: json.dumps(
+                [
+                    {
+                        'name': device.name,
+                        'protocol': device.protocol,
+                        'scancode': device.scancode,
+                        'description': device.description,
+                        'bound_action_key': device.bound_action_key,
+                    }
+                    for device in state.infrared.registered_devices
+                ],
+            ),
+        ),
+    ]
 
     _register_menus_and_actions()
 
@@ -834,7 +896,17 @@ def init_service() -> Subscriptions:
         ),
     )
 
+    unregister_components = register_mqtt_components('infrared', _mqtt_components)
+    # Subscribed here rather than at import: a module-level `@store.autorun`
+    # registers a listener the moment the file is imported.
+    announce_devices = store.autorun(
+        lambda state: state.infrared.registered_devices,
+    )(_announce_devices)
+
     return [
+        *persistence_cleanups,
+        unregister_components,
+        announce_devices.unsubscribe,
         store.subscribe_event(InfraredSendCodeEvent, _send_code),
         store.subscribe_event(
             InfraredDeviceRegistrationStartedEvent,

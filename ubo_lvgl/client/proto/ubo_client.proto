@@ -1,0 +1,483 @@
+// Curated, wire-compatible subset of the ubo-core proto surface the LVGL C
+// client actually uses (web-grpc transport only).
+//
+// Field NUMBERS match ubo_app/rpc/proto/{store,ubo}/v1/*.proto exactly, so this
+// is wire-compatible with the full server messages; nanopb skips unknown fields
+// on decode, and omitting fields we never set is harmless on encode. Field
+// NAMES may differ (e.g. BasicType.bool -> bool_value) to avoid C keyword
+// clashes — names do not affect the wire format.
+//
+// Keeping this curated keeps the nanopb output tiny: the real Action (~253
+// members) and Event (~133 members) oneofs would otherwise bloat the MCU image.
+//
+// The `action`/`event` oneof tag numbers are core-derived and drift whenever
+// ubo-core adds a new action/event anywhere (see ubo_app/rpc/generator/
+// generate_proto.py — tags are assigned by alphabetical position). Never
+// hand-edit them: `uv run poe proto:lvgl:check` verifies they match the
+// current core proto (part of the umbrella `poe proto`, and enforced in CI);
+// `uv run poe proto:lvgl:sync` patches this file when they've drifted.
+//
+// Regenerate ubo_client.pb.{c,h} (gitignored, not committed) with
+// `uv run poe proto:lvgl:generate` or `ubo_lvgl/client/proto/regen.sh`.
+
+syntax = "proto3";
+
+package ubo_client;
+
+// ── google well-known types (minimal, wire-compatible) ──────────────────────
+// SubscribeStoreResponse.results carries google.protobuf.Any; is_blanked is a
+// google.protobuf.BoolValue, and None is encoded as google.protobuf.Empty. We
+// decode Any.value positionally (selectors are fixed order) and only read
+// Any.type_url as a string to detect the Empty (None) case.
+message Any {
+  string type_url = 1;
+  bytes value = 2;
+}
+
+message BoolValue {
+  bool value = 1;
+}
+
+// ── store.v1.StoreService request/response messages ─────────────────────────
+message DispatchActionRequest {
+  Action action = 1;
+}
+
+message DispatchActionResponse {}
+
+message SubscribeEventRequest {
+  repeated Event events = 2;
+}
+
+message SubscribeEventResponse {
+  Event event = 1;
+}
+
+message SubscribeStoreRequest {
+  repeated string selectors = 1;
+}
+
+message SubscribeStoreResponse {
+  repeated Any results = 1;
+}
+
+// ── Enums the client encodes ────────────────────────────────────────────────
+enum Key {
+  KEY_UNSPECIFIED = 0;
+  KEY_BACK = 1;
+  KEY_HOME = 2;
+  KEY_UP = 3;
+  KEY_DOWN = 4;
+  KEY_L1 = 5;
+  KEY_L2 = 6;
+  KEY_L3 = 7;
+}
+
+enum AudioDevice {
+  AUDIO_DEVICE_UNSPECIFIED = 0;
+  AUDIO_DEVICE_INPUT = 1;
+  AUDIO_DEVICE_OUTPUT = 2;
+}
+
+// ── Actions the client encodes (trimmed Action oneof) ───────────────────────
+message KeypadKeyPressAction {
+  Key key = 2;
+  repeated Key pressed_keys = 3;
+}
+
+message KeypadKeyReleaseAction {
+  Key key = 2;
+  repeated Key pressed_keys = 3;
+}
+
+message AudioToggleMuteStatusAction {
+  AudioDevice device = 2;
+}
+
+message AudioSetVolumeAction {
+  float volume = 2;       // 0..1
+  AudioDevice device = 3;
+}
+
+// Raw audio (PCM) carried by playback events and report actions. `width` is
+// BYTES per sample (16-bit PCM => 2), matching ubo_app.store.services.audio.
+message AudioSample {
+  bytes data = 2;
+  int64 channels = 3;
+  int64 rate = 4;
+  int64 width = 5;
+}
+
+// How a listening session was triggered. ubo-core resolves a turn-completion
+// policy from this (silence timeout, end-of-turn phrases, push-to-talk), so it
+// is NOT optional metadata for a wake word: with no `source` the core matches
+// no policy at all and publishes an inert one — no silence stop, no phrase
+// stop. Push-to-talk survives that because releasing BOOT sends the stop; a
+// wake-word turn has no release and would stream forever.
+//
+// `detector` is free text naming the engine ("wakenet" for on-device WakeNet,
+// vs "vosk"/"openwakeword" for the ones running on the pod). `mode` is the
+// WakeMode slot, which is what the core's default policies actually match on —
+// keying on the slot rather than the literal phrase means changing the wake
+// word never orphans a policy.
+enum WakeMode {
+  WAKE_MODE_UNSPECIFIED = 0;
+  WAKE_MODE_INTENTS = 1;
+  WAKE_MODE_QUICK_CHAT = 2;
+  WAKE_MODE_CONVERSATION = 3;
+  WAKE_MODE_STOP_TALKING = 4;
+}
+
+message WakePhraseTriggerSource {
+  string phrase = 2;
+  string detector = 3;
+  WakeMode mode = 4;
+}
+
+// WARNING: tag 5 is the ALPHABETICAL position of `wake_phrase_trigger_source`
+// among the union's members upstream (desktop=1, grpc=2, infrared=3,
+// keypad=4, wake_phrase=5) — the same generator that numbers the Action and
+// Event oneofs. Adding any new *TriggerSource to ubo-core renumbers this.
+// Covered by lvgl-maintenance's sync_tags.sh.
+//
+// Only the one member we send is curated; the others decode as unknown fields.
+message AssistantTriggerSourceUnion {
+  oneof assistant_trigger_source_union {
+    WakePhraseTriggerSource wake_phrase_trigger_source = 5;
+  }
+}
+
+// Push-to-talk / wake word: start a microphone listening session.
+// `audio_source` tags which mic feeds the session so the core binds the session
+// to this client and ignores every other mic (empty = on-device system mic). It
+// must equal the `audio_source` sent with each AudioReportSampleAction.
+//
+// `source` is left unset for a button-driven session (the core logs a warning
+// and falls back to defaults, which is fine because the button release ends the
+// turn) and set for a wake word — see AssistantTriggerSourceUnion above.
+message AssistantStartListeningAction {
+  AssistantTriggerSourceUnion source = 2;
+  string audio_source = 3;
+}
+
+message AssistantStopListeningAction {}
+
+// Stream a captured mic chunk to the core (mirrors the web UI: timestamp, raw
+// speech-recognition PCM bytes, and the `audio_source` id — which must match the
+// AssistantStartListeningAction so the core keeps only this client's mic; the
+// `sample` submessage is unused).
+message AudioReportSampleAction {
+  float timestamp = 2;
+  bytes sample_speech_recognition = 3;
+  string audio_source = 5;
+}
+
+message Action {
+  oneof action {
+    AssistantStartListeningAction assistant_start_listening_action = 46;
+    AssistantStopListeningAction assistant_stop_listening_action = 47;
+    AudioReportSampleAction audio_report_sample_action = 64;
+    AudioSetVolumeAction audio_set_volume_action = 68;
+    AudioToggleMuteStatusAction audio_toggle_mute_status_action = 72;
+    KeypadKeyPressAction keypad_key_press_action = 162;
+    KeypadKeyReleaseAction keypad_key_release_action = 163;
+  }
+}
+
+// ── Events the client decodes (trimmed Event oneof) ─────────────────────────
+message ApplicationScrollEvent {
+  string direction = 2;
+}
+
+message MenuChooseByIndexEvent {
+  int64 index = 2;
+}
+
+message FrameStreamDataEvent {
+  string stream_id = 2;
+  bytes data = 3;
+  int64 width = 4;
+  int64 height = 5;
+}
+
+// Low-res RGB565 little-endian row chunk of a frame stream, produced by core
+// for memory-constrained clients (the ESP32). `data` holds whole rows
+// (`rows * width * 2` bytes) starting at `row_offset`; `width`/`height`
+// describe the full low-res frame. A frame is complete when
+// `row_offset + rows == height`.
+message FrameStreamChunkEvent {
+  string stream_id = 2;
+  bytes data = 3;
+  int64 width = 4;
+  int64 height = 5;
+  int64 row_offset = 6;
+}
+
+// Core -> client speaker playback. A one-shot sample, and a streamed sequence
+// (TTS): `sample` is optional (a chunk with no sample is a keepalive); `id` +
+// `index` identify the sequence ordering (the client trusts arrival order).
+message AudioPlayAudioSampleEvent {
+  float volume = 2;
+  AudioSample sample = 3;
+}
+
+message AudioPlayAudioSequenceEvent {
+  float volume = 2;
+  optional AudioSample sample = 3;
+  string id = 4;
+  int64 index = 5;
+}
+
+// Core -> client: stop and flush any buffered speaker playback immediately
+// (video stopped, etc.). Empty payload; receipt itself is the signal.
+message AudioStopPlaybackEvent {}
+
+// Subscribed only to ESTABLISH the event stream at connect: StackChangedEvent
+// has server "initial state" (sent the instant we subscribe, so the response
+// headers flush immediately instead of waiting for a first real event — without
+// it SubscribeEvent stays cold, gRPC-Web withholds headers, and a TTS reply
+// burst is missed before the stream comes up). Crucially it fires ONLY on
+// navigation, NOT on every view/status tick — so unlike ViewChangedEvent it does
+// not flood the server's shared 30-slot subscription queue during a chat reply
+// (which would drop the audio sequence burst). We never read its payload; the
+// empty message makes nanopb skip it on decode.
+message StackChangedEvent {}
+
+// Core -> device request to start/stop streaming this device's microphone.
+// Satellite capture is otherwise device-initiated (button held), so a session
+// opened by anything else — the web UI, a wake word heard on the pod, the HIL
+// test harness — would leave the device silent and record nothing.
+//
+// `audio_source` addresses exactly one device; ignore the event when it does
+// not equal this client's own id. Do NOT dispatch AssistantStartListeningAction
+// in response: the session that sent this is already open, and echoing it back
+// would loop.
+message AssistantRequestMicStreamEvent {
+  string audio_source = 2;
+  bool is_active = 3;
+}
+
+// WARNING: these tags are assigned by the server's alphabetical proto
+// generator, so inserting ANY new event upstream renumbers the ones after it.
+// They were last re-synced when AssistantRequestMicStreamEvent was added (it
+// took tag 19 and pushed every tag below it up by one). Re-verify against
+// ubo_app/rpc/proto/ubo/v1/ubo.proto after any `poe proto` that adds an event,
+// or the client silently decodes the wrong message type.
+message Event {
+  oneof event {
+    ApplicationScrollEvent application_scroll_event = 1;
+    AssistantRequestMicStreamEvent assistant_request_mic_stream_event = 20;
+    AudioPlayAudioSampleEvent audio_play_audio_sample_event = 27;
+    AudioPlayAudioSequenceEvent audio_play_audio_sequence_event = 28;
+    AudioStopPlaybackEvent audio_stop_playback_event = 32;
+    FrameStreamChunkEvent frame_stream_chunk_event = 88;
+    FrameStreamDataEvent frame_stream_data_event = 89;
+    MenuChooseByIndexEvent menu_choose_by_index_event = 119;
+    StackChangedEvent stack_changed_event = 150;
+  }
+}
+
+// ── Dynamic value type (used by RenderViewData props) ───────────────────────
+// Field NUMBERS match the server's BasicType; names suffixed to dodge C
+// keywords (bool/float).
+message BasicType {
+  oneof basic_type {
+    bool bool_value = 1;
+    bytes bytes_value = 2;
+    float float_value = 3;
+    int64 int64_value = 4;
+    string string_value = 5;
+  }
+}
+
+// ── Shared view types ───────────────────────────────────────────────────────
+message MenuItemData {
+  string key = 2;
+  string label = 3;
+  string icon = 4;
+  optional string color = 5;
+  optional bool is_short = 6;
+  optional string action_id = 7;
+  optional string background_color = 8;
+}
+
+message StatusIconData {
+  string symbol = 2;
+  string color = 3;
+}
+
+message ProgressNotificationData {
+  string id = 2;
+  optional float progress = 3;
+  string color = 4;
+}
+
+message StatusBarData {
+  message ProgressNotifications {
+    repeated ProgressNotificationData items = 1;
+  }
+  message Icons {
+    repeated StatusIconData items = 1;
+  }
+  optional string title = 2;
+  optional bool is_recording = 3;
+  optional bool is_replaying = 4;
+  optional bool is_recording_audio = 5;
+  optional ProgressNotifications progress_notifications = 6;
+  optional string clock = 7;
+  optional float temperature = 8;
+  optional float light_level = 9;
+  optional Icons icons = 10;
+}
+
+// ── ViewData variants ───────────────────────────────────────────────────────
+message HomeViewData {
+  message MenuItems {
+    repeated MenuItemData items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional MenuItems menu_items = 4;
+  optional float cpu_percent = 5;
+  optional float ram_percent = 6;
+  optional float volume_level = 7;
+}
+
+message MenuViewData {
+  message ItemsItem {
+    optional MenuItemData items = 1;
+  }
+  message Items {
+    repeated ItemsItem items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string title = 4;
+  optional string heading = 5;
+  optional string sub_heading = 6;
+  optional Items items = 7;
+  optional string placeholder = 8;
+  optional int64 page_index = 9;
+  optional int64 total_pages = 10;
+  optional int64 stack_depth = 11;
+}
+
+message ApplicationViewData {
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string application_id = 4;
+  // field 5 (extra_data map) intentionally omitted — unused by the client.
+  optional int64 stack_depth = 6;
+}
+
+message RenderViewData {
+  message PropsValue2 {
+    repeated BasicType items = 1;
+  }
+  message PropsValue {
+    oneof props_value {
+      BasicType basic_type = 1;
+      PropsValue2 list = 2;
+    }
+  }
+  message PropsDict {
+    map<string, PropsValue> items = 1;
+  }
+  message Items {
+    repeated MenuItemData items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string kind = 4;
+  optional string title = 5;
+  optional PropsDict props = 6;
+  optional Items items = 7;
+  optional string stream_id = 8;
+  optional int64 stack_depth = 9;
+}
+
+message ChatBubbleData {
+  message Waveform {
+    repeated float items = 1;
+  }
+  optional string message_id = 2;
+  optional string role = 3;
+  optional string alignment = 4;
+  optional string kind = 5;
+  optional string text = 6;
+  optional string color = 7;
+  optional string background_color = 8;
+  optional string pointer_key = 9;
+  optional bool is_playing = 10;
+  optional Waveform waveform = 11;
+}
+
+message ChatViewData {
+  message Bubbles {
+    repeated ChatBubbleData items = 1;
+  }
+  message Items {
+    repeated MenuItemData items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional Bubbles bubbles = 4;
+  optional Items items = 5;
+  optional int64 scroll_offset = 6;
+  optional int64 total_bubbles = 7;
+  optional int64 stack_depth = 8;
+}
+
+message NotificationViewData {
+  message ItemsItem {
+    optional MenuItemData items = 1;
+  }
+  message Items {
+    repeated ItemsItem items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string notification_id = 4;
+  optional string title = 5;
+  optional string content = 6;
+  optional string icon = 7;
+  optional string color = 8;
+  optional Items items = 9;
+  optional string extra_information = 10;
+  optional int64 page_index = 11;
+  optional int64 total_pages = 12;
+  optional int64 stack_depth = 13;
+}
+
+message InstructionViewData {
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string title = 4;
+  optional string instruction = 5;
+  optional string icon = 6;
+  optional bool spinner = 7;
+  optional int64 timeout_seconds = 8;
+  optional string progress_text = 9;
+  optional string footer_text = 10;
+  optional int64 stack_depth = 11;
+}
+
+message PromptViewData {
+  message Items {
+    repeated MenuItemData items = 1;
+  }
+  optional string type = 2;
+  optional bool show_status_bar = 3;
+  optional string title = 4;
+  optional string prompt = 5;
+  optional string icon = 6;
+  optional Items items = 7;
+  optional int64 stack_depth = 8;
+}
+
+// NB: there is intentionally no `ViewData` oneof here. On the wire,
+// `state.main.current_view` arrives as a google.protobuf.Any whose `value` is
+// the CONCRETE view message (HomeViewData / MenuViewData / ...), identified by
+// `Any.type_url` (e.g. ".../HomeViewData"). The client dispatches on the
+// type_url suffix and decodes the matching message above — it never decodes a
+// ViewData wrapper.

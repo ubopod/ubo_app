@@ -34,6 +34,8 @@ from ubo_app.store.services.speech_recognition import WakeMode
 from ubo_app.utils.persistent_store import read_from_persistent_store
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from ubo_app.store.services.audio import AudioSample
     from ubo_app.store.services.keypad import Key
 
@@ -50,6 +52,7 @@ class AssistantSTTName(StrEnum):
     ASSEMBLYAI = 'assemblyai'
     VENICE = 'venice'
     MISTRAL = 'mistral'
+    ELEVENLABS = 'elevenlabs'
 
 
 class AssistantLLMName(StrEnum):
@@ -103,6 +106,71 @@ def _load_selected_models(value: str) -> dict[AssistantLLMName, str]:
             continue
         selected_models[llm_name] = str(model)
     return selected_models
+
+
+# Id of the built-in system prompt. It is not stored in ``system_prompts`` — its
+# text lives in the assistant subprocess (``DEFAULT_SYSTEM_MESSAGE``), which the
+# core can't import — so only its enabled flag is tracked here.
+DEFAULT_SYSTEM_PROMPT_ID = 'default'
+
+
+class SystemPrompt(Immutable):
+    """A user-authored system prompt that can be enabled alongside others."""
+
+    id: str
+    label: str
+    content: str
+    is_enabled: bool = False
+
+
+def compose_active_system_prompt(prompts: Sequence[SystemPrompt]) -> str:
+    """Join the enabled user prompts. Excludes the built-in default."""
+    return '\n\n'.join(
+        prompt.content.strip()
+        for prompt in prompts
+        if prompt.is_enabled and prompt.content.strip()
+    )
+
+
+def _load_system_prompts(value: str) -> tuple[SystemPrompt, ...]:
+    """Load user system prompts from persistent storage."""
+    try:
+        entries = json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return ()
+    if not isinstance(entries, list):
+        return ()
+    prompts: list[SystemPrompt] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        id_ = entry.get('id')
+        label = entry.get('label')
+        content = entry.get('content')
+        if (
+            isinstance(id_, str)
+            and id_
+            and isinstance(label, str)
+            and isinstance(content, str)
+        ):
+            prompts.append(
+                SystemPrompt(
+                    id=id_,
+                    label=label,
+                    content=content,
+                    is_enabled=entry.get('is_enabled') is True,
+                ),
+            )
+    return tuple(prompts)
+
+
+def persisted_system_prompts() -> tuple[SystemPrompt, ...]:
+    """Read the stored user system prompts."""
+    return read_from_persistent_store(
+        'assistant:system_prompts',
+        default=(),
+        mapper=_load_system_prompts,
+    )
 
 
 class GenericLLMProvider(Immutable):
@@ -1033,6 +1101,34 @@ class AssistantRemoveGenericLLMProviderAction(AssistantAction):
     provider_id: str
 
 
+class AssistantAddSystemPromptAction(AssistantAction):
+    """Action to add (or upsert by id) a user system prompt.
+
+    Editing reuses this action with the entry's existing ``prompt_id`` so a
+    renamed prompt is updated in place; the reducer preserves ``is_enabled``.
+    """
+
+    prompt_id: str
+    label: str
+    content: str
+
+
+class AssistantRemoveSystemPromptAction(AssistantAction):
+    """Action to remove a user system prompt."""
+
+    prompt_id: str
+
+
+class AssistantToggleSystemPromptAction(AssistantAction):
+    """Action to flip whether a system prompt is injected into the LLM context.
+
+    ``DEFAULT_SYSTEM_PROMPT_ID`` toggles the built-in prompt instead of an
+    entry in ``system_prompts``.
+    """
+
+    prompt_id: str
+
+
 class AssistantSelectGenericLLMProviderAction(AssistantAction):
     """Action to mark a named generic LLM provider as the active one.
 
@@ -1076,6 +1172,15 @@ class AssistantSynthesizeAction(AssistantAction):
     text: str
     session_id: str
     tts_provider: AssistantTTSName | None = None
+    play_locally: bool = True
+    """Whether the synthesized audio is also played on the device speaker.
+
+    On by default, because most callers (the screen reader, voice previews) ask
+    for synthesis precisely to hear it. A caller that only wants the audio
+    stream back — the Wyoming TTS engine hands it to Home Assistant, which plays
+    it on whichever satellite asked — sets this false, otherwise the device
+    speaks the response as well and it is heard twice.
+    """
 
 
 class AssistantCompleteAction(AssistantAction):
@@ -1108,10 +1213,36 @@ class AssistantRunPipelineAction(AssistantAction):
     llm_model: str | None = None
     system_prompt: str | None = None
     enable_tools: bool = False
+    play_locally: bool = True
+    """Whether audio this pipeline produces is played on the device speaker."""
+
+
+class AssistantCancelRequestAction(AssistantAction):
+    """Cancel a one-shot pipeline when its remote client disconnects."""
+
+    session_id: str
 
 
 class AssistantEvent(BaseEvent):
     """Base class for assistant events."""
+
+
+class AssistantRequestMicStreamEvent(AssistantEvent):
+    """Ask a remote client to start or stop streaming its microphone.
+
+    Satellite microphones are device-initiated: the ESP32 starts its own
+    capture when its button is held and dispatches the listening action itself.
+    That means a session opened by anything *other* than the device — the web
+    UI, a test harness, a wake word heard on the pod — leaves the satellite
+    silent, and the session records nothing.
+
+    This event closes that gap. It is addressed to one ``audio_source`` so only
+    the intended device responds, and clients must NOT echo a listening action
+    back when they act on it: the session is already open.
+    """
+
+    audio_source: str
+    is_active: bool
 
 
 class AssistantStopTalkingEvent(AssistantEvent):
@@ -1301,6 +1432,16 @@ class AssistantRunPipelineEvent(AssistantEvent):
     piper_voice_id: str = ''
     kokoro_voice_id: str = ''
     tts_voice_id: str = ''
+    # Carried through so the service knows, at frame time, whether this
+    # session's audio belongs on the speaker — a frame only identifies its
+    # session, not the request that asked for it.
+    play_locally: bool = True
+
+
+class AssistantCancelRequestEvent(AssistantEvent):
+    """Tell the assistant subprocess to stop one in-flight request pipeline."""
+
+    session_id: str
 
 
 class AssistantState(Immutable):
@@ -1533,4 +1674,28 @@ class AssistantState(Immutable):
     last_stop_reason: AssistantStopReasonUnion | None = None
     policies: tuple[AssistantTriggerPolicyEntry, ...] = field(
         default_factory=_default_policies,
+    )
+    # User-authored system prompts. Several can be enabled at once; the enabled
+    # ones are concatenated into the LLM's system message.
+    system_prompts: tuple[SystemPrompt, ...] = field(
+        default_factory=persisted_system_prompts,
+    )
+    # Whether the subprocess's built-in ``DEFAULT_SYSTEM_MESSAGE`` is part of the
+    # composed prompt. Its text isn't mirrored here — the core can't import the
+    # subprocess package — so only the flag crosses the boundary.
+    is_default_system_prompt_enabled: bool = field(
+        default=read_from_persistent_store(
+            'assistant:is_default_system_prompt_enabled',
+            default=True,
+        ),
+    )
+    # Derived: the enabled entries of ``system_prompts``, joined. A selector
+    # can't return a container over gRPC, so the subprocess subscribes to this
+    # scalar rather than the tuple — the same workaround as
+    # ``moonshine_downloaded_models_wrapper``. Recomputed by the reducer at every
+    # write site.
+    active_system_prompt: str = field(
+        default_factory=lambda: compose_active_system_prompt(
+            persisted_system_prompts(),
+        ),
     )

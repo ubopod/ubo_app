@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
 import sys
 import threading
-import traceback
 from typing import TYPE_CHECKING
 
 from ubo_app.utils.thread import UboThread
@@ -31,17 +31,28 @@ def get_service() -> UboServiceThread:
         if isinstance(thread, UboThread) and thread.ubo_service:
             return thread.ubo_service
 
-        stack = traceback.extract_stack()
         services_by_path = SERVICES_BY_PATH.copy()
 
-        # Optimize by checking stack frames in reverse order and breaking early
-        for frame in stack[-2::-1]:
-            frame_path = frame.filename
+        # Walk the frames directly rather than via `traceback.extract_stack()`.
+        # Only the filenames matter here, but `extract_stack` also resolves the
+        # *source line* of every frame — which stats and reads the file behind
+        # each one through `linecache`. This runs on every action construction,
+        # every `create_task` and every `to_thread`, so that turned a stack walk
+        # into a burst of file I/O on the hottest path in the app.
+        #
+        # Starts at the caller (`f_back`) and walks outward, matching the
+        # caller-first order the previous `stack[-2::-1]` slice produced.
+        frame = inspect.currentframe()
+        frame = frame.f_back if frame else None
+
+        while frame is not None:
+            frame_path = frame.f_code.co_filename
             for registered_path in services_by_path:
                 if frame_path.startswith(registered_path.as_posix()):
                     if registered_path in SERVICES_BY_PATH:
                         return SERVICES_BY_PATH[registered_path]
                     break  # Move to next frame if path not found in current services
+            frame = frame.f_back
 
     msg = 'Service is not available.'
     raise ServiceUnavailableError(msg)

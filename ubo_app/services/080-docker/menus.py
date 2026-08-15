@@ -2,24 +2,28 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING
 
 from apps import IMAGES
 from docker_composition import check_composition
 from docker_container import check_container
+from docker_logs import PLACEHOLDER as LOGS_PLACEHOLDER
+from docker_logs import stream_id as logs_stream_id
 from redux import AutorunOptions
 
-from ubo_app.colors import DANGER_COLOR
-from ubo_app.constants import SECRETS_PATH
+from ubo_app.colors import DANGER_COLOR, RUNNING_COLOR, WARNING_COLOR
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.types import (
     MenuItemData,
     OpenRenderAction,
     StackPushMenuAction,
     UpdateDynamicMenuAction,
+    UpdateRegisteredAppAction,
 )
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
+    DockerAppStatus,
     DockerImageFetchAction,
     DockerImageReleaseAction,
     DockerImageRemoveAction,
@@ -28,8 +32,11 @@ from ubo_app.store.services.docker import (
     DockerImageSetExposeToLanAction,
     DockerImageSetStatusAction,
     DockerImageStopAction,
+    DockerItemHealth,
     DockerItemStatus,
+    DockerSetAppStatusAction,
     ImageState,
+    derive_health,
 )
 from ubo_app.store.services.notification_helpers import create_notification_action
 from ubo_app.store.services.notifications import (
@@ -38,17 +45,13 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
 )
 from ubo_app.store.services.speech_synthesis import ReadableInformation
+from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from ubo_app.store.services.ip import IpNetworkInterface
-
-
-def _secrets_modification_time() -> float:
-    """Return the modification time of the secrets file."""
-    return SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
 
 
 def get_docker_image_menu_id(image_id: str) -> str:
@@ -84,6 +87,79 @@ def _show_delete_confirmation(image_id: str) -> None:
 
 
 _image_action_ids: dict[str, list[str]] = {}
+
+
+def _health_message(image: ImageState, health: DockerItemHealth) -> str:
+    """Say what the app did, in the space the status message would have used."""
+    if image.failing_services:
+        # A stack: name the services rather than the app, since the whole point
+        # is that some of it is up and some of it is not.
+        names = ', '.join(image.failing_services)
+        return f'Failing: {names} — open Logs'
+
+    cause = image.last_error or (
+        f'exit {image.last_exit_code}' if image.last_exit_code is not None else ''
+    )
+    if health is DockerItemHealth.CRASH_LOOPING:
+        headline = f'Keeps crashing — {image.restart_count} restarts'
+    else:
+        plural = '' if image.restart_count == 1 else 's'
+        headline = f'Restarted {image.restart_count} time{plural}'
+    return f'{headline} ({cause}) — open Logs' if cause else f'{headline} — open Logs'
+
+
+# How an app's tile is tinted in the Apps list. The colour rides in
+# `MenuItemData.color` rather than as `[color=…]` markup inside the icon,
+# because the LVGL client strips markup out of icons and tints an item only
+# from the structured field — a marked-up badge would be invisible on the pod's
+# own screen, which is the one that matters most here.
+#
+# The app's own icon is left alone. Swapping it for a status glyph, the way the
+# services list does, would turn the Apps menu into a column of identical dots
+# with no way to tell Home Assistant from Pi-hole.
+_HEALTH_COLOR: dict[DockerItemHealth, str] = {
+    DockerItemHealth.RECOVERED: WARNING_COLOR,
+    DockerItemHealth.CRASH_LOOPING: DANGER_COLOR,
+}
+
+_STATUS_COLOR: dict[DockerItemStatus, str] = {
+    DockerItemStatus.RUNNING: RUNNING_COLOR,
+    DockerItemStatus.STARTING: WARNING_COLOR,
+    DockerItemStatus.FETCHING: WARNING_COLOR,
+    DockerItemStatus.PROCESSING: WARNING_COLOR,
+    DockerItemStatus.ERROR: DANGER_COLOR,
+}
+
+# Not installed, not started: the default. Nothing has gone wrong and there is
+# nothing to confirm, so the tile stays as plain as every other app's.
+_DEFAULT_COLOR = '#ffffff'
+
+
+def _update_app_badge(image: ImageState) -> None:
+    """Tint the app's tile in the Apps list, and project its status.
+
+    Health outranks lifecycle: with `restart_policy: always` a failing app is
+    back to RUNNING seconds after it died, so the lifecycle status on its own
+    would keep the tile green while the app cycles.
+    """
+    health = derive_health(image, now=time.time())
+    color = _HEALTH_COLOR.get(health) or _STATUS_COLOR.get(image.status, _DEFAULT_COLOR)
+    store.dispatch(
+        UpdateRegisteredAppAction(key=image.id, color=color),
+        # The same derivation, for surfaces that render from the store rather
+        # than from the menu — the web UI dashboard's Apps tile. `IMAGES.get`
+        # rather than `IMAGES[...]` because the rest of this module guards with
+        # `image.id in IMAGES` throughout: an id outside the registry happens.
+        DockerSetAppStatusAction(
+            app=DockerAppStatus(
+                id=image.id,
+                label=image.label,
+                icon=entry.icon if (entry := IMAGES.get(image.id)) else '󰣆',
+                status=image.status,
+                health=health,
+            ),
+        ),
+    )
 
 
 def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
@@ -378,6 +454,39 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             ),
         )
 
+    # Logs, wherever there is something that could have produced any. Offered
+    # in ERROR too — that is the state whose message tells the user to go read
+    # them, and until now there was nowhere to go.
+    if image.status in (
+        DockerItemStatus.CREATED,
+        DockerItemStatus.STARTING,
+        DockerItemStatus.RUNNING,
+        DockerItemStatus.ERROR,
+    ):
+        logs_id = f'docker:logs:{image.id}'
+        _image_action_ids[menu_id].append(logs_id)
+        register_action(
+            logs_id,
+            lambda _id=image.id, _label=image.label: store.dispatch(
+                OpenRenderAction(
+                    kind='text_viewer',
+                    title=f'{_label} Logs',
+                    stream_id=logs_stream_id(_id),
+                    # The tail arrives from `docker_logs`' polling loop, which
+                    # starts when this page reaches the top of the stack.
+                    props={'text': LOGS_PLACEHOLDER},
+                ),
+            ),
+        )
+        items.append(
+            MenuItemData(
+                key='logs',
+                label='Logs',
+                icon='󰦪',
+                action_id=logs_id,
+            ),
+        )
+
     # Status messages
     if is_composition:
         messages = {
@@ -388,7 +497,7 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             DockerItemStatus.CREATED: 'Composition is created but not running',
             DockerItemStatus.STARTING: 'Application is starting...',
             DockerItemStatus.RUNNING: 'Composition is running',
-            DockerItemStatus.ERROR: 'We have an error, please check the logs',
+            DockerItemStatus.ERROR: 'Something went wrong — open Logs for details',
             DockerItemStatus.PROCESSING: 'Waiting...',
         }
     else:
@@ -404,7 +513,7 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
             DockerItemStatus.CREATED: 'Container is created but not running',
             DockerItemStatus.STARTING: 'Application is starting...',
             DockerItemStatus.RUNNING: running_message or 'Container is running',
-            DockerItemStatus.ERROR: 'We have an error, please check the logs',
+            DockerItemStatus.ERROR: 'Something went wrong — open Logs for details',
             DockerItemStatus.PROCESSING: 'Waiting...',
         }
 
@@ -414,12 +523,22 @@ def _update_docker_image_menu(  # noqa: C901, PLR0912, PLR0915
     # `list.sort` is stable, so the relative order of all other items is kept.
     items.sort(key=lambda item: item.key in ('delete', 'remove', 'remove_container'))
 
+    # A crash record outranks the lifecycle message. With `restart_policy:
+    # always` a failing app reads as "running" seconds after it died, so the
+    # lifecycle status alone would keep saying everything is fine.
+    health = derive_health(image, now=time.time())
+    sub_heading = (
+        messages[image.status]
+        if health is DockerItemHealth.OK
+        else _health_message(image, health)
+    )
+
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=menu_id,
             title=f'Docker - {image.label}',
             heading=image.label,
-            sub_heading=messages[image.status],
+            sub_heading=sub_heading,
             items=tuple(items),
             placeholder='',
         ),
@@ -436,7 +555,7 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
             getattr(state.docker, image_id, None),
             state.ip.interfaces if hasattr(state, 'ip') else None,
             state.docker.service.expose_to_lan.get(image_id, False),
-            _secrets_modification_time() if has_secrets else None,
+            secrets.modification_time() if has_secrets else None,
         ),
         options=AutorunOptions(default_value=None, memoization=not has_secrets),
     )
@@ -462,6 +581,7 @@ def setup_docker_image_dynamic_menu(image_id: str) -> None:
             _get_interfaces(),
             expose_to_lan=_get_expose_to_lan(),
         )
+        _update_app_badge(image)
 
         if (
             image.status == DockerItemStatus.STARTING

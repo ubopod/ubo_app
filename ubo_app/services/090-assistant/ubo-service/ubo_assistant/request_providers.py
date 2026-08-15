@@ -40,6 +40,9 @@ _DEFAULT_VENICE_TTS_VOICE = os.environ.get(
     # Kept in sync with core's ``DEFAULT_VENICE_TTS_VOICE``.
     'af_heart',
 )
+# Default-library voice ("George") used when the user set an API key but no
+# voice id. Kept in sync with core's ``DEFAULT_ELEVENLABS_TTS_VOICE``.
+_DEFAULT_ELEVENLABS_TTS_VOICE = 'JBFqnCBsd6RMkjVDRZzb'
 
 
 async def _secret(client: UboRPCClient, env_var: str) -> str | None:
@@ -169,6 +172,14 @@ async def _build_stt(  # noqa: C901, PLR0912
         from pipecat.services.mistral.stt import MistralSTTService
 
         return MistralSTTService(api_key=api_key)
+
+    if provider_id == 'elevenlabs':
+        api_key = await _secret(client, 'ELEVENLABS_API_KEY_SECRET_ID')
+        if not api_key:
+            return None
+        from pipecat.services.elevenlabs.stt import ElevenLabsRealtimeSTTService
+
+        return ElevenLabsRealtimeSTTService(api_key=api_key)
 
     return None
 
@@ -371,13 +382,15 @@ async def _build_tts(  # noqa: C901, PLR0912
     if provider_id == 'elevenlabs':
         api_key = await _secret(client, 'ELEVENLABS_API_KEY_SECRET_ID')
         voice_id = await _secret(client, 'ELEVENLABS_VOICE_ID')
-        if not (api_key and voice_id):
+        if not api_key:
             return None
         from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 
         return ElevenLabsTTSService(
             api_key=api_key,
-            voice_id=tts_voice_id or voice_id,
+            # The voice id is optional at setup; fall back through the secret
+            # to the default-library voice (see ``ubo_tts``).
+            voice_id=tts_voice_id or voice_id or _DEFAULT_ELEVENLABS_TTS_VOICE,
             sample_rate=24000,
             model='eleven_turbo_v2_5',
             enable_logging=True,

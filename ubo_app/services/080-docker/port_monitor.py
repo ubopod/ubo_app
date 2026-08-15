@@ -62,7 +62,8 @@ async def monitor_app_port(
     """Probe ``port`` until the HTTP server responds, then set RUNNING.
 
     If ``max_wait`` seconds elapse without a successful probe the status is
-    set to RUNNING anyway so the user isn't stuck on "starting" forever.
+    left alone. It stays at STARTING, which is the truth: the container is up
+    but nothing is answering on its port yet.
     """
     if image_id in _active_monitors:
         return
@@ -87,15 +88,13 @@ async def monitor_app_port(
                 )
                 return
 
+        # Deliberately no dispatch. Declaring RUNNING on a probe that never
+        # answered is how a crash-looping app came to report itself healthy:
+        # with `restart_policy: always` it never serves the port, so it hit
+        # this branch every time and landed on RUNNING.
         logger.warning(
-            'Port probe timed out, transitioning to RUNNING anyway',
+            'Port probe timed out, leaving status unchanged',
             extra={'image': image_id, 'port': port, 'max_wait': max_wait},
-        )
-        store.dispatch(
-            DockerImageSetStatusAction(
-                image=image_id,
-                status=DockerItemStatus.RUNNING,
-            ),
         )
     finally:
         _active_monitors.discard(image_id)

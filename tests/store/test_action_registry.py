@@ -42,6 +42,17 @@ class TestRegisterAction:
         with pytest.raises(ValueError, match='already registered'):
             register_action('test:action', lambda: None)
 
+    def test_allow_reregister_replaces_handler(self) -> None:
+        """``allow_reregister=True`` silently replaces an existing handler.
+
+        Services whose setup can run more than once (e.g. a service
+        restart) must pass this so re-registration doesn't crash the setup
+        path — see the ``ssh:open_menu`` regression (Sentry UBO-APP-PN).
+        """
+        register_action('test:action', lambda: 'first')
+        register_action('test:action', lambda: 'second', allow_reregister=True)
+        assert execute_action('test:action') == 'second'
+
 
 class TestUnregisterAction:
     """Tests for unregister_action."""

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from redux import CompleteReducerResult
 
@@ -243,3 +243,21 @@ def test_set_servers_prunes_stale_status() -> None:
 
     assert isinstance(new_state, McpState)
     assert set(new_state.server_statuses) == {'a_1'}
+
+
+def test_none_state_init_and_raise() -> None:
+    """InitAction builds state; any other action against None raises."""
+    import pytest
+    from redux import InitAction, InitializationActionError
+
+    assert isinstance(reducer(None, cast('McpAction', InitAction())), McpState)
+    with pytest.raises(InitializationActionError):
+        reducer(None, McpSyncServersAction())
+
+
+def test_unhandled_action_returns_state_unchanged() -> None:
+    """An action matching no case leaves the state untouched."""
+    from redux import InitAction
+
+    state = McpState()
+    assert reducer(state, cast('McpAction', InitAction())) is state

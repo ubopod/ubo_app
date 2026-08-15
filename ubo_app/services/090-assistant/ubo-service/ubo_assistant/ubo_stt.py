@@ -17,6 +17,7 @@ from pipecat.processors.frame_processor import FrameDirection, FrameProcessorSet
 from pipecat.services.assemblyai.stt import AssemblyAISTTService
 from pipecat.services.assemblyai.models import AssemblyAIConnectionParams
 from pipecat.services.deepgram.stt import DeepgramSTTService
+from pipecat.services.elevenlabs.stt import ElevenLabsRealtimeSTTService
 from pipecat.services.google.stt import GoogleSTTService
 from pipecat.services.mistral.stt import MistralSTTService
 from pipecat.services.openai.stt import OpenAISTTService
@@ -62,6 +63,7 @@ class STTServiceConfig:
     assemblyai_api_key: str | None = None
     venice_api_key: str | None = None
     mistral_api_key: str | None = None
+    elevenlabs_api_key: str | None = None
 
 
 class GenericSTTProxy(STTService):
@@ -214,6 +216,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         self.assemblyai_stt = GenericSTTProxy()
         self.venice_stt = GenericSTTProxy()
         self.mistral_stt = GenericSTTProxy()
+        self.elevenlabs_stt = GenericSTTProxy()
 
         # Initialize Vosk STT with the default model — the store autorun
         # registered in `_ensure_autoruns_started` reconciles it to the
@@ -242,6 +245,7 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             'assemblyai': self.assemblyai_stt,
             'venice': self.venice_stt,
             'mistral': self.mistral_stt,
+            'elevenlabs': self.elevenlabs_stt,
         }
 
         UboSwitchService.__init__(
@@ -287,6 +291,12 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             'mistral_api_key',
             '_create_mistral_service',
             'mistral_stt',
+        ),
+        'elevenlabs': (
+            'ELEVENLABS_API_KEY_SECRET_ID',
+            'elevenlabs_api_key',
+            '_create_elevenlabs_service',
+            'elevenlabs_stt',
         ),
     }
 
@@ -356,6 +366,23 @@ class UboSTTService(UboSwitchService[STTService], STTService):
             return MistralSTTService(api_key=self._config.mistral_api_key)
         except Exception:
             logger.exception('Error while initializing Mistral STT')
+            return None
+
+    def _create_elevenlabs_service(self) -> ElevenLabsRealtimeSTTService | None:
+        """Create ElevenLabs realtime STT service if API key is provided."""
+        if not self._config.elevenlabs_api_key:
+            return None
+        try:
+            # Realtime (websocket) rather than the file-based
+            # ``ElevenLabsSTTService``: it streams partial transcripts and keeps
+            # the default ``CommitStrategy.MANUAL`` so Pipecat's own VAD owns
+            # segment boundaries, matching every other streaming provider here.
+            # Model defaults to ``scribe_v2_realtime`` with auto language.
+            return ElevenLabsRealtimeSTTService(
+                api_key=self._config.elevenlabs_api_key,
+            )
+        except Exception:
+            logger.exception('Error while initializing ElevenLabs STT')
             return None
 
     def _create_assemblyai_service(self) -> AssemblyAISTTService | None:

@@ -27,9 +27,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
-if TYPE_CHECKING:
-    import pytest
+import pytest
 
+if TYPE_CHECKING:
     from ubo_app.store.services.speech_synthesis import SpeechSynthesisState
 
 
@@ -119,3 +119,36 @@ def test_read_text_emits_event_even_when_disabled(
     event = result.events[0]
     assert isinstance(event, ns.SpeechSynthesisSynthesizeTextEvent)
     assert event.information.text == 'hello'
+
+
+def test_init_action_builds_default_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A None state plus InitAction yields a fresh default state."""
+    from redux import InitAction
+
+    ns = _load(monkeypatch)
+
+    result = ns.reducer(None, InitAction())
+
+    assert isinstance(result, ns.SpeechSynthesisState)
+
+
+def test_none_state_without_init_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Any non-init action against a None state is an initialization error."""
+    from redux import InitializationActionError
+
+    ns = _load(monkeypatch)
+
+    with pytest.raises(InitializationActionError):
+        ns.reducer(None, ns.SpeechSynthesisSetIsEnabledAction(is_enabled=True))
+
+
+def test_unhandled_action_returns_state_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An action matching no case leaves the state untouched."""
+    from redux import InitAction
+
+    ns = _load(monkeypatch)
+    state = _state(ns)
+
+    assert ns.reducer(state, InitAction()) is state

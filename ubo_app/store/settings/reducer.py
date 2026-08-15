@@ -35,8 +35,11 @@ from ubo_app.store.settings.types import (
     SettingsState,
     SettingsStopServiceAction,
     SettingsStopServiceEvent,
+    SettingsToggleAssistantDebugAction,
     SettingsToggleBetaVersionsAction,
+    SettingsToggleGrpcRemoteAccessAction,
     SettingsTogglePdbSignalAction,
+    SettingsToggleTcpLiteAction,
     SettingsToggleVisualDebugAction,
 )
 from ubo_app.store.update_manager.types import UpdateManagerRequestCheckAction
@@ -95,6 +98,12 @@ def reducer(
                 visual_debug=not state.visual_debug,
             )
 
+        case SettingsToggleAssistantDebugAction():
+            return replace(
+                state,
+                assistant_debug=not state.assistant_debug,
+            )
+
         case SettingsToggleBetaVersionsAction():
             return CompleteReducerResult(
                 state=replace(
@@ -115,6 +124,22 @@ def reducer(
                 ]
                 if not state.beta_versions
                 else [],
+            )
+
+        case SettingsToggleGrpcRemoteAccessAction():
+            # Just flip the flag. The security warning is merged into the docker
+            # service's single "gRPC exposed" notification, fired when Envoy
+            # actually starts exposing the port — so nothing is warned about here
+            # (nothing is exposed until Envoy is up).
+            return replace(
+                state,
+                grpc_remote_access=not state.grpc_remote_access,
+            )
+
+        case SettingsToggleTcpLiteAction():
+            return replace(
+                state,
+                tcp_lite_enabled=not state.tcp_lite_enabled,
             )
 
         case SettingsSetServicesAction():

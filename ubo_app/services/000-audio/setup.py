@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ParamSpec
 
 from audio_manager import AudioManager
+from output_manager import apply_output, watch_lineout_jack
+from output_menu import register_output_menu
 
 from ubo_app.colors import DANGER_COLOR, SUCCESS_COLOR, WARNING_COLOR
 from ubo_app.store.core.view_registry import (
@@ -21,11 +23,13 @@ from ubo_app.store.main import store
 from ubo_app.store.services.audio import (
     AudioDevice,
     AudioInstallDriverEvent,
+    AudioOutput,
     AudioPlayAudioSampleAction,
     AudioPlayAudioSampleEvent,
     AudioPlayAudioSequenceEvent,
     AudioPlayChimeAction,
     AudioPlayChimeEvent,
+    AudioReportLineoutJackAction,
     AudioSample,
     AudioSetMuteStatusAction,
     AudioStopPlaybackEvent,
@@ -114,6 +118,45 @@ async def _install_driver() -> None:
                 ),
             ),
         )
+
+
+def _init_output_routing() -> Subscriptions:
+    """Wire up playback-output selection, the lineout jack, and the menu.
+
+    Routing goes entirely through PipeWire, so this needs nothing from the
+    ``AudioManager`` — in particular it does not have to wait for the ALSA card
+    index, and can be wired up before the card is found.
+    """
+    register_persistent_store(
+        'audio_state:selected_output',
+        lambda state: state.audio.selected_output,
+    )
+    register_persistent_store(
+        'audio_state:output_volumes',
+        lambda state: state.audio.output_volumes,
+    )
+    register_persistent_store(
+        'audio_state:is_lineout_auto_switch_enabled',
+        lambda state: state.audio.is_lineout_auto_switch_enabled,
+    )
+
+    @store.autorun(lambda state: state.audio.selected_output)
+    def apply_selected_output(output: AudioOutput) -> None:
+        # Fires once at registration too, which re-asserts the persisted choice
+        # over whatever port PipeWire restored on its own at boot.
+        apply_output(output)
+
+    stop_watching_lineout_jack = watch_lineout_jack(
+        lambda is_inserted: store.dispatch(
+            AudioReportLineoutJackAction(is_inserted=is_inserted),
+        ),
+    )
+
+    return [
+        apply_selected_output.unsubscribe,
+        stop_watching_lineout_jack,
+        register_output_menu(),
+    ]
 
 
 def init_service() -> Subscriptions:
@@ -228,6 +271,8 @@ def init_service() -> Subscriptions:
         lambda state: state.audio.is_capture_mute,
     )
 
+    output_subscriptions = _init_output_routing()
+
     def stop_playback(_: AudioStopPlaybackEvent) -> None:
         import simpleaudio
 
@@ -239,6 +284,7 @@ def init_service() -> Subscriptions:
 
     return [
         audio_manager.close,
+        *output_subscriptions,
         store.subscribe_event(AudioInstallDriverEvent, _install_driver),
         store.subscribe_event(AudioPlayChimeEvent, play_chime),
         store.subscribe_event(AudioPlayAudioSampleEvent, play_audio),

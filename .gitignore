@@ -103,6 +103,10 @@ ubo_app/_version.py
 !/ubo_app/rpc/ubo_bindings/client.py
 !/ubo_app/rpc/ubo_bindings/parent_version.py
 
+# nanopb (LVGL client) — generated, see ubo_lvgl/client/proto/regen.sh
+/ubo_lvgl/client/proto/ubo_client.pb.c
+/ubo_lvgl/client/proto/ubo_client.pb.h
+
 /screenshots
 /snapshots
 /recordings
@@ -118,3 +122,6 @@ whisker.bin
 .memsearch/
 .graphify/
 graphify-out/
+# LVGL C build output (one dir per cmake configuration, e.g. build-grpcweb)
+ubo_lvgl/build/
+ubo_lvgl/build-*/

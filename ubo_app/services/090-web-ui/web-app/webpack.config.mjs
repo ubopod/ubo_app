@@ -38,5 +38,9 @@ export default {
       },
     ],
   },
-  mode: "development",
+  // The kiosk browser runs this bundle on the device itself, where a
+  // development build costs real CPU: React and MUI ship their dev-only
+  // validation, nothing is minified, and every render pays for it. `npm start`
+  // passes `--mode development` for the dev-server workflow.
+  mode: "production",
 };

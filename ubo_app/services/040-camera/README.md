@@ -25,7 +25,7 @@ For the action/event/store model this doc references throughout, see
 | `reducer.py`            | Pure reducer for the `camera` slice; input-queue handling + action→event mapping. |
 | `camera_backend.py`     | `CameraBackend` `Protocol` (start/stop/close/capture_array/configure/set_controls). |
 | `opencv_backend.py`     | OpenCV `VideoCapture` backend for macOS/Linux dev hosts.                        |
-| `picamera2_backend.py`  | Picamera2 backend for Raspberry Pi (RGB888, autofocus/AWB controls).           |
+| `picamera2_backend.py`  | Picamera2 backend for Raspberry Pi (RGB888 preview config, AWB, capability-probed AF). |
 | `utils.py`              | Camera-index detection helpers (`detect_available_cameras[_picamera2]`).        |
 | `pages.py`              | Thin shim re-exporting `CAMERA_MENU_ID`; the menu is now fully dynamic.         |
 
@@ -41,7 +41,6 @@ Slice: `state.camera` — [`CameraState`](../../store/services/camera.py):
 | `selected_source_id`           | `str`                         | Active source id, `local:<index>` or `remote:<uuid>` (persisted).  |
 | `available_cameras`            | `tuple[CameraSource, ...]`    | Merged local + remote source list from the last detection cycle.   |
 | `pending_remote_registrations` | `tuple[CameraSource, ...]`    | Staging area for remote clients answering a detect advertise.      |
-| `camera_type`                  | `CameraType`                  | `default` / `autofocus` / `fixed-focus` (persisted; drives driver + AF). |
 
 `selected_source_id` is migrated from the legacy `camera_selected_index` int key on first init
 (`_resolve_initial_source_id`).
@@ -63,8 +62,8 @@ capture / privileged side effects.
 | `CameraSetAvailableCamerasAction` | Publishes the merged list, re-validates selection, clears staging.   |
 | `CameraReportImageAction`       | → `CameraReportImageEvent` (remote gRPC frame → same decode path as local). |
 | `CameraReportBarcodeAction`     | Matches the queue head's `pattern`; on hit dispatches `InputProvideAction`. |
-| `CameraInstallDriverAction`     | Sets `camera_type`; → `CameraInstallDriverEvent`.                      |
-| `CameraRestoreDefaultAction`    | Resets `camera_type`; → `CameraRestoreDefaultEvent`.                   |
+| `CameraInstallDriverAction`     | → `CameraInstallDriverEvent` (state untouched).                         |
+| `CameraRestoreDefaultAction`    | → `CameraRestoreDefaultEvent` (state untouched).                        |
 
 ## Runtime & Setup
 
@@ -106,14 +105,26 @@ event subscriptions.
 
 ## System / Hardware Integration
 
-- **Two backends** behind `CameraBackend`: Picamera2 (RGB888, `AwbEnable`, autofocus when
-  `camera_type == 'autofocus'`) on the Pi; OpenCV `VideoCapture` (BGR→RGB, 180° rotate, warm-up
-  frames) elsewhere.
+- **Two backends** behind `CameraBackend`: Picamera2 on the Pi; OpenCV `VideoCapture` (BGR→RGB,
+  180° rotate, warm-up frames) elsewhere.
+- **Autofocus is probed, not configured.** `PiCamera2Backend._apply_default_controls` enables
+  `AwbEnable` always and `AfMode: Continuous` only when the opened camera advertises `AfMode`. That
+  covers the Pi Camera Module 3 (IMX708) and an Arducam IMX519 with its VCM enabled, and skips
+  fixed-focus hardware (IMX219, `imx519,vcm=off`, USB webcams) without `set_controls` being asked
+  for an unsupported control. Controls are re-asserted in `start()` because `configure()` rebuilds
+  the control set and the viewfinder session rebuilds the backend on every source change.
+- **Preview, not still, configuration.** `create_preview_configuration` keeps the sensor in a
+  binned, high-frame-rate mode; a still configuration selects the full-resolution, low-frame-rate
+  mode, which starves the `VIEWFINDER_INTERVAL` feed loop and leaves continuous AF too few frames
+  to converge on.
 - **Remote sources:** clients (iOS/web) that answer `CameraDetectAdvertiseEvent` with
   `CameraRegisterRemoteAction` and then push frames as `CameraReportImageAction` over gRPC — they
   cannot emit events directly, so the reducer translates the action into `CameraReportImageEvent`.
 - **Privileged driver ops:** `send_command('camera', 'install_driver'|'restore_default', ...)` to
-  the system manager (both prompt a reboot on success).
+  the system manager (both prompt a reboot on success). `variant` selects the device-tree overlay
+  (`imx519` vs `imx519,vcm=off`) — it does not declare AF support. Note that no menu currently
+  dispatches `CameraInstallDriverAction`: the entries lived in the legacy `store/settings/menu.py`,
+  removed when the app moved to dynamic menus, so today the action only arrives over gRPC.
 - **QR decode:** `pyzbar`; PNG/text mock inputs at `/tmp/qrcode_input.{png,txt}` short-circuit the
   capture path off-device for tests.
 
@@ -127,7 +138,7 @@ event subscriptions.
 
 ## Configuration
 
-- Persisted (`register_persistent_store`): `camera_selected_source_id`, `camera_type`.
+- Persisted (`register_persistent_store`): `camera_selected_source_id`.
 - Constants: `CAMERA_MENU_ID`, `VIEWFINDER_INTERVAL`, `THROTTL_TIME`,
   `REMOTE_REGISTRATION_WINDOW`; capture size derives from `WIDTH`/`HEIGHT` in `ubo_app.constants`.
 

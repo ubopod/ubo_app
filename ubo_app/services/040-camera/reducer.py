@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import functools
 import re
+import time
 
 from redux import (
     CompleteReducerResult,
@@ -46,7 +47,6 @@ from ubo_app.store.services.camera import (
     CameraStartViewfinderAction,
     CameraStartViewfinderEvent,
     CameraState,
-    CameraType,
 )
 from ubo_app.store.services.keypad import KeypadKeyPressAction
 from ubo_app.store.services.notifications import (
@@ -56,6 +56,7 @@ from ubo_app.store.services.notifications import (
     NotificationsAddAction,
     NotificationsClearByIdAction,
 )
+from ubo_app.utils.persistent_store import read_from_persistent_store
 
 Action = InitAction | CameraAction | InputAction | KeypadKeyPressAction
 DispatchAction = (
@@ -73,13 +74,13 @@ def prompt_notification(description: QRCodeInputDescription) -> NotificationsAdd
             display_type=NotificationDisplayType.STICKY,
             is_read=True,
             extra_information=description.instructions,
+            expiration_timestamp=time.time(),
             color='#ffffff',
             actions=[
                 NotificationDispatchItem(
                     store_action=CameraStartViewfinderAction(
                         pattern=description.pattern,
                     ),
-                    label='Open Camera',
                     icon='󰄀',
                     close_notification=False,
                 ),
@@ -137,6 +138,30 @@ def pop_queue(
     )
 
 
+def _resolve_initial_source_id() -> str:
+    """Pick the initial selected-source id, migrating from the old int key.
+
+    Older releases persisted `camera_selected_index` (int). Newer state lives
+    under `camera_selected_source_id` (str). If only the old key is present,
+    we synthesise `local:<index>` so the user's previous choice survives.
+    """
+    new_value = read_from_persistent_store(
+        'camera_selected_source_id',
+        default=None,
+        output_type=str,
+    )
+    if new_value:
+        return new_value
+    legacy_index = read_from_persistent_store(
+        'camera_selected_index',
+        default=None,
+        output_type=int,
+    )
+    if legacy_index is not None:
+        return f'local:{legacy_index}'
+    return 'local:0'
+
+
 def _ensure_selection_valid(
     available: tuple[CameraSource, ...],
     selected_source_id: str,
@@ -167,7 +192,10 @@ def reducer(
 ]:
     if state is None:
         if isinstance(action, InitAction):
-            return CameraState(queue=[])
+            return CameraState(
+                queue=[],
+                selected_source_id=_resolve_initial_source_id(),
+            )
         raise InitializationActionError(action)
 
     match action:
@@ -188,7 +216,7 @@ def reducer(
 
         case CameraInstallDriverAction(make=make, model=model, variant=variant):
             return CompleteReducerResult(
-                state=state(camera_type=CameraType(variant)),
+                state=state,
                 events=[
                     CameraInstallDriverEvent(
                         make=make,
@@ -200,7 +228,7 @@ def reducer(
 
         case CameraRestoreDefaultAction():
             return CompleteReducerResult(
-                state=state(camera_type=CameraType.DEFAULT),
+                state=state,
                 events=[CameraRestoreDefaultEvent()],
             )
 

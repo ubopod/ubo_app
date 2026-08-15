@@ -19,9 +19,18 @@ if TYPE_CHECKING:
 MAX_EXPECTED_LISTENERS = 600
 # Bumped from 95 to cover the speech-recognition wake-word model lifecycle event
 # handlers (WakeWordDownloadModelsEvent / WakeWordDeleteModelEvent), which run the
-# blocking download/delete off the reducer. These are intentional subscriptions,
-# not leaks; the guard still catches runaway handler growth.
-MAX_EXPECTED_EVENT_HANDLERS = 105
+# blocking download/delete off the reducer. Then to 108 for the MQTT bridge's two
+# subscriptions (MqttPublishEvent / MqttAnnounceRequestedEvent) — the seam other
+# services publish through, since they cannot import the bridge — plus the
+# sensors service's SensorsScanEvent handler, which runs the bus scan off the
+# reducer. Bumped again by 5 for the localization service's location-reset,
+# weather-refresh and three speak-{time,date,weather} handlers, which run the
+# network fetch and the TTS dispatch off the reducer. Then to 120 once
+# `localization` joined CORE_SERVICE_IDS, so those handlers (six of them — the
+# five above plus location-changed) finally register here; the device run counts
+# 116, since it also loads the hardware-only services desktop skips. These are
+# intentional subscriptions, not leaks; the guard still catches runaway growth.
+MAX_EXPECTED_EVENT_HANDLERS = 120
 
 
 @pytest.mark.timeout(500)

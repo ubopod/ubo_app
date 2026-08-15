@@ -36,6 +36,55 @@ class DockerItemStatus(StrEnum):
     PROCESSING = auto()
 
 
+class DockerItemHealth(StrEnum):
+    """How an app is faring, as distinct from where it is in its lifecycle.
+
+    Kept out of ``DockerItemStatus`` on purpose. That enum drives control flow
+    all over the service — ``is_available``, the rebind gate, the broker
+    recreation set, the Zigbee heal — through hardcoded tuples that a new member
+    would silently fall out of, disabling exactly the recovery paths a crashed
+    app needs.
+    """
+
+    OK = auto()
+    # Came back on its own after one or more policy-driven restarts.
+    RECOVERED = auto()
+    # Restarting repeatedly and recently: it cannot stay up.
+    CRASH_LOOPING = auto()
+
+
+# A container that restarted once an hour ago has recovered; one that restarted
+# three times in the last five minutes has not. `restart_count` is cumulative
+# since the last manual start, so recency has to be part of the test.
+CRASH_LOOP_THRESHOLD = 3
+CRASH_LOOP_WINDOW = 300.0
+
+
+class DockerAppStatus(Immutable):
+    """Serializable projection of one app's state, for non-menu surfaces.
+
+    `state.docker` itself cannot be streamed to a client: `combine_reducers`
+    synthesizes a per-image attribute on `DockerState` at runtime, and none of
+    those exist in the proto message — serializing the slice raises `KeyError`
+    and takes down the whole `SubscribeStore` stream, every selector in it, not
+    just this one. This lives on `DockerServiceState`, which is a plain
+    `Immutable` and does serialize.
+
+    `label` and `icon` are copied in because they live Python-side in the
+    `IMAGES` registry's `ContainerEntry`, not in `ImageState`.
+    """
+
+    id: str
+    label: str
+    icon: str
+    status: DockerItemStatus = DockerItemStatus.NOT_AVAILABLE
+    # Carried alongside the lifecycle status rather than folded into it, so a
+    # consumer can apply the same precedence the Apps menu tint does: health
+    # outranks status, because with `restart_policy: always` a failing app is
+    # back to RUNNING seconds after it died.
+    health: DockerItemHealth = DockerItemHealth.OK
+
+
 class DockerAction(BaseAction):
     """Docker action."""
 
@@ -96,20 +145,30 @@ class DockerSetZigbeeIntentAction(DockerAction):
     adapter_by_id: str = ''
 
 
-class DockerSetMacvlanConfigAction(DockerAction):
-    """Set Home Assistant's optional macvlan "advanced discovery" config.
+class DockerSetHostNetworkAction(DockerAction):
+    """Set whether Home Assistant runs on the host's network stack.
 
-    macvlan gives HA its own LAN IP so mDNS/SSDP discovery works. The LAN
-    parameters aren't in core state (``IpNetworkInterface`` has no subnet/
-    gateway), so they're discovered/confirmed via a web form and persisted
-    here; the compose macvlan network + attachment are re-derived at render.
+    Host networking is what makes HA's mDNS/SSDP discovery work: the container
+    shares the host's interfaces, so multicast reaches the LAN. It is the only
+    option that works over Wi-Fi — a macvlan sub-interface has its own MAC, and
+    an access point only accepts one MAC per associated station, so its frames
+    are silently dropped. Intent only; the compose ``network_mode`` and the
+    hostname shims that keep the add-on bus reachable are derived at render.
     """
 
     enabled: bool
-    parent: str = ''
-    subnet: str = ''
-    gateway: str = ''
-    ip: str = ''
+
+
+class DockerSetAppStatusAction(DockerAction):
+    """Record an app's projected status in ``DockerServiceState.apps``.
+
+    Deliberately not a ``DockerImageAction``: those are routed to the per-image
+    reducer by ``image`` id, and this writes the service slice instead. An app
+    reported as ``NOT_AVAILABLE`` is evicted rather than stored — see the
+    reducer.
+    """
+
+    app: DockerAppStatus
 
 
 class DockerImageAction(DockerAction):
@@ -130,6 +189,24 @@ class DockerImageSetDockerIdAction(DockerImageAction):
     """Docker image set docker id action."""
 
     docker_id: str
+
+
+class DockerImageReportExitAction(DockerImageAction):
+    """Record how an app's container last exited, as the daemon reports it.
+
+    Latched rather than folded into ``status``: every container is created with
+    ``restart_policy: always``, so a crash is followed by a restart within
+    seconds and any status derived from it would be gone before it was read.
+    """
+
+    restart_count: int
+    exit_code: int | None = None
+    exit_at: float | None = None
+    error: str = ''
+    # Compositions only. `RestartCount` is per-container and `compose ps` does
+    # not report it, so a stack says which of its services cannot stay up
+    # instead. Always sent, so a recovered stack clears it.
+    failing_services: tuple[str, ...] = ()
 
 
 class DockerImageUpdateMetadataAction(DockerImageAction):
@@ -218,47 +295,23 @@ class DockerServiceState(Immutable):
             output_type=str,
         ),
     )
-    # Optional macvlan "advanced discovery" config for Home Assistant. Intent
-    # only — the compose macvlan network + multi-homed attachment are derived
-    # from these at render time.
-    macvlan_enabled: bool = field(
+    # Per-app status for surfaces that render from the store rather than from
+    # the menu (the web UI dashboard). Only apps whose image is actually on the
+    # device appear — the reducer evicts an app that goes `NOT_AVAILABLE`.
+    #
+    # Derived, and deliberately *not* persisted like its siblings above: a
+    # restored entry would outlive its container and claim an app was running
+    # before docker had reconciled anything.
+    apps: dict[str, DockerAppStatus] = field(default_factory=dict)
+    # Whether Home Assistant runs on the host's network stack (for mDNS/SSDP
+    # discovery). Intent only — the compose `network_mode` and the hostname
+    # shims that keep the add-on bus reachable are derived at render time.
+    host_network_enabled: bool = field(
         default_factory=functools.partial(
             read_from_persistent_store,
-            'docker_macvlan_enabled',
+            'docker_host_network_enabled',
             default=False,
             output_type=bool,
-        ),
-    )
-    macvlan_parent: str = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            'docker_macvlan_parent',
-            default='',
-            output_type=str,
-        ),
-    )
-    macvlan_subnet: str = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            'docker_macvlan_subnet',
-            default='',
-            output_type=str,
-        ),
-    )
-    macvlan_gateway: str = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            'docker_macvlan_gateway',
-            default='',
-            output_type=str,
-        ),
-    )
-    macvlan_ip: str = field(
-        default_factory=functools.partial(
-            read_from_persistent_store,
-            'docker_macvlan_ip',
-            default='',
-            output_type=str,
         ),
     )
 
@@ -327,6 +380,17 @@ class ImageState(Immutable):
     container_ip: str | None = None
     docker_id: str | None = None
     ports: list[str] = field(default_factory=list)
+    # How the container last exited, as the daemon reports it. Deliberately
+    # separate from `status`: with `restart_policy: always` a crash is undone by
+    # a restart within seconds, so a status carrying it would never be seen.
+    # `restart_count` is the daemon's own — it counts policy-driven restarts and
+    # resets on a manual start, which is what distinguishes a crash from a stop.
+    restart_count: int = 0
+    last_exit_code: int | None = None
+    last_exit_at: float | None = None
+    last_error: str = ''
+    # Compositions only: the services in the stack that cannot stay up.
+    failing_services: tuple[str, ...] = ()
 
     @property
     def is_fetching(self: ImageState) -> bool:
@@ -346,6 +410,37 @@ class ImageState(Immutable):
     def is_running(self: ImageState) -> bool:
         """Check if image is running."""
         return self.status == DockerItemStatus.RUNNING
+
+
+def derive_health(image: ImageState, *, now: float) -> DockerItemHealth:
+    """Classify an app's health from what the daemon last reported.
+
+    Keyed on ``restart_count`` rather than the exit code, because the exit code
+    cannot tell the two cases apart: ``container.stop()`` is SIGTERM then
+    SIGKILL, so a perfectly deliberate stop exits 143 or 137. Only the restart
+    policy increments this counter, and a manual start resets it — so a nonzero
+    count means the daemon revived something the user did not stop.
+    """
+    # An app that is not meant to be up is not unhealthy, it is off. Its crash
+    # history stops being actionable the moment the user stops or removes it,
+    # and `docker stop` does not reset `RestartCount` — only `docker start`
+    # does — so without this the count would outlive the thing it described.
+    if image.status not in (DockerItemStatus.STARTING, DockerItemStatus.RUNNING):
+        return DockerItemHealth.OK
+
+    # A stack reports by name instead of by count, since `compose ps` has no
+    # per-container restart counter to read.
+    if image.failing_services:
+        return DockerItemHealth.CRASH_LOOPING
+    if image.restart_count <= 0:
+        return DockerItemHealth.OK
+    if (
+        image.restart_count >= CRASH_LOOP_THRESHOLD
+        and image.last_exit_at is not None
+        and now - image.last_exit_at < CRASH_LOOP_WINDOW
+    ):
+        return DockerItemHealth.CRASH_LOOPING
+    return DockerItemHealth.RECOVERED
 
 
 class DockerState(BaseCombineReducerState):

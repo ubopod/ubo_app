@@ -47,6 +47,37 @@ export function TileGrid({
     tileRefs.current[focusIndex]?.focus({ preventScroll: true });
   }, [focusIndex]);
 
+  useEffect(() => {
+    // In the two-display kiosk a load-time .focus() no-ops (the compositor's
+    // single keyboard focus starts on the other surface), and a click on empty
+    // page area lands DOM focus on <body>. Both leave arrow navigation dead
+    // until the user presses Tab. So reclaim focus into the grid when the
+    // window regains keyboard focus or a click leaves focus on the body —
+    // guarded on <body> so clicks on real controls (tiles, back button,
+    // dialogs) keep their own focus. requestAnimationFrame lets the click's
+    // own focus handling settle first, so we don't fight it.
+    const reclaimFocus = () => {
+      if (document.visibilityState !== "visible") return;
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+        if (active && active !== document.body && active !== document.documentElement) {
+          return;
+        }
+        (tileRefs.current[focusIndex] ?? gridRef.current)?.focus({
+          preventScroll: true,
+        });
+      });
+    };
+    window.addEventListener("focus", reclaimFocus);
+    document.addEventListener("visibilitychange", reclaimFocus);
+    document.addEventListener("click", reclaimFocus);
+    return () => {
+      window.removeEventListener("focus", reclaimFocus);
+      document.removeEventListener("visibilitychange", reclaimFocus);
+      document.removeEventListener("click", reclaimFocus);
+    };
+  }, [focusIndex]);
+
   const lastActivateRef = useRef(0);
 
   const handleActivate = useCallback(

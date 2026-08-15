@@ -1,3 +1,8 @@
 #!/usr/bin/env bash
 
-uv run ubo-assistant
+# ``uv run`` resolves its project from the cwd, but ubo-core spawns service
+# binaries with ``cwd=DATA_PATH`` (so that cwd is never an ancestor of the
+# service venv's site-packages — see the nltk CWE-427 note in
+# ``ubo_app/service_thread.py``). Name the project explicitly so the launcher
+# no longer depends on the cwd it is started in.
+exec uv run --project "$(cd "$(dirname "$0")/.." && pwd)" ubo-assistant

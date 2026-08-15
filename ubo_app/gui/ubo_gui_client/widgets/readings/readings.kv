@@ -1,0 +1,26 @@
+#:kivy 2.3.0
+
+<ReadingsRenderPage>:
+  BoxLayout:
+    orientation: 'vertical'
+    padding: dp(8), root.padding_top + dp(6), dp(8), root.padding_bottom + dp(6)
+    spacing: dp(2)
+
+    BoxLayout:
+      id: rows
+      orientation: 'vertical'
+      spacing: dp(2)
+      size_hint: 1, None
+      height: self.minimum_height
+
+    Label:
+      text: root.placeholder or ''
+      opacity: 0 if root.labels else 1
+      size_hint: 1, None
+      height: 0 if root.labels else self.texture_size[1]
+      font_size: dp(15)
+      halign: 'center'
+      valign: 'middle'
+
+    Widget:
+      size_hint: 1, 1

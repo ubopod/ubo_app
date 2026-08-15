@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from dataclasses import fields
 from pathlib import Path
@@ -15,6 +16,16 @@ if TYPE_CHECKING:
     from _pytest.fixtures import SubRequest
 
     from ubo_app.store.main import RootState
+
+# Blinka's platform detector crashes on device-tree-less Linux (e.g. the
+# aarch64 test container: `Chip._linux_id` calls `.split` on a `None`
+# `/proc/device-tree/compatible`), which makes importing any real Adafruit
+# driver explode. OS-agnostic mode skips hardware probing entirely. Gated on
+# non-Pi so on-device runs keep real detection, and set here — before
+# anything can import `adafruit_blinka`/`board`/`busio` — because the chip id
+# is cached on a module singleton at first import.
+if not Path('/etc/rpi-issue').exists():
+    os.environ.setdefault('BLINKA_OS_AGNOSTIC', '1')
 
 dotenv.load_dotenv(Path(__file__).parent / '.dev.env')
 dotenv.load_dotenv(Path(__file__).parent / '.env')

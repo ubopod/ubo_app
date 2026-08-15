@@ -3,8 +3,14 @@ name = "ubo-app"
 dynamic = ["version"]
 description = "Ubo main app, running on device initialization. A platform for running other apps."
 license = "Apache-2.0"
-authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
-maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+authors = [
+  { name = "Mehrdad M", email = "mehrdad@getubo.com" },
+  { name = "Sassan Haradji", email = "me@sassanh.com" },
+]
+maintainers = [
+  { name = "Mehrdad M", email = "mehrdad@getubo.com" },
+  { name = "Sassan Haradji", email = "me@sassanh.com" },
+]
 readme = "README.md"
 requires-python = ">=3.11, <3.12"
 keywords = ['ubo', 'ubo-pod', 'raspberry pi', 'rpi', 'home assistance']
@@ -40,11 +46,34 @@ dependencies = [
   "ubo-app-raw-bindings",
   "ubo-gui==0.13.17",
   "vosk==0.3.44",
+  # Not wyoming[zeroconf] — that extra only adds zeroconf==0.88.0 to
+  # Requires-Dist and nothing imports wyoming.zeroconf (090-wyoming/setup.py
+  # uses zeroconf.asyncio directly), but on the pod `pip install <wheel>`
+  # sees that pin and our direct one below as conflicting and silently keeps
+  # the old version — a uv override-dependencies entry doesn't help there,
+  # it only affects uv's own resolution, not the wheel's Requires-Dist. Drop
+  # the extra so there's a single source of truth for the zeroconf version.
+  "wyoming==1.10.0",
+  # Direct dependency for ubo_app/utils/zeroconf.py's shared mDNS registry
+  # (used by services beyond Wyoming, e.g. the gRPC control API's
+  # discoverability advertisement). Floor of 0.128.3 fixes a wire-format bug
+  # in DNSNsec.write() (writes the NSEC window/bitmap-length fields as
+  # 2-byte shorts instead of the RFC 4034 §4.1.2-mandated 1 byte each) that
+  # made Android 14+'s stricter NSD mDNS parser drop the whole response
+  # packet containing our _uborpc._tcp answer — macOS's more lenient
+  # mDNSResponder tolerated it, which is why `dns-sd` worked regardless.
+  # Fixed upstream in "Correct nsec record writing" (python-zeroconf#1326).
+  "zeroconf==0.150.0",
   "openwakeword==0.6.0",
   # Speex noise suppression for OpenWakeWord — native, Linux-only (manylinux
   # aarch64/x86_64 wheels). Marked so it's skipped on non-Linux dev (e.g. macOS);
   # the engine enables suppression only when the package is importable.
   "speexdsp-ns==0.1.2 ; sys_platform == 'linux'",
+  # microWakeWord runtime — ships prebuilt wheels bundling their own
+  # `libtensorflowlite_c` (linux aarch64/armv7l/x86_64, macOS universal2), so
+  # there is no `tflite-runtime` to resolve. Pulls `pymicro-features` for the
+  # audio frontend.
+  "pymicro-wakeword==2.4.1",
   "opencv-python==4.10.0.84",
   # Adafruit dependencies
   "adafruit-circuitpython-aw9523==1.1.12",
@@ -54,7 +83,31 @@ dependencies = [
   "adafruit-circuitpython-rgb-display==3.14.0",
   "adafruit-circuitpython-veml7700==2.1.3",
   "adafruit-circuitpython-pixelbuf==2.0.8",
+  # STEMMA QT sensor drivers — one per definition in the sensor registry
+  # (`040-sensors/registry.default.json`). A definition may only name a driver
+  # that is both listed here and on `drivers.DRIVER_ALLOWLIST`.
+  "adafruit-circuitpython-ahtx0==1.0.28",
+  "adafruit-circuitpython-apds9960==3.1.19",
+  "adafruit-circuitpython-bh1750==1.1.14",
+  "adafruit-circuitpython-bme280==2.6.28",
+  "adafruit-circuitpython-bme680==3.7.16",
+  "adafruit-circuitpython-bmp3xx==1.3.27",
+  "adafruit-circuitpython-ens160==1.1.2",
+  "adafruit-circuitpython-mcp9808==3.3.26",
+  "adafruit-circuitpython-pm25==2.1.24",
+  "adafruit-circuitpython-scd4x==1.4.12",
+  "adafruit-circuitpython-sgp40==1.3.24",
+  "adafruit-circuitpython-sht4x==1.0.22",
+  "adafruit-circuitpython-vl53l1x==1.1.12",
   "adafruit-blinka-raspberry-pi5-neopixel==1.0.0rc2 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
+  # Not imported directly — every `adafruit-circuitpython-*` above pulls it in.
+  # Pinned to a floor because 9.1.0 and earlier pick the GPIO chip by the *last
+  # character* of its sysfs name, so a kernel that numbers the RP1 controller
+  # `gpiochip15` sends them to `/dev/gpiochip5`, which does not exist, and every
+  # consumer dies at import with "can not open gpiochip". 9.2.0 parses the whole
+  # numeric suffix. Seen for real: a kernel bump renumbered the chips 4 -> 15
+  # and the GUI client would not start until this floor was raised.
+  "adafruit-blinka>=9.2.0",
   # RPi dependencies
   "onnxruntime>=1.22.0 ; sys_platform=='linux' and platform_machine=='aarch64'",
   "pyalsaaudio==0.11.0 ; platform_machine == 'aarch64' and sys_platform == 'linux'",
@@ -66,6 +119,8 @@ dependencies = [
   # gRPC
   "betterproto[compiler]==2.0.0b7",
   "pillow>=11.3.0",
+  # MQTT — publishes sensor readings to Home Assistant's bundled broker.
+  "aiomqtt==2.4.0",
 ]
 
 [tool.uv]
@@ -117,6 +172,8 @@ exclude = [
   "ubo_app/services/*/ubo-service",
   "ubo_app/services/080-docker/assets/envoy.yaml",
   "ubo_app/gui",
+  "ubo_app/lvgl_gui",
+  "ubo_lvgl",
 ]
 artifacts = ["ubo_app/services/090-web-ui/web-app/dist"]
 
@@ -139,25 +196,41 @@ version = "uvx --with hatch-vcs hatch version"
 "lint:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint"
 "lint:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service lint"
 "lint:gui" = "poe --directory=ubo_app/gui lint"
-lint = ['lint:self', 'lint:rpc', 'lint:assistant', 'lint:mcp', 'lint:gui']
+"lint:lvgl-gui" = "poe --directory=ubo_app/lvgl_gui lint"
+lint = ['lint:self', 'lint:rpc', 'lint:assistant', 'lint:mcp', 'lint:gui', 'lint:lvgl-gui']
 "lint:fix:self" = "ruff check . --fix --unsafe-fixes"
 "lint:fix:rpc" = "poe --directory=ubo_app/rpc lint --fix --unsafe-fixes"
 "lint:fix:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service lint --fix --unsafe-fixes"
 "lint:fix:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service lint --fix --unsafe-fixes"
 "lint:fix:gui" = "poe --directory=ubo_app/gui lint --fix --unsafe-fixes"
-"lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant", "lint:fix:mcp", "lint:fix:gui"]
+"lint:fix:lvgl-gui" = "poe --directory=ubo_app/lvgl_gui lint --fix --unsafe-fixes"
+"lint:fix" = ["lint:fix:self", "lint:fix:rpc", "lint:fix:assistant", "lint:fix:mcp", "lint:fix:gui", "lint:fix:lvgl-gui"]
 "typecheck:self" = "pyright -p pyproject.toml ."
 "typecheck:rpc" = "poe --directory=ubo_app/rpc typecheck"
 "typecheck:assistant" = "poe --directory=ubo_app/services/090-assistant/ubo-service typecheck"
 "typecheck:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service typecheck"
 "typecheck:gui" = "poe --directory=ubo_app/gui typecheck"
-typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant", "typecheck:mcp", "typecheck:gui"]
-test = "pytest"
+"typecheck:lvgl-gui" = "poe --directory=ubo_app/lvgl_gui typecheck"
+typecheck = ["typecheck:self", "typecheck:rpc", "typecheck:assistant", "typecheck:mcp", "typecheck:gui", "typecheck:lvgl-gui"]
+# Two pytest invocations on purpose — see the script's docstring. A cmd task
+# (not a poe sequence) so extra pytest args are forwarded to both tiers.
+test = "python scripts/run_test_tiers.py"
 "test:mcp" = "poe --directory=ubo_app/services/090-mcp/ubo-service test"
 "test:unit" = "pytest tests/store tests/navigation --ignore=tests/store/test_subscribe_event.py -v"
+# Plain pytest passthrough, bypassing the tier split — for targeting a single
+# test/file without also running both tiers in full (see docker:test:raw).
+"test:raw" = "pytest"
 sanity = ["typecheck", "lint", "test"]
 build-docker-images = "sh -c 'docker buildx build . -f scripts/Dockerfile.dev -t ubo-app-dev && docker buildx build . -f scripts/Dockerfile.test -t ubo-app-test'"
-"docker:test:unit" = "sh -c 'docker run --rm -v \"$(pwd)\":/ubo-app ubo-app-test -- tests/store tests/navigation -v'"
+"docker:test:unit" = "sh -c 'docker run --rm -v \"$(pwd)\":/ubo-app -e UBO_TEST_TASK=test:unit ubo-app-test'"
+# The leading `--` is consumed as $0 by the host sh -c invocation so poe's
+# forwarded args land correctly in "$@"; the one inside the docker command is
+# consumed the same way by the container entrypoint's own bash -c "$@" — see
+# scripts/Dockerfile.test. `-e PRETEND_VERSION` (no value) forwards it from
+# the host shell if set, avoiding a setuptools-scm version-detection error
+# from the bind-mounted repo's shallow/missing git history.
+# Usage: PRETEND_VERSION=0.0.0.dev0 uv run poe docker:test:raw tests/foo.py -v
+"docker:test:raw" = "sh -c 'docker run --rm -v \"$(pwd)\":/ubo-app -e UBO_TEST_TASK=test:raw -e PRETEND_VERSION ubo-app-test -- \"$@\"' --"
 build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install --include=dev && npm run proto:compile && npm run build'"
 
 
@@ -168,7 +241,19 @@ build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install -
 "proto:compile:raw" = "sh -c 'mkdir -p ubo_app/rpc/ubo_bindings && python -m grpc_tools.protoc -I ubo_app/rpc/proto/ --python_betterproto_opt=typing.310 --python_betterproto_out=ubo_app/rpc/ubo_bindings/ ubo_app/rpc/proto/store/v1/store.proto ubo_app/rpc/proto/secrets/v1/secrets.proto'"
 "proto:compile" = ["proto:compile:raw", "lint:fix:rpc"]
 
-"proto" = ["proto:generate", "proto:compile"]
+# LVGL C client's curated proto (ubo_lvgl/client/proto/ubo_client.proto) hard-codes a subset of
+# ubo-core's Action/Event oneof tag numbers, which ubo-core assigns by alphabetical position — so
+# any new action/event upstream silently renumbers them. `:check` diffs the curated tags against
+# the freshly generated core proto (needs proto:generate to have run first) and fails loudly on
+# drift instead of letting a firmware build silently dispatch the wrong action. `:sync` applies the
+# fix for review/commit. `:generate` (check + nanopb regen) is what the umbrella `proto` task runs;
+# its output (ubo_client.pb.{c,h}) is gitignored, never committed.
+"proto:lvgl:check" = "bash ubo_lvgl/client/proto/sync_tags.sh"
+"proto:lvgl:sync" = "bash ubo_lvgl/client/proto/sync_tags.sh . --write"
+"proto:lvgl:regen" = "bash ubo_lvgl/client/proto/regen.sh"
+"proto:lvgl:generate" = ["proto:lvgl:check", "proto:lvgl:regen"]
+
+"proto" = ["proto:generate", "proto:compile", "proto:lvgl:generate"]
 
 # Swift / Kotlin client bindings live in sibling repos (ubo-swift-grpc,
 # ubo-kotlin-grpc) and aren't always checked out — keep them off the
@@ -202,6 +287,45 @@ build-web-app = "sh -c 'cd ubo_app/services/090-web-ui/web-app/ && npm install -
 "device:test:run" = "poe test-on-device --run"
 "device:test:results" = "poe test-on-device --results"
 "device:test:complete" = "poe test-on-device --deps --copy --run --results"
+# Hardware-in-the-loop audio tests. Runs against the RUNNING ubo-app (unlike
+# device:test, which stops it), because the point is to measure the deployed
+# system with a real satellite listening over the air.
+"device:test:hil" = "poe test-hil --copy --run --results"
+"device:test:hil:run" = "poe test-hil --run"
+
+# ESP32 firmware (ubo_lvgl/esp32) for both supported boards. --board is
+# required: c6 = Waveshare ESP32-C6-Touch-AMOLED-1.8, s3 = Espressif
+# ESP32-S3-BOX-3. --profile defaults to the shipping `ppp` build (USB/PPP link
+# to ubo-core, no USB console); pass `--profile wifi` for the debug build whose
+# serial console `esp32:monitor` can actually read. Each pair builds into its
+# own build.<target>[.ppp]/sdkconfig.<target>[.ppp], so the two boards never
+# clobber each other. `esp32:flash` builds first (idf.py flash does).
+[tool.poe.tasks."esp32:build"]
+args = [
+  { name = "board", type = "string", default = "" },
+  { name = "profile", type = "string", default = "ppp" },
+  { name = "transport", type = "string", default = "" },
+  { name = "fresh", type = "boolean" },
+]
+cmd = "scripts/esp32.sh build"
+
+[tool.poe.tasks."esp32:flash"]
+args = [
+  { name = "board", type = "string", default = "" },
+  { name = "profile", type = "string", default = "ppp" },
+  { name = "port", type = "string", default = "" },
+  { name = "transport", type = "string", default = "" },
+  { name = "fresh", type = "boolean" },
+]
+cmd = "scripts/esp32.sh flash"
+
+[tool.poe.tasks."esp32:monitor"]
+args = [
+  { name = "board", type = "string", default = "" },
+  { name = "profile", type = "string", default = "ppp" },
+  { name = "port", type = "string", default = "" },
+]
+cmd = "scripts/esp32.sh monitor"
 
 [tool.poe.tasks.test-on-device]
 args = [
@@ -213,6 +337,17 @@ args = [
   { name = "pytest-args", type = "string", default = "" },
 ]
 cmd = "scripts/test_on_device.sh"
+
+[tool.poe.tasks.test-hil]
+args = [
+  { name = "copy", type = "boolean" },
+  { name = "run", type = "boolean" },
+  { name = "results", type = "boolean" },
+  { name = "index", type = "integer", default = '1' },
+  { name = "pytest-args", type = "string", default = "tests/hardware -v -s" },
+  { name = "satellite-port", type = "string", default = "/dev/ttyACM0" },
+]
+cmd = "scripts/test_hil.sh"
 
 [tool.poe.tasks.deploy-to-device]
 args = [
@@ -228,6 +363,12 @@ cmd = "scripts/deploy.sh"
 
 [tool.ruff]
 target-version = 'py311'
+extend-exclude = [
+  "ubo_lvgl/lvgl",                        # git submodule (lvgl/lvgl)
+  "ubo_lvgl/third_party",                 # git submodule (nanopb)
+  "ubo_lvgl/esp32/managed_components",    # ESP-IDF component manager
+  "ubo_lvgl/esp32/build",                 # ESP-IDF build output
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -266,10 +407,21 @@ exclude = [
   "ubo_app/rpc/ubo_bindings",
   "ubo_app/services/*/ubo-service",
   "ubo_app/gui",
+  "ubo_app/lvgl_gui",
+  "ubo_lvgl/lvgl",                        # git submodule (lvgl/lvgl)
+  "ubo_lvgl/third_party",                 # git submodule (nanopb)
+  "ubo_lvgl/esp32/managed_components",    # ESP-IDF component manager
+  "ubo_lvgl/esp32/build",                 # ESP-IDF build output
+  # Sibling client repos, cloned inside this tree and gitignored. Ruff skips
+  # them via .gitignore; pyright does not, and their vendored SwiftPM checkouts
+  # carry protobuf's own Python, which alone accounts for thousands of errors.
+  "ubo-swift-app",
+  "ubo-swift-grpc",
+  "ubo-kotlin-apps",
+  "ubo-kotlin-grpc",
   "**/.venv",
   "dist/",
 ]
-disableTaggedHints = true
 
 [[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/000-audio"
@@ -324,7 +476,15 @@ root = "ubo_app/services/050-lightdm"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/050-mqtt"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
 root = "ubo_app/services/050-rpi-connect"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/055-kiosk"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
@@ -364,12 +524,16 @@ root = "ubo_app/services/090-web-ui"
 extraPaths = ["."]
 
 [[tool.pyright.executionEnvironments]]
+root = "ubo_app/services/090-wyoming"
+extraPaths = ["."]
+
+[[tool.pyright.executionEnvironments]]
 root = "ubo_app/tui"
 extraPaths = ["."]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-norecursedirs = ["ubo_app/tui", "ubo_app/gui"]
+norecursedirs = ["ubo_app/tui", "ubo_app/gui", "ubo_app/lvgl_gui"]
 markers = ["persistent_store: run test with provided persistent store"]
 asyncio_mode = "auto"
 filterwarnings = [

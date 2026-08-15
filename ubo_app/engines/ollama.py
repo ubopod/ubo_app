@@ -142,8 +142,13 @@ class OllamaEngine(NeedsSetupMixin, AIProviderMixin):
         """
         try:
             result = await self._client().list()
-        except Exception:
-            logger.exception('Failed to query local Ollama daemon')
+        except Exception:  # noqa: BLE001 -- most users never run a local Ollama
+            # daemon at all, so this fires on essentially every refresh for
+            # them (Sentry UBO-APP-Q7/Q8: 300+ events, 26 users). It's
+            # expected and already handled below (empty model set, never
+            # raises to the caller), so it doesn't warrant an error-level
+            # report.
+            logger.warning('Failed to query local Ollama daemon', exc_info=True)
             normalised: tuple[str, ...] = ()
         else:
             normalised = tuple(

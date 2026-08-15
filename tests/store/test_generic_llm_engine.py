@@ -15,6 +15,7 @@ from ubo_app.store.services.assistant import (
 )
 from ubo_app.store.services.notifications import NotificationsAddAction
 from ubo_app.utils import secrets
+from ubo_app.utils.text import slugify
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -42,7 +43,7 @@ class _FakeStore:
 )
 def test_slugify_provider_name(name: str, expected: str) -> None:
     """Display names reduce to dotenv-safe slugs."""
-    assert generic_llm.slugify_provider_name(name) == expected
+    assert slugify(name) == expected
 
 
 def _patch_flow(

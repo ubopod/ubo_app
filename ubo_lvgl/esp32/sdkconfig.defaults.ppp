@@ -1,0 +1,36 @@
+# PPP-over-USB build profile — the "pod" firmware. Layer it on the base defaults:
+#
+#   idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.ppp" build
+#
+# NOTE: sdkconfig.defaults* files are only consumed when `sdkconfig` does not
+# exist. Switching profiles means `rm sdkconfig` (or `idf.py fullclean`) first,
+# or these keys are silently ignored.
+
+# PPP must own the USB Serial/JTAG endpoint, so it can no longer double as a log
+# console. The primary console stays UART0 — `idf.py monitor` over USB shows
+# nothing in this profile. The default (non-PPP) profile is unaffected.
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+
+# Quieter reset: ROM/bootloader chatter lands mid-stream in pppd's HDLC framing.
+# It is discarded on FCS anyway, but there is no reason to emit it.
+CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y
+
+CONFIG_LWIP_PPP_SUPPORT=y
+CONFIG_LWIP_PPP_ENABLE_IPV4=y
+
+# Off deliberately. It defaults to y, but Linux pppd has IPv6CP disabled unless
+# explicitly asked for (`+ipv6`), and IDF's own Kconfig warns that an unanswered
+# IPV6CP negotiation "may time out... would in turn fail the configuration for
+# the whole link."
+CONFIG_LWIP_PPP_ENABLE_IPV6=n
+
+# Pairs with `novj` in the pppd unit. Van Jacobson header compression buys little
+# on a link this fast and is one more thing to negotiate.
+CONFIG_LWIP_PPP_VJ_HEADER_COMPRESSION=n
+
+# LCP echo is how a dead peer (Pi rebooted, pppd killed, cable yanked) is
+# detected: 3 missed echoes at 3s => PPPERR_PEERDEAD within ~10s. Mirrored by
+# lcp-echo-interval/lcp-echo-failure on the pppd side.
+CONFIG_LWIP_ENABLE_LCP_ECHO=y
+CONFIG_LWIP_LCP_ECHOINTERVAL=3
+CONFIG_LWIP_LCP_MAXECHOFAILS=3

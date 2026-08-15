@@ -21,6 +21,7 @@ from typing import (
     Union,
     cast,
     get_origin,
+    get_type_hints,
     overload,
 )
 
@@ -107,6 +108,7 @@ if TYPE_CHECKING:
         KeypadReportContextAction,
         KeypadState,
     )
+    from ubo_app.store.services.kiosk import KioskAction, KioskEvent, KioskState
     from ubo_app.store.services.lightdm import LightDMAction, LightDMState
     from ubo_app.store.services.localization import (
         LocalizationAction,
@@ -114,6 +116,7 @@ if TYPE_CHECKING:
         LocalizationState,
     )
     from ubo_app.store.services.mcp import McpAction, McpEvent, McpState
+    from ubo_app.store.services.mqtt import MqttAction, MqttEvent, MqttState
     from ubo_app.store.services.notifications import (
         NotificationsAction,
         NotificationsEvent,
@@ -121,7 +124,11 @@ if TYPE_CHECKING:
     )
     from ubo_app.store.services.rgb_ring import RgbRingAction, RgbRingState
     from ubo_app.store.services.rpi_connect import RPiConnectAction, RPiConnectState
-    from ubo_app.store.services.sensors import SensorsAction, SensorsState
+    from ubo_app.store.services.sensors import (
+        SensorsAction,
+        SensorsEvent,
+        SensorsState,
+    )
     from ubo_app.store.services.speech_recognition import (
         SpeechRecognitionAction,
         SpeechRecognitionEvent,
@@ -138,6 +145,11 @@ if TYPE_CHECKING:
     from ubo_app.store.services.vscode import VSCodeAction, VSCodeState
     from ubo_app.store.services.web_ui import WebUIAction, WebUIState
     from ubo_app.store.services.wifi import WiFiAction, WiFiEvent, WiFiState
+    from ubo_app.store.services.wyoming import (
+        WyomingAction,
+        WyomingEvent,
+        WyomingState,
+    )
     from ubo_app.store.settings.types import SettingsState
     from ubo_app.store.status_icons.types import StatusIconsAction, StatusIconsState
     from ubo_app.store.update_manager.types import (
@@ -167,9 +179,11 @@ UboAction: TypeAlias = Union[
     'IpAction',
     'KeypadAction',
     'KeypadReportContextAction',
+    'KioskAction',
     'LightDMAction',
     'LocalizationAction',
     'McpAction',
+    'MqttAction',
     'NotificationsAction',
     'RgbRingAction',
     'RPiConnectAction',
@@ -183,6 +197,7 @@ UboAction: TypeAlias = Union[
     'VSCodeAction',
     'WebUIAction',
     'WiFiAction',
+    'WyomingAction',
 ]
 UboEvent: TypeAlias = Union[
     # Core Events
@@ -197,12 +212,16 @@ UboEvent: TypeAlias = Union[
     'FileSystemEvent',
     'InfraredEvent',
     'IpEvent',
+    'KioskEvent',
     'LocalizationEvent',
     'McpEvent',
+    'MqttEvent',
     'NotificationsEvent',
+    'SensorsEvent',
     'SpeechRecognitionEvent',
     'UsersEvent',
     'WiFiEvent',
+    'WyomingEvent',
 ]
 
 if threading.current_thread() is not threading.main_thread():
@@ -226,9 +245,11 @@ class RootState(BaseCombineReducerState):
     infrared: InfraredState
     ip: IpState
     keypad: KeypadState
+    kiosk: KioskState
     lightdm: LightDMState
     localization: LocalizationState
     mcp: McpState
+    mqtt: MqttState
     notifications: NotificationsState
     rgb_ring: RgbRingState
     rpi_connect: RPiConnectState
@@ -242,6 +263,7 @@ class RootState(BaseCombineReducerState):
     vscode: VSCodeState
     web_ui: WebUIState
     wifi: WiFiState
+    wyoming: WyomingState
 
 
 root_reducer, root_reducer_id = combine_reducers(
@@ -391,6 +413,22 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
         *,
         object_type: GenericAlias | type[T] | None = None,
     ) -> LoadedObject | T:
+        # An enum-typed field is persisted as its bare value (a `str`/`int`),
+        # so this must run before the primitive passthrough below - otherwise
+        # that passthrough returns the raw value first and these branches
+        # never run.
+        if isinstance(object_type, type):
+            if issubclass(object_type, StrEnum):
+                if isinstance(data, str):
+                    return object_type(data)
+                msg = f'Invalid data type {type(data)} for StrEnum {object_type}'
+                raise TypeError(msg)
+            if issubclass(object_type, IntEnum):
+                if isinstance(data, int):
+                    return object_type(data)
+                msg = f'Invalid data type {type(data)} for IntEnum {object_type}'
+                raise TypeError(msg)
+
         if isinstance(data, int | float | str | bool | None):
             return data
         if isinstance(data, list):
@@ -413,23 +451,27 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
                 msg = f'Invalid type {type(type_)}'
                 raise TypeError(msg)
 
-            parameters = {key: self.load_object(value) for key, value in data.items()}
+            # Field types let a nested enum field (e.g. `AudioOutputVolume.output`)
+            # round-trip correctly - without them every field is reloaded with
+            # object_type=None and an enum field comes back as a bare str.
+            try:
+                field_types = get_type_hints(class_)
+            except (NameError, TypeError):
+                field_types = {}
+            parameters = {
+                key: (
+                    self.load_object(value, object_type=field_type)
+                    if isinstance(field_type := field_types.get(key), type)
+                    else self.load_object(value)
+                )
+                for key, value in data.items()
+            }
 
             return class_(**parameters)
         if isinstance(object_type, GenericAlias):
             origin = get_origin(object_type)
             if isinstance(data, origin):
                 return cast('T', data)
-        elif object_type and issubclass(object_type, StrEnum):
-            if isinstance(data, str):
-                return object_type(data)
-            msg = f'Invalid data type {type(data)} for StrEnum {object_type}'
-            raise TypeError(msg)
-        elif object_type and issubclass(object_type, IntEnum):
-            if isinstance(data, int):
-                return object_type(data)
-            msg = f'Invalid data type {type(data)} for IntEnum {object_type}'
-            raise TypeError(msg)
         elif not object_type or isinstance(data, object_type):
             return cast('T', data)
 
@@ -523,7 +565,6 @@ class UboStore(Store[RootState, UboAction, UboEvent]):
                 # Process ALL pending events before continuing with actions
                 if len(self._events) > 0:
                     self._run_event_handlers()
-
 
 
 CALL_EVENT_KWARGS_KEY = '__ubo_autorun_call_event'

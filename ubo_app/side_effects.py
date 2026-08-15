@@ -33,6 +33,7 @@ from ubo_app.store.update_manager.types import (
 )
 from ubo_app.store.update_manager.utils import check_version, update
 from ubo_app.utils import bus_provider
+from ubo_app.utils.async_ import create_task
 from ubo_app.utils.hardware import IS_RPI
 from ubo_app.utils.persistent_store import register_persistent_store
 from ubo_app.utils.store import replay_actions
@@ -205,6 +206,18 @@ def setup_side_effects() -> Subscriptions:
         'settings:beta_versions',
         lambda state: state.settings.beta_versions,
     )
+    register_persistent_store(
+        'settings:grpc_remote_access',
+        lambda state: state.settings.grpc_remote_access,
+    )
+    register_persistent_store(
+        'settings:assistant_debug',
+        lambda state: state.settings.assistant_debug,
+    )
+    register_persistent_store(
+        'settings:tcp_lite_enabled',
+        lambda state: state.settings.tcp_lite_enabled,
+    )
     subscriptions = [
         store.subscribe_event(PowerOffEvent, _power_off),
         store.subscribe_event(RebootEvent, _reboot),
@@ -242,6 +255,18 @@ def setup_side_effects() -> Subscriptions:
             signal.signal(signal.SIGUSR1, pdb_signal_handler)
         else:
             signal.signal(signal.SIGUSR1, signal.SIG_DFL)
+
+    @store.autorun(lambda state: state.settings.tcp_lite_enabled)
+    def _tcp_lite_server_toggle(enabled: bool) -> None:  # noqa: FBT001
+        """Start or stop the MCU raw-TCP listener to match the setting."""
+        from ubo_app.constants import DISABLE_MCU_SERVER
+        from ubo_app.rpc import mcu_server
+
+        create_task(
+            mcu_server.serve()
+            if enabled and not DISABLE_MCU_SERVER
+            else mcu_server.close_server(),
+        )
 
     store.dispatch(UpdateManagerRequestCheckAction())
 

@@ -20,6 +20,8 @@ from ubo_app.store.services.notifications import (
 from ubo_app.store.services.web_ui import (
     WebUIAction,
     WebUIInitializeEvent,
+    WebUIInputAction,
+    WebUIInputEvent,
     WebUIState,
 )
 
@@ -35,7 +37,7 @@ def reducer(
 ) -> ReducerResult[
     WebUIState,
     DispatchAction,
-    WebUIInitializeEvent,
+    WebUIInitializeEvent | WebUIInputEvent,
 ]:
     if state is None:
         if isinstance(action, InitAction):
@@ -69,6 +71,12 @@ def reducer(
                     active_inputs=new_active_inputs,
                 ),
                 actions=[NotificationsClearByIdAction(id=f'web_ui:pending:{id}')],
+            )
+
+        case WebUIInputAction(command=command):
+            return CompleteReducerResult(
+                state=state,
+                events=[WebUIInputEvent(command=command)],
             )
 
         case _:

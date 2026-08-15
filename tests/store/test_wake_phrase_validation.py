@@ -175,3 +175,43 @@ def test_openwakeword_model_collision_is_engine_wide(
         )
         == []
     )
+
+
+def test_collision_message_for_every_wake_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Every ``WakeMode`` must render a collision message.
+
+    ``_MODE_LABELS`` is a hand-maintained parallel of the ``WakeMode`` enum, so a
+    mode added to the enum without a label here raises ``KeyError`` the moment a
+    user's phrase collides with a trigger in that mode. Parametrising over the
+    live enum keeps the two in step instead of pinning today's members.
+    """
+    module = _load_validation(monkeypatch)
+    sr = importlib.import_module('ubo_app.store.services.speech_recognition')
+
+    for mode in sr.WakeMode:
+        state = SimpleNamespace(
+            wake_engines=(
+                SimpleNamespace(
+                    engine=sr.WakeWordEngineName.VOSK,
+                    triggers=(
+                        SimpleNamespace(
+                            id=f'{mode.value}-0',
+                            mode=mode,
+                            value='hey ubo',
+                        ),
+                    ),
+                ),
+            ),
+            conversation_end_phrases=(),
+        )
+
+        problems = module.phrase_collisions(
+            'hey ubo',
+            sr.WakeWordEngineName.VOSK,
+            state,
+        )
+
+        assert problems, mode
+        assert 'Already used by' in problems[0], mode

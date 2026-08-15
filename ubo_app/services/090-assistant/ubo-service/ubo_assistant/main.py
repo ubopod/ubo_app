@@ -29,7 +29,6 @@ from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from ubo_bindings.client import UboRPCClient
 
 from ubo_assistant.barge_in import BargeInOnListenSignal
-from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE, DEFAULT_TOOLS_MESSAGE
 from ubo_assistant.end_of_turn import EndOfTurnPhraseDetector
 from ubo_assistant.error_notification import attach_error_notifier
 from ubo_assistant.image_frame import ImageGenFrame
@@ -42,6 +41,7 @@ from ubo_assistant.silence_user_turn_stop import (
 )
 from ubo_assistant.stop_listening_on_bot_speech import StopListeningOnBotSpeech
 from ubo_assistant.stop_talking import StopTalkingOnSignal
+from ubo_assistant.system_prompt_watcher import SystemPromptWatcher
 from ubo_assistant.ubo_image_generator import UboImageGeneratorService
 from ubo_assistant.ubo_input_transport import UboInputTransport
 from ubo_assistant.ubo_llm import LLMServiceConfig, UboLLMService
@@ -175,12 +175,14 @@ class Assistant:
                 assemblyai_api_key=assemblyai_api_key,
                 venice_api_key=venice_api_key,
                 mistral_api_key=mistral_api_key,
+                elevenlabs_api_key=elevenlabs_api_key,
             ),
             google_credentials=google_credentials,
             selector='state.assistant.selected_stt',
         )
 
         policy_watcher = PolicyWatcher(self.client)
+        system_prompt_watcher = SystemPromptWatcher(self.client)
         silence_user_turn_stop_strategy = UboPolicyAwareUserTurnStopStrategy(
             client=self.client,
             policy_watcher=policy_watcher,
@@ -191,7 +193,6 @@ class Assistant:
             user_turn_stop_strategy=silence_user_turn_stop_strategy,
         )
         barge_in_on_listen = BargeInOnListenSignal(client=self.client)
-        stop_talking_on_signal = StopTalkingOnSignal(client=self.client)
         stop_listening_on_bot_speech = StopListeningOnBotSpeech(client=self.client)
 
         ubo_llm_service = UboLLMService(
@@ -213,11 +214,12 @@ class Assistant:
                 generic_llm_model=generic_llm_model,
             ),
             selector='state.assistant.selected_llm',
+            system_prompt_watcher=system_prompt_watcher,
         )
 
         messages: list[LLMContextMessage] = [{
             'role': 'system',
-            'content': DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE,
+            'content': system_prompt_watcher.compose(include_tools=True),
         }]
 
         tools = ToolsSchema(standard_tools=[])
@@ -232,6 +234,13 @@ class Assistant:
         )
         user_aggregator = context_aggregator.user()
         assistant_aggregator = context_aggregator.assistant()
+
+        # Needs the user aggregator (to clear an already-aggregated transcript) and
+        # a pipeline slot downstream of STT (to swallow the ones still arriving).
+        stop_talking_on_signal = StopTalkingOnSignal(
+            client=self.client,
+            user_aggregator=user_aggregator,
+        )
 
         async def g() -> None:
             while True:
@@ -280,7 +289,7 @@ class Assistant:
 
         # Handle decoupled programmatic STT/LLM/TTS pipeline requests, isolated
         # from the live conversation pipeline below.
-        setup_request_handler(self.client)
+        setup_request_handler(self.client, system_prompt_watcher)
 
         async def is_image_gen_frame(frame: Frame) -> bool:
             return isinstance(frame, ImageGenFrame)
@@ -297,8 +306,11 @@ class Assistant:
                     [
                         vad_processor,
                         barge_in_on_listen,
-                        stop_talking_on_signal,
                         ubo_stt_service,
+                        # After STT so it sees the transcription frames of a
+                        # discarded turn and can withhold them from the
+                        # aggregator (and from end-of-turn detection).
+                        stop_talking_on_signal,
                         end_of_turn_detector,
                         user_aggregator,
                         ubo_llm_service,

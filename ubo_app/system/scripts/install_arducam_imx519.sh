@@ -21,6 +21,51 @@ fi
 # Accept variant argument: "autofocus" or "fixed-focus"
 VARIANT="${1:-autofocus}"
 
+CONFIG="/boot/firmware/config.txt"
+
+# `sed -i` writes a temporary file into the target's directory and renames it,
+# so an unwritable /boot/firmware fails the edit even as root. That happens when
+# the boot partition is mounted read-only — either deliberately or because the
+# kernel remounted the vfat filesystem after an error. Recover by remounting
+# read-write, and fail with the real reason rather than a bare sed error.
+boot_config_writable() {
+  # sed -i needs to create a temp file in the directory and rename over the
+  # target, so probe the directory too — not just the file.
+  local probe="$(dirname "$CONFIG")/.ubo-write-probe.$$"
+  if [ -w "$CONFIG" ] && (: >"$probe") 2>/dev/null; then
+    rm -f "$probe"
+    return 0
+  fi
+  rm -f "$probe" 2>/dev/null || true
+  return 1
+}
+
+ensure_boot_config_writable() {
+  if [ ! -f "$CONFIG" ]; then
+    echo "ERROR: $CONFIG not found; is this a Raspberry Pi OS boot partition?" 1>&2
+    exit 1
+  fi
+
+  if boot_config_writable; then
+    return 0
+  fi
+
+  echo "$CONFIG is not writable, attempting to remount read-write..." 1>&2
+  mount -o remount,rw /boot/firmware || true
+
+  if boot_config_writable; then
+    echo "Remounted /boot/firmware read-write."
+    return 0
+  fi
+
+  echo "ERROR: cannot write $CONFIG." 1>&2
+  echo "Mount state:" 1>&2
+  findmnt -no SOURCE,FSTYPE,OPTIONS /boot/firmware 1>&2 || true
+  exit 1
+}
+
+ensure_boot_config_writable
+
 WORKDIR=$(mktemp -d)
 cd "$WORKDIR"
 
@@ -33,7 +78,6 @@ chmod +x install_pivariety_pkgs.sh
 ./install_pivariety_pkgs.sh -p libcamera_apps
 
 # Configure dtoverlay in /boot/firmware/config.txt
-CONFIG="/boot/firmware/config.txt"
 
 # Set camera_auto_detect=0
 if grep -q "^camera_auto_detect=" "$CONFIG"; then

@@ -39,6 +39,18 @@ class SettingsToggleBetaVersionsAction(SettingsAction):
     """Toggle beta versions action."""
 
 
+class SettingsToggleGrpcRemoteAccessAction(SettingsAction):
+    """Toggle gRPC remote (LAN) access action."""
+
+
+class SettingsToggleTcpLiteAction(SettingsAction):
+    """Toggle the TCP-lite (MCU raw-TCP) server action."""
+
+
+class SettingsToggleAssistantDebugAction(SettingsAction):
+    """Toggle assistant debug session recording action."""
+
+
 class SettingsSetServicesAction(SettingsAction):
     """Start service action."""
 
@@ -154,5 +166,34 @@ class SettingsState(Immutable):
             default=DEBUG_BETA_VERSIONS,
         ),
     )
+    grpc_remote_access: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            'settings:grpc_remote_access',
+            # On by default so a freshly flashed pod is reachable by the mobile
+            # clients out of the box — with no GUI hardware attached, the only
+            # way to reach this toggle would otherwise be the Wi-Fi AP web UI.
+            # Turning it off persists, so an opt-out survives reboots.
+            default=True,
+        ),
+    )
+    tcp_lite_enabled: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            'settings:tcp_lite_enabled',
+            default=True,
+        ),
+    )
+    assistant_debug: bool = field(
+        default_factory=lambda: read_from_persistent_store(
+            'settings:assistant_debug',
+            default=False,
+        ),
+    )
+    """Record each assistant listening session's audio to disk for diagnosis.
+
+    Writes the received microphone stream, the audio played during the session
+    and a metadata sidecar under ``DATA_PATH / 'assistant_sessions'``. Off by
+    default: sessions are written unconditionally while enabled, so this
+    accumulates files.
+    """
     services: dict[str, ServiceState] = field(default_factory=dict)
     services_status: ServicesStatus = ServicesStatus.LOADING

@@ -2,32 +2,85 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
+import os
 import re
 import secrets as py_secrets
-from typing import TYPE_CHECKING
+from enum import StrEnum
+from typing import TYPE_CHECKING, NamedTuple
 
 import aiohttp
+import dotenv
 
 from apps._registry import COMPOSITIONS_PATH, ContainerEntry
 from ubo_app.constants import CONFIG_PATH
 from ubo_app.constants.assistant import (
+    ANTHROPIC_API_KEY_SECRET_ID,
+    BRAVE_SEARCH_API_KEY_SECRET_ID,
+    DEEPSEEK_API_KEY_SECRET_ID,
+    ELEVENLABS_API_KEY_SECRET_ID,
     GENERIC_LLM_PROVIDER_API_KEY_SECRET_TEMPLATE,
     GENERIC_LLM_PROVIDER_BASE_URL_SECRET_TEMPLATE,
     GENERIC_LLM_PROVIDER_MODEL_SECRET_TEMPLATE,
+    GOOGLE_API_KEY_SECRET_ID,
+    GROK_API_KEY_SECRET_ID,
+    MISTRAL_API_KEY_SECRET_ID,
+    OPENAI_API_KEY_SECRET_ID,
+    OPENROUTER_API_KEY_SECRET_ID,
+    QWEN_API_KEY_SECRET_ID,
 )
 from ubo_app.logger import logger
+from ubo_app.store.core.action_registry import register_action
+from ubo_app.store.core.types import (
+    MenuItemData,
+    OpenRenderAction,
+    RenderStackItem,
+    StackPopAction,
+    StackPushMenuAction,
+    UpdateDynamicMenuAction,
+    UpdateRenderPropsAction,
+)
+from ubo_app.store.input.types import (
+    InputFieldDescription,
+    InputFieldType,
+    WebUIInputDescription,
+)
 from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     AssistantAddGenericLLMProviderAction,
     AssistantRemoveGenericLLMProviderAction,
 )
+from ubo_app.store.services.notifications import (
+    Chime,
+    Notification,
+    NotificationDisplayType,
+    NotificationsAddAction,
+)
+from ubo_app.store.services.speech_synthesis import ReadableInformation
 from ubo_app.utils import secrets
+from ubo_app.utils.async_ import create_task
+from ubo_app.utils.input import ubo_input
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
     from pathlib import Path
 
+    from ubo_app.store.core.types import StackItemType
+    from ubo_app.store.ubo_actions import BasicType
+
+    RenderProps = dict[
+        str,
+        BasicType | tuple[BasicType, ...] | list[BasicType],
+    ]
+
 HERMES_COMPOSITION_ID = 'hermes'
+# The `hermes` user inside the images. The WebUI container chowns the shared
+# state directory to it on start, so anything we create in there has to end up
+# owned by it too.
+HERMES_CONTAINER_UID = 10000
+HERMES_CONTAINER_GID = 10000
 # Persistent host directory for all Hermes state, kept outside the composition
 # directory so neither `docker compose down -v` nor the composition-directory
 # removal on uninstall can destroy it. This decouples config/skills/sessions/
@@ -41,6 +94,63 @@ HERMES_GATEWAY_PORT = 8642
 HERMES_DASHBOARD_PORT = 9119
 HERMES_WEBUI_PORT = 8787
 HERMES_API_SERVER_KEY_SECRET = 'hermes_api_server_key'  # noqa: S105
+
+# Dashboard sign-in credentials. Since the June 2026 Hermes hardening the
+# dashboard refuses to start on a non-loopback bind unless an auth provider is
+# registered, and `--insecure` is a no-op that can no longer bypass the gate.
+# The container always binds 0.0.0.0 internally — that is what makes the
+# published port reachable at all — so the gate engages regardless of whether
+# the *host* side is bound to loopback or to the LAN. Credentials are therefore
+# mandatory in both modes, not only when "Expose to LAN" is on.
+HERMES_DASHBOARD_USERNAME_SECRET = 'hermes_dashboard_username'  # noqa: S105
+HERMES_DASHBOARD_PASSWORD_SECRET = 'hermes_dashboard_password'  # noqa: S105
+HERMES_DASHBOARD_SESSION_SECRET = 'hermes_dashboard_session_secret'  # noqa: S105
+HERMES_DASHBOARD_AUTH_SECRET_KEYS = (
+    HERMES_DASHBOARD_USERNAME_SECRET,
+    HERMES_DASHBOARD_PASSWORD_SECRET,
+    HERMES_DASHBOARD_SESSION_SECRET,
+)
+HERMES_DASHBOARD_DEFAULT_USERNAME = 'ubo'
+
+
+class HermesApiKeyImport(NamedTuple):
+    """A ubo-held API key that Hermes can consume under its own env var name."""
+
+    env_var: str
+    secret_id: str
+    label: str
+
+
+# ubo secrets that map onto a provider Hermes recognises first-class, keyed by
+# the env var name Hermes documents for it. Deliberately not exhaustive over
+# ubo's secrets: Cerebras, Venice, Deepgram, AssemblyAI and Rime have no
+# documented Hermes env var (Cerebras would need a hand-written custom provider
+# entry), and copying a credential into a container that will never read it is
+# pure exposure for no capability.
+HERMES_API_KEY_IMPORTS = (
+    HermesApiKeyImport(
+        'OPENROUTER_API_KEY',
+        OPENROUTER_API_KEY_SECRET_ID,
+        'OpenRouter',
+    ),
+    HermesApiKeyImport('OPENAI_API_KEY', OPENAI_API_KEY_SECRET_ID, 'OpenAI'),
+    HermesApiKeyImport('ANTHROPIC_API_KEY', ANTHROPIC_API_KEY_SECRET_ID, 'Anthropic'),
+    HermesApiKeyImport('GEMINI_API_KEY', GOOGLE_API_KEY_SECRET_ID, 'Google Gemini'),
+    HermesApiKeyImport('XAI_API_KEY', GROK_API_KEY_SECRET_ID, 'xAI (Grok)'),
+    HermesApiKeyImport('MISTRAL_API_KEY', MISTRAL_API_KEY_SECRET_ID, 'Mistral'),
+    HermesApiKeyImport('DEEPSEEK_API_KEY', DEEPSEEK_API_KEY_SECRET_ID, 'DeepSeek'),
+    HermesApiKeyImport('DASHSCOPE_API_KEY', QWEN_API_KEY_SECRET_ID, 'Qwen'),
+    HermesApiKeyImport(
+        'BRAVE_SEARCH_API_KEY',
+        BRAVE_SEARCH_API_KEY_SECRET_ID,
+        'Brave Search',
+    ),
+    HermesApiKeyImport(
+        'ELEVENLABS_API_KEY',
+        ELEVENLABS_API_KEY_SECRET_ID,
+        'ElevenLabs',
+    ),
+)
 
 # Auto-registered assistant LLM provider backed by the Hermes gateway's
 # OpenAI-compatible API server.
@@ -138,31 +248,805 @@ def _inject_api_server_env(content: str) -> str:
     return content.replace(needle, replacement, 1)
 
 
+def _get_or_create_secret(key: str) -> str:
+    """Return a persisted random Hermes secret, creating it if needed."""
+    value = secrets.read_secret(key)
+    if value:
+        return value
+
+    value = py_secrets.token_urlsafe(32)
+    secrets.write_secret(key=key, value=value)
+    return value
+
+
 def _get_or_create_api_server_key() -> str:
     """Return the persisted Hermes API server key, creating it if needed."""
-    key = secrets.read_secret(HERMES_API_SERVER_KEY_SECRET)
-    if key:
-        return key
+    return _get_or_create_secret(HERMES_API_SERVER_KEY_SECRET)
 
-    key = py_secrets.token_urlsafe(32)
-    secrets.write_secret(key=HERMES_API_SERVER_KEY_SECRET, value=key)
-    return key
+
+# ---------------------------------------------------------------------------
+# Dashboard sign-in
+# ---------------------------------------------------------------------------
+
+
+def _has_dashboard_credentials() -> bool:
+    """Check whether dashboard sign-in credentials have been collected."""
+    return bool(
+        secrets.read_secret(HERMES_DASHBOARD_USERNAME_SECRET)
+        and secrets.read_secret(HERMES_DASHBOARD_PASSWORD_SECRET),
+    )
+
+
+def _build_dashboard_auth_fields() -> list[InputFieldDescription]:
+    """Build the web UI form fields for the dashboard sign-in credentials."""
+    return [
+        InputFieldDescription(
+            name='HERMES_DASHBOARD_USERNAME',
+            label='Dashboard username',
+            type=InputFieldType.TEXT,
+            default_value=HERMES_DASHBOARD_DEFAULT_USERNAME,
+            required=True,
+        ),
+        InputFieldDescription(
+            name='HERMES_DASHBOARD_PASSWORD',
+            label='Dashboard password',
+            type=InputFieldType.PASSWORD,
+            description='Used to sign in to the Hermes dashboard.',
+            required=True,
+        ),
+    ]
+
+
+async def configure_dashboard_auth() -> bool:
+    """Prompt for dashboard sign-in credentials and store them as secrets."""
+    try:
+        _, result = await ubo_input(
+            title='Dashboard sign-in',
+            prompt='Choose a username and password for the Hermes dashboard.',
+            descriptions=[
+                WebUIInputDescription(fields=_build_dashboard_auth_fields()),
+            ],
+        )
+    except asyncio.CancelledError:
+        return False
+
+    if not result:
+        return False
+
+    username = (result.data.get('HERMES_DASHBOARD_USERNAME') or '').strip()
+    # The password is stored verbatim — it has to match what the user types
+    # into the dashboard's own login form byte for byte.
+    password = result.data.get('HERMES_DASHBOARD_PASSWORD') or ''
+    if not username or not password:
+        logger.warning('Hermes dashboard sign-in submitted incomplete form data')
+        return False
+
+    secrets.write_secret(key=HERMES_DASHBOARD_USERNAME_SECRET, value=username)
+    secrets.write_secret(key=HERMES_DASHBOARD_PASSWORD_SECRET, value=password)
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Optional API key sharing
+# ---------------------------------------------------------------------------
+
+
+def _is_checkbox_on(value: str | None) -> bool:
+    """Interpret a CHECKBOX form value. The web UI submits ``on``."""
+    return (value or '').strip().lower() in ('on', 'true', '1', 'yes', 'checked')
+
+
+def _available_api_key_imports() -> list[HermesApiKeyImport]:
+    """Return the importable keys the user has actually configured in ubo."""
+    return [
+        item for item in HERMES_API_KEY_IMPORTS if secrets.read_secret(item.secret_id)
+    ]
+
+
+def _chown_to_container_user(path: Path) -> None:
+    """Hand a file we created to the ``hermes`` user inside the containers.
+
+    Best effort: the chown needs privileges we may not hold off-device, and the
+    WebUI container chowns this shared directory on start anyway, so failing
+    here is recoverable rather than fatal.
+    """
+    try:
+        os.chown(path, HERMES_CONTAINER_UID, HERMES_CONTAINER_GID)
+    except OSError:
+        logger.warning(
+            'Unable to chown Hermes .env to the container user',
+            extra={'path': str(path)},
+        )
+
+
+def _write_hermes_dotenv(items: Sequence[HermesApiKeyImport]) -> None:
+    """Copy the selected API keys into Hermes' own ``~/.hermes/.env``.
+
+    That file — not ``config.yaml``, and not the composition's Compose ``.env``
+    — is where Hermes documents its secrets as living, and it sits in the shared
+    state directory so the agent and the WebUI both see it. Keys are set one at
+    a time rather than the file being rewritten, so anything Hermes put there
+    itself survives. The mode is tightened before the values go in, so the keys
+    are never briefly world-readable.
+    """
+    dotenv_path = HERMES_DATA_PATH / 'data' / '.env'
+    dotenv_path.parent.mkdir(exist_ok=True, parents=True)
+    dotenv_path.touch(mode=0o600, exist_ok=True)
+    dotenv_path.chmod(0o600)
+    for item in items:
+        value = secrets.read_secret(item.secret_id)
+        if value:
+            dotenv.set_key(
+                dotenv_path=dotenv_path,
+                key_to_set=item.env_var,
+                value_to_set=value,
+            )
+    _chown_to_container_user(dotenv_path)
+
+
+async def configure_api_key_imports() -> None:
+    """Offer to share ubo's already-configured API keys with Hermes.
+
+    Entirely optional, and skipped silently when ubo holds none of the keys
+    Hermes understands — an empty checklist is worse than no step at all.
+    Declining, cancelling or ticking nothing all leave Hermes' ``.env``
+    untouched and never block the install.
+    """
+    available = _available_api_key_imports()
+    if not available:
+        return
+
+    try:
+        _, result = await ubo_input(
+            title='Import API keys',
+            prompt='Select which of your API keys to share with Hermes.',
+            descriptions=[
+                WebUIInputDescription(
+                    fields=[
+                        InputFieldDescription(
+                            name=item.env_var,
+                            # Masked tail so two keys from the same provider are
+                            # tellable apart. `***1234`, parenthesised, is the
+                            # shape `apps/_helpers.py` already uses for its
+                            # existing-secret picker.
+                            label=f'{item.label} '
+                            f'({secrets.read_covered_secret(item.secret_id)})',
+                            type=InputFieldType.CHECKBOX,
+                            description=f'Share as {item.env_var}.',
+                            required=False,
+                        )
+                        for item in available
+                    ],
+                ),
+            ],
+        )
+    except asyncio.CancelledError:
+        return
+
+    if not result:
+        return
+
+    selected = [
+        item for item in available if _is_checkbox_on(result.data.get(item.env_var))
+    ]
+    if not selected:
+        return
+
+    _write_hermes_dotenv(selected)
+    logger.info(
+        'Shared API keys with Hermes',
+        extra={'variables': [item.env_var for item in selected]},
+    )
+
+
+def _compose_env_item(name: str, value: str) -> str:
+    """Render a ``NAME=value`` compose environment entry safely.
+
+    ``$`` is doubled so Compose's variable interpolation leaves a user-chosen
+    password alone, and the whole entry is emitted as a double-quoted scalar
+    (``json.dumps`` output is valid YAML) so quotes, backslashes, colons and
+    ``#`` in the value cannot break the document.
+    """
+    return json.dumps(f'{name}={value.replace("$", "$$")}')
+
+
+def _write_dashboard_auth_override(composition_path: Path) -> None:
+    """Write the compose override registering the dashboard's auth provider.
+
+    A separate override file is used rather than patching the upstream compose
+    so the credentials are rewritten wholesale on every prepare — which is what
+    makes "Dashboard Sign-in" take effect on the next start — and never have to
+    be located and replaced inside a file we do not own. ``docker compose`` runs
+    with the composition directory as its working directory, so it picks
+    ``docker-compose.override.yml`` up automatically.
+    """
+    username = secrets.read_secret(HERMES_DASHBOARD_USERNAME_SECRET)
+    password = secrets.read_secret(HERMES_DASHBOARD_PASSWORD_SECRET)
+    if not username or not password:
+        logger.warning('Skipping Hermes dashboard auth override; no credentials')
+        return
+
+    entries = (
+        _compose_env_item('HERMES_DASHBOARD_BASIC_AUTH_USERNAME', username),
+        _compose_env_item('HERMES_DASHBOARD_BASIC_AUTH_PASSWORD', password),
+        # Stable signing key, so sessions survive a container restart.
+        _compose_env_item(
+            'HERMES_DASHBOARD_BASIC_AUTH_SECRET',
+            _get_or_create_secret(HERMES_DASHBOARD_SESSION_SECRET),
+        ),
+    )
+    composition_path.joinpath('docker-compose.override.yml').write_text(
+        'services:\n  hermes-dashboard:\n    environment:\n'
+        + ''.join(f'      - {entry}\n' for entry in entries),
+    )
+
+
+def _reconfigure_dashboard_auth_action() -> None:
+    """Start the dashboard credential re-prompt, returning nothing."""
+    create_task(reconfigure_dashboard_auth())
+
+
+async def reconfigure_dashboard_auth() -> bool:
+    """Re-prompt for dashboard credentials and rewrite the compose override."""
+    if not await configure_dashboard_auth():
+        return False
+    _write_dashboard_auth_override(COMPOSITIONS_PATH / HERMES_COMPOSITION_ID)
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Provider OAuth sign-in
+# ---------------------------------------------------------------------------
+
+
+class OAuthOutcome(StrEnum):
+    """How a login attempt ended.
+
+    ``CANCELLED`` is every way the user changed their mind — walking away from
+    the view, dismissing the code form, or starting a different provider. It is
+    silent: a failure notification for any of those is noise, and it lands on
+    whatever screen they moved on to.
+    """
+
+    SUCCEEDED = 'succeeded'
+    FAILED = 'failed'
+    CANCELLED = 'cancelled'
+
+
+class HermesOAuthProvider(NamedTuple):
+    """A Hermes provider whose credentials come from an OAuth flow."""
+
+    id: str
+    label: str
+    icon: str
+    # True when the flow ends by reading an authorization code back from stdin
+    # rather than polling a device code.
+    needs_code: bool = False
+
+
+# Verified against Hermes v0.20.0 on a device, from the six ids in the CLI's own
+# `_OAUTH_CAPABLE_PROVIDERS`. `qwen-oauth` is the one omission: it aborts with
+# `Qwen CLI credentials not found` because it delegates to a separate `qwen`
+# binary that is not in the image, so there is nothing a menu can drive.
+HERMES_OAUTH_PROVIDERS = (
+    HermesOAuthProvider('nous', 'Nous Research', '󰧑'),
+    HermesOAuthProvider('openai-codex', 'OpenAI Codex', '󰚩'),
+    HermesOAuthProvider('xai-oauth', 'xAI Grok', '󰩄'),
+    HermesOAuthProvider('minimax-oauth', 'MiniMax', '󰫤'),
+    # Anthropic is the odd one out: instead of a device code it redirects to a
+    # *hosted* callback (console.anthropic.com), shows the user a code there,
+    # and blocks reading that code back from stdin. Since we own the pipe we
+    # answer it ourselves — see `needs_code`. Its PKCE verifier lives in the
+    # process, so the process must stay alive from URL to code.
+    HermesOAuthProvider('anthropic', 'Claude (Anthropic)', '󰛄', needs_code=True),
+)
+
+# How long the CLI waits for the user to approve on their phone.
+HERMES_OAUTH_TIMEOUT_SECONDS = 300
+# How long to keep reading after the URL for a device code printed below it.
+HERMES_OAUTH_CODE_GRACE_SECONDS = 5
+
+_ANSI_ESCAPE_RE = re.compile(r'\x1b\[[0-9;]*m')
+_URL_RE = re.compile(r'https?://\S+')
+# Device codes render as `52DK-A59Z` (Nous, xAI, MiniMax) or `L0JT-CIPSL`
+# (OpenAI Codex).
+_DEVICE_CODE_RE = re.compile(r'\b[A-Z0-9]{4}-[A-Z0-9]{4,6}\b')
+# Several providers print a `Portal: https://host` banner *before* the link the
+# user actually has to open, so the first URL in the stream is the wrong one.
+_PORTAL_LINE_RE = re.compile(r'^\s*Portal:', re.IGNORECASE)
+
+_oauth_process: asyncio.subprocess.Process | None = None
+# Bumped per login attempt. A run whose generation is no longer current has
+# been superseded by a newer one, which is a cancellation rather than a
+# failure and must not raise a notification.
+_oauth_generation = 0
+# How often to check that the user is still looking at the sign-in view.
+HERMES_OAUTH_VIEW_POLL_SECONDS = 0.5
+
+
+@store.with_state(lambda state: state.main.stack)
+def _sign_in_view_is_open(stack: Sequence[StackItemType], title: str) -> bool:
+    """Whether this provider's sign-in view is still on the navigation stack."""
+    return any(
+        isinstance(item, RenderStackItem) and item.title == title for item in stack
+    )
+
+
+async def _await_login(
+    process: asyncio.subprocess.Process,
+    title: str,
+) -> bool:
+    """Wait for the login to finish, or for the user to walk away from it.
+
+    Returns ``False`` when the sign-in view is gone, which is the only signal
+    available that the user pressed back: nothing tells this coroutine that its
+    view was popped, so without the poll an abandoned login would sit here
+    until the CLI's own timeout and then report a failure the user had already
+    moved on from.
+    """
+    waiter = asyncio.ensure_future(process.wait())
+    try:
+        while True:
+            done, _ = await asyncio.wait(
+                {waiter},
+                timeout=HERMES_OAUTH_VIEW_POLL_SECONDS,
+            )
+            if done:
+                return True
+            if not _sign_in_view_is_open(title):
+                return False
+    finally:
+        if not waiter.done():
+            waiter.cancel()
+
+
+def extract_oauth_prompt(
+    output: str,
+    *,
+    expect_device_code: bool = True,
+) -> tuple[str | None, str | None]:
+    """Pull the verification URL and device code out of Hermes' login output.
+
+    Two traps, both observed on real output: OpenAI Codex wraps the URL and the
+    code in ANSI colour sequences (and puts the URL on the line *after* its
+    label), and Nous/MiniMax print a `Portal:` host banner ahead of the real
+    link. Stripping colour and skipping the banner line handles both without
+    tying the parser to any provider's exact wording.
+
+    ``expect_device_code`` is False for the code-paste flow, whose URL carries a
+    long PKCE ``state``/``client_id``; scanning that for a device code that does
+    not exist risks a chance match on a hyphenated all-caps run.
+    """
+    plain = _ANSI_ESCAPE_RE.sub('', output)
+
+    url = None
+    for line in plain.splitlines():
+        if _PORTAL_LINE_RE.match(line):
+            continue
+        if (match := _URL_RE.search(line)) is not None:
+            url = match.group(0).rstrip('.,')
+            break
+
+    if not expect_device_code:
+        return url, None
+
+    code_match = _DEVICE_CODE_RE.search(plain)
+    return url, code_match.group(0) if code_match else None
+
+
+async def _terminate_oauth_process() -> None:
+    """Stop a login already in flight so two flows never race."""
+    global _oauth_process
+    process, _oauth_process = _oauth_process, None
+    if process is None or process.returncode is not None:
+        return
+    with contextlib.suppress(ProcessLookupError):
+        process.terminate()
+    with contextlib.suppress(TimeoutError):
+        await asyncio.wait_for(process.wait(), timeout=5)
+
+
+def _notify_oauth_result(
+    provider: HermesOAuthProvider,
+    *,
+    succeeded: bool,
+    transcript: str = '',
+) -> None:
+    """Report the outcome, carrying the CLI transcript on failure.
+
+    The transcript is what makes an upstream wording change diagnosable rather
+    than a silent hang, so it rides along as extra information.
+    """
+    store.dispatch(
+        NotificationsAddAction(
+            notification=Notification(
+                title='Hermes',
+                content=f'{provider.label} '
+                + ('signed in' if succeeded else 'sign-in failed'),
+                display_type=NotificationDisplayType.FLASH
+                if succeeded
+                else NotificationDisplayType.STICKY,
+                color='#4CAF50' if succeeded else '#D32F2F',
+                icon='󰄬' if succeeded else '󰜺',
+                chime=Chime.DONE if succeeded else Chime.FAILURE,
+                extra_information=None
+                if succeeded or not transcript
+                else ReadableInformation(text=transcript),
+            ),
+        ),
+    )
+
+
+def build_oauth_qr_props(url: str, code: str | None) -> RenderProps:
+    """Build the ``qr_code`` render props for a login prompt.
+
+    The QR always encodes the bare URL, so a scan works regardless of what is
+    written around it. The device code goes in ``caption``, not the label: the
+    code is not part of the link and must not be rendered inside one, and on
+    its own line it stays readable while typing it in on another device.
+    """
+    return {
+        'value': url,
+        'label': url,
+        'caption': f'Code: {code}' if code else '',
+    }
+
+
+async def _read_oauth_prompt(
+    process: asyncio.subprocess.Process,
+    provider: HermesOAuthProvider,
+    transcript: list[str],
+) -> tuple[str | None, str | None]:
+    """Read stdout until both the URL and any device code have appeared.
+
+    Stopping at the URL is not enough. Nous, xAI and MiniMax carry the code in
+    the URL's own ``user_code`` parameter, so both land on the same line — but
+    OpenAI Codex prints its code several lines *later*, and returning early
+    there leaves the user staring at a QR with no code to type. Once the URL is
+    in hand we therefore keep reading for a short grace period; the stream is
+    unbuffered, so the rest of the block arrives immediately or not at all.
+    """
+    if process.stdout is None:
+        return None, None
+
+    expect_device_code = not provider.needs_code
+    loop = asyncio.get_running_loop()
+    url = code = None
+    deadline: float | None = None
+    while True:
+        try:
+            line = await asyncio.wait_for(
+                process.stdout.readline(),
+                None if deadline is None else max(deadline - loop.time(), 0),
+            )
+        except TimeoutError:
+            break
+        if not line:
+            break
+
+        transcript.append(line.decode(errors='replace'))
+        url, code = extract_oauth_prompt(
+            ''.join(transcript),
+            expect_device_code=expect_device_code,
+        )
+        if url and (code or not expect_device_code):
+            break
+        if url and deadline is None:
+            deadline = loop.time() + HERMES_OAUTH_CODE_GRACE_SECONDS
+
+    return url, code
+
+
+async def _prompt_for_authorization_code(
+    provider: HermesOAuthProvider,
+    url: str,
+) -> str | None:
+    """Ask the user for the code the provider showed them after approving.
+
+    The link goes in the form rather than on a QR page. This flow needs the
+    form on screen to accept the code, and the form covers the QR — so the two
+    cannot share a screen. Putting the URL in the prompt also sidesteps the
+    length problem: these authorization URLs carry a few hundred characters of
+    PKCE state that no pod screen can show, whereas the web UI renders them as
+    a link with shortened text.
+    """
+    try:
+        _, result = await ubo_input(
+            prompt=f'{provider.label} sign-in',
+            title=f'Open {url} and approve access, then paste the code it '
+            'gives you below.',
+            descriptions=[
+                WebUIInputDescription(
+                    fields=[
+                        InputFieldDescription(
+                            name='code',
+                            label='Authorization code',
+                            type=InputFieldType.TEXT,
+                            required=True,
+                        ),
+                    ],
+                ),
+            ],
+        )
+    except asyncio.CancelledError:
+        return None
+
+    if not result:
+        return None
+    return (result.data.get('code') or '').strip() or None
+
+
+async def _answer_code_prompt(
+    process: asyncio.subprocess.Process,
+    provider: HermesOAuthProvider,
+    url: str,
+) -> bool:
+    """Collect the authorization code and hand it to the waiting process."""
+    code = await _prompt_for_authorization_code(provider, url)
+    if code is None or process.stdin is None:
+        return False
+    process.stdin.write(f'{code}\n'.encode())
+    await process.stdin.drain()
+    process.stdin.close()
+    return True
+
+
+def _present_login_prompt(
+    provider: HermesOAuthProvider,
+    *,
+    url: str,
+    code: str | None,
+    title: str,
+) -> None:
+    """Swap the spinner for whatever this provider's flow asks the user to do."""
+    if provider.needs_code:
+        # Deliberately no QR. This flow needs the input form on screen to take
+        # the code back, and the form sits over the QR — so the link goes in
+        # the form instead, where it is also clickable.
+        store.dispatch(
+            UpdateRenderPropsAction(
+                kind='status',
+                title=title,
+                props={
+                    'text': 'Open the link in the web dashboard, then enter the code.',
+                    'text_font_size': 16,
+                },
+            ),
+        )
+    else:
+        store.dispatch(
+            UpdateRenderPropsAction(
+                kind='status',
+                next_kind='qr_code',
+                title=title,
+                props=build_oauth_qr_props(url, code),
+            ),
+        )
+
+
+def _settle_oauth(
+    provider: HermesOAuthProvider,
+    *,
+    process: asyncio.subprocess.Process | None,
+    title: str,
+    outcome: OAuthOutcome,
+    transcript: str,
+) -> None:
+    """Tear a finished login down: stop it, close its view, report the outcome."""
+    if process is not None and process.returncode is None:
+        with contextlib.suppress(ProcessLookupError):
+            process.terminate()
+    # Only pop what we pushed. If the user already navigated away, the view on
+    # top belongs to someone else and popping it would steal a screen.
+    if _sign_in_view_is_open(title):
+        store.dispatch(StackPopAction())
+    if outcome is not OAuthOutcome.CANCELLED:
+        _notify_oauth_result(
+            provider,
+            succeeded=outcome is OAuthOutcome.SUCCEEDED,
+            transcript=transcript,
+        )
+
+
+async def _perform_oauth(provider: HermesOAuthProvider) -> None:
+    """Run a provider's OAuth login in the container, showing its URL as a QR."""
+    global _oauth_generation, _oauth_process  # noqa: PLW0603
+    # Claim the generation *before* terminating the previous login, not after.
+    # `_terminate_oauth_process` awaits, and the run being terminated wakes up
+    # inside that await — if it reached its teardown while the counter still
+    # matched, it would announce a failure for the provider the user just
+    # navigated away from.
+    _oauth_generation += 1
+    generation = _oauth_generation
+    await _terminate_oauth_process()
+    # Doubles as the handle for this run's view: the stack carries the title,
+    # so it is what tells us whether the user is still on the sign-in screen.
+    title = f'{provider.label} Sign In'
+
+    store.dispatch(
+        OpenRenderAction(
+            kind='status',
+            title=title,
+            props={'text': 'Starting…', 'text_font_size': 16},
+        ),
+    )
+
+    transcript: list[str] = []
+    outcome = OAuthOutcome.FAILED
+    process = None
+    try:
+        process = await asyncio.create_subprocess_exec(
+            'docker',
+            'compose',
+            'exec',
+            # No pty: keeps the stream parseable.
+            '-T',
+            # Hermes block-buffers stdout when it is a pipe rather than a tty,
+            # which would withhold the URL until the process exits — long after
+            # the login it describes has timed out.
+            '-e',
+            'PYTHONUNBUFFERED=1',
+            'hermes-agent',
+            'hermes',
+            'auth',
+            'add',
+            provider.id,
+            '--type',
+            'oauth',
+            '--no-browser',
+            '--timeout',
+            str(HERMES_OAUTH_TIMEOUT_SECONDS),
+            cwd=COMPOSITIONS_PATH / HERMES_COMPOSITION_ID,
+            # stdin stays open: the code-paste flow is answered through it.
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        _oauth_process = process
+        if process.stdout is None:
+            return
+
+        url, code = await _read_oauth_prompt(process, provider, transcript)
+
+        if url is None:
+            if _sign_in_view_is_open(title):
+                await process.wait()
+            else:
+                outcome = OAuthOutcome.CANCELLED
+            return
+
+        _present_login_prompt(provider, url=url, code=code, title=title)
+
+        # Dismissing the form is the user declining, not a failure.
+        if provider.needs_code and not await _answer_code_prompt(
+            process,
+            provider,
+            url,
+        ):
+            outcome = OAuthOutcome.CANCELLED
+            return
+
+        if not await _await_login(process, title):
+            outcome = OAuthOutcome.CANCELLED
+            return
+        if process.returncode == 0:
+            outcome = OAuthOutcome.SUCCEEDED
+    except Exception:
+        logger.exception('Hermes OAuth login failed', extra={'provider': provider.id})
+    finally:
+        # A newer login has already taken ownership of the module state, so
+        # only clear it if this run is still the current one.
+        superseded = generation != _oauth_generation
+        if not superseded:
+            _oauth_process = None
+        _settle_oauth(
+            provider,
+            process=process,
+            title=title,
+            outcome=OAuthOutcome.CANCELLED if superseded else outcome,
+            transcript=''.join(transcript),
+        )
+
+
+def _oauth_action(provider: HermesOAuthProvider) -> Callable[[], None]:
+    """Build a menu handler that starts a login and returns nothing.
+
+    Returning ``None`` is load-bearing. ``_handle_execute_menu_action`` pushes
+    a menu named after the item's key whenever a handler returns a non-``None``
+    result, which is how items that navigate are distinguished from items that
+    just act. Handing back the ``Task`` from ``create_task`` therefore stacked
+    an empty "Openai Codex" page under the sign-in view, and popping the view
+    on success landed the user on that instead of back at the provider list.
+    """
+
+    def start() -> None:
+        create_task(_perform_oauth(provider))
+
+    return start
+
+
+def _add_oauth_menu(
+    menu_id: str,
+    items: list[MenuItemData],
+    action_ids: dict[str, list[str]],
+) -> None:
+    """Add the OAuth submenu and populate it with the supported providers.
+
+    Mirrors the Ports submenu in ``menus.py``: a nav item pushes ``menu_key``,
+    and the menu it lands on is filled by a dynamic-menu dispatch. Every action
+    id is appended to ``action_ids`` so the menu builder unregisters it before
+    the next render.
+    """
+    nav_id = 'docker:hermes:oauth'
+    action_ids[menu_id].append(nav_id)
+    register_action(
+        nav_id,
+        lambda: store.dispatch(StackPushMenuAction(menu_key='oauth')),
+    )
+    items.append(
+        MenuItemData(key='oauth', label='OAuth', icon='󰌆', action_id=nav_id),
+    )
+
+    oauth_items: list[MenuItemData] = []
+    for provider in HERMES_OAUTH_PROVIDERS:
+        provider_action_id = f'docker:hermes:oauth:{provider.id}'
+        action_ids[menu_id].append(provider_action_id)
+        register_action(provider_action_id, _oauth_action(provider))
+        oauth_items.append(
+            MenuItemData(
+                key=provider.id,
+                label=provider.label,
+                icon=provider.icon,
+                action_id=provider_action_id,
+            ),
+        )
+
+    store.dispatch(
+        UpdateDynamicMenuAction(
+            menu_id=f'docker:image:{HERMES_COMPOSITION_ID}:oauth',
+            title='OAuth',
+            items=tuple(oauth_items),
+            placeholder='No providers',
+        ),
+    )
+
+
+def _menu_actions(
+    menu_id: str,
+    items: list[MenuItemData],
+    action_ids: dict[str, list[str]],
+) -> None:
+    """Add the Hermes-specific items to the app menu."""
+    action_id = 'docker:hermes:dashboard-auth'
+    action_ids[menu_id].append(action_id)
+    # Returns None deliberately — see `_oauth_action`; handing back a Task
+    # would stack an empty "Dashboard Auth" page over the menu.
+    register_action(action_id, _reconfigure_dashboard_auth_action)
+    items.append(
+        MenuItemData(
+            key='dashboard-auth',
+            label='Dashboard Sign-in',
+            icon='󰌾',
+            action_id=action_id,
+        ),
+    )
+    _add_oauth_menu(menu_id, items, action_ids)
 
 
 def _write_hermes_env(composition_path: Path) -> None:
     """Write compose env for Hermes.
 
-    UID/GID are set to 10000 (the hermes user inside the image) so the WebUI
-    container chowns the shared hermes-home volume to the correct user.
-    Setting UID=0 would cause the WebUI to chown everything to root, making
-    the volume inaccessible to the hermes-agent (which runs as UID 10000).
+    UID/GID are set to the hermes user inside the image so the WebUI container
+    chowns the shared hermes-home volume to the correct user. Setting UID=0
+    would cause the WebUI to chown everything to root, making the volume
+    inaccessible to the hermes-agent (which runs as that user).
     """
     api_server_key = _get_or_create_api_server_key()
     composition_path.joinpath('.env').write_text(
-        'UID=10000\n'
-        'GID=10000\n'
-        'HERMES_UID=10000\n'
-        'HERMES_GID=10000\n'
+        f'UID={HERMES_CONTAINER_UID}\n'
+        f'GID={HERMES_CONTAINER_GID}\n'
+        f'HERMES_UID={HERMES_CONTAINER_UID}\n'
+        f'HERMES_GID={HERMES_CONTAINER_GID}\n'
         'API_SERVER_ENABLED=true\n'
         f'HERMES_API_SERVER_KEY={api_server_key}\n',
     )
@@ -208,10 +1092,9 @@ def _cleanup_hermes() -> None:
 
 def _is_hermes_configured() -> bool:
     composition_path = COMPOSITIONS_PATH / HERMES_COMPOSITION_ID
-    return (
-        (composition_path / 'docker-compose.yml').exists()
-        and (composition_path / '.env').exists()
-    )
+    return (composition_path / 'docker-compose.yml').exists() and (
+        composition_path / '.env'
+    ).exists()
 
 
 async def prepare_hermes() -> bool:
@@ -222,6 +1105,16 @@ async def prepare_hermes() -> bool:
             'Preparing Hermes composition',
             extra={'composition_path': str(composition_path)},
         )
+
+        # Collected up front, before any files are written, so cancelling the
+        # form leaves nothing behind. `prepare` runs before every `up`, so this
+        # only prompts on the first install (or after the secrets are cleared).
+        if not _has_dashboard_credentials():
+            if not await configure_dashboard_auth():
+                logger.warning('Hermes dashboard sign-in was not configured')
+                return False
+            # Optional second step of the same first-run setup; never fatal.
+            await configure_api_key_imports()
 
         composition_path.mkdir(exist_ok=True, parents=True)
         # Persistent, image-independent state dirs (idempotent — never clobbers
@@ -244,6 +1137,7 @@ async def prepare_hermes() -> bool:
         compose_path.write_text(compose_content)
 
         _write_hermes_env(composition_path)
+        _write_dashboard_auth_override(composition_path)
 
         _register_assistant_provider(_get_or_create_api_server_key())
 
@@ -257,6 +1151,9 @@ async def prepare_hermes() -> bool:
                 f'WebUI: http://{{{{hostname}}}}:{HERMES_WEBUI_PORT}\n\n'
                 'Use the WebUI to chat with Hermes, and use the dashboard to '
                 'monitor agent activity, sessions, and resource usage.\n\n'
+                'The dashboard asks for the username and password you entered '
+                'during setup. Change them with "Dashboard Sign-in" in the '
+                'Hermes menu.\n\n'
                 'For security these ports are reachable from this device only '
                 '(loopback) by default. To open them to your local network, use '
                 '"Expose to LAN" in the Hermes menu.'
@@ -282,12 +1179,15 @@ ENTRY = ContainerEntry(
     cleanup=_cleanup_hermes,
     is_composition=True,
     category='AI Agents',
-    # Dashboard (9119) and WebUI (8787) have no auth; default to loopback.
+    # The dashboard (9119) is gated behind its own basic-auth sign-in, but the
+    # gateway (8642) and WebUI (8787) still have none; default to loopback.
     supports_lan_toggle=True,
     secret_keys=(
         HERMES_API_SERVER_KEY_SECRET,
         *HERMES_LLM_PROVIDER_SECRET_KEYS,
+        *HERMES_DASHBOARD_AUTH_SECRET_KEYS,
     ),
+    menu_actions=_menu_actions,
     ports={
         f'{HERMES_GATEWAY_PORT}/tcp': HERMES_GATEWAY_PORT,
         f'{HERMES_DASHBOARD_PORT}/tcp': HERMES_DASHBOARD_PORT,

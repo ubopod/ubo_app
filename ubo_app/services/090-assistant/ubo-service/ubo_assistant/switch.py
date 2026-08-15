@@ -39,13 +39,30 @@ from ubo_assistant.constants import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from betterproto.lib.google.protobuf import StringValue
     from pipecat.services.mcp_service import MCPClient
     from ubo_bindings.client import UboRPCClient
+    from ubo_bindings.ubo.v1 import LocationInfo, WeatherCondition
 
-    from ubo_assistant.tools import CombinedTools
+    from ubo_assistant.system_prompt_watcher import SystemPromptWatcher
+    from ubo_assistant.tools import CombinedTools, DeviceCommand
 
 T = TypeVar('T', bound=FrameProcessor)
+
+
+def _compose_system_message(
+    watcher: SystemPromptWatcher | None,
+    *,
+    include_tools: bool,
+) -> str:
+    """Build the system message, falling back when no watcher is wired."""
+    if watcher is not None:
+        return watcher.compose(include_tools=include_tools)
+    if include_tools:
+        return DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE
+    return DEFAULT_SYSTEM_MESSAGE
 
 
 class UboNoopService(FrameProcessor):
@@ -102,12 +119,28 @@ class UboSwitchMixin(Generic[T]):
     _ubo_services: dict[str, T | None]
     _noop_service: T
 
-    def _initialize_ubo_switch(self, client: UboRPCClient, *, selector: str) -> None:
+    def _initialize_ubo_switch(
+        self,
+        client: UboRPCClient,
+        *,
+        selector: str,
+        system_prompt_watcher: SystemPromptWatcher | None = None,
+    ) -> None:
         self._reset_assistance()
         self.client = client
         self._store_selector = selector
+        # Only the LLM switcher composes a system message; the STT/TTS
+        # switchers leave this unset.
+        self._system_prompt_watcher = system_prompt_watcher
+        self._unsubscribe_system_prompt: Callable[[], None] | None = None
         self._autoruns_started = False
         self._enabled_mcp_servers: set[str] = set()
+        self._device_commands: list[DeviceCommand] = []
+        # Latest localization state, kept fresh by an autorun. There is no
+        # one-shot store read over gRPC, so the time/weather tools answer from
+        # this cache.
+        self._location: LocationInfo | None = None
+        self._weather: WeatherCondition | None = None
         self._gateway_token: str | None = None
         self._mcp_clients: list[MCPClient] = []
         self._mcp_tools_update_lock = asyncio.Lock()
@@ -209,6 +242,9 @@ class UboSwitchMixin(Generic[T]):
 
     async def cleanup(self) -> None:
         """Clean up switcher resources."""
+        if self._unsubscribe_system_prompt is not None:
+            self._unsubscribe_system_prompt()
+            self._unsubscribe_system_prompt = None
         await self._close_mcp_clients(self._mcp_clients)
         self._mcp_clients = []
         await super().cleanup()  # pyright: ignore[reportAttributeAccessIssue]
@@ -235,6 +271,59 @@ class UboSwitchMixin(Generic[T]):
         if isinstance(self, UboLLMSwitchService):
             logger.info('Service is LLMSwitcher, subscribing to MCP state changes')
             self._setup_mcp_autorun()
+            self._setup_device_commands_autorun()
+            self._setup_localization_autorun()
+            if self._system_prompt_watcher is not None:
+                # Re-push the system message when the user enables, edits or
+                # disables a prompt, so a mid-conversation change takes effect.
+                self._unsubscribe_system_prompt = (
+                    self._system_prompt_watcher.subscribe(
+                        self._refresh_active_llm_tools,
+                    )
+                )
+
+    def _refresh_active_llm_tools(self) -> None:
+        """Re-run ``_update_llm_tools`` against the currently active LLM.
+
+        No-op unless an LLM service is actually selected and active.
+        """
+        if self._current_service_id is None:
+            return
+        native_switcher = cast('ServiceSwitcher', self)
+        active_service = native_switcher.strategy.active_service
+        if not isinstance(active_service, LLMService):
+            return
+        native_switcher.create_task(
+            self._update_llm_tools(
+                service_id=self._current_service_id,
+                llm_service=cast('LLMService', active_service),
+            ),
+        )
+
+    def _setup_localization_autorun(self) -> None:
+        """Track the device's location and cached weather for the native tools.
+
+        Unlike ``run_device_command``, the time/weather/location tools are always
+        registered (they degrade gracefully when the location is unknown), so a
+        change here only refreshes the cache — no tool re-registration needed.
+        """
+
+        @self.client.autorun([
+            'state.localization.location',
+            'state.localization.weather',
+        ])
+        def handle_localization_change(data: list) -> None:
+            # ``None`` on the server is encoded as ``google.protobuf.Empty`` and
+            # unpacks back to ``None`` here, so an unset location arrives as-is.
+            self._location = data[0] if len(data) > 0 else None
+            self._weather = data[1] if len(data) > 1 else None
+            logger.debug(
+                'Localization state changed via autorun',
+                extra={
+                    'has_location': self._location is not None,
+                    'has_weather': self._weather is not None,
+                },
+            )
 
     def _setup_mcp_autorun(self) -> None:
         """Set up autorun subscription for MCP server state changes."""
@@ -245,6 +334,59 @@ class UboSwitchMixin(Generic[T]):
         def handle_mcp_servers_change(data: list) -> None:
             """Handle MCP servers state changes from Redux store."""
             self._process_mcp_servers_data(data)
+
+    def _setup_device_commands_autorun(self) -> None:
+        """Track the voice-shortcut catalog so the LLM tool follows the user's edits."""
+
+        @self.client.autorun([
+            'state.speech_recognition.commands_catalog',
+        ])
+        def handle_device_commands_change(data: list) -> None:
+            self._process_device_commands_data(data)
+
+    def _process_device_commands_data(self, data: list) -> None:
+        """Re-register the ``run_device_command`` tool when the catalog changes.
+
+        Mirrors ``_process_mcp_servers_data``, including its double-``items``
+        unwrap: a list field inside a gRPC message arrives as a wrapper whose
+        ``items`` is itself a wrapper.
+        """
+        from ubo_assistant.tools import DeviceCommand
+
+        try:
+            catalog_wrapper = data[0]
+            items_wrapper = getattr(catalog_wrapper, 'items', None)
+            if items_wrapper is None:
+                descriptors = []
+            else:
+                descriptors = getattr(items_wrapper, 'items', [])
+            if not isinstance(descriptors, list):
+                descriptors = []
+
+            device_commands = [
+                DeviceCommand(
+                    id=descriptor.id,
+                    label=descriptor.label,
+                    sample_phrases=tuple(
+                        getattr(descriptor, 'sample_phrases', None) or (),
+                    ),
+                )
+                for descriptor in descriptors
+                if getattr(descriptor, 'id', None)
+            ]
+
+            logger.info(
+                'Device command catalog changed via autorun',
+                extra={'command_count': len(device_commands)},
+            )
+
+            self._device_commands = device_commands
+
+            self._refresh_active_llm_tools()
+
+        except Exception:
+            logger.exception('Error handling device command catalog change')
+            self._device_commands = []
 
     def _process_mcp_servers_data(self, data: list) -> None:
         """React to enabled-server-set changes by reconnecting to the gateway.
@@ -283,24 +425,7 @@ class UboSwitchMixin(Generic[T]):
 
             self._enabled_mcp_servers = enabled_servers_set
 
-            if (
-                self._current_service_id is not None
-                and isinstance(
-                    cast('ServiceSwitcher', self).strategy.active_service,
-                    LLMService,
-                )
-            ):
-                native_switcher = cast('ServiceSwitcher', self)
-                active_service = cast(
-                    'LLMService',
-                    native_switcher.strategy.active_service,
-                )
-                native_switcher.create_task(
-                    self._update_llm_tools(
-                        service_id=self._current_service_id,
-                        llm_service=active_service,
-                    ),
-                )
+            self._refresh_active_llm_tools()
 
         except Exception:
             logger.exception('Error handling MCP servers state change')
@@ -357,6 +482,7 @@ class UboSwitchMixin(Generic[T]):
                 'mcp_enabled': mcp_enabled,
                 'enabled_servers': len(self._enabled_mcp_servers),
                 'gateway': bool(gateway_url and gateway_token),
+                'device_commands': len(self._device_commands),
             },
         )
 
@@ -364,6 +490,7 @@ class UboSwitchMixin(Generic[T]):
             llm_service=llm_service,
             gateway_url=gateway_url,
             gateway_token=gateway_token,
+            device_commands=self._device_commands,
         )
         logger.info(
             'Combined tools ready',
@@ -405,7 +532,6 @@ class UboSwitchMixin(Generic[T]):
                     )
                     tools = combined_tools.tools_schema
                     new_mcp_clients = combined_tools.mcp_clients
-                    system_message = DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE
                     tool_count = len(tools.standard_tools)
                 else:
                     logger.info(
@@ -413,8 +539,12 @@ class UboSwitchMixin(Generic[T]):
                         extra={'service': llm_service},
                     )
                     tools = NOT_GIVEN
-                    system_message = DEFAULT_SYSTEM_MESSAGE
                     tool_count = 0
+
+                system_message = _compose_system_message(
+                    self._system_prompt_watcher,
+                    include_tools=tools_supported,
+                )
 
                 await llm_service.queue_frame(
                     LLMMessagesUpdateFrame(
@@ -489,6 +619,7 @@ class UboLLMSwitchService(UboSwitchMixin[LLMService[Any]], LLMSwitcher):
         *,
         selector: str,
         settings: LLMSettings | None = None,
+        system_prompt_watcher: SystemPromptWatcher | None = None,
     ) -> None:
         """Initialize the Ubo LLM switcher."""
         self._noop_service = UboNoopLLMService()
@@ -496,4 +627,8 @@ class UboLLMSwitchService(UboSwitchMixin[LLMService[Any]], LLMSwitcher):
         LLMSwitcher.__init__(self, llms=self.switcher_services)
         if settings is not None:
             self._settings = settings
-        self._initialize_ubo_switch(client=client, selector=selector)
+        self._initialize_ubo_switch(
+            client=client,
+            selector=selector,
+            system_prompt_watcher=system_prompt_watcher,
+        )

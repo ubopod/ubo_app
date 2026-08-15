@@ -155,6 +155,22 @@ class KokoroTTSService(PipecatKokoroTTSService):
         # all voices live in the already-loaded ``voices-v1.0.bin``.
         self._requested_voice_id = voice_id
 
+    def release(self) -> None:
+        """Drop the onnxruntime session and the voice bank.
+
+        Releasing the *service* is not enough to free the weights: pipecat
+        holds references to its processors that survive both refcounting and
+        the cyclic collector, so a deselected service stays alive and — as
+        measured on-device — keeps ``voices-v1.0.bin`` open with the full
+        ~421 MB resident. Dropping the inner ``Kokoro`` handle frees the
+        model regardless of who still holds the wrapper.
+
+        Safe because the wrapper is discarded on deselection and a fresh one
+        is built if the user comes back: no frame ever reaches a released
+        service, since the proxy that routes them has already dropped it.
+        """
+        self._kokoro = None  # pyright: ignore[reportAttributeAccessIssue]
+
     def request_voice(self, voice_id: str) -> None:
         """Record the voice the user selected and rewrite settings.
 

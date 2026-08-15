@@ -51,6 +51,7 @@ static_resources:
                   - name: envoy.filters.http.router
                     typed_config:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+$GRPC_NATIVE_LISTENER
   clusters:
     - name: grpc_service_cluster
       connect_timeout: 5s

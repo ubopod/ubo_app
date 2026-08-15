@@ -3,9 +3,10 @@
 Node-RED is a self-contained Compose stack that joins the shared `ubo_net`
 bus and integrates with the rest of the ecosystem purely by service name:
 the bundled MQTT broker as `mosquitto:1883` and Home Assistant as
-`http://homeassistant:8123`. It owns no devices, so it never contends with
-ZHA for the Zigbee coordinator. Starting/stopping/removing it never disturbs
-HA, the broker, or `ubo_net`.
+`http://homeassistant:8123` (the latter pinned to the host gateway via
+`extra_hosts`, so it resolves whether or not HA is on the host network). It
+owns no devices, so it never contends with ZHA for the Zigbee coordinator.
+Starting/stopping/removing it never disturbs HA, the broker, or `ubo_net`.
 """
 
 from __future__ import annotations
@@ -56,6 +57,14 @@ def _write_node_red_compose(composition_path: Path) -> None:
         # safe-by-default even if read or brought up without the rewrite.
         '    ports:\n'
         '      - "127.0.0.1:1880:1880"\n'
+        # Home Assistant leaves `ubo_net` when its LAN-discovery (host network)
+        # toggle is on, which would break `homeassistant:8123` resolution here.
+        # Pinning the name to the host gateway keeps one address correct in both
+        # of HA's modes — it publishes 8123 on the host either way — and this
+        # file isn't re-rendered when HA's toggle flips, so it can't be
+        # conditional on it.
+        '    extra_hosts:\n'
+        '      - "homeassistant:host-gateway"\n'
         '    networks:\n'
         f'      - {UBO_NET}\n'
         'networks:\n'
@@ -72,8 +81,10 @@ def _write_node_red_metadata(composition_path: Path) -> None:
         'instructions': (
             'Node-RED is installed and running.\n\n'
             'Open port 1880 on this device in a browser to edit flows. '
-            'On the shared network it reaches the bundled broker at '
-            'mosquitto:1883 and Home Assistant at http://homeassistant:8123.'
+            'On the shared network it reaches the MQTT broker at '
+            'mosquitto:1883 — using the credentials under Settings > Network > '
+            'MQTT > Broker Settings — and Home Assistant at '
+            'http://homeassistant:8123.'
         ),
         'compose_id': NODE_RED_COMPOSITION_ID,
     }

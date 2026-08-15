@@ -16,11 +16,15 @@ from redux.basic_types import InitAction
 from ubo_app.logger import logger
 from ubo_app.store.services.assistant import (
     DEFAULT_MODELS,
+    DEFAULT_SYSTEM_PROMPT_ID,
     DEFAULT_VOICES,
     AssistantAction,
     AssistantAddElevenLabsVoiceAction,
     AssistantAddGenericLLMProviderAction,
     AssistantAddMoonshineDownloadedModelAction,
+    AssistantAddSystemPromptAction,
+    AssistantCancelRequestAction,
+    AssistantCancelRequestEvent,
     AssistantCompleteAction,
     AssistantDeleteElevenLabsVoiceAction,
     AssistantDeleteKokoroAction,
@@ -53,7 +57,9 @@ from ubo_app.store.services.assistant import (
     AssistantPipelineStage,
     AssistantRemoveGenericLLMProviderAction,
     AssistantRemoveMoonshineDownloadedModelAction,
+    AssistantRemoveSystemPromptAction,
     AssistantReportAction,
+    AssistantRequestMicStreamEvent,
     AssistantRunPipelineAction,
     AssistantRunPipelineEvent,
     AssistantSelectGenericLLMProviderAction,
@@ -86,6 +92,7 @@ from ubo_app.store.services.assistant import (
     AssistantSTTName,
     AssistantSynthesizeAction,
     AssistantToggleListeningAction,
+    AssistantToggleSystemPromptAction,
     AssistantTranscribeAction,
     AssistantTTSName,
     AssistantUpdateProvidersAction,
@@ -94,9 +101,11 @@ from ubo_app.store.services.assistant import (
     GenericLLMProvider,
     MoonshineDownloadedModels,
     StopTalkingPhraseStopReason,
+    SystemPrompt,
     UserStopReason,
     WakePhraseMatcher,
     WakePhraseTriggerSource,
+    compose_active_system_prompt,
     resolve_policy,
 )
 from ubo_app.store.services.audio import (
@@ -141,6 +150,7 @@ def _make_run_pipeline_event(  # noqa: PLR0913
     llm_model: str | None = None,
     system_prompt: str | None = None,
     enable_tools: bool = False,
+    play_locally: bool = True,
 ) -> AssistantRunPipelineEvent:
     """Build the canonical run-pipeline event, resolving providers/model from state."""
     resolved_llm = llm_provider if llm_provider is not None else state.selected_llm
@@ -160,6 +170,7 @@ def _make_run_pipeline_event(  # noqa: PLR0913
         else state.selected_models.get(resolved_llm, DEFAULT_MODELS[resolved_llm]),
         system_prompt=system_prompt,
         enable_tools=enable_tools,
+        play_locally=play_locally,
         # Resolve per-engine selections so the request handler doesn't fall
         # back to hardcoded module defaults (live and one-shot pipelines must
         # agree on the same Vosk model / Piper voice / Kokoro voice / cloud voice).
@@ -537,6 +548,70 @@ def reducer(
                 provider_setup_status=provider_setup_status,
             )
 
+        case AssistantAddSystemPromptAction():
+            # Upsert by id so the edit flow (which reuses the entry's existing
+            # id even when the label changes) updates in place. The enabled
+            # flag is carried over so editing never silently deactivates a
+            # prompt that was in use.
+            previous = next(
+                (
+                    prompt
+                    for prompt in state.system_prompts
+                    if prompt.id == action.prompt_id
+                ),
+                None,
+            )
+            system_prompts = (
+                *(
+                    prompt
+                    for prompt in state.system_prompts
+                    if prompt.id != action.prompt_id
+                ),
+                SystemPrompt(
+                    id=action.prompt_id,
+                    label=action.label,
+                    content=action.content,
+                    is_enabled=previous.is_enabled if previous else True,
+                ),
+            )
+            return replace(
+                state,
+                system_prompts=system_prompts,
+                active_system_prompt=compose_active_system_prompt(system_prompts),
+            )
+
+        case AssistantRemoveSystemPromptAction():
+            system_prompts = tuple(
+                prompt
+                for prompt in state.system_prompts
+                if prompt.id != action.prompt_id
+            )
+            return replace(
+                state,
+                system_prompts=system_prompts,
+                active_system_prompt=compose_active_system_prompt(system_prompts),
+            )
+
+        case AssistantToggleSystemPromptAction():
+            if action.prompt_id == DEFAULT_SYSTEM_PROMPT_ID:
+                return replace(
+                    state,
+                    is_default_system_prompt_enabled=(
+                        not state.is_default_system_prompt_enabled
+                    ),
+                )
+            system_prompts = tuple(
+                replace(prompt, is_enabled=not prompt.is_enabled)
+                if prompt.id == action.prompt_id
+                else prompt
+                for prompt in state.system_prompts
+            )
+            return replace(
+                state,
+                system_prompts=system_prompts,
+                active_system_prompt=compose_active_system_prompt(system_prompts),
+            )
+
         case AssistantAddGenericLLMProviderAction():
             # Upsert by id so re-running a registration (e.g. re-preparing the
             # Hermes composition) replaces the entry instead of duplicating it.
@@ -641,6 +716,17 @@ def reducer(
                     active_audio_source=action.audio_source,
                 ),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],
+                # Tell the satellite to start streaming. Harmless when the
+                # device initiated the session itself — it is already
+                # capturing, and the event is idempotent.
+                events=[
+                    AssistantRequestMicStreamEvent(
+                        audio_source=action.audio_source,
+                        is_active=True,
+                    ),
+                ]
+                if action.audio_source
+                else [],
             )
 
         case AssistantStopListeningAction():
@@ -657,6 +743,16 @@ def reducer(
                     last_stop_reason=action.reason,
                 ),
                 actions=[RgbRingBlankAction()],
+                # Addressed with the source being torn down, read before the
+                # state clears it.
+                events=[
+                    AssistantRequestMicStreamEvent(
+                        audio_source=state.active_audio_source,
+                        is_active=False,
+                    ),
+                ]
+                if state.active_audio_source
+                else [],
             )
 
         case AssistantStopTalkingAction(phrase=phrase, detector=detector):
@@ -705,6 +801,14 @@ def reducer(
                         last_stop_reason=stop_reason,
                     ),
                     actions=[RgbRingBlankAction()],
+                    events=[
+                        AssistantRequestMicStreamEvent(
+                            audio_source=state.active_audio_source,
+                            is_active=False,
+                        ),
+                    ]
+                    if state.active_audio_source
+                    else [],
                 )
             # Not listening, start it (with mute check)
             if state.is_microphone_mute:
@@ -731,6 +835,17 @@ def reducer(
                     active_audio_source=action.audio_source,
                 ),
                 actions=[RgbRingRainbowAction(rounds=0, wait=800)],
+                # Tell the satellite to start streaming. Harmless when the
+                # device initiated the session itself — it is already
+                # capturing, and the event is idempotent.
+                events=[
+                    AssistantRequestMicStreamEvent(
+                        audio_source=action.audio_source,
+                        is_active=True,
+                    ),
+                ]
+                if action.audio_source
+                else [],
             )
 
         case AssistantTranscribeAction():
@@ -759,6 +874,7 @@ def reducer(
                         stages=[AssistantPipelineStage.TTS],
                         text=action.text,
                         tts_provider=action.tts_provider,
+                        play_locally=action.play_locally,
                     ),
                 ],
             )
@@ -797,8 +913,15 @@ def reducer(
                         llm_model=action.llm_model,
                         system_prompt=action.system_prompt,
                         enable_tools=action.enable_tools,
+                        play_locally=action.play_locally,
                     ),
                 ],
+            )
+
+        case AssistantCancelRequestAction():
+            return CompleteReducerResult(
+                state=state,
+                events=[AssistantCancelRequestEvent(session_id=action.session_id)],
             )
 
         case _:

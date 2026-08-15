@@ -25,6 +25,12 @@ ASSISTANT_STOP_TALKING_PHRASE = os.environ.get(
     'UBO_ASSISTANT_STOP_TALKING_PHRASE',
     'okay enough',
 )
+# Hands the utterance to Home Assistant's voice pipeline over Wyoming instead of
+# the on-device assistant — see ``WakeMode.HOME_ASSISTANT``.
+HOME_ASSISTANT_WAKE_PHRASE = os.environ.get(
+    'UBO_HOME_ASSISTANT_WAKE_PHRASE',
+    'hey home assistant',
+)
 ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS: float = float(
     os.environ.get('UBO_ASSISTANT_DEFAULT_SILENCE_TIMEOUT_SECONDS', '2.0'),
 )
@@ -148,6 +154,13 @@ ELEVENLABS_API_KEY_SECRET_ID = 'elevenlabs_api_key'  # noqa: S105
 ELEVENLABS_API_KEY_PATTERN = '^(sk_)?[a-zA-Z0-9]{32,}$'
 ELEVENLABS_VOICE_ID = 'elevenlabs_voice_id'
 ELEVENLABS_VOICE_ID_PATTERN = '^[a-zA-Z0-9-_]{20,}$'
+# Last-resort ElevenLabs voice. The voice id is optional at setup (an API key
+# alone is enough — it also unlocks ElevenLabs STT, which needs no voice), so
+# TTS falls back to this when neither a picked voice nor the secret is set.
+# "George" is a default-library voice present on every account; ElevenLabs uses
+# this exact id in the request examples of its own text-to-speech API reference.
+DEFAULT_ELEVENLABS_TTS_VOICE = 'JBFqnCBsd6RMkjVDRZzb'
+DEFAULT_ELEVENLABS_TTS_VOICE_LABEL = 'George (default)'
 
 BRAVE_SEARCH_API_KEY_SECRET_ID = 'brave_search_api_key'  # noqa: S105
 BRAVE_SEARCH_API_KEY_PATTERN = '^BS[a-zA-Z0-9-_]{20,}$'
@@ -229,3 +242,14 @@ ASSEMBLYAI_API_KEY_PATTERN = '^[a-f0-9]{32}$'
 
 RIME_API_KEY_SECRET_ID = 'rime_api_key'  # noqa: S105
 RIME_API_KEY_PATTERN = '^[a-zA-Z0-9-_]{32,}$'
+
+# Shown as helper text under the multiline prompt box in the Web UI form, so it
+# has to read as a few plain sentences rather than a bulleted guide.
+SYSTEM_PROMPT_GUIDANCE = (
+    'Write it as instructions to the assistant: state the persona, tone and any '
+    'rules it must follow. Keep it short — replies are spoken aloud, so ask for '
+    'brevity unless you want long answers. Prefer concrete rules ("answer in at '
+    'most two sentences") over vague adjectives ("be helpful"), and say what to '
+    'do rather than only what to avoid. Every enabled prompt is sent together, '
+    'so leave out anything another one already covers.'
+)

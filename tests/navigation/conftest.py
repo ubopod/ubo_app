@@ -24,6 +24,8 @@ from ubo_app.store.core.constants import (
 from ubo_app.store.core.types import (
     ApplicationStackItem,
     ApplicationViewData,
+    ChatStackItem,
+    ChatViewData,
     DynamicMenuData,
     HomeViewData,
     InstructionStackItem,
@@ -36,11 +38,14 @@ from ubo_app.store.core.types import (
     NotificationViewData,
     PromptStackItem,
     PromptViewData,
+    RenderStackItem,
+    RenderViewData,
+    StackPushMenuAction,
     ViewData,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
     from ubo_app.store.core.types import MainAction, MainEvent
 
@@ -195,7 +200,7 @@ reducer = _import_reducer()
 # View computation from dynamic menus (replaces legacy compute_view_from_stack)
 # ============================================================================
 
-def compute_view_from_dynamic_menus(
+def compute_view_from_dynamic_menus(  # noqa: C901
     state: MainState,
     dynamic_menus: dict[str, DynamicMenuData],
     path_mappings: dict[tuple[str, ...], str],
@@ -216,6 +221,23 @@ def compute_view_from_dynamic_menus(
             application_id=top_item.application_id,
             show_status_bar=False,
             extra_data=dict(top_item.initialization_kwargs),
+        )
+
+    if isinstance(top_item, RenderStackItem):
+        return RenderViewData(
+            kind=top_item.kind,
+            title=top_item.title,
+            show_status_bar=False,
+            props=dict(top_item.props),
+            items=top_item.items,
+            stream_id=top_item.stream_id,
+            stack_depth=len(stack),
+        )
+
+    if isinstance(top_item, ChatStackItem):
+        return ChatViewData(
+            scroll_offset=top_item.scroll_offset,
+            stack_depth=len(stack),
         )
 
     if isinstance(top_item, NotificationStackItem):
@@ -363,6 +385,57 @@ def nav() -> ReducerRunner:
     result = reducer(None, InitAction())
     assert isinstance(result, MainState)
     return ReducerRunner(result)
+
+
+# Imported at module (collection) time on purpose: the runner's dispatch does
+# `isinstance(action, MainAction)`, so it must share the same import
+# generation as the test modules that construct the actions. A lazy in-fixture
+# import would re-import a fresh module graph after an `app_context` test's
+# sys.modules cleanup and silently turn every dispatch into a no-op. Placed
+# down here rather than in the top import block because `event_runner` itself
+# imports `ReducerRunner`/`reducer` back from this module — the names above
+# must exist before the circular import resolves.
+from tests.navigation.event_runner import NavigationEventRunner  # noqa: E402
+
+
+@pytest.fixture
+def navigation_events() -> Iterator[NavigationEventRunner]:
+    """Create a runner wired to production menu event handlers."""
+    from ubo_app.store.core.action_registry import (
+        get_action,
+        register_action,
+        unregister_action,
+    )
+
+    result = reducer(None, InitAction())
+    assert isinstance(result, MainState)
+    runner = NavigationEventRunner(result)
+
+    action_ids = {
+        f'{MENU_NAVIGATE_PREFIX}{key}': key
+        for key in ('main', 'apps', 'settings', 'notifications', 'power')
+    }
+    previous_handlers = {
+        action_id: get_action(action_id)
+        for action_id in action_ids
+    }
+    for action_id, menu_key in action_ids.items():
+        def navigate(key: str = menu_key) -> None:
+            runner.dispatch(StackPushMenuAction(menu_key=key))
+
+        register_action(action_id, navigate, allow_reregister=True)
+
+    yield runner
+
+    for action_id, previous_handler in previous_handlers.items():
+        if previous_handler is None:
+            unregister_action(action_id)
+        else:
+            register_action(
+                action_id,
+                previous_handler,
+                allow_reregister=True,
+            )
 
 
 class EventCapture:

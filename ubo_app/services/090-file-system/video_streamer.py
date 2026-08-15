@@ -15,6 +15,7 @@ from ubo_app.store.services.audio import (
     AudioStopPlaybackAction,
 )
 from ubo_app.store.services.file_system import FileSystemVideoFrameEvent
+from ubo_app.utils.frame_stream import low_res_chunk_events
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -26,7 +27,12 @@ FRAME_INTERVAL = 1 / 15  # 15 fps for preview
 AUDIO_RATE = 22050
 AUDIO_CHANNELS = 1
 AUDIO_WIDTH = 2  # 16-bit PCM
-AUDIO_CHUNK_SECONDS = 1  # Send audio in 1-second chunks for smoother streaming
+# Cap audio events at ~8KB (~186ms) — larger payloads overflow the heap of
+# memory-constrained clients (see _MAX_AUDIO_CHUNK_BYTES in the assistant's
+# ubo_output_transport).
+AUDIO_CHUNK_BYTES = 8192
+# How far ahead of real time audio dispatch may run (jitter absorption).
+AUDIO_LEAD_SECONDS = 0.5
 
 # Track the active streaming session so it can be stopped.
 _active_session: list[_VideoSession | None] = [None]
@@ -94,13 +100,14 @@ class _VideoSession:
         if stdout is None:
             return
 
-        # Send audio in larger chunks to avoid flooding the store/logs
-        chunk_size = AUDIO_RATE * AUDIO_CHANNELS * AUDIO_WIDTH * AUDIO_CHUNK_SECONDS
+        chunk_size = AUDIO_CHUNK_BYTES
         sequence_id = f'video-audio:{id(self)}'
         chunk_index = 0
 
         import time
 
+        start_time = time.monotonic()
+        sent_duration = 0.0
         try:
             while self.is_running:
                 data = stdout.read(chunk_size)
@@ -119,12 +126,22 @@ class _VideoSession:
                     ),
                 )
                 chunk_index += 1
-                # Sleep slightly less than chunk duration to keep the buffer
-                # ahead and avoid gaps between chunks during playback
-                chunk_duration = len(data) / (
+                sent_duration += len(data) / (
                     AUDIO_RATE * AUDIO_CHANNELS * AUDIO_WIDTH
                 )
-                time.sleep(chunk_duration * 0.8)
+                # Dispatch on a real-time schedule with a small constant lead.
+                # Running permanently fast instead (the previous *0.8 pacing)
+                # piles an unbounded backlog into slow clients' subscription
+                # queues — heard as trailing audio after stop, and eventually
+                # dropped chunks on long videos.
+                sleep_time = (
+                    start_time
+                    + sent_duration
+                    - AUDIO_LEAD_SECONDS
+                    - time.monotonic()
+                )
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
         finally:
             # Signal end-of-stream so play_sequence closes the audio device
             store.dispatch(
@@ -191,19 +208,26 @@ class _VideoSession:
 
                 # Ensure contiguous array for tobytes
                 frame = np.ascontiguousarray(frame)
+                data = frame.tobytes()
 
                 store._dispatch(  # noqa: SLF001
                     [
                         FileSystemVideoFrameEvent(
-                            data=frame.tobytes(),
+                            data=data,
                             width=new_w,
                             height=new_h,
                         ),
                         FrameStreamDataEvent(
                             stream_id='file-system:video',
-                            data=frame.tobytes(),
+                            data=data,
                             width=new_w,
                             height=new_h,
+                        ),
+                        *low_res_chunk_events(
+                            'file-system:video',
+                            data,
+                            new_w,
+                            new_h,
                         ),
                     ],
                 )

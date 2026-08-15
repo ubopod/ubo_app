@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from ubo_app.engines.abstraction.ai_provider_mixin import AIProviderMixin
     from ubo_app.store.services.localization import LanguageCode
 
+import playback_policy
 from engines_registry import (
     IMAGE_GENERATOR_ENGINES,
     LLM_ENGINES,
@@ -24,15 +25,26 @@ from engines_registry import (
     first_configured_engine,
     is_engine_configured,
 )
+from session_recorder import setup_session_recorder
+from system_prompt_menu import (
+    DETAIL_MENU_KEY_PREFIX as SYSTEM_PROMPT_DETAIL_MENU_KEY_PREFIX,
+)
+from system_prompt_menu import (
+    MENU_ID as SYSTEM_PROMPT_MENU_ID,
+)
+from system_prompt_menu import (
+    setup_system_prompt_menu,
+)
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, WARNING_COLOR
-from ubo_app.constants import SECRETS_PATH
 from ubo_app.constants.assistant import (
     ANTHROPIC_API_KEY_SECRET_ID,
     ASSEMBLYAI_API_KEY_SECRET_ID,
     CEREBRAS_API_KEY_SECRET_ID,
     DEEPGRAM_API_KEY_SECRET_ID,
     DEEPSEEK_API_KEY_SECRET_ID,
+    DEFAULT_ELEVENLABS_TTS_VOICE,
+    DEFAULT_ELEVENLABS_TTS_VOICE_LABEL,
     DEFAULT_LLM_OLLAMA_MODEL,
     ELEVENLABS_API_KEY_SECRET_ID,
     ELEVENLABS_VOICE_ID,
@@ -164,6 +176,7 @@ from ubo_app.store.services.assistant import (
     AssistantHandleReportEvent,
     AssistantImageGeneratorName,
     AssistantLLMName,
+    AssistantRunPipelineEvent,
     AssistantSetOllamaThinkingAction,
     AssistantSetSelectedImageGeneratorAction,
     AssistantSetSelectedKokoroVoiceAction,
@@ -201,6 +214,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.frame_stream import register_still
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.menu_items import (
     SELECTED_ITEM_PARAMETERS,
@@ -212,6 +226,14 @@ from ubo_app.utils.persistent_store import register_persistent_store
 
 # Spoken when the user picks a TTS voice, so they immediately hear it.
 VOICE_PREVIEW_TEXT = 'This is a new voice.'
+
+# A single slot: a new generated picture replaces the previous one in place
+# (`push_render` is idempotent by `stream_id`).
+ASSISTANT_IMAGE_STREAM_ID = 'assistant:image'
+
+# Per-utterance count of TTS audio chunks that reached core, keyed by assistance
+# id and cleared when its end-of-stream marker arrives.
+_audio_chunks_received: dict[str, int] = {}
 
 
 def _get_selected_item_parameters(*, is_offline: bool) -> ItemParameters:
@@ -252,7 +274,7 @@ def _get_not_setup_item_parameters(*, is_offline: bool | None = None) -> ItemPar
 
 def secrets_modification_time() -> float:
     """Return the modification time of the secrets file."""
-    return SECRETS_PATH.stat().st_mtime if SECRETS_PATH.exists() else 0
+    return secrets.modification_time()
 
 
 def _total_ram_bytes() -> int:
@@ -271,9 +293,31 @@ def _format_ram_gb(bytes_: int) -> str:
     return f'{bytes_ / (1024**3):.1f} GB'
 
 
+def _remember_playback_choice(event: AssistantRunPipelineEvent) -> None:
+    """Record a session that must not play its audio on the device speaker."""
+    playback_policy.remember(
+        event.session_id,
+        play_locally=event.play_locally,
+    )
+
+
 def _communicate(event: AssistantHandleReportEvent) -> None:
     """Communicate the assistance."""
     match event.data:
+        case AssistanceAudioFrame(
+            audio=sample,
+            index=index,
+            id=id,
+            is_last_frame=is_last_frame,
+            session_id=session_id,
+        ) if not playback_policy.should_play(
+            session_id,
+            is_last_frame=is_last_frame,
+        ):
+            # The caller wants the stream, not the speaker. Frames still reach
+            # whoever requested them; they just skip the audio bus.
+            pass
+
         case AssistanceAudioFrame(
             audio=sample,
             index=index,
@@ -304,17 +348,36 @@ def _communicate(event: AssistantHandleReportEvent) -> None:
                         source=audio_source,
                     ),
                 )
+                # Counts the chunks that actually crossed the RPC boundary, to
+                # bracket the assistant's own "reports dispatched" tally: a gap
+                # between the two localises lost TTS audio to the transport,
+                # a gap after this one localises it to the audio bus.
+                _audio_chunks_received[id] = _audio_chunks_received.get(id, 0) + 1
+                if is_last_frame:
+                    logger.info(
+                        'assistant: audio chunks received for %s: %d (last index %s)',
+                        id,
+                        _audio_chunks_received.pop(id, 0),
+                        index,
+                    )
 
         case AssistanceImageFrame() as image:
+            # The picture travels as frame-stream events, not inline in props:
+            # view data is broadcast to every client, so an image in props sent
+            # a multi-megabyte payload down the store stream, which on the
+            # ESP32 exceeded UBO_GRPC_WEB_MAX_FRAME and knocked the satellite
+            # off the air. Props carry only the geometry.
+            register_still(
+                ASSISTANT_IMAGE_STREAM_ID,
+                image.image,
+                image.width,
+                image.height,
+            )
             store.dispatch(
                 OpenRenderAction(
                     kind='image_viewer',
-                    stream_id='assistant:image',
-                    props={
-                        'image': image.image,
-                        'width': image.width,
-                        'height': image.height,
-                    },
+                    stream_id=ASSISTANT_IMAGE_STREAM_ID,
+                    props={'width': image.width, 'height': image.height},
                 ),
             )
 
@@ -366,6 +429,26 @@ def _register_persistent_stores() -> None:
     register_persistent_store(
         'assistant:selected_generic_llm_provider',
         lambda state: state.assistant.selected_generic_llm_provider,
+    )
+    # ``active_system_prompt`` is derived from these two and is deliberately not
+    # persisted — the reducer recomputes it from the restored values on boot.
+    register_persistent_store(
+        'assistant:system_prompts',
+        lambda state: json.dumps(
+            [
+                {
+                    'id': prompt.id,
+                    'label': prompt.label,
+                    'content': prompt.content,
+                    'is_enabled': prompt.is_enabled,
+                }
+                for prompt in state.assistant.system_prompts
+            ],
+        ),
+    )
+    register_persistent_store(
+        'assistant:is_default_system_prompt_enabled',
+        lambda state: state.assistant.is_default_system_prompt_enabled,
     )
     register_persistent_store(
         'assistant:ollama_thinking_enabled',
@@ -2092,7 +2175,13 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         # primary voice from the secret directly (matches how other autoruns
         # treat secrets_monitor.value: a change signal, not a data source).
         secret_voice = secrets.read_secret(ELEVENLABS_VOICE_ID) or ''
-        selected = selected_voices.get(AssistantTTSName.ELEVENLABS) or secret_voice
+        # Mirrors the subprocess's resolution order (picked → secret → default)
+        # so the checkmark lands on the voice that will actually be used.
+        selected = (
+            selected_voices.get(AssistantTTSName.ELEVENLABS)
+            or secret_voice
+            or DEFAULT_ELEVENLABS_TTS_VOICE
+        )
 
         for action_id in _elevenlabs_voice_action_ids:
             unregister_action(action_id)
@@ -2108,6 +2197,12 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
             labels.setdefault(secret_voice, secret_voice)
         for entry in available_voices:
             labels.setdefault(entry.id, entry.label or entry.id)
+        # Always offer the default-library voice, so an API-key-only setup has a
+        # named, selectable voice even before the account's voices are fetched.
+        labels.setdefault(
+            DEFAULT_ELEVENLABS_TTS_VOICE,
+            DEFAULT_ELEVENLABS_TTS_VOICE_LABEL,
+        )
 
         items: list[MenuItemData] = []
         for voice_id, label in labels.items():
@@ -3156,6 +3251,7 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
         'assistant:llm': 'assistant:llm',
         'assistant:tts': 'assistant:tts',
         'assistant:image_generator': 'assistant:image_generator',
+        SYSTEM_PROMPT_MENU_ID: SYSTEM_PROMPT_MENU_ID,
     }
 
     def _match_catalog_tail(tail: str) -> str | None:  # noqa: C901, PLR0912
@@ -3204,6 +3300,9 @@ def _register_assistant_path_matchers() -> None:  # noqa: C901
             return 'assistant:tts:elevenlabs:voices'
         if tail == 'mistral:voices':
             return 'assistant:tts:mistral:voices'
+        if tail.startswith(SYSTEM_PROMPT_DETAIL_MENU_KEY_PREFIX):
+            prompt_id = tail[len(SYSTEM_PROMPT_DETAIL_MENU_KEY_PREFIX) :]
+            return f'{SYSTEM_PROMPT_MENU_ID}:{prompt_id}'
         return None
 
     def _assistant_path_matcher(path: tuple[str, ...]) -> str | None:
@@ -3305,7 +3404,7 @@ def _register_bindable_actions() -> None:
     )
 
 
-async def init_service() -> None:
+async def init_service() -> None:  # noqa: PLR0915
     """Initialize the assistant service."""
     _register_persistent_stores()
     _register_bindable_actions()
@@ -3446,6 +3545,15 @@ async def init_service() -> None:
         'assistant:provider_status',
         lambda s: tuple(s.assistant.provider_setup_status.items()),
     )
+    # Covers the list menu and every per-prompt detail page — both are rebuilt
+    # from these two slices.
+    register_menu_content_dependency(
+        SYSTEM_PROMPT_MENU_ID,
+        lambda s: (
+            s.assistant.system_prompts,
+            s.assistant.is_default_system_prompt_enabled,
+        ),
+    )
 
     (
         _secrets_monitor,
@@ -3518,10 +3626,25 @@ async def init_service() -> None:
             label='Image Generator',
             icon='󰹉',
         ),
+        # Between Image Generator (20) and the MCP service's Tools entry (15).
+        RegisterSettingAppAction(
+            category=SettingsCategory.ASSISTANT,
+            priority=18,
+            key='system_prompts',
+            label='System Prompt',
+            icon='󰈙',
+        ),
     )
 
     # Register path matchers for assistant sub-pages
     _register_assistant_path_matchers()
+
+    store.subscribe_event(AssistantRunPipelineEvent, _remember_playback_choice)
+    setup_session_recorder()
+    # The autorun it registers persists via the store's listener set (keep_ref),
+    # the same way ``_watch_ollama_container_status``'s does.
+    setup_system_prompt_menu()
+
 
     store.subscribe_event(AssistantHandleReportEvent, _communicate)
     store.subscribe_event(

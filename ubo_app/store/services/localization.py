@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import field
 from enum import StrEnum
+from typing import cast
 
 from immutable import Immutable
 from redux import BaseAction, BaseEvent
@@ -46,6 +47,77 @@ def language_label(code: LanguageCode) -> str:
     return _LANGUAGE_LABELS.get(code, code.value)
 
 
+class LocationSource(StrEnum):
+    """Where the currently stored location came from.
+
+    ``IP`` locations are refreshed automatically whenever connectivity or the
+    public IP changes. ``MANUAL`` locations are never overwritten by the
+    automatic detector — only an explicit reset returns the device to ``IP``.
+    """
+
+    IP = 'ip'
+    MANUAL = 'manual'
+
+
+class UnitSystem(StrEnum):
+    """How measured quantities (temperature, speed, distance, pressure) display.
+
+    ``AUTO`` continuously tracks the resolved location's country — the same
+    "keep following upstream" behavior ``LocationSource.IP`` has for location
+    itself. An explicit ``METRIC``/``US`` pick is sticky, like
+    ``LocationSource.MANUAL`` — nothing overwrites it until the user changes
+    it back to ``AUTO``.
+    """
+
+    AUTO = 'auto'
+    METRIC = 'metric'
+    US = 'us'
+
+
+_UNIT_SYSTEM_LABELS: dict[UnitSystem, str] = {
+    UnitSystem.AUTO: 'Automatic',
+    UnitSystem.METRIC: 'Metric (°C, km/h)',
+    UnitSystem.US: 'US Customary (°F, mph)',
+}
+
+
+def unit_system_label(system: UnitSystem) -> str:
+    """Return the human-readable label for *system*."""
+    return _UNIT_SYSTEM_LABELS.get(system, system.value)
+
+
+class LocationInfo(Immutable):
+    """Where the device is, as far as the device knows."""
+
+    latitude: float
+    longitude: float
+    city: str | None = None
+    country: str | None = None
+    country_code: str | None = None
+    timezone: str | None = None
+
+
+class WeatherCondition(Immutable):
+    """A snapshot of the current weather at the device's location.
+
+    ``fetched_at`` / ``expires_at`` are epoch seconds. Freshness is decided by
+    the async handlers that consume this — reducers never read the clock.
+    """
+
+    symbol_code: str
+    temperature_celsius: float
+    wind_speed_mps: float | None = None
+    fetched_at: float = 0
+    expires_at: float = 0
+    # Filled in by the reducer (never by the fetch layer) from the raw fields
+    # above plus the effective UnitSystem — the pair every client (and the
+    # LLM tool) reads instead of converting Celsius/m-s themselves.
+    temperature_display_value: float = 0
+    temperature_display_unit: str = '°C'
+    wind_speed_display_value: float | None = None
+    wind_speed_display_unit: str | None = None
+
+
 class LocalizationAction(BaseAction): ...
 
 
@@ -56,8 +128,77 @@ class LocalizationSetLanguageAction(LocalizationAction):
     language: LanguageCode
 
 
+class LocalizationSetUnitSystemAction(LocalizationAction):
+    unit_system: UnitSystem
+
+
+class LocalizationSetLocationAction(LocalizationAction):
+    location: LocationInfo
+    source: LocationSource
+    public_ip: str | None = None
+
+
+class LocalizationResetLocationAction(LocalizationAction): ...
+
+
+class LocalizationUpdateWeatherAction(LocalizationAction):
+    weather: WeatherCondition
+
+
+class LocalizationRefreshWeatherAction(LocalizationAction): ...
+
+
+class LocalizationUpdateClockAction(LocalizationAction):
+    """Publish the wall clock at the device's location.
+
+    Dispatched only when one of the two strings actually changes, so the clock
+    costs the store one update a minute rather than one a tick.
+    """
+
+    clock: str  # Format: "HH:MM"
+    date: str  # Format: "YYYY-MM-DD"
+
+
+class LocalizationSpeakTimeAction(LocalizationAction): ...
+
+
+class LocalizationSpeakDateAction(LocalizationAction): ...
+
+
+class LocalizationSpeakWeatherAction(LocalizationAction): ...
+
+
 class LocalizationLanguageChangedEvent(LocalizationEvent):
     language: LanguageCode
+
+
+class LocalizationUnitSystemChangedEvent(LocalizationEvent):
+    unit_system: UnitSystem
+
+
+class LocalizationLocationChangedEvent(LocalizationEvent):
+    location: LocationInfo
+    source: LocationSource
+
+
+class LocalizationLocationResetEvent(LocalizationEvent): ...
+
+
+class LocalizationWeatherRefreshRequestedEvent(LocalizationEvent):
+    location: LocationInfo
+
+
+class LocalizationSpeakTimeEvent(LocalizationEvent):
+    timezone: str | None = None
+
+
+class LocalizationSpeakDateEvent(LocalizationEvent):
+    timezone: str | None = None
+
+
+class LocalizationSpeakWeatherEvent(LocalizationEvent):
+    weather: WeatherCondition | None = None
+    location: LocationInfo | None = None
 
 
 def _load_language(value: object) -> LanguageCode:
@@ -71,6 +212,58 @@ def _load_language(value: object) -> LanguageCode:
     return LanguageCode.EN
 
 
+def _load_location(value: object) -> LocationInfo | None:
+    """Rebuild a ``LocationInfo`` from its persisted form, tolerating garbage."""
+    if isinstance(value, LocationInfo):
+        return value
+    if not isinstance(value, dict):
+        return None
+    try:
+        latitude = float(cast('float', value['latitude']))
+        longitude = float(cast('float', value['longitude']))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+    def _optional_str(key: str) -> str | None:
+        candidate = value.get(key)
+        return candidate if isinstance(candidate, str) and candidate else None
+
+    return LocationInfo(
+        latitude=latitude,
+        longitude=longitude,
+        city=_optional_str('city'),
+        country=_optional_str('country'),
+        country_code=_optional_str('country_code'),
+        timezone=_optional_str('timezone'),
+    )
+
+
+def _load_location_source(value: object) -> LocationSource:
+    if isinstance(value, LocationSource):
+        return value
+    if isinstance(value, str):
+        try:
+            return LocationSource(value)
+        except ValueError:
+            return LocationSource.IP
+    return LocationSource.IP
+
+
+def _load_public_ip(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def _load_unit_system(value: object) -> UnitSystem:
+    if isinstance(value, UnitSystem):
+        return value
+    if isinstance(value, str):
+        try:
+            return UnitSystem(value)
+        except ValueError:
+            return UnitSystem.AUTO
+    return UnitSystem.AUTO
+
+
 class LocalizationState(Immutable):
     language: LanguageCode = field(
         default=read_from_persistent_store(
@@ -79,3 +272,40 @@ class LocalizationState(Immutable):
             mapper=_load_language,
         ),
     )
+    location: LocationInfo | None = field(
+        default_factory=lambda: read_from_persistent_store(
+            key='localization:location',
+            default=None,
+            mapper=_load_location,
+        ),
+    )
+    location_source: LocationSource = field(
+        default_factory=lambda: read_from_persistent_store(
+            key='localization:location_source',
+            default=LocationSource.IP,
+            mapper=_load_location_source,
+        ),
+    )
+    public_ip: str | None = field(
+        default_factory=lambda: read_from_persistent_store(
+            key='localization:public_ip',
+            default=None,
+            mapper=_load_public_ip,
+        ),
+    )
+    unit_system: UnitSystem = field(
+        default=read_from_persistent_store(
+            key='localization:unit_system',
+            default=UnitSystem.AUTO,
+            mapper=_load_unit_system,
+        ),
+    )
+    # Deliberately not persisted: a weather snapshot from the last boot is
+    # always stale, and re-fetching costs one request.
+    weather: WeatherCondition | None = None
+    # The wall clock *at the device's location*, which is not necessarily the
+    # host's timezone — nothing sets the OS zone from the detected location.
+    # This service owns the location, so it owns the time there too; the status
+    # bar and every client read these rather than computing their own.
+    clock: str = ''
+    date: str = ''

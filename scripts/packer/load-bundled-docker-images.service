@@ -1,0 +1,20 @@
+[Unit]
+Description=Load Docker images bundled into the ubo image on first boot
+After=docker.service
+Requires=docker.service
+Wants=network-online.target
+# Run before the display manager so the autologin session — and the ubo-app
+# user service it launches — only start once the bundled images are loaded.
+# Otherwise ubo-app's first Docker status check could race the load and mark a
+# bundled image NOT_AVAILABLE (the event monitor reacts to pull/delete, not
+# load, so it would not self-correct until the next check).
+Before=display-manager.service lightdm.service
+ConditionPathExistsGlob=/var/lib/ubo/bundled-docker-images/*.tar
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/ubo/load-bundled-docker-images.sh
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

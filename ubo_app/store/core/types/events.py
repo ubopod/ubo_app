@@ -154,6 +154,21 @@ class FrameStreamDataEvent(MainEvent):
     height: int
 
 
+class FrameStreamChunkEvent(MainEvent):
+    """Low-res RGB565-LE row chunk of a frame stream for constrained clients.
+
+    `data` holds whole rows (`rows * width * 2` bytes, RGB565 little-endian)
+    starting at `row_offset`; `width`/`height` describe the full low-res
+    frame. A frame is complete when `row_offset + rows == height`.
+    """
+
+    stream_id: str
+    data: bytes
+    width: int
+    height: int
+    row_offset: int
+
+
 class ScreenshotDataEvent(MainEvent):
     """Event emitted when screenshot data is received from GUI client."""
 

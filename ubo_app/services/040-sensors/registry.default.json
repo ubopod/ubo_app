@@ -1,0 +1,600 @@
+{
+  "version": 1,
+  "updated": "2026-08-14",
+  "sensors": [
+    {
+      "id": "pct2075",
+      "label": "PCT2075 Temperature",
+      "manufacturer": "NXP",
+      "addresses": [
+        "0x48",
+        "0x49",
+        "0x4a",
+        "0x4b",
+        "0x4c",
+        "0x4d",
+        "0x4e",
+        "0x4f"
+      ],
+      "probe": null,
+      "driver": {
+        "module": "adafruit_pct2075",
+        "class": "PCT2075"
+      },
+      "entities": [
+        {
+          "key": "temperature",
+          "attribute": "temperature",
+          "name": "Temperature",
+          "device_class": "temperature",
+          "unit_of_measurement": "\u00b0C",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        }
+      ]
+    },
+    {
+      "id": "veml7700",
+      "label": "VEML7700 Ambient Light",
+      "manufacturer": "Vishay",
+      "addresses": [
+        "0x10"
+      ],
+      "probe": null,
+      "driver": {
+        "module": "adafruit_veml7700",
+        "class": "VEML7700",
+        "post_init": {
+          "light_integration_time": 8
+        }
+      },
+      "entities": [
+        {
+          "key": "illuminance",
+          "attribute": "lux",
+          "name": "Illuminance",
+          "device_class": "illuminance",
+          "unit_of_measurement": "lx",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        }
+      ]
+    },
+    {
+      "id": "aht20",
+      "label": "AHT20 Temp/Humidity",
+      "manufacturer": "Aosong",
+      "addresses": [
+        "0x38"
+      ],
+      "probe": null,
+      "driver": {
+        "module": "adafruit_ahtx0",
+        "class": "AHTx0"
+      },
+      "entities": [
+        {
+          "key": "temperature",
+          "attribute": "temperature",
+          "name": "Temperature",
+          "device_class": "temperature",
+          "unit_of_measurement": "\u00b0C",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        },
+        {
+          "key": "humidity",
+          "attribute": "relative_humidity",
+          "name": "Humidity",
+          "device_class": "humidity",
+          "unit_of_measurement": "%",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        }
+      ]
+    },
+    {
+      "id": "bme280",
+      "label": "BME280 Environment",
+      "manufacturer": "Bosch",
+      "addresses": [
+        "0x76",
+        "0x77"
+      ],
+      "probe": {
+        "register": "0xd0",
+        "expected": "0x60",
+        "read_length": 1,
+        "mask": "0xff"
+      },
+      "driver": {
+        "module": "adafruit_bme280.basic",
+        "class": "Adafruit_BME280_I2C"
+      },
+      "entities": [
+        {
+          "key": "temperature",
+          "attribute": "temperature",
+          "name": "Temperature",
+          "device_class": "temperature",
+          "unit_of_measurement": "\u00b0C",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        },
+        {
+          "key": "humidity",
+          "attribute": "relative_humidity",
+          "name": "Humidity",
+          "device_class": "humidity",
+          "unit_of_measurement": "%",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "pressure",
+          "attribute": "pressure",
+          "name": "Pressure",
+          "device_class": "pressure",
+          "unit_of_measurement": "hPa",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        }
+      ]
+    },
+    {
+      "id": "bme680",
+      "label": "BME680 Environment + Gas",
+      "manufacturer": "Bosch",
+      "addresses": [
+        "0x76",
+        "0x77"
+      ],
+      "probe": {
+        "register": "0xd0",
+        "expected": "0x61",
+        "read_length": 1,
+        "mask": "0xff"
+      },
+      "driver": {
+        "module": "adafruit_bme680",
+        "class": "Adafruit_BME680_I2C"
+      },
+      "entities": [
+        {
+          "key": "temperature",
+          "attribute": "temperature",
+          "name": "Temperature",
+          "device_class": "temperature",
+          "unit_of_measurement": "\u00b0C",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        },
+        {
+          "key": "humidity",
+          "attribute": "relative_humidity",
+          "name": "Humidity",
+          "device_class": "humidity",
+          "unit_of_measurement": "%",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "pressure",
+          "attribute": "pressure",
+          "name": "Pressure",
+          "device_class": "pressure",
+          "unit_of_measurement": "hPa",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        },
+        {
+          "key": "gas_resistance",
+          "attribute": "gas",
+          "name": "Gas Resistance",
+          "unit_of_measurement": "\u03a9",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        }
+      ]
+    },
+    {
+      "id": "bmp388",
+      "label": "BMP388 Pressure",
+      "manufacturer": "Bosch",
+      "addresses": [
+        "0x76",
+        "0x77"
+      ],
+      "probe": {
+        "register": "0x00",
+        "expected": "0x50",
+        "read_length": 1,
+        "mask": "0xff"
+      },
+      "driver": {
+        "module": "adafruit_bmp3xx",
+        "class": "BMP3XX_I2C"
+      },
+      "entities": [
+        {
+          "key": "pressure",
+          "attribute": "pressure",
+          "name": "Pressure",
+          "device_class": "pressure",
+          "unit_of_measurement": "hPa",
+          "state_class": "measurement",
+          "suggested_display_precision": 2
+        },
+        {
+          "key": "temperature",
+          "attribute": "temperature",
+          "name": "Temperature",
+          "device_class": "temperature",
+          "unit_of_measurement": "\u00b0C",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        },
+        {
+          "key": "altitude",
+          "attribute": "altitude",
+          "name": "Altitude",
+          "device_class": "distance",
+          "unit_of_measurement": "m",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        }
+      ]
+    },
+    {
+      "id": "scd4x",
+      "label": "SCD-40 CO2",
+      "manufacturer": "Sensirion",
+      "min_read_interval": 5,
+      "addresses": [
+        "0x62"
+      ],
+      "probe": null,
+      "driver": {
+        "module": "adafruit_scd4x",
+        "class": "SCD4X",
+        "post_init_calls": [
+          "start_periodic_measurement"
+        ]
+      },
+      "entities": [
+        {
+          "key": "co2",
+          "attribute": "CO2",
+          "name": "CO2",
+          "device_class": "carbon_dioxide",
+          "unit_of_measurement": "ppm",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "temperature",
+          "attribute": "temperature",
+          "name": "Temperature",
+          "device_class": "temperature",
+          "unit_of_measurement": "\u00b0C",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        },
+        {
+          "key": "humidity",
+          "attribute": "relative_humidity",
+          "name": "Humidity",
+          "device_class": "humidity",
+          "unit_of_measurement": "%",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        }
+      ]
+    },
+    {
+      "id": "sgp40",
+      "label": "SGP40 VOC",
+      "manufacturer": "Sensirion",
+      "addresses": [
+        "0x59"
+      ],
+      "probe": null,
+      "driver": {
+        "module": "adafruit_sgp40",
+        "class": "SGP40"
+      },
+      "entities": [
+        {
+          "key": "voc_index",
+          "attribute": "measure_index",
+          "name": "VOC Index",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        }
+      ]
+    },
+    {
+      "id": "ens160",
+      "label": "ENS160 Air Quality",
+      "manufacturer": "ScioSense",
+      "addresses": [
+        "0x53",
+        "0x52"
+      ],
+      "probe": null,
+      "driver": {
+        "module": "adafruit_ens160",
+        "class": "ENS160",
+        "read_method": "read_all_sensors",
+        "read_primer": "new_data_available"
+      },
+      "entities": [
+        {
+          "key": "eco2",
+          "attribute": "eCO2",
+          "name": "eCO2",
+          "device_class": "carbon_dioxide",
+          "unit_of_measurement": "ppm",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "tvoc",
+          "attribute": "TVOC",
+          "name": "TVOC",
+          "device_class": "volatile_organic_compounds_parts",
+          "unit_of_measurement": "ppb",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "aqi",
+          "attribute": "AQI",
+          "name": "Air Quality Index",
+          "device_class": "aqi",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "validity",
+          "attribute": "data_validity",
+          "name": "Data Validity",
+          "value_template": "{% set v = value_json.validity %}{{ ['normal', 'warming up', 'starting up', 'invalid'][v | int] if v is not none else 'unknown' }}"
+        }
+      ]
+    },
+    {
+      "id": "sht4x",
+      "label": "SHT4x Temp/Humidity",
+      "manufacturer": "Sensirion",
+      "addresses": [
+        "0x44"
+      ],
+      "probe": null,
+      "driver": {
+        "module": "adafruit_sht4x",
+        "class": "SHT4x"
+      },
+      "entities": [
+        {
+          "key": "temperature",
+          "attribute": "temperature",
+          "name": "Temperature",
+          "device_class": "temperature",
+          "unit_of_measurement": "\u00b0C",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        },
+        {
+          "key": "humidity",
+          "attribute": "relative_humidity",
+          "name": "Humidity",
+          "device_class": "humidity",
+          "unit_of_measurement": "%",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        }
+      ]
+    },
+    {
+      "id": "bh1750",
+      "label": "BH1750 Ambient Light",
+      "manufacturer": "Rohm",
+      "addresses": [
+        "0x23",
+        "0x5c"
+      ],
+      "probe": null,
+      "driver": {
+        "module": "adafruit_bh1750",
+        "class": "BH1750"
+      },
+      "entities": [
+        {
+          "key": "illuminance",
+          "attribute": "lux",
+          "name": "Illuminance",
+          "device_class": "illuminance",
+          "unit_of_measurement": "lx",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        }
+      ]
+    },
+    {
+      "id": "mcp9808",
+      "label": "MCP9808 Temperature",
+      "manufacturer": "Microchip",
+      "addresses": [
+        "0x18",
+        "0x19",
+        "0x1b",
+        "0x1c",
+        "0x1d",
+        "0x1e",
+        "0x1f"
+      ],
+      "probe": {
+        "register": "0x06",
+        "expected": "0x0054",
+        "read_length": 2,
+        "mask": "0xffff"
+      },
+      "driver": {
+        "module": "adafruit_mcp9808",
+        "class": "MCP9808"
+      },
+      "entities": [
+        {
+          "key": "temperature",
+          "attribute": "temperature",
+          "name": "Temperature",
+          "device_class": "temperature",
+          "unit_of_measurement": "\u00b0C",
+          "state_class": "measurement",
+          "suggested_display_precision": 2
+        }
+      ]
+    },
+    {
+      "id": "pmsa003i",
+      "label": "PMSA003I Air Quality",
+      "manufacturer": "Plantower",
+      "addresses": [
+        "0x12"
+      ],
+      "probe": null,
+      "driver": {
+        "module": "adafruit_pm25.i2c",
+        "class": "PM25_I2C",
+        "read_method": "read"
+      },
+      "entities": [
+        {
+          "key": "pm1",
+          "attribute": "pm10 standard",
+          "name": "PM1.0",
+          "device_class": "pm1",
+          "unit_of_measurement": "\u00b5g/m\u00b3",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "pm25",
+          "attribute": "pm25 standard",
+          "name": "PM2.5",
+          "device_class": "pm25",
+          "unit_of_measurement": "\u00b5g/m\u00b3",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "pm10",
+          "attribute": "pm100 standard",
+          "name": "PM10",
+          "device_class": "pm10",
+          "unit_of_measurement": "\u00b5g/m\u00b3",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        }
+      ]
+    },
+    {
+      "id": "vl53l1x",
+      "label": "VL53L1X Distance",
+      "manufacturer": "STMicroelectronics",
+      "addresses": [
+        "0x29"
+      ],
+      "probe": {
+        "register": "0x010f",
+        "register_length": 2,
+        "expected": "0xea",
+        "read_length": 1,
+        "mask": "0xff"
+      },
+      "driver": {
+        "module": "adafruit_vl53l1x",
+        "class": "VL53L1X",
+        "post_init_calls": [
+          "start_ranging"
+        ]
+      },
+      "entities": [
+        {
+          "key": "distance",
+          "attribute": "distance",
+          "name": "Distance",
+          "device_class": "distance",
+          "unit_of_measurement": "cm",
+          "state_class": "measurement",
+          "suggested_display_precision": 1
+        }
+      ]
+    },
+    {
+      "id": "apds9960",
+      "label": "APDS-9960 Proximity + Color",
+      "manufacturer": "Avago",
+      "addresses": [
+        "0x39"
+      ],
+      "probe": {
+        "register": "0x92",
+        "expected": "0xa8",
+        "read_length": 1,
+        "mask": "0xf8"
+      },
+      "driver": {
+        "module": "adafruit_apds9960.apds9960",
+        "class": "APDS9960",
+        "takes_address": false,
+        "post_init": {
+          "enable_proximity": true,
+          "enable_color": true
+        }
+      },
+      "entities": [
+        {
+          "key": "proximity",
+          "attribute": "proximity",
+          "name": "Proximity",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "red",
+          "attribute": "color_data",
+          "index": 0,
+          "name": "Red",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "green",
+          "attribute": "color_data",
+          "index": 1,
+          "name": "Green",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "blue",
+          "attribute": "color_data",
+          "index": 2,
+          "name": "Blue",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "clear",
+          "attribute": "color_data",
+          "index": 3,
+          "name": "Clear",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        }
+      ]
+    }
+  ]
+}

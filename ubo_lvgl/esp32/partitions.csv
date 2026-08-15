@@ -1,0 +1,20 @@
+# Name,   Type, SubType, Offset,  Size, Flags
+nvs,      data, nvs,     ,        0x6000,
+phy_init, data, phy,     ,        0x1000,
+factory,  app,  factory, ,        4M,
+# esp-sr looks up a partition literally named `model` (see its CMakeLists.txt)
+# and silently skips packing/flashing srmodels.bin when it is absent. One wn9
+# WakeNet model is 292KB; 512KB leaves room for a second (or wn9_customword).
+# APPENDED LAST ON PURPOSE: offsets are implicit, so adding it here leaves nvs
+# at 0x9000 and a provisioned board keeps its Wi-Fi credentials. `model` lands
+# at 0x410000 -- confirm with `idf.py partition-table`, it moves if `factory`
+# is ever resized.
+#
+# WARNING: never flash a partition table containing `model` without writing
+# srmodels.bin in the SAME operation. srmodel_load() reads its model count
+# straight out of the image, so a blank (0xFF) partition yields num=0xFFFFFFFF,
+# a failed malloc and a NULL deref panic at boot.
+#
+# Unused on the ESP32-C6: esp-sr is an esp32s3-only dependency (idf_component.yml),
+# so nothing is written here on that target. It costs 512KB of a 16MB flash.
+model,    data, spiffs,  ,        0x80000,

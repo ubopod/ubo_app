@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from pipecat.utils.text.base_text_filter import BaseTextFilter
+    from piper.voice import PiperVoice
 
 DEFAULT_PIPER_VOICE_ID = 'en/en_US/kristin/medium/en_US-kristin-medium'
 
@@ -74,8 +75,6 @@ class PiperTTSService(TTSService):
         # mid-utterance voice switch never tears the queue.
         self._reload_lock = asyncio.Lock()
 
-        from piper.voice import PiperVoice
-
         # ``_requested_voice_id`` is the voice the user wants (updated by
         # ``request_voice`` from the store autorun callback — possibly on
         # a foreign thread, so it's a plain attribute write and nothing
@@ -84,21 +83,18 @@ class PiperTTSService(TTSService):
         # missed signal or a not-yet-downloaded voice self-heals on the
         # next turn instead of needing the user to toggle repeatedly.
         #
-        # The model is loaded lazily: when the voice file isn't on disk yet
-        # (first-time setup — the core process downloads it on demand) we
-        # construct with no client and ``_loaded_voice_id = None``. Keeping
-        # this service alive (rather than failing construction) is what lets
-        # the switcher list it as a selectable target; ``_ensure_voice_loaded``
-        # then loads the model before the first utterance once it's downloaded,
-        # so the user never has to restart the app.
+        # Construction NEVER touches the weights, even when the voice file is
+        # already on disk. A loaded Piper voice costs ~94 MB resident, and this
+        # service is constructed at subprocess start for every user regardless
+        # of which TTS provider they selected — so loading here charged that
+        # memory to people who never synthesize a word locally.
+        # ``_ensure_voice_loaded`` does the load before the first utterance,
+        # which is also what makes a freshly-downloaded voice work without a
+        # restart.
         self._requested_voice_id = voice_id
         self._loaded_voice_id: str | None = None
         self._client: PiperVoice | None = None
         sample_rate = _DEFAULT_SAMPLE_RATE
-        if _voice_path(voice_id).exists():
-            self._client = PiperVoice.load(_voice_path(voice_id))
-            self._loaded_voice_id = voice_id
-            sample_rate = self._client.config.sample_rate
 
         self.tasks: list[asyncio.Handle] = []
 
@@ -182,6 +178,29 @@ class PiperTTSService(TTSService):
             'Loaded Piper voice',
             extra={'voice_id': voice_id},
         )
+
+    async def unload(self) -> bool:
+        """Drop the loaded voice model, returning ~94 MB to the allocator.
+
+        Called when the user switches to another TTS provider — keeping a
+        voice resident for the life of the subprocess is what made "try Piper
+        once" a permanent cost. ``run_tts`` reloads on the next utterance, so
+        this is safe to call at any time.
+
+        Takes ``_reload_lock`` so an unload can never tear a synthesis that is
+        already streaming. Returns whether anything was actually released.
+        """
+        async with self._reload_lock:
+            if self._client is None:
+                return False
+
+            logger.info(
+                'Unloading Piper voice',
+                extra={'voice_id': self._loaded_voice_id},
+            )
+            self._client = None
+            self._loaded_voice_id = None
+            return True
 
     def synthesize(self, text: str) -> None:
         """Synthesize audio from text."""

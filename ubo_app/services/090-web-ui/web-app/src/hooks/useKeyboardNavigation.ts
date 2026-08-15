@@ -42,6 +42,9 @@ export function useKeyboardNavigation(store: StoreServiceClient): void {
           if (document.querySelector("[data-tile-grid]")) break;
           // NotificationOverlay handles its own arrow keys
           if (document.querySelector("[data-notification-actions]")) break;
+          // The dashboard is a scrollable page of its own; let the browser
+          // scroll it rather than forwarding a scroll to the device.
+          if (document.querySelector("[data-dashboard]")) break;
           // On non-TileGrid pages, focus the back button if available
           const backBtn = document.querySelector<HTMLElement>("[data-back-button]");
           if (backBtn) {
@@ -59,6 +62,7 @@ export function useKeyboardNavigation(store: StoreServiceClient): void {
           if (hasPopover) break;
           if (document.querySelector("[data-tile-grid]")) break;
           if (document.querySelector("[data-notification-actions]")) break;
+          if (document.querySelector("[data-dashboard]")) break;
           e.preventDefault();
           scroll(store, "down");
           break;

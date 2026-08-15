@@ -1,9 +1,13 @@
 """LLM service that wraps multiple LLM services allowing switching between them."""
 
+import asyncio
 import json
 import os
+import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from loguru import logger
 from pipecat.frames.frames import (
@@ -37,6 +41,7 @@ from pipecat.services.xai.llm import GrokLLMService
 from ubo_bindings.client import UboRPCClient
 from ubo_bindings.ubo.v1 import (
     AcceptableAssistanceFrame,
+    Action,
     AssistanceTextFrame,
     AssistantGenericLlmProviderChangedEvent,
     AssistantLlmName,
@@ -44,6 +49,11 @@ from ubo_bindings.ubo.v1 import (
     AssistantOllamaThinkingChangedEvent,
     AssistantPipelineStage,
     Event,
+    LocalizationRefreshWeatherAction,
+    LocalizationSetLocationAction,
+    LocationInfo,
+    LocationSource,
+    SpeechRecognitionRunCommandAction,
 )
 
 from ubo_assistant.constants import IS_RPI
@@ -52,6 +62,14 @@ from ubo_assistant.switch import UboLLMSwitchService, make_empty_llm_settings
 
 if TYPE_CHECKING:
     from pipecat.pipeline.service_switcher import ServiceSwitcher
+    from ubo_bindings.ubo.v1 import WeatherCondition
+
+    from ubo_assistant.system_prompt_watcher import SystemPromptWatcher
+
+# How long ``get_weather`` waits for a core-side refetch to land in the autorun
+# cache before answering with (and disclaiming) the last known conditions.
+WEATHER_REFRESH_TIMEOUT_SECONDS = 4.0
+WEATHER_REFRESH_POLL_SECONDS = 0.25
 
 DEFAULT_GENERIC_LLM_MODEL = os.environ.get('DEFAULT_LLM_GENERIC_MODEL', 'gpt-4.1')
 DEFAULT_OPENAI_MODEL = os.environ.get(
@@ -208,9 +226,12 @@ class GenericLLMProxy(LLMService):
             return
 
         self._service.push_frame = self.push_frame
-        for function_name, handler, cancel_on_interruption, timeout_secs in (
-            self._registered_functions
-        ):
+        for (
+            function_name,
+            handler,
+            cancel_on_interruption,
+            timeout_secs,
+        ) in self._registered_functions:
             self._service.register_function(
                 function_name,
                 handler,
@@ -267,6 +288,9 @@ class UboLLMService(UboLLMSwitchService):
         client: UboRPCClient,
         config: LLMServiceConfig,
         selector: str,
+        # Quoted: this module has no ``from __future__ import annotations``, so
+        # a bare TYPE_CHECKING-only name would be evaluated at class creation.
+        system_prompt_watcher: 'SystemPromptWatcher | None' = None,
     ) -> None:
         """Initialize LLM service with various services including remote Ollama."""
         self._config = config
@@ -331,6 +355,7 @@ class UboLLMService(UboLLMSwitchService):
             client=client,
             selector=selector,
             settings=make_empty_llm_settings(),
+            system_prompt_watcher=system_prompt_watcher,
         )
 
         # Register built-in functions
@@ -609,8 +634,7 @@ class UboLLMService(UboLLMSwitchService):
         has never picked a model for the provider).
         """
         return (
-            self._config.selected_models.get(service_id)
-            or _DEFAULT_MODELS[service_id]
+            self._config.selected_models.get(service_id) or _DEFAULT_MODELS[service_id]
         )
 
     def _create_openai_service(self) -> OpenAILLMService | None:
@@ -822,8 +846,7 @@ class UboLLMService(UboLLMSwitchService):
                 api_key=self._config.generic_llm_api_key or 'not-needed',
                 base_url=self._config.generic_llm_base_url.rstrip('/'),
                 settings=OpenAILLMService.Settings(
-                    model=self._config.generic_llm_model
-                    or DEFAULT_GENERIC_LLM_MODEL,
+                    model=self._config.generic_llm_model or DEFAULT_GENERIC_LLM_MODEL,
                 ),
             )
         except Exception:
@@ -838,6 +861,10 @@ class UboLLMService(UboLLMSwitchService):
         for service in self.service_map.values():
             service.register_function('draw_image', self.draw_image)
             service.register_function('get_image', self.get_image)
+            service.register_function('run_device_command', self.run_device_command)
+            service.register_function('get_current_time', self.get_current_time)
+            service.register_function('get_weather', self.get_weather)
+            service.register_function('set_location', self.set_location)
 
     def register_function(
         self,
@@ -868,6 +895,217 @@ class UboLLMService(UboLLMSwitchService):
         await params.result_callback(
             f'Image generator here, going for {prompt}.',
         )
+
+    async def run_device_command(self, params: FunctionCallParams) -> None:
+        """Run one of the user's configured voice shortcuts (stage 2).
+
+        Stage 1 matches shortcut phrases locally against the Vosk grammar and
+        never reaches the LLM. This is the fallback for a near-miss phrasing that
+        did.
+
+        The dispatch is optimistic: there is no ack channel back from the store,
+        so the result is reported as soon as the action is on the wire. The core
+        validates the id again anyway (an unknown one is a no-op there).
+        """
+        command_id = params.arguments['command_id']
+        command = next(
+            (
+                candidate
+                for candidate in self._device_commands
+                if candidate.id == command_id
+            ),
+            None,
+        )
+        if command is None:
+            logger.warning(
+                'LLM asked for an unknown device command',
+                extra={'command_id': command_id},
+            )
+            await params.result_callback(
+                f'There is no device command with the id {command_id!r}.',
+            )
+            return
+
+        logger.info(
+            'Running device command on behalf of the LLM',
+            extra={'command_id': command_id, 'label': command.label},
+        )
+        self.client.dispatch(
+            action=Action(
+                speech_recognition_run_command_action=(
+                    SpeechRecognitionRunCommandAction(command_id=command_id)
+                ),
+            ),
+        )
+        await params.result_callback(
+            f'Running the "{command.label}" command now.',
+        )
+
+    async def get_current_time(self, params: FunctionCallParams) -> None:
+        """Tell the LLM the current local time at the device's location.
+
+        The model has no clock, so this is the only way it can answer a time or
+        date question correctly. Falls back to the system timezone (and says so)
+        when the device's location isn't known yet.
+        """
+        timezone = self._location.timezone if self._location else None
+        if timezone:
+            try:
+                now = datetime.now(ZoneInfo(timezone))
+            except (ZoneInfoNotFoundError, ValueError):
+                logger.warning(
+                    'Unknown timezone in localization state',
+                    extra={'timezone': timezone},
+                )
+                now = datetime.now().astimezone()
+                timezone = None
+        else:
+            now = datetime.now().astimezone()
+
+        stamp = now.strftime('%I:%M %p on %A, %B %d, %Y').replace(' 0', ' ')
+        if timezone:
+            await params.result_callback(f'It is {stamp} ({timezone}).')
+            return
+        await params.result_callback(
+            f'It is {stamp}. Note: the device location is unknown, so this is '
+            "the system clock's timezone and may be wrong. Consider asking the "
+            'user where they are and calling set_location.',
+        )
+
+    async def get_weather(self, params: FunctionCallParams) -> None:
+        """Tell the LLM the current weather at the device's location.
+
+        There is no one-shot store read over gRPC, so a stale cache is refreshed
+        by dispatching a refresh action to the core and waiting for the autorun
+        to deliver the new value. If it doesn't arrive in time we answer with the
+        last known conditions rather than nothing, and say how old they are.
+        """
+        if self._location is None:
+            await params.result_callback(
+                "The device's location is not known yet, so the weather cannot "
+                'be looked up. Ask the user where they are and call set_location.',
+            )
+            return
+
+        weather = self._weather
+        if weather is None or (weather.expires_at or 0) <= time.time():
+            weather = await self._refresh_weather(previous=weather)
+
+        if weather is None:
+            await params.result_callback(
+                'The weather service could not be reached just now.',
+            )
+            return
+
+        place = self._location.city or 'the device location'
+        temperature_unit = weather.temperature_display_unit or '°C'
+        temperature_unit_name = temperature_unit.lstrip('°') or 'C'
+        parts = [
+            f'{weather.temperature_display_value:.0f} degrees {temperature_unit_name}',
+            f'conditions "{weather.symbol_code}"',
+        ]
+        if weather.wind_speed_display_value is not None:
+            parts.append(
+                f'wind {weather.wind_speed_display_value:.0f} '
+                f'{weather.wind_speed_display_unit}',
+            )
+
+        summary = f'Current weather in {place}: {", ".join(parts)}.'
+        if (weather.expires_at or 0) <= time.time():
+            age_minutes = int((time.time() - (weather.fetched_at or 0)) / 60)
+            summary += (
+                f' (This reading is about {age_minutes} minutes old — the '
+                'weather service is not responding right now.)'
+            )
+        await params.result_callback(summary)
+
+    async def _refresh_weather(
+        self,
+        *,
+        previous: 'WeatherCondition | None',
+    ) -> 'WeatherCondition | None':
+        """Ask the core to refetch the weather, then wait for the autorun to land."""
+        self.client.dispatch(
+            action=Action(
+                localization_refresh_weather_action=(
+                    LocalizationRefreshWeatherAction()
+                ),
+            ),
+        )
+
+        previous_stamp = previous.fetched_at if previous else None
+        deadline = time.time() + WEATHER_REFRESH_TIMEOUT_SECONDS
+        while time.time() < deadline:
+            await asyncio.sleep(WEATHER_REFRESH_POLL_SECONDS)
+            current = self._weather
+            if current is not None and current.fetched_at != previous_stamp:
+                return current
+
+        logger.warning('Weather refresh timed out; answering from cache')
+        return previous
+
+    async def set_location(self, params: FunctionCallParams) -> None:
+        """Set the device's location from what the user said in conversation.
+
+        The model supplies the coordinates and IANA timezone it knows for the
+        named city, so no geocoding service is needed. Dispatch is optimistic,
+        like ``run_device_command`` — there is no ack channel back from the store.
+        """
+
+        def _text(key: str) -> str | None:
+            value = params.arguments.get(key)
+            return value.strip() or None if isinstance(value, str) else None
+
+        city = _text('city')
+        country = _text('country')
+        country_code = _text('country_code')
+        timezone = _text('timezone')
+
+        try:
+            latitude = float(params.arguments['latitude'])
+            longitude = float(params.arguments['longitude'])
+        except (KeyError, TypeError, ValueError):
+            await params.result_callback(
+                'Latitude and longitude must both be numbers.',
+            )
+            return
+
+        if timezone is None:
+            await params.result_callback(
+                'An IANA timezone name is required, for example "Europe/Lisbon".',
+            )
+            return
+
+        try:
+            ZoneInfo(timezone)
+        except (ZoneInfoNotFoundError, ValueError):
+            await params.result_callback(
+                f'{timezone!r} is not a valid IANA timezone name. Use one like '
+                '"Europe/Lisbon".',
+            )
+            return
+
+        logger.info(
+            'Setting device location on behalf of the LLM',
+            extra={'city': city, 'country': country, 'timezone': timezone},
+        )
+        self.client.dispatch(
+            action=Action(
+                localization_set_location_action=LocalizationSetLocationAction(
+                    location=LocationInfo(
+                        latitude=latitude,
+                        longitude=longitude,
+                        city=city,
+                        country=country,
+                        country_code=country_code,
+                        timezone=timezone,
+                    ),
+                    source=LocationSource.MANUAL,
+                ),
+            ),
+        )
+        where = ', '.join(part for part in (city, country) if part) or 'that location'
+        await params.result_callback(f'Location set to {where}.')
 
     async def get_image(self, params: FunctionCallParams) -> None:
         """Get an image from the video stream based on a question."""

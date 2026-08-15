@@ -14,22 +14,44 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
-from redux import CompleteReducerResult
+import pytest
+from redux import (
+    CompleteReducerResult,
+    FinishEvent,
+    InitAction,
+    InitializationActionError,
+)
 
 from ubo_app.store.core.types import (
     MenuChooseByIndexEvent,
     MenuGoBackAction,
+    MenuGoHomeAction,
     MenuScrollAction,
+    ReplayRecordedSequenceAction,
+    SnapshotEvent,
+    TakeScreenshotAction,
+    ToggleRecordingAction,
 )
-from ubo_app.store.services.audio import AudioChangeVolumeAction
+from ubo_app.store.services.assistant import (
+    AssistantStartListeningAction,
+    AssistantStopListeningAction,
+)
+from ubo_app.store.services.audio import (
+    AudioChangeVolumeAction,
+    AudioPlayRecordingAction,
+    AudioToggleRecordingAction,
+)
 from ubo_app.store.services.display import DisplayUnblankAction
 from ubo_app.store.services.keypad import (
     Key,
+    KeypadKeyHoldAction,
     KeypadKeyPressAction,
     KeypadKeyReleaseAction,
+    KeypadKeyUnholdAction,
     KeypadReportContextAction,
     KeypadState,
 )
+from ubo_app.store.services.notifications import NotificationsAddAction
 
 _REDUCER_PATH = (
     Path(__file__).resolve().parents[2]
@@ -174,3 +196,165 @@ class TestNavigation:
         assert any(
             isinstance(action, MenuGoBackAction) for action in result.actions or ()
         )
+
+
+def _emitted(result: object) -> list[object]:
+    """Flatten a reducer result's actions and events for type assertions."""
+    actions: list[object] = list(getattr(result, 'actions', None) or ())
+    events: list[object] = list(getattr(result, 'events', None) or ())
+    return actions + events
+
+
+class TestInitialization:
+    """The None-state initialization contract."""
+
+    def test_init_action_builds_default_state(self) -> None:
+        """A None state plus InitAction yields a fresh default state."""
+        assert isinstance(reducer(None, InitAction()), KeypadState)
+
+    def test_none_state_without_init_raises(self) -> None:
+        """Any non-init action against a None state is an initialization error."""
+        with pytest.raises(InitializationActionError):
+            reducer(None, _press(Key.L1))
+
+
+class TestHomeListening:
+    """HOME drives the assistant listening lifecycle."""
+
+    def test_home_press_at_depth_one_starts_listening(self) -> None:
+        """HOME on the home screen starts assistant listening (press mode)."""
+        result = reducer(KeypadState(depth=1), _press(Key.HOME))
+        assert any(
+            isinstance(action, AssistantStartListeningAction)
+            for action in _emitted(result)
+        )
+
+    def test_home_release_at_depth_one_stops_listening_without_going_home(
+        self,
+    ) -> None:
+        """Releasing HOME on the home screen stops listening but does not navigate."""
+        result = reducer(
+            KeypadState(depth=1),
+            KeypadKeyReleaseAction(key=Key.HOME, pressed_keys=()),
+        )
+        emitted = _emitted(result)
+        assert any(isinstance(a, AssistantStopListeningAction) for a in emitted)
+        assert not any(isinstance(a, MenuGoHomeAction) for a in emitted)
+
+    def test_home_release_deep_stops_listening_and_goes_home(self) -> None:
+        """Releasing HOME deeper in the menu stops listening and navigates home."""
+        result = reducer(
+            KeypadState(depth=3),
+            KeypadKeyReleaseAction(key=Key.HOME, pressed_keys=()),
+        )
+        emitted = _emitted(result)
+        assert any(isinstance(a, AssistantStopListeningAction) for a in emitted)
+        assert any(isinstance(a, MenuGoHomeAction) for a in emitted)
+
+    def test_home_hold_deep_starts_hold_listening_and_consumes(self) -> None:
+        """Holding HOME deeper in the menu starts hold-listening and consumes it."""
+        result = reducer(
+            KeypadState(depth=2),
+            KeypadKeyHoldAction(
+                key=Key.HOME,
+                pressed_keys=(Key.HOME,),
+                held_keys=(Key.HOME,),
+            ),
+        )
+        assert any(
+            isinstance(a, AssistantStartListeningAction) for a in _emitted(result)
+        )
+        assert result.state.is_consumed is True
+
+    def test_home_unhold_stops_hold_listening_and_consumes(self) -> None:
+        """Unholding HOME stops hold-listening and consumes it."""
+        result = reducer(
+            KeypadState(depth=2, is_consumed=True),
+            KeypadKeyUnholdAction(key=Key.HOME, pressed_keys=(Key.HOME,)),
+        )
+        assert any(
+            isinstance(a, AssistantStopListeningAction) for a in _emitted(result)
+        )
+        assert result.state.is_consumed is True
+
+
+class TestChooseByIndexAndScroll:
+    """Single-key L2 and DOWN behaviours not covered elsewhere."""
+
+    def test_l2_chooses_index_one(self) -> None:
+        """L2 emits MenuChooseByIndexEvent(index=1)."""
+        result = reducer(KeypadState(), _press(Key.L2))
+        assert any(
+            isinstance(e, MenuChooseByIndexEvent) and e.index == 1
+            for e in _emitted(result)
+        )
+
+    def test_down_at_depth_one_changes_volume(self) -> None:
+        """DOWN on the home screen lowers the volume."""
+        result = reducer(KeypadState(depth=1), _press(Key.DOWN))
+        volume_actions = [
+            a for a in _emitted(result) if isinstance(a, AudioChangeVolumeAction)
+        ]
+        assert volume_actions
+        assert volume_actions[0].amount < 0
+
+    def test_down_at_depth_two_scrolls_down(self) -> None:
+        """DOWN deeper in the menu scrolls instead of changing volume."""
+        result = reducer(KeypadState(depth=2), _press(Key.DOWN))
+        scrolls = [a for a in _emitted(result) if isinstance(a, MenuScrollAction)]
+        assert scrolls
+        assert scrolls[0].direction.value == 'down'
+
+
+_COMBOS = [
+    pytest.param(Key.L1, (Key.HOME, Key.L1), TakeScreenshotAction, id='home+l1'),
+    pytest.param(Key.L2, (Key.HOME, Key.L2), SnapshotEvent, id='home+l2'),
+    pytest.param(Key.L3, (Key.HOME, Key.L3), ToggleRecordingAction, id='home+l3'),
+    pytest.param(Key.L1, (Key.BACK, Key.L1), AudioToggleRecordingAction, id='back+l1'),
+    pytest.param(Key.L2, (Key.BACK, Key.L2), AudioPlayRecordingAction, id='back+l2'),
+    pytest.param(
+        Key.L3, (Key.BACK, Key.L3), ReplayRecordedSequenceAction, id='back+l3',
+    ),
+    pytest.param(Key.BACK, (Key.HOME, Key.BACK), FinishEvent, id='home+back'),
+    pytest.param(Key.UP, (Key.HOME, Key.UP), NotificationsAddAction, id='home+up'),
+    pytest.param(
+        Key.DOWN, (Key.HOME, Key.DOWN), NotificationsAddAction, id='home+down',
+    ),
+]
+
+
+@pytest.mark.parametrize(('key', 'pressed_keys', 'expected'), _COMBOS)
+def test_key_combinations_emit_expected_output(
+    key: Key,
+    pressed_keys: tuple[Key, ...],
+    expected: type,
+) -> None:
+    """Each two-key chord maps to its dedicated action/event."""
+    result = reducer(
+        KeypadState(depth=1),
+        KeypadKeyPressAction(key=key, pressed_keys=pressed_keys),
+    )
+    assert any(isinstance(item, expected) for item in _emitted(result))
+
+
+class TestPassthroughs:
+    """State-preserving fallthrough branches."""
+
+    def test_consumed_release_resets_the_flag(self) -> None:
+        """A release while consumed clears the consumed flag and emits nothing."""
+        result = reducer(
+            KeypadState(is_consumed=True),
+            KeypadKeyReleaseAction(key=Key.L1, pressed_keys=()),
+        )
+        assert isinstance(result, KeypadState)
+        assert result.is_consumed is False
+
+    def test_unhandled_press_combo_returns_state_unchanged(self) -> None:
+        """A single BACK press (no dedicated case) leaves the state untouched."""
+        state = KeypadState(depth=1)
+        assert reducer(state, _press(Key.BACK)) is state
+
+    def test_unknown_action_returns_state_unchanged(self) -> None:
+        """An action matching no case leaves the state untouched."""
+        state = KeypadState(depth=1)
+        assert reducer(state, InitAction()) is state

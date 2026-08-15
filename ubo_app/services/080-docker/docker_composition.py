@@ -17,6 +17,7 @@ from calculate_progress import (
     ServiceTrackers,
     calculate_composition_progress,
 )
+from compose_ps import failing_services, has_running, parse_compose_ps
 from docker_app import prepare_app
 
 from ubo_app.colors import DANGER_COLOR
@@ -28,6 +29,7 @@ from ubo_app.store.services.docker import (
     DockerImageFetchCompositionEvent,
     DockerImageReleaseCompositionEvent,
     DockerImageRemoveCompositionEvent,
+    DockerImageReportExitAction,
     DockerImageRunCompositionEvent,
     DockerImageSetStatusAction,
     DockerImageStopCompositionEvent,
@@ -136,7 +138,7 @@ async def run_composition(
     id = event.image
 
     # Re-render the compose file from current intent *before* `up`. The compose
-    # file is a derived artifact (Zigbee device mapping, macvlan, etc. are read
+    # file is a derived artifact (Zigbee device mapping, network mode, etc. are read
     # from store/persistent state at render time), and `up -d` only re-reads the
     # file on (re)create — so the render must happen here, not just at pull time.
     # No-op for entries without a `prepare` hook. Port binding runs afterwards
@@ -719,34 +721,47 @@ def release_composition(event: DockerImageReleaseCompositionEvent) -> None:
     create_task(_release_composition(id))
 
 
+def _report_failing(id: str, names: tuple[str, ...]) -> None:
+    """Publish which services are failing — including none of them.
+
+    Always dispatched, on every path out of ``check_composition``. A record that
+    is only ever *set* outlives what it describes: releasing a stack removes its
+    containers and deleting one removes its directory, so a later check has
+    nothing left to inspect and could never retract a stale name on its own.
+    """
+    store.dispatch(
+        DockerImageReportExitAction(
+            image=id,
+            restart_count=0,
+            failing_services=names,
+        ),
+    )
+
+
 async def check_composition(*, id: str) -> None:
     """Check the status of the composition."""
     # Check if composition directory exists
     composition_path = COMPOSITIONS_PATH / id
     if not composition_path.exists():
         # Directory doesn't exist - set status to NOT_AVAILABLE
+        _report_failing(id, ())
         store.dispatch(
             DockerImageSetStatusAction(image=id, status=DockerItemStatus.NOT_AVAILABLE),
         )
         return
 
-    # Check if containers are running
-    ps_running = await asyncio.subprocess.create_subprocess_exec(
-        'docker',
-        'compose',
-        'ps',
-        '--quiet',
-        cwd=composition_path,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-    # Check all containers (including stopped)
-    ps_all = await asyncio.subprocess.create_subprocess_exec(
+    # One `ps` covering every container, reporting per-service state rather
+    # than bare ids. `--quiet` twice told us only whether *something* existed,
+    # so a stack with one healthy container and four crash-looping ones read as
+    # running. `-a` is required: a service between restart-backoff attempts is
+    # absent from the default listing.
+    ps = await asyncio.subprocess.create_subprocess_exec(
         'docker',
         'compose',
         'ps',
         '-a',
-        '--quiet',
+        '--format',
+        'json',
         cwd=composition_path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
@@ -763,8 +778,7 @@ async def check_composition(*, id: str) -> None:
     )
 
     await asyncio.gather(
-        ps_running.wait(),
-        ps_all.wait(),
+        ps.wait(),
         config.wait(),
         return_exceptions=True,
     )
@@ -772,12 +786,7 @@ async def check_composition(*, id: str) -> None:
     store.dispatch(
         *await asyncio.gather(
             log_async_process(
-                ps_running,
-                title='Docker Composition Error',
-                message='Failed to check running containers.',
-            ),
-            log_async_process(
-                ps_all,
+                ps,
                 title='Docker Composition Error',
                 message='Failed to check containers.',
             ),
@@ -789,19 +798,21 @@ async def check_composition(*, id: str) -> None:
         ),
     )
 
-    # Check if containers are running
-    ps_running_output = await ps_running.stdout.read() if ps_running.stdout else b''
-    if ps_running_output:
-        store.dispatch(
-            DockerImageSetStatusAction(image=id, status=DockerItemStatus.STARTING),
-        )
-        return
+    ps_output = await ps.stdout.read() if ps.stdout else b''
+    services = parse_compose_ps(ps_output.decode('utf-8', errors='replace'))
 
-    # Check if containers exist (even if stopped)
-    ps_all_output = await ps_all.stdout.read() if ps_all.stdout else b''
-    if ps_all_output:
+    # Before the branch, so the no-containers case below clears it too — that is
+    # the state a released stack lands in.
+    _report_failing(id, failing_services(services))
+
+    if services:
         store.dispatch(
-            DockerImageSetStatusAction(image=id, status=DockerItemStatus.CREATED),
+            DockerImageSetStatusAction(
+                image=id,
+                status=DockerItemStatus.STARTING
+                if has_running(services)
+                else DockerItemStatus.CREATED,
+            ),
         )
         return
 

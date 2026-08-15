@@ -1,8 +1,9 @@
+import { resilientStream } from "./resilient-stream";
+import { subscribeEvent } from "./store-streams";
 import {
   SubscribeEventRequest,
   SubscribeEventResponse,
 } from "../bindings/store/v1/store_pb";
-import { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import {
   AudioPlayAudioSampleEvent,
   AudioPlayAudioSequenceEvent,
@@ -214,38 +215,36 @@ function playSequenceChunk(
   flushSequenceBuffer(id);
 }
 
+/**
+ * Subscribe to a set of events, reconnecting on failure.
+ *
+ * Returns an unsubscribe function. It cancels whichever stream is currently
+ * open — including one opened by a reconnect — which the previous hand-rolled
+ * version could not do: it captured the first stream in a closure, so after any
+ * reconnect the disposer cancelled a dead stream and leaked the live one. That
+ * matters here because `RenderView` registers these as `pageStreams` that
+ * `dispatch()` cancels to free a connection slot.
+ */
 export function subscribeToEvents(
-  store: StoreServiceClient,
   setupEvents: Array<(event: Event) => void>,
   handleResponse: (response: SubscribeEventResponse) => void,
 ): () => void {
-  const request = new SubscribeEventRequest();
-  for (const setup of setupEvents) {
-    const event = new Event();
-    setup(event);
-    request.addEvents(event);
-  }
-
-  const stream = store.subscribeEvent(request);
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  let cancelled = false;
-
-  stream.on("error", () => {
-    if (!cancelled) {
-      reconnectTimer = setTimeout(
-        () => subscribeToEvents(store, setupEvents, handleResponse),
-        1000,
-      );
+  const buildRequest = () => {
+    const request = new SubscribeEventRequest();
+    for (const setup of setupEvents) {
+      const event = new Event();
+      setup(event);
+      request.addEvents(event);
     }
-  });
-
-  stream.on("data", handleResponse);
-
-  return () => {
-    cancelled = true;
-    if (reconnectTimer) clearTimeout(reconnectTimer);
-    stream.cancel();
+    return request;
   };
+
+  const stream = resilientStream(
+    (sink) => subscribeEvent(buildRequest(), sink),
+    handleResponse,
+  );
+
+  return () => stream.dispose();
 }
 
 export function stopAllAudio(): void {
@@ -261,11 +260,8 @@ export function stopAllAudio(): void {
   sequenceState.clear();
 }
 
-export function subscribeToAudioEvents(
-  store: StoreServiceClient,
-): () => void {
+export function subscribeToAudioEvents(): () => void {
   return subscribeToEvents(
-    store,
     [
       (event) =>
         event.setAudioPlayAudioSampleEvent(new AudioPlayAudioSampleEvent()),

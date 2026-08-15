@@ -390,7 +390,18 @@ class OpenWakeWordEngine(WakeWordRecognitionMixin):
                 self._audio_buffer.clear()
                 continue
 
-            self._audio_buffer.extend(chunk)
+            try:
+                self._audio_buffer.extend(chunk)
+            except TypeError:
+                # A malformed chunk must not kill this loop: nothing else
+                # restarts it (``decide_running_state`` only re-fires on a
+                # trigger-config change), so one bad chunk would otherwise
+                # silently and permanently stop wake-word detection.
+                logger.warning(
+                    'Dropping malformed audio chunk',
+                    extra={'chunk_type': type(chunk).__name__},
+                )
+                continue
             while len(self._audio_buffer) >= _BYTES_PER_CHUNK:
                 frame = bytes(self._audio_buffer[:_BYTES_PER_CHUNK])
                 del self._audio_buffer[:_BYTES_PER_CHUNK]

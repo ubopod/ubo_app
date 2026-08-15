@@ -26,6 +26,7 @@ from pipecat.frames.frames import (
 )
 from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.deepgram.stt import DeepgramSTTService
+from pipecat.services.elevenlabs.stt import ElevenLabsRealtimeSTTService
 from pipecat.services.moonshine.stt import MoonshineSTTService
 from provider_harness import FakeUboRPCClient
 from ubo_bindings.ubo.v1 import (
@@ -78,6 +79,18 @@ def _report_frame(action: Action) -> _ReportFrame | None:
 def _report_frames(client: FakeUboRPCClient) -> list[_ReportFrame]:
     """All report frames captured by the fake client, in dispatch order."""
     return [frame for action in client.frames if (frame := _report_frame(action))]
+
+
+async def _settle(collector: GRPCTerminalCollector) -> None:
+    """Let the collector's chained dispatches run.
+
+    Each report is issued only after its predecessor's RPC has completed, so
+    that core receives the chunks in emission order. A dispatch therefore lands
+    a loop turn after the frame is processed rather than synchronously, and a
+    test that reads the fake client straight after ``process_frame`` would see
+    nothing.
+    """
+    await collector._drain_pending()  # noqa: SLF001
 
 
 def _collector(client: object, stage: AssistantPipelineStage) -> GRPCTerminalCollector:
@@ -146,6 +159,10 @@ def test_realtime_feed_for_cloud_streaming_not_segmented_or_vosk() -> None:
     # stubs, so this pins the actual taxonomy: Deepgram streams, Google-segmented,
     # Vosk and Moonshine buffer.
     assert _stt_needs_realtime_feed(DeepgramSTTService.__new__(DeepgramSTTService))
+    # ElevenLabs realtime is a websocket streamer, not a segmented service.
+    assert _stt_needs_realtime_feed(
+        ElevenLabsRealtimeSTTService.__new__(ElevenLabsRealtimeSTTService),
+    )
     assert not _stt_needs_realtime_feed(
         SegmentedGoogleSTTService.__new__(SegmentedGoogleSTTService),
     )
@@ -228,6 +245,7 @@ async def test_collector_tts_end_marker_routed_through_report_path() -> None:
         _DOWN,
     )
     await collector.process_frame(TTSStoppedFrame(), _DOWN)
+    await _settle(collector)
 
     # Every dispatched action is a report — the collector never dispatches a raw
     # AudioPlayAudioSequenceAction itself (the racing direct-dispatch the fix
@@ -395,6 +413,7 @@ async def test_collector_stt_finalized_signal() -> None:
 
     assert collector.stt_finalized.is_set()
     assert collector.first_output.is_set()
+    await _settle(collector)
     texts = [
         frame.text
         for frame in _report_frames(client)
@@ -410,6 +429,7 @@ async def test_collector_dispatch_error_is_terminal_and_idempotent() -> None:
 
     await collector.dispatch_error('boom')
     await collector.dispatch_error('again')  # idempotent — ignored
+    await _settle(collector)
 
     assert len(client.frames) == 1
     frame = _report_frame(client.frames[0])

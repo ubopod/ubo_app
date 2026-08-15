@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
     from ubo_app.store.services.speech_recognition import (
         SpeechRecognitionState,
+        WakeMode,
         WakeWordEngineName,
     )
 
@@ -64,7 +65,19 @@ _MODE_LABELS: dict[str, str] = {
     'quick_chat': 'Quick Chat',
     'conversation': 'Conversation',
     'stop_talking': 'Stop Talking',
+    'home_assistant': 'Home Assistant',
 }
+
+
+def _mode_label(mode: WakeMode) -> str:
+    """Return the user-facing name of *mode* for a collision message.
+
+    Falls back to a titled form of the raw value: this table is a hand-maintained
+    parallel of the ``WakeMode`` enum, and a mode added there without an entry
+    here would otherwise raise ``KeyError`` mid-validation — turning a phrase the
+    user merely typed twice into a crash.
+    """
+    return _MODE_LABELS.get(mode.value, mode.value.replace('_', ' ').title())
 
 
 def phrase_collisions(
@@ -96,8 +109,7 @@ def phrase_collisions(
         else set()
     )
     problems = [
-        f'Already used by {_MODE_LABELS[colliding.value]}.'
-        for colliding in colliding_modes
+        f'Already used by {_mode_label(colliding)}.' for colliding in colliding_modes
     ]
     end_phrases = state.conversation_end_phrases
     if any(phrase.casefold() == normalized for phrase in end_phrases):

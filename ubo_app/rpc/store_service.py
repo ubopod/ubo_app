@@ -16,6 +16,12 @@ from ubo_app.logger import logger
 from ubo_app.rpc.message_to_object import get_class, rebuild_object, reduce_group
 from ubo_app.rpc.object_to_message import GRPCSerializable, build_message
 from ubo_app.store.core.types import (
+    FrameStreamChunkEvent as CoreFrameStreamChunkEvent,
+)
+from ubo_app.store.core.types import (
+    FrameStreamDataEvent as CoreFrameStreamDataEvent,
+)
+from ubo_app.store.core.types import (
     StackChangedEvent as CoreStackChangedEvent,
 )
 from ubo_app.store.core.types import (
@@ -30,6 +36,7 @@ from ubo_app.store.services.assistant import (
     AssistantVoiceChangedEvent,
 )
 from ubo_app.utils.error_handlers import report_service_error
+from ubo_app.utils.frame_stream import open_still_events
 
 from ubo_bindings.store.v1 import (
     DispatchActionRequest,
@@ -44,6 +51,30 @@ from ubo_bindings.ubo.v1 import Event
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
+
+# Depth of each subscription's event queue. Must be read as a *duration*, not a
+# count: the queue overflows when a producer outruns one subscriber, and what
+# matters is how much stream it can absorb meanwhile.
+#
+# It was 30 for as long as the biggest producer -- the assistant's TTS -- sent
+# one ``AudioSample`` per pipecat frame (~0.5 s, ~48 KB), so 30 slots held ~15 s
+# of speech and the limit was never reached. Capping samples at
+# ``MAX_AUDIO_CHUNK_BYTES`` (8 KB, ~85 ms) so the ESP32 client could decode them
+# then multiplied the event rate by six and cut the same 30 slots to ~2.5 s,
+# without anyone resizing the queue. A single synthesized sentence arrives as a
+# burst -- 44 chunks in 100 ms measured on device -- which overran it and
+# dropped 120 of 563 chunks of one reply.
+#
+# Dropping is uniquely bad for an ordered stream: clients that play strictly by
+# ``index`` stall at the first hole (the web UI) rather than skipping it, so a
+# drop truncates the rest of the utterance. Only the device kept playing,
+# because ``audio_manager`` reads an in-process buffer nothing drops from.
+#
+# 256 restores ~21 s at 8 KB chunks -- the headroom this had before the split.
+# The cost is bounded and core-side only: queued events are shared references,
+# not copies, so a fully-backed-up subscription holds ~2 MB and several
+# subscriptions stalled at the same point in a stream share it.
+SUBSCRIPTION_QUEUE_SIZE = 256
 
 
 def _is_valid_selector(selector: str) -> bool:
@@ -175,6 +206,14 @@ def _send_initial_state(  # noqa: C901
 
         _send_initial_stack()
 
+    if event_class in (CoreFrameStreamDataEvent, CoreFrameStreamChunkEvent):
+        # A still has no next frame, so a client that subscribes while a
+        # picture is displayed -- a fresh connection, or a satellite that just
+        # rebooted -- would otherwise render the view with no pixels.
+        for event in open_still_events():
+            if isinstance(event, event_class):
+                queue_event(event)
+
     if event_class is AssistantModelChangedEvent:
         # Replay the persisted per-LLM model selections so a freshly-subscribed
         # client (e.g. the assistant subprocess on startup) doesn't have to
@@ -236,22 +275,41 @@ def _make_queue_event(
     loop: AbstractEventLoop,
 ) -> Callable[[UboEvent], None]:
     """Create a thread-safe callback that puts events into an async queue."""
+    # Dropped-event tally for this subscription. Losing an event here is not a
+    # detail: a dropped state update leaves a client stale, and a dropped
+    # `AudioPlayAudioSequenceEvent` is a hole in the middle of spoken audio.
+    # It used to be recorded at `verbose`, which is off in practice, so the
+    # loss was invisible.
+    dropped = [0]
 
     def queue_event(event: UboEvent) -> None:
         def _put() -> None:
             try:
                 queue.put_nowait(event)
             except QueueFull:
-                logger.verbose(
-                    'Subscription event queue is full, dropping event',
-                    extra={
-                        'event': event,
-                        'queue_size': queue.qsize(),
-                    },
-                )
+                dropped[0] += 1
+                # First drop, then every 20th: enough to notice a burst without
+                # the log itself becoming the flood.
+                if dropped[0] == 1 or dropped[0] % 20 == 0:
+                    logger.warning(
+                        'Subscription event queue full, dropping event',
+                        extra={
+                            'event_type': type(event).__name__,
+                            'dropped_total': dropped[0],
+                            'queue_size': queue.qsize(),
+                        },
+                    )
 
-        with contextlib.suppress(RuntimeError):
+        try:
             loop.call_soon_threadsafe(_put)
+        except RuntimeError:
+            # The subscription's loop is already closed (client went away while
+            # the event was in flight). The event is lost; previously this was
+            # suppressed without leaving any trace at all.
+            logger.debug(
+                'Dropping event, subscription loop is closed',
+                extra={'event_type': type(event).__name__},
+            )
 
     return queue_event
 
@@ -324,7 +382,7 @@ class StoreService(StoreServiceBase):
             'Received event subscription over gRPC',
             extra={'request': subscribe_event_request},
         )
-        queue: Queue[UboEvent] = Queue(30)
+        queue: Queue[UboEvent] = Queue(SUBSCRIPTION_QUEUE_SIZE)
         queue_event = _make_queue_event(queue, get_running_loop())
 
         event_field_names, unsubscribes = _setup_event_subscriptions(

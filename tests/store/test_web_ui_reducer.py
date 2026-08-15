@@ -32,6 +32,9 @@ def _import_types_and_reducer() -> tuple[tuple[Any, ...], Callable[..., Any]]:
     )
     from ubo_app.store.services.web_ui import (
         WebUIInitializeEvent,
+        WebUIInputAction,
+        WebUIInputCommand,
+        WebUIInputEvent,
         WebUIState,
     )
 
@@ -54,6 +57,9 @@ def _import_types_and_reducer() -> tuple[tuple[Any, ...], Callable[..., Any]]:
         InputDemandAction,
         WebUIInputDescription,
         WebUIInitializeEvent,
+        WebUIInputAction,
+        WebUIInputCommand,
+        WebUIInputEvent,
         WebUIState,
     ), reducer
 
@@ -63,6 +69,9 @@ def _import_types_and_reducer() -> tuple[tuple[Any, ...], Callable[..., Any]]:
     InputDemandAction,
     WebUIInputDescription,
     WebUIInitializeEvent,
+    WebUIInputAction,
+    WebUIInputCommand,
+    WebUIInputEvent,
     WebUIState,
 ), reducer = _import_types_and_reducer()
 
@@ -88,3 +97,46 @@ def test_resolving_last_input_clears_it() -> None:
 
     assert isinstance(result, CompleteReducerResult)
     assert result.state.active_inputs == []
+
+
+def test_init_action_builds_empty_state() -> None:
+    """A None state plus InitAction yields an empty active-inputs state."""
+    from redux import InitAction
+
+    result = reducer(None, InitAction())
+
+    assert result.active_inputs == []
+
+
+def test_none_state_without_init_raises() -> None:
+    """Any non-init action against a None state is an initialization error."""
+    import pytest
+    from redux import InitializationActionError
+
+    with pytest.raises(InitializationActionError):
+        reducer(None, InputDemandAction(description=WebUIInputDescription(id='x')))
+
+
+def test_input_action_emits_input_event_without_mutating_state() -> None:
+    """A navigation WebUIInputAction emits a matching WebUIInputEvent."""
+    state = WebUIState(active_inputs=[])
+
+    result = reducer(state, WebUIInputAction(command=WebUIInputCommand.UP))
+
+    assert isinstance(result, CompleteReducerResult)
+    events = result.events or []
+    assert any(
+        isinstance(event, WebUIInputEvent)
+        and event.command == WebUIInputCommand.UP
+        for event in events
+    )
+    assert result.state is state
+
+
+def test_unhandled_action_returns_state_unchanged() -> None:
+    """An action matching no case leaves the state untouched."""
+    from redux import InitAction
+
+    state = WebUIState(active_inputs=[])
+
+    assert reducer(state, InitAction()) is state

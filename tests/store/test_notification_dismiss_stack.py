@@ -40,8 +40,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, cast
 
+import pytest
+
 if TYPE_CHECKING:
-    import pytest
     from redux import BaseAction
 
     from ubo_app.store.core.types import MainState
@@ -255,3 +256,90 @@ def test_keyed_pop_only_preserves_other(monkeypatch: pytest.MonkeyPatch) -> None
 
     assert _notification_ids_on_stack(main_state) == {'notif-B'}
     assert [n.id for n in notif_state.notifications] == ['notif-B']
+
+
+def test_clear_all_removes_every_notification_and_pops_each(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``NotificationsClearAllAction`` empties the list and pops each overlay."""
+    ns = _load(monkeypatch)
+    state = _init_notifications_state(ns)
+    for notification_id in ('notif-A', 'notif-B'):
+        state = ns.reducer(
+            state,
+            ns.NotificationsAddAction(notification=_sticky(ns, notification_id)),
+        ).state
+    assert len(state.notifications) == 2
+
+    clear_all = ns.reducer.__globals__['NotificationsClearAllAction']
+    result = ns.reducer(state, clear_all())
+
+    assert result.state.notifications == []
+    assert result.state.unread_count == 0
+    # Each cleared notification is popped off the stack by id and announced.
+    assert {action.notification_id for action in result.actions} == {
+        'notif-A',
+        'notif-B',
+    }
+    assert {event.notification.id for event in result.events} == {
+        'notif-A',
+        'notif-B',
+    }
+
+
+def test_none_state_without_init_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A non-init action against a None state is an initialization error."""
+    from redux import InitializationActionError
+
+    ns = _load(monkeypatch)
+
+    with pytest.raises(InitializationActionError):
+        ns.reducer(None, ns.NotificationsAddAction(notification=_sticky(ns, 'x')))
+
+
+def test_re_adding_same_notification_does_not_duplicate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Adding an already-present notification re-pushes its overlay only."""
+    ns = _load(monkeypatch)
+    state = _init_notifications_state(ns)
+    notification = _sticky(ns, 'notif-A')
+    add = ns.NotificationsAddAction(notification=notification)
+    state = ns.reducer(state, add).state
+
+    result = ns.reducer(state, ns.NotificationsAddAction(notification=notification))
+
+    assert result.state is state
+    assert [n.id for n in result.state.notifications] == ['notif-A']
+
+
+def test_display_action_emits_indexed_display_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``NotificationsDisplayAction`` re-emits a display event with its index."""
+    ns = _load(monkeypatch)
+    state = _init_notifications_state(ns)
+    notification = _sticky(ns, 'notif-A')
+    display_action = ns.reducer.__globals__['NotificationsDisplayAction']
+
+    result = ns.reducer(
+        state,
+        display_action(notification=notification, index=2),
+    )
+
+    assert result.state is state
+    assert len(result.events) == 1
+    assert result.events[0].notification.id == 'notif-A'
+    assert result.events[0].index == 2
+
+
+def test_unhandled_action_returns_state_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An action matching no case leaves the state untouched."""
+    from redux import InitAction
+
+    ns = _load(monkeypatch)
+    state = _init_notifications_state(ns)
+
+    assert ns.reducer(state, InitAction()) is state

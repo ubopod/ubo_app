@@ -16,7 +16,9 @@ from ubo_app.store.status_icons.types import (
 
 def reducer(
     state: StatusIconsState | None,
-    action: StatusIconsAction | InitAction,
+    # A service going inactive drops its icons, so this reducer accepts the
+    # settings slice's status action as well as its own.
+    action: StatusIconsAction | SettingsServiceSetStatusAction | InitAction,
 ) -> StatusIconsState:
     if state is None:
         if isinstance(action, InitAction):

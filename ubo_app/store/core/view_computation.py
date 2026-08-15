@@ -384,8 +384,10 @@ def compute_status_bar_data(state: RootState) -> StatusBarData:
             None,
         )
 
-    # Get system metrics (clock)
-    clock = getattr(getattr(state, 'system', None), 'clock', '') or ''
+    # The clock is the time at the device's *location*, so it comes from the
+    # localization slice rather than from system metrics — the host timezone
+    # is never set from the detected location.
+    clock = getattr(getattr(state, 'localization', None), 'clock', '') or ''
 
     # Get recording states
     main = getattr(state, 'main', None)

@@ -379,3 +379,103 @@ class TestCancelCleanup:
             e for e in result.events if isinstance(e, FileSystemSelectorCleanupEvent)
         ]
         assert len(cleanup_events) == 0
+
+
+def _g(name: str):  # noqa: ANN202
+    """Fetch a symbol the reducer imported, guaranteeing one module generation."""
+    return reducer.__globals__[name]
+
+
+class TestFileOperations:
+    """Copy/move/remove/download actions translate to their events."""
+
+    def test_none_state_init_and_raise(self) -> None:
+        """InitAction builds state; any other action against None raises."""
+        assert isinstance(reducer(None, InitAction()), FileSystemState)
+        with pytest.raises(_g('InitializationActionError')):
+            reducer(None, _g('FileSystemRemoveAction')(paths=['/x']))
+
+    def test_copy_emits_event(self) -> None:
+        """Copy forwards sources and destination to a copy event."""
+        result = reducer(
+            _init_state(),
+            _g('FileSystemCopyAction')(sources=['/a', '/b'], destination='/dst'),
+        )
+        events = list(result.events or [])
+        assert len(events) == 1
+        assert events[0].sources == ['/a', '/b']
+        assert events[0].destination == '/dst'
+
+    def test_move_emits_event(self) -> None:
+        """Move forwards sources and destination to a move event."""
+        result = reducer(
+            _init_state(),
+            _g('FileSystemMoveAction')(sources=['/a'], destination='/dst'),
+        )
+        assert isinstance(result.events[0], _g('FileSystemMoveEvent'))
+        assert result.events[0].destination == '/dst'
+
+    def test_remove_emits_event(self) -> None:
+        """Remove forwards its paths to a remove event."""
+        result = reducer(
+            _init_state(),
+            _g('FileSystemRemoveAction')(paths=['/a', '/b']),
+        )
+        assert isinstance(result.events[0], _g('FileSystemRemoveEvent'))
+        assert result.events[0].paths == ['/a', '/b']
+
+    def test_download_request_emits_event(self) -> None:
+        """A download request forwards the path to a request event."""
+        result = reducer(
+            _init_state(),
+            _g('FileDownloadRequestAction')(path='/file.bin'),
+        )
+        assert isinstance(result.events[0], _g('FileDownloadRequestEvent'))
+        assert result.events[0].path == '/file.bin'
+
+    def test_download_ready_emits_event(self) -> None:
+        """A ready download forwards the token and filename."""
+        result = reducer(
+            _init_state(),
+            _g('FileDownloadReadyAction')(
+                download_token='tok',  # noqa: S106
+                filename='f.bin',
+            ),
+        )
+        event = result.events[0]
+        assert isinstance(event, _g('FileDownloadReadyEvent'))
+        assert event.download_token == 'tok'  # noqa: S105
+        assert event.filename == 'f.bin'
+
+    def test_unhandled_action_returns_state_unchanged(self) -> None:
+        """An action matching no case leaves the state untouched."""
+        state = _init_state()
+        assert reducer(state, InitAction()) is state
+
+
+class TestQueueResolution:
+    """Resolving path-selector demands across a multi-item queue."""
+
+    def test_resolve_head_pops_and_prompts_next(self) -> None:
+        """Resolving the active demand pops it and prompts the next in queue."""
+        state = _demand_state(id_='first')
+        state = _demand_state(state, id_='second')
+
+        result = reducer(state, InputResolveAction(id='first'))
+
+        assert isinstance(result, CompleteReducerResult)
+        assert [d.id for d in result.state.queue] == ['second']
+        assert any(
+            isinstance(event, _g('FileSystemSelectEvent'))
+            and event.description.id == 'second'
+            for event in (result.events or [])
+        )
+
+    def test_resolve_non_head_filters_without_popping(self) -> None:
+        """Resolving a queued (non-active) demand just drops it from the queue."""
+        state = _demand_state(id_='first')
+        state = _demand_state(state, id_='second')
+
+        result = reducer(state, InputResolveAction(id='second'))
+
+        assert [d.id for d in result.queue] == ['first']

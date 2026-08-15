@@ -1,0 +1,23 @@
+[Unit]
+Description=Ubo Browser Kiosk Service
+Conflicts=lightdm.service
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+User=root
+TTYPath=/dev/tty2
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+TTYReset=yes
+TTYVHangup=yes
+RuntimeDirectory=ubo-kiosk
+RuntimeDirectoryMode=0700
+Environment=XDG_RUNTIME_DIR=/run/ubo-kiosk
+ExecStart=/usr/bin/weston --config /home/{{USERNAME}}/.config/ubo-kiosk/weston.ini
+WorkingDirectory=/home/{{USERNAME}}
+KillMode=control-group
+Restart=always

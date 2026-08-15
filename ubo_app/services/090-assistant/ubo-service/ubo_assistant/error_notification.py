@@ -6,6 +6,10 @@ rate-limit, or a ``5xx`` server error), pipecat only logs the failure and the
 assistant goes silent. :func:`attach_error_notifier` hooks the worker-level
 ``on_pipeline_error`` event and dispatches a flash notification so the user
 knows which stage failed and why.
+
+Not every ``ErrorFrame`` deserves a notification, though: websocket-based
+providers emit one whenever the far end drops an idle connection, even though
+pipecat immediately reconnects. :func:`is_transient_error` filters those out.
 """
 
 from __future__ import annotations
@@ -22,6 +26,8 @@ from ubo_bindings.ubo.v1 import (
     NotificationDisplayType,
     NotificationsAddAction,
 )
+from websockets.exceptions import ConnectionClosed
+from websockets.frames import CloseCode
 
 if TYPE_CHECKING:
     from pipecat.frames.frames import ErrorFrame
@@ -55,13 +61,25 @@ _CODE_MESSAGES = {
 }
 
 # Recoverable streaming-teardown errors that are NOT worth a user notification.
-# Realtime STT providers (e.g. Mistral Voxtral) hold a websocket open; once the
-# user stops speaking and the session goes idle, the connection times out
-# waiting for a response, or the upstream closes it with a ``1011`` internal
-# error. The transcription has already completed, so these are non-actionable
-# teardown artifacts — still logged, but suppressed from the notification path
-# so they don't spam the device after every interaction. Genuine errors (auth,
-# balance, bad config) don't match these signatures and still notify.
+# Streaming providers hold a websocket open across the whole session; the far end
+# eventually drops it (idle timeout, server restart, upstream hiccup). Pipecat's
+# ``WebsocketService`` reconnects automatically, so by the time the ``ErrorFrame``
+# reaches us the connection is usually already healthy again — the frame is a
+# teardown artifact of a *successful* recovery, not a failure the user can act on.
+#
+# Two tiers, because pipecat populates ``ErrorFrame.exception`` inconsistently:
+#
+# 1. Typed (preferred) — the close code off a ``ConnectionClosed``. This is the
+#    formal, RFC 6455 vocabulary; see ``_TRANSIENT_CLOSE_CODES``.
+# 2. Signature match — for the sites that call ``push_error(error_msg=...)`` with
+#    no ``exception=`` (e.g. Mistral realtime STT's idle "timeout waiting for
+#    response"), leaving only the rendered message to go on.
+#
+# Genuine failures are unaffected. When a reconnect really cannot be re-established
+# pipecat reports it with distinct wording that matches neither tier —
+# "reconnection attempt N failed", "failed to reconnect after N attempts",
+# "connection failed N times immediately after connecting", "websocket
+# unavailable" — and auth/balance/config errors carry a status code instead.
 _TRANSIENT_ERROR_PATTERN = re.compile(
     r'timeout waiting for response'
     r'|received 1011'
@@ -70,9 +88,35 @@ _TRANSIENT_ERROR_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Close codes meaning "the transport dropped / the server is having a moment"
+# rather than "the provider rejected this request". Retrying is the correct
+# response to all of them, so none are user-actionable. The request-rejection
+# codes (1002 protocol error, 1003/1007 bad data, 1008 policy violation, 1009
+# message too big, 1010 mandatory extension, 1015 TLS) are deliberately absent —
+# those point at a real misconfiguration and must still notify.
+#
+# 1001 covers the same idle-socket recycling as 1006, just announced politely:
+# ElevenLabs retires an idle connection either by dropping it outright (1006) or
+# by completing the handshake with "going away" (1001), and which one you get is
+# the server's choice, not a property of the request.
+_TRANSIENT_CLOSE_CODES = frozenset({
+    CloseCode.GOING_AWAY,  # 1001 — far end is cycling the connection
+    CloseCode.ABNORMAL_CLOSURE,  # 1006 — connection lost with no close handshake
+    CloseCode.INTERNAL_ERROR,  # 1011
+    CloseCode.SERVICE_RESTART,  # 1012
+    CloseCode.TRY_AGAIN_LATER,  # 1013
+    CloseCode.BAD_GATEWAY,  # 1014
+})
+
 
 def is_transient_error(frame: ErrorFrame) -> bool:
     """Return True for recoverable streaming-teardown errors not worth notifying."""
+    exception = frame.exception
+    if isinstance(exception, ConnectionClosed):
+        close = exception.rcvd or exception.sent
+        # Neither side sent a close frame → abnormal closure by definition.
+        code = CloseCode.ABNORMAL_CLOSURE if close is None else close.code
+        return code in _TRANSIENT_CLOSE_CODES
     return bool(_TRANSIENT_ERROR_PATTERN.search(frame.error or ''))
 
 # Substrings of the originating processor's class name → user-facing stage

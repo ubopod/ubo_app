@@ -71,6 +71,41 @@ async def _fake_create_subprocess_exec(
     return await original_asyncio_create_subprocess_exec(*_args, **kwargs)
 
 
+def _resolve_gpio_pin_factory() -> None:
+    """Resolve gpiozero's pin factory here, on the main thread.
+
+    `gpiozero.Device.pin_factory` is a lazily-created class attribute, and
+    creating it runs `RPi.GPIO.setmode()`, which opens the lgpio chip handle
+    behind an unguarded check-then-assign on a module global. Neither is thread
+    safe, and services claim their pins from their own threads — keypad on the
+    expander's interrupt line, audio on the lineout-detect line. When two of
+    them reach an uninitialized factory at the same moment they each open their
+    own chip handle, and the thread whose assignment lands first is left holding
+    a pin claimed against a handle that is no longer the module's. lgpio tracks
+    ownership per handle, so that pin reads back as never set up:
+    `RuntimeError: You must setup() the GPIO channel first`, which fails the
+    whole service setup and silently drops its menu.
+
+    Resolving the factory before any service thread starts leaves nothing to
+    race over.
+    """
+    from gpiozero import Device
+
+    from ubo_app.logger import logger
+
+    try:
+        Device.ensure_pin_factory()
+    except Exception:
+        # Services needing GPIO then fail on their own, exactly as they did
+        # before this call existed - the rest of the app still comes up.
+        logger.exception('Failed to resolve the gpiozero pin factory')
+    else:
+        logger.info(
+            'Resolved gpiozero pin factory',
+            extra={'factory': type(Device.pin_factory).__name__},
+        )
+
+
 def setup_headless() -> None:
     """Set up the headless core - no Kivy dependencies."""
     import sys
@@ -159,6 +194,9 @@ def setup_headless() -> None:
         network.has_gateway = Fake(
             _Fake__return_value=Fake(_Fake__await_value=True),
         )
+
+    if IS_RPI:
+        _resolve_gpio_pin_factory()
 
     if not IS_TEST_ENV:
         signal.signal(signal.SIGTERM, signal_handler)

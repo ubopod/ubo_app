@@ -6,6 +6,56 @@ history and may still collect terse maintainer-oriented entries during a release
 cycle.
 
 ## Upcoming
+- fix(speech-recognition): validate a downloaded microWakeWord model in a staging
+  directory under its final filenames — validating the `.part` files made
+  `from_config` look for a `.tflite` that wasn't there yet, failing every model
+  download
+- feat(speech-recognition): upload a custom microWakeWord model as a `.tflite` +
+  `.json` pair, with the manifest's `model` key normalized to the installed stem
+- feat(speech-recognition): point at the wake-word training sites from the
+  OpenWakeWord and microWakeWord model forms
+- feat(wyoming): add secured Home Assistant Wyoming satellite and assistant-engine
+  integration
+- feat(wyoming,speech-recognition): detect the Home Assistant wake word on-device
+  via the new `Home Assistant` wake mode (Wake Up → Phrases) and ask Home
+  Assistant for an ASR-stage pipeline run, so it needs no wake-word engine of its
+  own — the openWakeWord add-on is unavailable on container installs — and the
+  microphone is only streamed for the duration of a command instead of
+  continuously; the LED ring is green for the duration of that command
+- feat(wyoming): access policies combine — a Docker bridge and explicit IP/CIDR
+  sources can be permitted at once, each added and withdrawn on its own from
+  `Add Policy`. No policies means loopback-only, replacing the former
+  `local-only` choice; existing configuration migrates automatically
+- refactor(wyoming): the satellite, engines, and discovery rows are checkboxes —
+  marked is enabled — matching the WiFi hotspot toggle, and their labels drop the
+  redundant `: On`/`: Off` suffix so they fit the LCD (`ASR/TTS/LLM Engines` is
+  now `STT/TTS/LLM`)
+- fix(wyoming): serialize listener reconciliation — starting a listener dispatches
+  a status action that re-triggers the reconcile autorun, so two passes overlapped
+  on the same fixed ports and the loser died with `EADDRINUSE`, dropping both
+  listeners while the winner's socket stayed bound. Toggling the engines on took
+  the satellite down ("Satellite: stopped") while Home Assistant stayed connected
+  to a listener that no longer forwarded anything
+- fix(audio,wyoming): the microphone status icon is owned solely by the audio
+  service — Wyoming registered a second one with the same glyph, and since only
+  the four highest-priority icons are rendered, the real (lowest-priority)
+  microphone indicator was dropped off the status bar. It now keeps one position,
+  always tracks the mute state, and turns green while a remote client is
+  receiving the microphone
+- feat(speech-recognition): match configured voice shortcuts during a QUICK_CHAT
+  assistant session — a matched command runs its bound action and ends the session
+  instead of being answered by the LLM (stage 1, local Vosk, offline)
+- feat(assistant): expose the voice-shortcut catalog to the LLM as a
+  `run_device_command` tool, so a near-miss phrasing can still trigger a shortcut
+  (stage 2); omitted when no shortcuts are configured
+- feat(speech-recognition): the stop-talking phrase now also dismisses the voice
+  shortcut window, instead of having to wait out its 10 s timeout
+- fix(assistant): a stop-talking signal now actually discards the pending user
+  turn — pipecat's `InterruptionFrame` leaves the user aggregation intact and
+  session teardown flushed it to the LLM, so the assistant would answer an
+  utterance it had just been told to stay quiet about
+- fix(speech-recognition): keep the stop-talking phrase detectable while a
+  recognition is armed (it was dropped from the Vosk grammar for the whole window)
 
 ## Version 2.0.0
 - fix(speech-recognition): start Vosk wake-word engine at boot without its model

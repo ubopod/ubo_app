@@ -43,6 +43,22 @@ GRPC_LISTEN_PORT = int(os.environ.get('UBO_GRPC_LISTEN_PORT', '50051'))
 GRPC_ENVOY_LISTEN_ADDRESS = os.environ.get('UBO_GRPC_ENVOY_LISTEN_ADDRESS', '0.0.0.0')  # noqa: S104
 GRPC_ENVOY_LISTEN_PORT = int(os.environ.get('UBO_GRPC_ENVOY_LISTEN_PORT', '50052'))
 
+# Port of the Envoy raw TCP-proxy listener that forwards native gRPC traffic to
+# the loopback-only core server, exposing it to the LAN when the user enables the
+# "gRPC Access" setting. See ubo_app/services/080-docker/apps/envoy.py.
+GRPC_NATIVE_PROXY_LISTEN_PORT = int(
+    os.environ.get('UBO_GRPC_NATIVE_PROXY_LISTEN_PORT', '50053'),
+)
+
+# Lightweight raw-TCP listener ("tcp-lite") for MCU/ESP32 clients — a second,
+# parallel transport alongside the grpclib/Envoy path, carrying only
+# DispatchAction/SubscribeStore/SubscribeEvent. Bound to the LAN in-process
+# (like MCP_GATEWAY_LISTEN_ADDRESS) so the device reaches it directly. Port
+# 50054 avoids the 50051/50052/50053/4321/4322 range. See ubo_app/rpc/mcu_server.py.
+DISABLE_MCU_SERVER = str_to_bool(os.environ.get('UBO_DISABLE_MCU_SERVER', 'False'))
+MCU_LISTEN_ADDRESS = os.environ.get('UBO_MCU_LISTEN_ADDRESS', '0.0.0.0')  # noqa: S104
+MCU_LISTEN_PORT = int(os.environ.get('UBO_MCU_LISTEN_PORT', '50054'))
+
 # Most of these should be changed in ubo-app and ubo-system-manager simultaneously to
 # avoid breaking the system.
 # TODO(sassanh): Make above comment visible to the end user when a change # noqa: FIX002
@@ -94,6 +110,11 @@ DATA_PATH = Path(
         platformdirs.user_data_path(appname='ubo', ensure_exists=True),
     ),
 )
+# `ensure_exists` above only applies to the platformdirs default; an
+# UBO_DATA_PATH override (e.g. tests/.env) bypasses it, so guarantee the
+# directory exists unconditionally — service_thread.py spawns binaries with
+# cwd=DATA_PATH, and a missing cwd fails create_subprocess_exec outright.
+DATA_PATH.mkdir(parents=True, exist_ok=True)
 
 DISPLAY_BAUDRATE = int(os.environ.get('UBO_DISPLAY_BAUDRATE', '60_000_000'))
 WIDTH = 240
@@ -115,8 +136,11 @@ CORE_SERVICE_IDS = [
     'ip',
     'keyboard',
     'keypad',
+    'kiosk',
     'lightdm',
+    'localization',
     'mcp',
+    'mqtt',
     'notifications',
     'rgb_ring',
     'rpi_connect',

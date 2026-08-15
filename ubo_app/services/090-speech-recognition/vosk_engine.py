@@ -247,11 +247,24 @@ class VoskEngine(
             if recognizer is None:
                 continue
 
-            if await get_event_loop().run_in_executor(
-                self.process_executor,
-                recognizer.AcceptWaveform,
-                data,
-            ):
+            try:
+                accepted = await get_event_loop().run_in_executor(
+                    self.process_executor,
+                    recognizer.AcceptWaveform,
+                    data,
+                )
+            except TypeError:
+                # A malformed chunk must not kill this loop: nothing else
+                # restarts it (``decide_running_state`` only re-fires on a
+                # trigger-config change), so one bad chunk would otherwise
+                # silently and permanently stop speech recognition.
+                logger.warning(
+                    'Vosk - Dropping malformed audio chunk',
+                    extra={'chunk_type': type(data).__name__},
+                )
+                continue
+
+            if accepted:
                 result = json.loads(recognizer.FinalResult())
                 if result.get('text'):
                     await self.report(result=result['text'])

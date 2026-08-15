@@ -42,12 +42,13 @@ from pipecat.processors.aggregators.llm_response_universal import (
 )
 from pipecat.services.stt_service import SegmentedSTTService
 from ubo_bindings.ubo.v1 import (
+    AssistantCancelRequestEvent,
     AssistantPipelineStage,
     AssistantRunPipelineEvent,
     Event,
 )
 
-from ubo_assistant.constants import DEFAULT_SYSTEM_MESSAGE
+from ubo_assistant.error_notification import is_transient_error
 from ubo_assistant.grpc_collector import GRPCTerminalCollector
 from ubo_assistant.pipeline_builder import (
     LLM,
@@ -67,6 +68,8 @@ if TYPE_CHECKING:
     from pipecat.pipeline.task import PipelineTask
     from pipecat.processors.frame_processor import FrameProcessor
     from ubo_bindings.client import UboRPCClient
+
+    from ubo_assistant.system_prompt_watcher import SystemPromptWatcher
 
 _MAX_CONCURRENT_REQUESTS = 3
 _PIPELINE_IDLE_TIMEOUT_SECS = 120.0
@@ -141,6 +144,7 @@ _STT_PROVIDER_IDS = {
     'ASSEMBLYAI': 'assemblyai',
     'VENICE': 'venice',
     'MISTRAL': 'mistral',
+    'ELEVENLABS': 'elevenlabs',
 }
 _LLM_PROVIDER_IDS = {
     'OLLAMA': 'ollama',
@@ -175,9 +179,13 @@ _IDLE_TIMEOUT_FRAMES: dict[str, tuple[type[Frame], ...]] = {
 }
 
 
-def setup_request_handler(client: UboRPCClient) -> None:
+def setup_request_handler(
+    client: UboRPCClient,
+    system_prompt_watcher: SystemPromptWatcher,
+) -> None:
     """Subscribe to ``AssistantRunPipelineEvent`` and handle parametrized requests."""
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT_REQUESTS)
+    requests: dict[str, asyncio.Task[None]] = {}
 
     def _on_event(event: Event) -> None:
         run_event = event.assistant_run_pipeline_event
@@ -186,13 +194,31 @@ def setup_request_handler(client: UboRPCClient) -> None:
 
         async def _guarded() -> None:
             async with semaphore:
-                await _run_request(client, run_event)
+                await _run_request(client, run_event, system_prompt_watcher)
 
-        client.event_loop.create_task(_guarded())
+        request = client.event_loop.create_task(_guarded())
+        requests[run_event.session_id] = request
+
+        def _forget_request(_task: asyncio.Task[None]) -> None:
+            requests.pop(run_event.session_id, None)
+
+        request.add_done_callback(_forget_request)
+
+    def _on_cancel(event: Event) -> None:
+        cancel_event = event.assistant_cancel_request_event
+        if cancel_event is None:
+            return
+        request = requests.pop(cancel_event.session_id, None)
+        if request is not None:
+            request.cancel()
 
     client.subscribe_event(
         event_type=Event(assistant_run_pipeline_event=AssistantRunPipelineEvent()),
         callback=_on_event,
+    )
+    client.subscribe_event(
+        event_type=Event(assistant_cancel_request_event=AssistantCancelRequestEvent()),
+        callback=_on_cancel,
     )
     logger.info('Assistant request handler registered')
 
@@ -367,6 +393,7 @@ async def _queue_stt_input_realtime(
 async def _run_request(  # noqa: C901, PLR0912, PLR0915
     client: UboRPCClient,
     event: AssistantRunPipelineEvent,
+    system_prompt_watcher: SystemPromptWatcher,
 ) -> None:
     """Build and run a single parametrized request pipeline."""
     session_id = event.session_id
@@ -427,7 +454,11 @@ async def _run_request(  # noqa: C901, PLR0912, PLR0915
 
     context_aggregator: LLMContextAggregatorPair | None = None
     if LLM in stages:
-        system_prompt = event.system_prompt or DEFAULT_SYSTEM_MESSAGE
+        # One-shot requests get no tools, so the tool instructions are omitted.
+        # A caller-supplied prompt still wins over the user's selection.
+        system_prompt = event.system_prompt or system_prompt_watcher.compose(
+            include_tools=False,
+        )
         messages: list[LLMContextMessage] = [
             {'role': 'system', 'content': system_prompt},
         ]
@@ -449,6 +480,16 @@ async def _run_request(  # noqa: C901, PLR0912, PLR0915
 
     @task.event_handler('on_pipeline_error')
     async def _on_pipeline_error(_task: object, frame: ErrorFrame) -> None:
+        if is_transient_error(frame):
+            # A websocket provider dropped an idle connection and pipecat is
+            # already reconnecting. Failing the request here would abort a
+            # request that is about to recover; let it run on and fall back to
+            # the first-output timeout if the output really never arrives.
+            logger.debug(
+                'Ignoring transient provider error in request pipeline {extra}',
+                extra={'error': frame.error},
+            )
+            return
         # Surface provider errors (bad model, 401, unreachable host, …) as a real
         # error frame instead of letting them fall through to a misleading
         # "produced no output (provider timeout)". dispatch_error also sets the
@@ -620,3 +661,12 @@ async def _run_request(  # noqa: C901, PLR0912, PLR0915
         )
         logger.info(message)
         await collector.dispatch_last_frame()
+        # After the drain, so the counts are final. `dispatched` short of
+        # `output_count` means chunks never reached core -- the audible symptom
+        # is truncated speech, and nothing else reports it.
+        delivery = (
+            f'screen-reader: reports dispatched={collector.reports_dispatched} '
+            f'failed={collector.reports_failed} of {collector.output_count} '
+            f'output frame(s) session={session_id!r}'
+        )
+        logger.info(delivery)

@@ -24,7 +24,10 @@ from ubo_bindings.ubo.v1 import (
     AudioSample,
 )
 
-from ubo_assistant.constants import LIVE_PIPELINE_SOURCE_ID
+from ubo_assistant.constants import (
+    LIVE_PIPELINE_SOURCE_ID,
+    MAX_AUDIO_CHUNK_BYTES,
+)
 
 
 class UboOutputTransport(BaseOutputTransport):
@@ -120,22 +123,31 @@ class UboOutputTransport(BaseOutputTransport):
 
         """
         try:
-            self._report_assistance_frame(
-                AcceptableAssistanceFrame(
-                    assistance_audio_frame=AssistanceAudioFrame(
-                        audio=AudioSample(
-                            data=frame.audio,
-                            channels=frame.num_channels,
-                            rate=frame.sample_rate,
-                            width=2,
+            audio = frame.audio
+            # Split large frames into small, whole-sample-aligned chunks so
+            # memory-constrained clients can decode each ``AudioSample`` (see
+            # ``MAX_AUDIO_CHUNK_BYTES``). Alignment keeps a 16-bit sample from
+            # being split across two chunks. ``len(audio) or 1`` preserves the
+            # single-frame behavior for an (empty) keepalive frame.
+            align = 2 * max(frame.num_channels, 1)
+            step = max(MAX_AUDIO_CHUNK_BYTES // align, 1) * align
+            for offset in range(0, len(audio) or 1, step):
+                self._report_assistance_frame(
+                    AcceptableAssistanceFrame(
+                        assistance_audio_frame=AssistanceAudioFrame(
+                            audio=AudioSample(
+                                data=audio[offset : offset + step],
+                                channels=frame.num_channels,
+                                rate=frame.sample_rate,
+                                width=2,
+                            ),
+                            timestamp=self.client.event_loop.time(),
+                            id=self._assistance_id,
+                            index=self._audio_assistance_index,
                         ),
-                        timestamp=self.client.event_loop.time(),
-                        id=self._assistance_id,
-                        index=self._audio_assistance_index,
                     ),
-                ),
-            )
-            self._audio_assistance_index += 1
+                )
+                self._audio_assistance_index += 1
         except Exception as exception:
             logger.exception(
                 'Error writing audio frame {extra}',

@@ -2,7 +2,7 @@
 
 Home Assistant ships as a Compose-managed stack (rather than a single
 container) so it can anchor an add-on ecosystem on the shared `ubo_net`
-bridge: a bundled MQTT broker, optional macvlan discovery, and Zigbee USB
+bridge: a bundled MQTT broker, optional host-network discovery, and Zigbee USB
 passthrough into HA's built-in ZHA all attach to the same project.
 
 The compose file is a *derived artifact* — it is re-rendered from current
@@ -14,13 +14,14 @@ into a stale YAML that could brick an unattended boot.
 from __future__ import annotations
 
 import asyncio
-import ipaddress
+import base64
+import hashlib
 import json
-import re
-import shutil
+import secrets
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from apps._port_binding import LOOPBACK_IP
 from apps._registry import COMPOSITIONS_PATH, UBO_NET, ContainerEntry
 from ubo_app.constants import CONFIG_PATH
 from ubo_app.logger import logger
@@ -38,8 +39,12 @@ from ubo_app.store.input.types import (
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageRunAction,
-    DockerSetMacvlanConfigAction,
+    DockerSetHostNetworkAction,
     DockerSetZigbeeIntentAction,
+)
+from ubo_app.store.services.mqtt import (
+    BUNDLED_BROKER_PASSWORD_SECRET_ID,
+    BUNDLED_BROKER_USERNAME,
 )
 from ubo_app.store.services.notifications import (
     Notification,
@@ -48,6 +53,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.input import ubo_input
+from ubo_app.utils.secrets import read_secret, write_secret
 
 if TYPE_CHECKING:
     from ubo_app.store.services.docker import DockerServiceState
@@ -141,8 +147,10 @@ def zigbee_adapter_went_missing() -> bool:
     before ever completing Zigbee setup.
     """
     enabled, adapter_by_id = _zigbee_intent()
-    return enabled and bool(adapter_by_id) and (
-        adapter_by_id not in detect_serial_adapters()
+    return (
+        enabled
+        and bool(adapter_by_id)
+        and (adapter_by_id not in detect_serial_adapters())
     )
 
 
@@ -163,164 +171,84 @@ def _resolve_zigbee_device() -> str | None:
     return None
 
 
-# Network-interface names are restricted to this safe character set; the IP /
-# subnet / gateway fields are validated as real addresses. This prevents YAML
-# injection: every macvlan value is rendered into docker-compose.yml via raw
-# string interpolation, so a value containing a newline could otherwise inject
-# arbitrary service keys (e.g. `privileged: true`). The store is reachable over
-# the unauthenticated gRPC port, so we validate at render time too, not just at
-# the input form.
-_PARENT_IFACE_RE = re.compile(r'[A-Za-z0-9_.-]+')
+@store.with_state(lambda state: state.docker.service.host_network_enabled)
+def _resolve_host_network(host_network_enabled: bool) -> bool:  # noqa: FBT001
+    """Read whether HA should be rendered onto the host's network stack."""
+    return host_network_enabled
 
 
-def _is_valid_macvlan(config: dict[str, str]) -> bool:
-    """Reject any macvlan field that isn't a strict address/interface token.
+@store.with_state(lambda state: getattr(state, 'mqtt', None))
+def _resolve_broker_expose_to_lan(mqtt_state: object) -> bool:
+    """Read whether the bundled broker's port should bind every interface.
 
-    Also requires the reserved IP to fall inside the subnet — a mismatch would
-    otherwise make `docker compose up` fail with a cryptic daemon error.
+    Guarded with `getattr` because the MQTT service can be disabled, and
+    `state.mqtt` *raises* rather than returning None when its slice is absent —
+    the same guard `050-mqtt/client.py` uses to read the docker slice. A missing
+    slice reads as "loopback only", the safe direction.
     """
-    try:
-        network = ipaddress.ip_network(config['subnet'], strict=False)
-        if ipaddress.ip_address(config['ip']) not in network:
-            return False
-        ipaddress.ip_address(config['gateway'])
-    except ValueError:
-        return False
-    return bool(_PARENT_IFACE_RE.fullmatch(config['parent']))
-
-
-@store.with_state(lambda state: state.docker.service)
-def _resolve_macvlan(service: DockerServiceState) -> dict[str, str] | None:
-    """Resolve the macvlan network config from intent, or None when disabled.
-
-    Returns ``None`` unless macvlan is enabled, all four parameters are present,
-    AND they pass validation. An incomplete or malformed config falls back to
-    bridge-only rather than bricking `up` or injecting into the compose YAML.
-    """
-    if not service.macvlan_enabled:
-        return None
-    config = {
-        'parent': service.macvlan_parent,
-        'subnet': service.macvlan_subnet,
-        'gateway': service.macvlan_gateway,
-        'ip': service.macvlan_ip,
-    }
-    if all(config.values()) and _is_valid_macvlan(config):
-        return config
-    return None
-
-
-def parse_lan_params(ip_route: str, ip_addr: str) -> dict[str, str]:
-    """Derive macvlan prefills (parent iface, subnet, gateway) from `ip` output.
-
-    Pure parsing of `ip route` (default gateway + parent interface) and
-    `ip -o addr` (the interface's CIDR → network address). Returns whatever it
-    can determine; callers confirm/override via the web form.
-    """
-    params: dict[str, str] = {}
-    route_match = re.search(
-        r'^default via (\S+) dev (\S+)',
-        ip_route,
-        re.MULTILINE,
-    )
-    if not route_match:
-        return params
-    params['gateway'] = route_match.group(1)
-    params['parent'] = route_match.group(2)
-    addr_match = re.search(
-        rf'\b{re.escape(params["parent"])}\b\s+inet\s+(\S+)/(\d+)',
-        ip_addr,
-    )
-    if addr_match:
-        try:
-            network = ipaddress.ip_network(
-                f'{addr_match.group(1)}/{addr_match.group(2)}',
-                strict=False,
-            )
-        except ValueError:
-            return params
-        params['subnet'] = str(network)
-    return params
-
-
-async def _run_text(*command: str) -> str:
-    """Run a read-only command and return its stdout (empty on failure)."""
-    try:
-        process = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
-    except OSError:
-        return ''
-    stdout, _ = await process.communicate()
-    return stdout.decode(errors='replace')
-
-
-def _ip_binary() -> str:
-    """Resolve the `ip` binary, robust to a restricted systemd-service PATH.
-
-    The core runs as a systemd user-service whose PATH may omit `/usr/sbin`,
-    so a bare `ip` can fail to resolve in-process even though it exists — which
-    would leave the macvlan form's discovered prefills blank.
-    """
-    candidates = ('/usr/sbin/ip', '/sbin/ip', '/bin/ip')
-    return shutil.which('ip') or next(
-        (path for path in candidates if Path(path).exists()),
-        'ip',
-    )
-
-
-async def discover_lan_params() -> dict[str, str]:
-    """Discover macvlan prefills from the host's routing table (best effort)."""
-    ip_binary = _ip_binary()
-    return parse_lan_params(
-        await _run_text(ip_binary, 'route'),
-        await _run_text(ip_binary, '-o', 'addr'),
-    )
-
-
-def _suggest_reserved_ip(subnet: str, gateway: str) -> str:
-    """Suggest a high host address in the subnet for Home Assistant's macvlan IP.
-
-    A high host (`broadcast - 5`) is likely outside the common low DHCP range;
-    it's only a suggestion the user confirms. Returns '' when the subnet is
-    invalid/too small or the candidate would collide with the gateway/edges.
-    """
-    try:
-        network = ipaddress.ip_network(subnet, strict=False)
-    except ValueError:
-        return ''
-    first = int(network.network_address)
-    last = int(network.broadcast_address)
-    candidate = last - 5
-    if not first < candidate < last:
-        return ''
-    try:
-        if gateway and candidate == int(ipaddress.ip_address(gateway)):
-            candidate -= 1
-    except ValueError:
-        pass
-    if candidate <= first:
-        return ''
-    # Rebuild in the subnet's address family (IPv4/IPv6).
-    return str(type(network.network_address)(candidate))
+    return getattr(mqtt_state, 'bundled_expose_to_lan', False) is True
 
 
 MOSQUITTO_IMAGE = 'eclipse-mosquitto:2'
-# Mosquitto config allowing anonymous access. The broker has NO host `ports:`
-# publish — it is reachable only on `ubo_net` (as `mosquitto:1883`), so there
-# is no LAN surface to authenticate in v1.
+_MOSQUITTO_AUTH_SOURCE_PATH = '/mosquitto/config/passwd'
+_MOSQUITTO_AUTH_RUNTIME_PATH = '/run/mosquitto/passwd'
+# One listener, authenticated for everyone. There is deliberately no anonymous
+# path: an earlier split kept 1883 anonymous "because it is only reachable on
+# `ubo_net`", but that is not a boundary the pod controls — on Linux the host
+# routes to bridge addresses — and it forced the broker's address to differ
+# between Home Assistant's two network modes. With auth as the only boundary,
+# `mosquitto:1883` is the answer everywhere, and publishing the port to the LAN
+# becomes a safe, ordinary toggle.
 MOSQUITTO_CONF = (
     'listener 1883\n'
-    'allow_anonymous true\n'
+    'allow_anonymous false\n'
+    f'password_file {_MOSQUITTO_AUTH_RUNTIME_PATH}\n'
     'persistence true\n'
     'persistence_location /mosquitto/data/\n'
 )
 
+# Mosquitto 2.x `mosquitto_passwd` format: PBKDF2-HMAC-SHA512, tagged `$7$`,
+# with the iteration count it uses by default. Verified against a live
+# `eclipse-mosquitto:2` broker — do not change one without the other.
+_MOSQUITTO_HASH_ITERATIONS = 1000
+_MOSQUITTO_SALT_LENGTH = 64
+_MOSQUITTO_KEY_LENGTH = 64
+
+
+def _mosquitto_passwd_line(username: str, password: str) -> str:
+    """Render one `password_file` entry the way `mosquitto_passwd` would."""
+    salt = secrets.token_bytes(_MOSQUITTO_SALT_LENGTH)
+    digest = hashlib.pbkdf2_hmac(
+        'sha512',
+        password.encode(),
+        salt,
+        _MOSQUITTO_HASH_ITERATIONS,
+        dklen=_MOSQUITTO_KEY_LENGTH,
+    )
+    encoded_salt = base64.b64encode(salt).decode()
+    encoded_digest = base64.b64encode(digest).decode()
+    return (
+        f'{username}:$7${_MOSQUITTO_HASH_ITERATIONS}'
+        f'${encoded_salt}${encoded_digest}\n'
+    )
+
+
+def _bundled_broker_password() -> str:
+    """Return the bundled broker's credential, generating it on first use.
+
+    The password never needs to be typed by a human — the bridge reads it from
+    the secrets file — so it is generated once and reused, keeping the broker's
+    `password_file` and the bridge's view of it in sync across re-renders.
+    """
+    password = read_secret(BUNDLED_BROKER_PASSWORD_SECRET_ID)
+    if not password:
+        password = secrets.token_urlsafe(24)
+        write_secret(key=BUNDLED_BROKER_PASSWORD_SECRET_ID, value=password)
+    return password
+
 
 def _write_mosquitto_config() -> None:
-    """Write the anonymous Mosquitto config to its persistent bind-mount."""
+    """Write the Mosquitto config and password file to the bind-mount."""
     config_dir = HOME_ASSISTANT_DATA_PATH / 'mosquitto' / 'config'
     config_dir.mkdir(exist_ok=True, parents=True)
     (HOME_ASSISTANT_DATA_PATH / 'mosquitto' / 'data').mkdir(
@@ -328,44 +256,60 @@ def _write_mosquitto_config() -> None:
         parents=True,
     )
     (config_dir / 'mosquitto.conf').write_text(MOSQUITTO_CONF)
+    passwd_path = config_dir / 'passwd'
+    passwd_path.write_text(
+        _mosquitto_passwd_line(BUNDLED_BROKER_USERNAME, _bundled_broker_password()),
+    )
+    # Mosquitto warns on (and will eventually refuse) a world-readable
+    # password file.
+    passwd_path.chmod(0o600)
 
 
-HA_MACVLAN_NETWORK = 'ha_macvlan'
+def _ha_network_block(*, host_network: bool) -> str:
+    """HA's networking stanza — host stack, or the `ubo_net` bridge.
 
-
-def _ha_networks_block(macvlan: dict[str, str] | None) -> str:
-    """HA service `networks:` block — multi-homed when macvlan is enabled."""
-    if macvlan:
+    Compose rejects `network_mode` alongside `networks:`, so host mode takes HA
+    off the bus. The `extra_hosts` shim keeps the broker answering to the *same*
+    name either way: on the bus it is the container, on the host stack it is the
+    loopback publish. Both reach the same authenticated listener, so an MQTT
+    integration configured once keeps working across the toggle.
+    """
+    if host_network:
         return (
-            '    networks:\n'
-            f'      {UBO_NET}: {{}}\n'
-            f'      {HA_MACVLAN_NETWORK}:\n'
-            f'        ipv4_address: {macvlan["ip"]}\n'
+            '    network_mode: host\n'
+            '    extra_hosts:\n'
+            f'      - "mosquitto:{LOOPBACK_IP}"\n'
         )
     return f'    networks:\n      - {UBO_NET}\n'
 
 
-def _top_level_networks_block(macvlan: dict[str, str] | None) -> str:
-    """Top-level `networks:` — adds the macvlan definition when enabled."""
-    block = f'networks:\n  {UBO_NET}:\n    external: true\n'
-    if macvlan:
-        block += (
-            f'  {HA_MACVLAN_NETWORK}:\n'
-            '    driver: macvlan\n'
-            '    driver_opts:\n'
-            f'      parent: {macvlan["parent"]}\n'
-            '    ipam:\n'
-            '      config:\n'
-            f'        - subnet: {macvlan["subnet"]}\n'
-            f'          gateway: {macvlan["gateway"]}\n'
-        )
-    return block
+def _ha_ports_block(*, host_network: bool) -> str:
+    """HA's `ports:` block — omitted in host mode, where it isn't allowed."""
+    if host_network:
+        return ''
+    return '    ports:\n      - 8123:8123\n'
+
+
+def _mosquitto_ports_block(*, expose_to_lan: bool) -> str:
+    """Publish the broker on loopback, or on every interface when asked.
+
+    Compose's *long* syntax deliberately: `apply_compose_port_binding` rewrites
+    short-syntax entries only, so if Home Assistant ever opts into the per-app
+    expose-to-LAN toggle, 8123 can move to 0.0.0.0 without dragging the broker
+    along. The broker's own exposure is its own decision, made here.
+    """
+    block = '    ports:\n      - target: 1883\n        published: 1883\n'
+    if not expose_to_lan:
+        block += f'        host_ip: {LOOPBACK_IP}\n'
+    return block + '        protocol: tcp\n'
 
 
 def _write_home_assistant_compose(
     composition_path: Path,
     zigbee_device: str | None,
-    macvlan: dict[str, str] | None = None,
+    *,
+    host_network: bool = False,
+    broker_expose_to_lan: bool = False,
 ) -> None:
     """Write HA's `docker-compose.yml` from current intent.
 
@@ -376,18 +320,22 @@ def _write_home_assistant_compose(
 
     The bundled Mosquitto broker lives in HA's project (HA owns its lifecycle)
     but is attached to the external `ubo_net` bus so peer add-ons can reach it
-    as `mosquitto:1883`. It publishes no host port.
+    as `mosquitto:1883`. Every connection authenticates (see `MOSQUITTO_CONF`),
+    so the same listener serves the bus, the pod's own MQTT bridge on loopback,
+    and — when ``broker_expose_to_lan`` is set — any client on the network.
 
-    When ``macvlan`` is given, HA is additionally attached to a macvlan network
-    (its own LAN IP) so mDNS/SSDP discovery works; it stays multi-homed on
-    ``ubo_net`` for the bus.
+    When ``host_network`` is set, HA runs on the host's network stack so
+    mDNS/SSDP discovery works (the only option that works over Wi-Fi — a
+    macvlan sub-interface has its own MAC, which an access point silently
+    drops). It then binds 8123 on the host directly and leaves ``ubo_net``,
+    reaching the broker through the loopback publish instead — under the same
+    name, via `extra_hosts`.
     """
     config_path = HOME_ASSISTANT_DATA_PATH / 'config'
     mosquitto_path = HOME_ASSISTANT_DATA_PATH / 'mosquitto'
     timezone = _detect_timezone()
     devices_block = (
-        '    devices:\n'
-        f'      - {zigbee_device}:{ZIGBEE_CONTAINER_DEVICE}\n'
+        f'    devices:\n      - {zigbee_device}:{ZIGBEE_CONTAINER_DEVICE}\n'
         if zigbee_device
         else ''
     )
@@ -399,23 +347,38 @@ def _write_home_assistant_compose(
         '    restart: unless-stopped\n'
         '    environment:\n'
         f'      - TZ={timezone}\n'
+        '    extra_hosts:\n'
+        '      - host.docker.internal:host-gateway\n'
         '    volumes:\n'
         f'      - {config_path}:/config\n'
         '      - /etc/localtime:/etc/localtime:ro\n'
         f'{devices_block}'
-        '    ports:\n'
-        '      - 8123:8123\n'
-        f'{_ha_networks_block(macvlan)}'
+        f'{_ha_ports_block(host_network=host_network)}'
+        f'{_ha_network_block(host_network=host_network)}'
         '  mosquitto:\n'
         f'    image: {MOSQUITTO_IMAGE}\n'
         '    container_name: mosquitto\n'
         '    restart: unless-stopped\n'
+        '    command:\n'
+        '      - /bin/sh\n'
+        '      - -ec\n'
+        '      - |\n'
+        '        mkdir -p /run/mosquitto\n'
+        '        chown root:root /run/mosquitto\n'
+        '        chmod 755 /run/mosquitto\n'
+        f'        cp {_MOSQUITTO_AUTH_SOURCE_PATH} '
+        f'{_MOSQUITTO_AUTH_RUNTIME_PATH}\n'
+        f'        chown mosquitto:mosquitto {_MOSQUITTO_AUTH_RUNTIME_PATH}\n'
+        f'        chmod 600 {_MOSQUITTO_AUTH_RUNTIME_PATH}\n'
+        '        exec /usr/sbin/mosquitto '
+        '-c /mosquitto/config/mosquitto.conf\n'
         '    volumes:\n'
         f'      - {mosquitto_path / "config"}:/mosquitto/config\n'
         f'      - {mosquitto_path / "data"}:/mosquitto/data\n'
+        f'{_mosquitto_ports_block(expose_to_lan=broker_expose_to_lan)}'
         '    networks:\n'
         f'      - {UBO_NET}\n'
-        f'{_top_level_networks_block(macvlan)}'
+        f'networks:\n  {UBO_NET}:\n    external: true\n'
     )
     (composition_path / 'docker-compose.yml').write_text(compose_content)
 
@@ -429,13 +392,23 @@ def _write_home_assistant_metadata(composition_path: Path) -> None:
             'Open port 8123 on this device in a browser to finish onboarding. '
             'Configuration is stored on the device and survives reinstalling '
             'the app.\n\n'
-            'An MQTT broker is bundled. To connect it, add the MQTT '
+            'This app includes an MQTT broker. To connect it, add the MQTT '
             'integration in Home Assistant and point it at broker '
-            '"mosquitto" port 1883 (no username or password).\n\n'
-            'Advanced discovery (macvlan) gives Home Assistant its own LAN IP '
-            'for mDNS/SSDP discovery. Note: while macvlan is enabled, this '
-            'device (the Pod) cannot reach Home Assistant on its macvlan IP '
-            'directly — use port 8123 on the device instead.'
+            '"mosquitto" port 1883. It asks for a username and password: find '
+            'them on this device under Settings > Network > MQTT > Broker '
+            'Settings. That address is correct in either network mode.\n\n'
+            'Once that is done, sensors plugged into this device appear in '
+            'Home Assistant automatically — no further configuration.\n\n'
+            'LAN discovery (host network) puts Home Assistant on this '
+            "device's network stack so mDNS/SSDP discovery finds your "
+            'devices — the only mode that works over Wi-Fi. Home Assistant '
+            'stays on port 8123 either way.\n\n'
+            "To use this Home Assistant installation with the Pod's Wyoming "
+            'voice services, open Settings → Assistant → Satellites → Wyoming '
+            'on the Pod, enable the listeners and select the Docker-only '
+            'connection policy. Configure the Wyoming integrations with '
+            'host.docker.internal on ports 10700 (satellite) and 10600 (ASR, '
+            'TTS, and conversation).'
         ),
         'compose_id': HOME_ASSISTANT_COMPOSITION_ID,
     }
@@ -453,7 +426,8 @@ async def prepare_home_assistant() -> bool:
         _write_home_assistant_compose(
             composition_path,
             _resolve_zigbee_device(),
-            _resolve_macvlan(),
+            host_network=_resolve_host_network(),
+            broker_expose_to_lan=_resolve_broker_expose_to_lan(),
         )
         _write_home_assistant_metadata(composition_path)
     except Exception:
@@ -539,107 +513,34 @@ def _detach_zigbee() -> None:
     _recreate_home_assistant()
 
 
-async def _configure_macvlan() -> None:
-    """Collect macvlan LAN params (discovery-prefilled) and recreate HA."""
-    prefills = await discover_lan_params()
-    suggested_ip = _suggest_reserved_ip(
-        prefills.get('subnet', ''),
-        prefills.get('gateway', ''),
-    )
-    try:
-        _, result = await ubo_input(
-            prompt='Advanced discovery (macvlan)',
-            descriptions=[
-                WebUIInputDescription(
-                    fields=[
-                        InputFieldDescription(
-                            name='parent',
-                            label='Parent interface',
-                            type=InputFieldType.TEXT,
-                            default_value=prefills.get('parent', ''),
-                            required=True,
-                        ),
-                        InputFieldDescription(
-                            name='subnet',
-                            label='Subnet (CIDR)',
-                            type=InputFieldType.TEXT,
-                            default_value=prefills.get('subnet', ''),
-                            required=True,
-                        ),
-                        InputFieldDescription(
-                            name='gateway',
-                            label='Gateway',
-                            type=InputFieldType.TEXT,
-                            default_value=prefills.get('gateway', ''),
-                            required=True,
-                        ),
-                        InputFieldDescription(
-                            name='ip',
-                            label='Reserved IP for Home Assistant',
-                            type=InputFieldType.TEXT,
-                            default_value=suggested_ip,
-                            description=(
-                                'Suggested; confirm it is free and outside the '
-                                'DHCP pool.'
-                            ),
-                            required=True,
-                        ),
-                    ],
-                ),
-            ],
-        )
-    except asyncio.CancelledError:
-        return
-    if not result:
-        return
-    config = {
-        'parent': (result.data.get('parent') or '').strip(),
-        'subnet': (result.data.get('subnet') or '').strip(),
-        'gateway': (result.data.get('gateway') or '').strip(),
-        'ip': (result.data.get('ip') or '').strip(),
-    }
-    if not all(config.values()) or not _is_valid_macvlan(config):
-        store.dispatch(
-            NotificationsAddAction(
-                notification=Notification(
-                    title=HOME_ASSISTANT_LABEL,
-                    content=(
-                        'Invalid macvlan settings. Enter a valid interface '
-                        'name, subnet (CIDR), gateway and reserved IP.'
-                    ),
-                    display_type=NotificationDisplayType.FLASH,
-                    icon=HOME_ASSISTANT_ICON,
-                ),
-            ),
-        )
-        return
+def _enable_host_network() -> None:
+    """Move HA onto the host network stack and recreate it.
+
+    Host mode costs HA its `ubo_net` membership, but not its broker: the
+    `extra_hosts` shim keeps `mosquitto:1883` resolving, so a configured MQTT
+    integration survives the toggle untouched.
+    """
+    store.dispatch(DockerSetHostNetworkAction(enabled=True))
     store.dispatch(
-        DockerSetMacvlanConfigAction(
-            enabled=True,
-            parent=config['parent'],
-            subnet=config['subnet'],
-            gateway=config['gateway'],
-            ip=config['ip'],
+        NotificationsAddAction(
+            notification=Notification(
+                title=HOME_ASSISTANT_LABEL,
+                content=(
+                    "Home Assistant now shares this device's network so it "
+                    'can discover LAN devices. It stays on port 8123.'
+                ),
+                display_type=NotificationDisplayType.FLASH,
+                icon=HOME_ASSISTANT_ICON,
+            ),
         ),
     )
     _recreate_home_assistant()
 
 
-def _on_configure_macvlan() -> None:
-    """Launch the macvlan config flow as a fire-and-forget task (returns None)."""
-    create_task(_configure_macvlan())
-
-
-def _disable_macvlan() -> None:
-    """Disable macvlan (back to bridge-only) and recreate HA."""
-    store.dispatch(DockerSetMacvlanConfigAction(enabled=False))
+def _disable_host_network() -> None:
+    """Put HA back on the `ubo_net` bridge and recreate it."""
+    store.dispatch(DockerSetHostNetworkAction(enabled=False))
     _recreate_home_assistant()
-
-
-@store.with_state(lambda state: state.docker.service.macvlan_enabled)
-def _macvlan_enabled(macvlan_enabled: bool) -> bool:  # noqa: FBT001
-    """Read whether macvlan advanced discovery is currently enabled."""
-    return macvlan_enabled
 
 
 def _zigbee_submenu_view(
@@ -666,12 +567,12 @@ def _menu_actions(
     items: list[MenuItemData],
     action_ids: dict[str, list[str]],
 ) -> None:
-    """Collapse Zigbee + macvlan into a 'Zigbee' submenu and an 'Advanced' one.
+    """Collapse Zigbee + LAN discovery into a 'Zigbee' and an 'Advanced' submenu.
 
     Each submenu shows only the single action relevant to the current state
     (Attach/Detach, Enable/Disable), instead of cluttering the main menu with
     both directions of each toggle. Runs inside the docker menu autorun, so it
-    re-renders reactively when the Zigbee/macvlan intent changes.
+    re-renders reactively when the Zigbee/host-network intent changes.
     """
     submenu_prefix = f'docker:image:{HOME_ASSISTANT_COMPOSITION_ID}'
 
@@ -720,9 +621,9 @@ def _menu_actions(
         ),
     )
 
-    # --- Advanced submenu (macvlan) ---
+    # --- Advanced submenu (LAN discovery) ---
     advanced_nav_id = 'docker:home_assistant:advanced'
-    macvlan_action_id = 'docker:home_assistant:macvlan-action'
+    host_network_action_id = 'docker:home_assistant:host-network-action'
     action_ids[menu_id].append(advanced_nav_id)
     register_action(
         advanced_nav_id,
@@ -737,29 +638,27 @@ def _menu_actions(
         ),
     )
 
-    macvlan_on = _macvlan_enabled()
-    action_ids[menu_id].append(macvlan_action_id)
+    host_network_on = _resolve_host_network()
+    action_ids[menu_id].append(host_network_action_id)
     register_action(
-        macvlan_action_id,
-        _disable_macvlan if macvlan_on else _on_configure_macvlan,
+        host_network_action_id,
+        _disable_host_network if host_network_on else _enable_host_network,
     )
-    macvlan_label = (
-        'Disable advanced discovery'
-        if macvlan_on
-        else 'Advanced discovery (macvlan)'
+    host_network_label = (
+        'Disable LAN discovery' if host_network_on else 'LAN discovery (host network)'
     )
     store.dispatch(
         UpdateDynamicMenuAction(
             menu_id=f'{submenu_prefix}:advanced',
             title='Advanced',
             heading='LAN discovery',
-            sub_heading='macvlan gives Home Assistant its own LAN IP',
+            sub_heading="Shares this device's network for mDNS/SSDP",
             items=(
                 MenuItemData(
-                    key='macvlan',
-                    label=macvlan_label,
+                    key='host-network',
+                    label=host_network_label,
                     icon='󰛳',
-                    action_id=macvlan_action_id,
+                    action_id=host_network_action_id,
                 ),
             ),
         ),

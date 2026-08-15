@@ -18,13 +18,15 @@ if TYPE_CHECKING:
 
 def setup_sentry() -> None:  # pragma: no cover
     import os
+    import socket
 
     import sentry_sdk
 
     serial_number = read_serial_number()
+    hostname = socket.gethostname()
 
     if 'SENTRY_DSN' in os.environ:
-        from sentry_sdk import set_user
+        from sentry_sdk import set_tag, set_user
 
         sentry_sdk.init(
             traces_sample_rate=1.0,
@@ -32,7 +34,10 @@ def setup_sentry() -> None:  # pragma: no cover
             ignore_errors=[KeyboardInterrupt, asyncio.CancelledError],
             server_name=serial_number,
         )
-        set_user({'id': serial_number})
+        set_user({'id': serial_number, 'username': hostname})
+        # Hostname (e.g. ``ubo-r``) is easier for users to recognise than the
+        # serial number, so expose it as an indexed tag for searching/filtering.
+        set_tag('hostname', hostname)
 
 
 def get_all_thread_stacks() -> dict[str, list[str]]:
@@ -236,9 +241,29 @@ def report_service_error(
     context = context or {}
 
     if service_id is None:
-        from ubo_app.utils.service import get_service
+        from ubo_app.utils.service import ServiceUnavailableError, get_service
 
-        service_id = get_service().service_id
+        try:
+            service_id = get_service().service_id
+        except ServiceUnavailableError:
+            from ubo_app.logger import logger
+
+            # This runs from `except` blocks, so it must never raise: throwing
+            # here turns a handled error into an unhandled one, and the caller's
+            # exception is replaced by this one. `get_service` walks the calling
+            # frames, which finds nothing when the caller is on a worker thread
+            # — every `@store.autorun` reaction is dispatched through
+            # `to_thread`, so every autorun failure took this path.
+            #
+            # Log and stop rather than guess an owner, for the same reason the
+            # loop exception handler declines to record an unattributable error:
+            # a service's state is snapshotted, so a wrong attribution is worse
+            # than none. The caller has already logged the original exception.
+            logger.exception(
+                'Unattributable service error; logged but not recorded',
+                extra={'context': context},
+            )
+            return
 
     if exception is None:
         _, exception, _ = sys.exc_info()

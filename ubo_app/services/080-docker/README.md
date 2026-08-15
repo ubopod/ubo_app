@@ -6,7 +6,7 @@ The Docker service turns the device into a small container appliance: it install
 daemon, manages a registry of pre-defined **apps** (single containers *and* multi-container
 compositions such as Home Assistant, Node-RED, n8n, Immich, OpenClaw), and drives their full
 lifecycle — fetch → run → stop → remove — with live status, port monitoring, and LAN-exposure
-controls. It also renders compose files from *persisted intent* (Zigbee passthrough, macvlan
+controls. It also renders compose files from *persisted intent* (Zigbee passthrough, host-network
 discovery, LAN binding) rather than storing brittle compose fragments.
 
 It loads in the `080-` tier (after core, network, and access services) because containers depend on
@@ -37,7 +37,7 @@ Slice: `state.docker` — [`DockerState`](../../store/services/docker.py), a
 
 - **`service`** — [`DockerServiceState`](../../store/services/docker.py): daemon `status`
   (`DockerStatus`), registry `usernames`, and per-app *intent* maps that are all persisted:
-  `expose_to_lan`, Zigbee (`zigbee_enabled`/`zigbee_adapter_by_id`), and macvlan config.
+  `expose_to_lan`, Zigbee (`zigbee_enabled`/`zigbee_adapter_by_id`), and `host_network_enabled`.
 - **One `ImageState` per app** — keyed by app id: `status` (`DockerItemStatus`), `docker_id`,
   `container_ip`, `ports`, plus `is_fetching`/`is_available`/`is_running` helpers.
 
@@ -64,7 +64,7 @@ puts all blocking Docker I/O off the store's critical path.
 
 Non-event actions patch state directly: `DockerSetStatusAction`, `DockerImageSetStatusAction`,
 `DockerImageSetDockerIdAction`, `DockerImageUpdateMetadataAction`, `DockerStoreUsernameAction`,
-`DockerSetZigbeeIntentAction`, `DockerSetMacvlanConfigAction`.
+`DockerSetZigbeeIntentAction`, `DockerSetHostNetworkAction`.
 
 The per-app reducer is created on `CombineReducerInitAction` (payload carries `label`) and emits a
 `DockerImageRegisterAppEvent` so `setup.py` can wire up that app's menu/monitors.
@@ -116,8 +116,9 @@ run; a `False` result aborts the run, and composition metadata (e.g. instruction
   `monitor_unit('docker.socket', …)`.
 - **Shared bridge network `ubo_net`** — an external Docker network Ubo-managed stacks attach to as a
   cross-stack bus (e.g. reaching the bundled Mosquitto broker); bootstrapped idempotently.
-- **Hardware passthrough:** Zigbee USB coordinator (`/dev/serial/by-id`) and macvlan LAN attachment
-  are re-derived into compose at render time, never persisted as raw compose lines.
+- **Hardware passthrough:** the Zigbee USB coordinator (`/dev/serial/by-id`) is re-derived into
+  compose at render time, never persisted as raw compose lines — as is Home Assistant's network
+  mode (`ubo_net` bridge, or the host stack for mDNS/SSDP discovery).
 
 ## Cross-Service Interactions
 
@@ -132,7 +133,7 @@ run; a `False` result aborts the run, and composition metadata (e.g. instruction
 ## Configuration
 
 - Persisted (via `register_persistent_store`): `docker_usernames`, `docker_expose_to_lan`,
-  `docker_zigbee_enabled`, `docker_zigbee_adapter_by_id`, and the five `docker_macvlan_*` keys.
+  `docker_zigbee_enabled`, `docker_zigbee_adapter_by_id`, and `docker_host_network_enabled`.
 - `COMPOSITIONS_PATH = CONFIG_PATH / 'docker_compositions'`; shared network name `UBO_NET`
   (`ubo_net`); per-app `ContainerEntry` flags: `supports_lan_toggle`, `requires_mqtt`,
   `is_composition`, `secret_keys`, and the `prepare`/`cleanup`/`apply_lan_config` hooks.

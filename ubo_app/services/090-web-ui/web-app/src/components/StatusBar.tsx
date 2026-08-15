@@ -36,7 +36,7 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ data, store }: StatusBarProps) {
-  const { cpuPercent, ramPercent } = useAppState();
+  const { system } = useAppState();
   const icons = data?.icons?.itemsList ?? [];
   const progressNotifications =
     data?.progressNotifications?.itemsList ?? [];
@@ -131,7 +131,8 @@ export function StatusBar({ data, store }: StatusBarProps) {
           fontSize: "0.7rem",
         }}
       >
-        CPU {Math.round(cpuPercent)}% · RAM {Math.round(ramPercent)}%
+        CPU {Math.round(system?.cpuPercent ?? 0)}% · RAM{" "}
+        {Math.round(system?.ramPercent ?? 0)}%
       </Typography>
 
       {/* Clock */}

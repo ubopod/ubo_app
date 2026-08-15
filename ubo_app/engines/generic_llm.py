@@ -62,6 +62,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils import secrets
 from ubo_app.utils.input import ubo_input
+from ubo_app.utils.text import slugify
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -76,11 +77,6 @@ def provider_secret_ids(provider_id: str) -> tuple[str, str, str]:
         GENERIC_LLM_PROVIDER_API_KEY_SECRET_TEMPLATE.format(provider_id=provider_id),
         GENERIC_LLM_PROVIDER_MODEL_SECRET_TEMPLATE.format(provider_id=provider_id),
     )
-
-
-def slugify_provider_name(name: str) -> str:
-    """Reduce a display name to a dotenv-safe provider id."""
-    return re.sub(r'[^a-z0-9]+', '_', name.lower()).strip('_')
 
 
 def activate_provider(provider_id: str) -> None:
@@ -374,7 +370,7 @@ class GenericLLMEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             return
         name, base_url, api_key, model = collected
 
-        provider_id = slugify_provider_name(name)
+        provider_id = slugify(name)
         if not provider_id:
             self._notify_failure('The provider name must contain letters or digits.')
             return

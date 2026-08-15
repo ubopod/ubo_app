@@ -170,6 +170,7 @@ class UboServiceThread(threading.Thread):
 
         self.module = None
         self.is_started = False
+        self._start_requested = False
         self.has_reducer = False
 
         self._reducer_barrier = None
@@ -309,6 +310,17 @@ class UboServiceThread(threading.Thread):
     def start(self) -> None:
         if not hasattr(self, 'setup'):
             return
+        # ``is_started`` only flips once setup finishes running on the new
+        # thread (see ``run``), so two ``SettingsStartServiceEvent``s for the
+        # same service racing through the module-level ``start()`` can both
+        # pass its guard and reach this method before either thread is
+        # visibly started. Idempotency has to live here, checked and set
+        # synchronously (no ``await`` in between), so the second caller sees
+        # it before ``threading.Thread.start`` ever runs a second time on
+        # the same object.
+        if self._start_requested:
+            return
+        self._start_requested = True
 
         super().start()
 
@@ -379,7 +391,12 @@ class UboServiceThread(threading.Thread):
                     if process_path.exists():
                         process = await asyncio.subprocess.create_subprocess_exec(
                             process_path,
-                            cwd=process_path.parent.parent,
+                            # The cwd must not be an ancestor of the service venv's
+                            # site-packages: nltk>=3.10.1 (pulled in by the
+                            # assistant's pipeline) blocks imports of its
+                            # dependencies that resolve to paths under the cwd
+                            # (CWE-427 mitigation).
+                            cwd=DATA_PATH,
                             env={
                                 'GRPC_ADDRESS': GRPC_LISTEN_ADDRESS,
                                 'GRPC_PORT': str(GRPC_LISTEN_PORT),

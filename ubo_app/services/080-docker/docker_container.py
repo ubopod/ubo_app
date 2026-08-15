@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import contextlib
+import datetime
 import ipaddress
+import itertools
 import threading
+import time
 from inspect import isawaitable
 from typing import TYPE_CHECKING, cast, overload
 
@@ -20,6 +23,7 @@ from ubo_app.logger import logger
 from ubo_app.store.main import store
 from ubo_app.store.services.docker import (
     DockerImageRemoveContainerEvent,
+    DockerImageReportExitAction,
     DockerImageRunContainerEvent,
     DockerImageSetDockerIdAction,
     DockerImageSetStatusAction,
@@ -36,6 +40,15 @@ from ubo_app.utils.async_ import to_thread
 
 # Track which event monitors are already running to prevent duplicates
 _active_monitors: set[str] = set()
+
+# Per-image callbacks invoked when that image's container emits a ``start``
+# event. Lets a service react to "its container started" without polling status.
+_container_start_hooks: dict[str, Callable[[], None]] = {}
+
+
+def register_container_start_hook(image_id: str, hook: Callable[[], None]) -> None:
+    """Register a callback fired when ``image_id``'s container starts."""
+    _container_start_hooks[image_id] = hook
 
 
 def start_event_monitor(image_id: str) -> None:
@@ -309,8 +322,70 @@ def remove_container(event: DockerImageRemoveContainerEvent) -> None:
     docker_client.close()
 
 
+# Docker's zero value for a timestamp that never happened.
+_NEVER = '0001-01-01T00:00:00Z'
+
+
+def _parse_docker_time(value: object) -> float | None:
+    """Parse one of Docker's RFC3339 timestamps into an epoch, or ``None``.
+
+    Docker reports nanosecond precision, which ``fromisoformat`` refuses; the
+    fractional part is trimmed to the microseconds it will accept.
+    """
+    if not isinstance(value, str) or not value or value == _NEVER:
+        return None
+    text = value.replace('Z', '+00:00')
+    if '.' in text:
+        head, _, tail = text.partition('.')
+        digits = ''.join(itertools.takewhile(str.isdigit, tail))
+        text = f'{head}.{digits[:6]}{tail[len(digits) :]}'
+    try:
+        return datetime.datetime.fromisoformat(text).timestamp()
+    except ValueError:
+        return None
+
+
+def report_exit_record(
+    *,
+    image_id: str,
+    container: Container,
+    exit_code: int | None = None,
+    exit_at: float | None = None,
+) -> None:
+    """Latch how this container last exited, as the daemon reports it.
+
+    ``RestartCount`` is the load-bearing field. The exit code cannot tell a
+    crash from a deliberate stop — ``container.stop()`` is SIGTERM then SIGKILL,
+    so a clean stop exits 143 or 137 — but only the restart policy increments
+    this counter, and a manual start resets it.
+    """
+    attributes = container.attrs or {}
+    state = attributes.get('State') or {}
+
+    error = state.get('Error') or ''
+    if state.get('OOMKilled'):
+        error = error or 'Killed for exceeding available memory'
+
+    store.dispatch(
+        DockerImageReportExitAction(
+            image=image_id,
+            restart_count=int(attributes.get('RestartCount') or 0),
+            exit_code=exit_code if exit_code is not None else state.get('ExitCode'),
+            exit_at=exit_at
+            if exit_at is not None
+            else _parse_docker_time(state.get('FinishedAt')),
+            error=error,
+        ),
+    )
+
+
 def update_container(*, image_id: str, container: Container) -> None:
     """Update a container's state in store based on its real state."""
+    # Catches an app that was already crash-looping before ubo started, which
+    # the `die` event handler cannot see because it happened while nobody was
+    # listening. A no-op when the container has never exited.
+    report_exit_record(image_id=image_id, container=container)
+
     if container.status == 'running':
         logger.debug(
             'Container running image found',
@@ -320,15 +395,37 @@ def update_container(*, image_id: str, container: Container) -> None:
             DockerImageSetStatusAction(
                 image=image_id,
                 status=DockerItemStatus.STARTING,
+                # Docker reports ``None`` (not ``[]``) for ports that are
+                # EXPOSEd but not published to the host, so skip empty values
+                # before iterating the binding list.
                 ports=[
-                    f'{i["HostIp"]}:{i["HostPort"]}'
-                    for i in container.ports.values()
-                    for i in i
+                    f'{binding["HostIp"]}:{binding["HostPort"]}'
+                    for bindings in container.ports.values()
+                    if bindings
+                    for binding in bindings
                 ],
                 ip=container.attrs['NetworkSettings']['Networks']['bridge']['IPAddress']
                 if container.attrs
                 and 'bridge' in container.attrs['NetworkSettings']['Networks']
                 else None,
+            ),
+        )
+        return
+    if container.status == 'restarting':
+        # A container in the restart-policy backoff is *trying* to start, not
+        # stopped. Every container is created with `restart_policy: always`
+        # (see `run_container`), so a crash-looping app spends most of its life
+        # here — and reporting CREATED offered the user a "Start" button for
+        # something that is already starting, over and over, while hiding the
+        # fault entirely.
+        logger.debug(
+            'Container for the image found, restarting',
+            extra={'image': image_id, 'path': IMAGES[image_id].full_path},
+        )
+        store.dispatch(
+            DockerImageSetStatusAction(
+                image=image_id,
+                status=DockerItemStatus.STARTING,
             ),
         )
         return
@@ -406,13 +503,25 @@ def _monitor_events(  # noqa: C901, PLR0912, PLR0915
                             ),
                         )
                 except docker.errors.DockerException:
+                    # A 'pull' event fires per-layer, so ``event['id']`` can
+                    # match ``path`` before the image is actually committed/
+                    # tagged — ``images.get`` 404s (ImageNotFound) on that
+                    # intermediate event. Don't re-raise: that would kill this
+                    # thread for good (nothing restarts it, and
+                    # ``_active_monitors`` is never cleared on this path — see
+                    # Sentry UBO-APP-QC), permanently freezing the image's
+                    # status. A later 'pull' event for the same image retries
+                    # this lookup once it actually resolves.
+                    logger.debug(
+                        'Event monitor: image not found yet after pull event',
+                        extra={'image_id': image_id},
+                    )
                     store.dispatch(
                         DockerImageSetStatusAction(
                             image=image_id,
                             status=DockerItemStatus.NOT_AVAILABLE,
                         ),
                     )
-                    raise
             elif action == 'delete':
                 # For delete events, event.get('id') is often None
                 # Check if we have a docker_id tracked
@@ -465,6 +574,9 @@ def _monitor_events(  # noqa: C901, PLR0912, PLR0915
                 )
                 if container:
                     update_container(image_id=image_id, container=container)
+                    hook = _container_start_hooks.get(image_id)
+                    if hook is not None:
+                        hook()
                 else:
                     logger.warning(
                         '_monitor_events: Container not found after start event',
@@ -481,6 +593,27 @@ def _monitor_events(  # noqa: C901, PLR0912, PLR0915
                         status=DockerItemStatus.CREATED,
                     ),
                 )
+                # Latch how it went before the restart policy erases the
+                # evidence: with `restart_policy: always` the container is
+                # usually back up within seconds of this event.
+                exit_code = event.get('Actor', {}).get('Attributes', {}).get('exitCode')
+                container = find_container(
+                    docker_client,
+                    image_path=IMAGES[image_id].path,
+                )
+                if container is not None:
+                    with contextlib.suppress(docker.errors.DockerException):
+                        container.reload()
+                        report_exit_record(
+                            image_id=image_id,
+                            container=container,
+                            exit_code=int(exit_code)
+                            if exit_code is not None
+                            else None,
+                            # The event *is* the exit, observed now — more
+                            # reliable than re-parsing the daemon's timestamp.
+                            exit_at=time.time(),
+                        )
                 logger.info(
                     'Status updated to CREATED',
                     extra={'image_id': image_id},

@@ -1,7 +1,7 @@
 # ruff: noqa: D100
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 from picamera2.picamera2 import Picamera2
 
@@ -10,6 +10,11 @@ from ubo_app.logger import logger
 if TYPE_CHECKING:
     import numpy as np
     from numpy.typing import NDArray
+
+# libcamera's `controls.AfModeEnum.Continuous`. Spelled out rather than
+# imported from `libcamera` because there is no stub for it under `typings/`;
+# the value is part of libcamera's published control definitions.
+AF_MODE_CONTINUOUS = 2
 
 
 class PiCamera2Backend:
@@ -34,36 +39,56 @@ class PiCamera2Backend:
         """Initialize the PiCamera2 instance."""
         try:
             self._picamera2 = Picamera2(self._camera_index)
-            preview_config = cast(
-                'str',
-                self._picamera2.create_still_configuration(
+            # A *preview* configuration keeps the sensor in a binned,
+            # high-frame-rate mode. A still configuration selects the
+            # full-resolution, low-frame-rate mode instead, which both starves
+            # the viewfinder's `VIEWFINDER_INTERVAL` feed loop and leaves
+            # continuous autofocus too few frames to converge on.
+            self._picamera2.configure(
+                self._picamera2.create_preview_configuration(
                     {
                         'format': 'RGB888',
                         'size': (self._width, self._height),
                     },
                 ),
             )
-            self._picamera2.configure(preview_config)
-            try:
-                self._picamera2.set_controls({'AwbEnable': True})
-                from ubo_app.utils.persistent_store import read_from_persistent_store
-
-                camera_type = read_from_persistent_store(
-                    'camera_type',
-                    default='default',
-                )
-                if camera_type == 'autofocus':
-                    self._picamera2.set_controls({'AfMode': 2, 'AfTrigger': 0})
-            except Exception:
-                logger.exception('Failed to set camera controls.')
+            self._apply_default_controls()
         except IndexError:
             logger.exception('Camera not found.')
             self._picamera2 = None
+
+    def _apply_default_controls(self) -> None:
+        """Enable auto white balance and, if the lens moves, continuous focus.
+
+        Focus support is probed from the controls the opened camera advertises
+        rather than from a persisted camera-type flag: every module with a
+        movable lens exposes `AfMode`, so the Pi Camera Module 3 (IMX708), an
+        Arducam IMX519 with its VCM enabled, and any future autofocus module
+        all light up without configuration. Fixed-focus hardware (IMX219,
+        `imx519,vcm=off`, USB webcams) doesn't advertise it and is skipped, so
+        `set_controls` is never asked for a control the camera can't honour.
+        """
+        if not self._picamera2:
+            return
+
+        controls: dict[str, object] = {'AwbEnable': True}
+        if 'AfMode' in self._picamera2.camera_controls:
+            controls['AfMode'] = AF_MODE_CONTINUOUS
+
+        try:
+            self._picamera2.set_controls(controls)
+        except Exception:
+            logger.exception('Failed to set camera controls.')
 
     def start(self) -> None:
         """Start the camera."""
         if self._picamera2:
             self._picamera2.start()
+            # `configure()` rebuilds the control set from the configuration,
+            # dropping anything set beforehand. The viewfinder session rebuilds
+            # this backend whenever the selected source changes, so re-assert
+            # the controls on every start to keep autofocus running.
+            self._apply_default_controls()
 
     def stop(self) -> None:
         """Stop the camera."""

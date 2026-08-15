@@ -5,10 +5,9 @@ from __future__ import annotations
 import sys
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import Protocol, cast
 
-if TYPE_CHECKING:
-    import pytest
+import pytest
 
 DOCKER_SERVICE_PATH = Path(__file__).parents[2] / 'ubo_app' / 'services' / '080-docker'
 
@@ -22,6 +21,8 @@ class HomeAssistantModule(Protocol):
     UBO_NET: str
     SERIAL_BY_ID_PATH: Path
     ZIGBEE_CONTAINER_DEVICE: str
+    BUNDLED_BROKER_USERNAME: str
+    BUNDLED_BROKER_PASSWORD_SECRET_ID: str
 
     def detect_serial_adapters(self) -> list[str]:
         """Enumerate serial-by-id adapters."""
@@ -37,16 +38,10 @@ class HomeAssistantModule(Protocol):
         self,
         composition_path: Path,
         zigbee_device: str | None,
-        macvlan: dict[str, str] | None = None,
+        *,
+        host_network: bool = False,
+        broker_expose_to_lan: bool = False,
     ) -> None: ...
-
-    def parse_lan_params(self, ip_route: str, ip_addr: str) -> dict[str, str]:
-        """Parse macvlan prefills from `ip` output."""
-        ...
-
-    def _is_valid_macvlan(self, config: dict[str, str]) -> bool: ...
-
-    def _suggest_reserved_ip(self, subnet: str, gateway: str) -> str: ...
 
     def _zigbee_submenu_view(
         self,
@@ -65,9 +60,10 @@ def _disable_zigbee(
     monkeypatch: pytest.MonkeyPatch,
     ha: HomeAssistantModule,
 ) -> None:
-    """Bypass the store-backed Zigbee + macvlan resolution for render tests."""
+    """Bypass the store-backed Zigbee + host-network resolution for renders."""
     monkeypatch.setattr(ha, '_resolve_zigbee_device', lambda: None)
-    monkeypatch.setattr(ha, '_resolve_macvlan', lambda: None)
+    monkeypatch.setattr(ha, '_resolve_host_network', lambda: False)
+    monkeypatch.setattr(ha, '_resolve_broker_expose_to_lan', lambda: False)
 
 
 def _import_home_assistant() -> HomeAssistantModule:
@@ -81,6 +77,20 @@ def _import_home_assistant() -> HomeAssistantModule:
     finally:
         if docker_path in sys.path:
             sys.path.remove(docker_path)
+
+
+@pytest.fixture(autouse=True)
+def bundled_broker_secrets(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
+    """Keep the generated broker credential out of the real secrets file."""
+    ha = _import_home_assistant()
+    store: dict[str, str] = {}
+
+    def _write_secret(*, key: str, value: str) -> None:
+        store[key] = value
+
+    monkeypatch.setattr(ha, 'read_secret', store.get)
+    monkeypatch.setattr(ha, 'write_secret', _write_secret)
+    return store
 
 
 async def test_prepare_renders_compose_on_ubo_net(
@@ -112,18 +122,129 @@ async def test_prepare_renders_compose_on_ubo_net(
     assert 'restart: unless-stopped' in compose
     assert '- 8123:8123' in compose
     assert 'TZ=' in compose
+    assert 'extra_hosts:' in compose
+    assert '- host.docker.internal:host-gateway' in compose
     # No blanket privilege escalation in the device-only posture.
     assert 'privileged' not in compose
-    # The bundled MQTT broker rides the same external bus and publishes NO host
-    # port (reachable only as mosquitto:1883 on ubo_net) — so there is no LAN
-    # surface and the port-binding helper has nothing to rewrite.
+    # The bundled MQTT broker rides the same external bus (containers reach it
+    # as mosquitto:1883) and is published on the host's loopback so the pod's
+    # own bridge can publish readings to it. Loopback by default — never
+    # 0.0.0.0 unless the user asks for it.
     assert 'mosquitto:' in compose
     assert 'image: eclipse-mosquitto' in compose
+    assert 'host_ip: 127.0.0.1\n' in compose
+    assert '- target: 1883\n' in compose
+    assert 'published: 1883\n' in compose
+    # The bare short-syntax form would bind every interface — it must not appear.
     assert '- 1883:1883' not in compose
     mosquitto_conf = (
         data / 'mosquitto' / 'config' / 'mosquitto.conf'
     ).read_text()
-    assert 'allow_anonymous true' in mosquitto_conf
+    # One listener, authenticated for everyone: there is no anonymous path, so
+    # the same address and credentials work from the bus, from loopback, and
+    # from the LAN.
+    assert 'per_listener_settings' not in mosquitto_conf
+    assert 'allow_anonymous true' not in mosquitto_conf
+    assert '1884' not in mosquitto_conf
+    assert (
+        'listener 1883\nallow_anonymous false\n'
+        'password_file /run/mosquitto/passwd\n' in mosquitto_conf
+    )
+    assert 'mkdir -p /run/mosquitto\n' in compose
+    assert 'cp /mosquitto/config/passwd /run/mosquitto/passwd\n' in compose
+    assert 'chown mosquitto:mosquitto /run/mosquitto/passwd\n' in compose
+    assert 'chmod 600 /run/mosquitto/passwd\n' in compose
+    assert (
+        'exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf\n' in compose
+    )
+
+
+async def test_mosquitto_password_file_is_generated_and_stable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    bundled_broker_secrets: dict[str, str],
+) -> None:
+    """The broker credential is generated once, hashed, and kept private.
+
+    The password itself lives in the secrets file (the bridge reads it from
+    there); the broker only ever sees the `mosquitto_passwd`-format hash, and
+    a re-render reuses the stored secret so the two stay in sync.
+    """
+    ha = _import_home_assistant()
+    compositions = tmp_path / 'compositions'
+    data = tmp_path / 'data'
+    monkeypatch.setattr(ha, 'COMPOSITIONS_PATH', compositions)
+    monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', data)
+    _disable_zigbee(monkeypatch, ha)
+
+    assert await ha.prepare_home_assistant()
+
+    passwd_path = data / 'mosquitto' / 'config' / 'passwd'
+    line = passwd_path.read_text()
+    password = bundled_broker_secrets[ha.BUNDLED_BROKER_PASSWORD_SECRET_ID]
+    # `user:$7$<iterations>$<salt-b64>$<digest-b64>` — and never the cleartext.
+    assert line.startswith(f'{ha.BUNDLED_BROKER_USERNAME}:$7$')
+    assert password not in line
+    assert passwd_path.stat().st_mode & 0o077 == 0
+    _, _, iterations, salt, digest = line.strip().split('$')
+    import base64
+    import hashlib
+
+    assert base64.b64decode(digest) == hashlib.pbkdf2_hmac(
+        'sha512',
+        password.encode(),
+        base64.b64decode(salt),
+        int(iterations),
+        dklen=len(base64.b64decode(digest)),
+    )
+
+    # A second render must not rotate the credential out from under the
+    # bridge's copy in the secrets file.
+    assert await ha.prepare_home_assistant()
+    assert bundled_broker_secrets[ha.BUNDLED_BROKER_PASSWORD_SECRET_ID] == password
+
+
+async def test_broker_stays_on_loopback_when_exposed_to_lan(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Exposing Home Assistant to the LAN must not expose the MQTT broker.
+
+    The host-published listener is authenticated, but it is still not meant
+    for the LAN. `apply_compose_port_binding` rewrites short-syntax ports
+    only, which is exactly why the broker's publish uses the long form: HA's
+    8123 moves, the broker does not.
+    """
+    import sys
+
+    ha = _import_home_assistant()
+    compositions = tmp_path / 'compositions'
+    data = tmp_path / 'data'
+    monkeypatch.setattr(ha, 'COMPOSITIONS_PATH', compositions)
+    monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', data)
+    _disable_zigbee(monkeypatch, ha)
+
+    assert await ha.prepare_home_assistant()
+    compose = (
+        compositions / ha.HOME_ASSISTANT_COMPOSITION_ID / 'docker-compose.yml'
+    ).read_text()
+
+    sys.path.insert(0, str(DOCKER_SERVICE_PATH))
+    try:
+        from apps._port_binding import (  # type: ignore[import-not-found]
+            apply_compose_port_binding,
+        )
+    finally:
+        sys.path.remove(str(DOCKER_SERVICE_PATH))
+
+    exposed = apply_compose_port_binding(compose, expose_to_lan=True)
+
+    # HA's own port is free to move to every interface ...
+    assert '- 8123:8123' in exposed
+    # ... but the broker keeps its explicit loopback binding.
+    assert 'host_ip: 127.0.0.1\n' in exposed
+    assert '- 1883:1883' not in exposed
+    assert '- 0.0.0.0:1883:1883' not in exposed
 
 
 async def test_prepare_creates_persistent_config_dir_and_metadata(
@@ -264,85 +385,92 @@ def test_compose_includes_devices_when_adapter_present(
     assert 'devices:' not in compose
 
 
-def test_parse_lan_params_from_ip_output() -> None:
-    """LAN discovery derives parent/gateway/subnet from `ip` output."""
-    ha = _import_home_assistant()
-    ip_route = (
-        'default via 192.168.1.1 dev eth0 proto dhcp metric 100\n'
-        '192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.42\n'
-    )
-    ip_addr = (
-        '1: lo    inet 127.0.0.1/8 scope host lo\n'
-        '2: eth0    inet 192.168.1.42/24 brd 192.168.1.255 scope global eth0\n'
-    )
-    params = ha.parse_lan_params(ip_route, ip_addr)
-    assert params['parent'] == 'eth0'
-    assert params['gateway'] == '192.168.1.1'
-    assert params['subnet'] == '192.168.1.0/24'
-
-
-def test_parse_lan_params_no_default_route() -> None:
-    """No default route → no params (caller asks the user)."""
-    ha = _import_home_assistant()
-    assert ha.parse_lan_params('', '') == {}
-
-
-def test_macvlan_validation_rejects_yaml_injection() -> None:
-    """Validation rejects newline/garbage that could inject compose YAML keys."""
-    ha = _import_home_assistant()
-    valid = {
-        'parent': 'eth0',
-        'subnet': '192.168.1.0/24',
-        'gateway': '192.168.1.1',
-        'ip': '192.168.1.50',
-    }
-    assert ha._is_valid_macvlan(valid)  # noqa: SLF001
-
-    # The classic injection: a newline in the reserved-IP field dedenting to a
-    # new service key. Must be rejected.
-    injected = {**valid, 'ip': '1.2.3.4\n    privileged: true'}
-    assert not ha._is_valid_macvlan(injected)  # noqa: SLF001
-
-    # Each field independently guarded.
-    assert not ha._is_valid_macvlan({**valid, 'parent': 'eth0\n  x: y'})  # noqa: SLF001
-    assert not ha._is_valid_macvlan({**valid, 'subnet': 'not-a-subnet'})  # noqa: SLF001
-    assert not ha._is_valid_macvlan({**valid, 'gateway': 'nope'})  # noqa: SLF001
-
-
-def test_compose_attaches_macvlan_when_enabled(
+def test_compose_uses_host_network_when_enabled(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """A macvlan config multi-homes HA on a LAN IP and defines the network."""
+    """Host-network mode takes HA off the bridge and onto the host stack."""
     ha = _import_home_assistant()
     monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', tmp_path / 'data')
     composition_path = tmp_path / 'composition'
     composition_path.mkdir()
-    macvlan = {
-        'parent': 'eth0',
-        'subnet': '192.168.1.0/24',
-        'gateway': '192.168.1.1',
-        'ip': '192.168.1.50',
-    }
 
-    ha._write_home_assistant_compose(composition_path, None, macvlan)  # noqa: SLF001
+    ha._write_home_assistant_compose(  # noqa: SLF001
+        composition_path,
+        None,
+        host_network=True,
+    )
     compose = (composition_path / 'docker-compose.yml').read_text()
-    # HA stays on the bus AND gets a LAN IP.
-    assert 'driver: macvlan' in compose
-    assert 'parent: eth0' in compose
-    assert 'subnet: 192.168.1.0/24' in compose
-    assert 'gateway: 192.168.1.1' in compose
-    assert 'ipv4_address: 192.168.1.50' in compose
-    assert f'{ha.UBO_NET}: ' in compose  # mapping form alongside macvlan
+    ha_block = compose.split('  mosquitto:')[0]
+    assert 'network_mode: host' in ha_block
+    # Compose rejects `network_mode` alongside `networks:`, and `ports:` is not
+    # permitted either — HA binds 8123 on the host directly.
+    assert f'      - {ha.UBO_NET}\n' not in ha_block
+    assert '- 8123:8123' not in compose
+    # Off the bus, the broker answers under the same name via the loopback
+    # publish — so an MQTT integration configured once survives the toggle.
+    assert '- "mosquitto:127.0.0.1"' in ha_block
+    # The broker itself is untouched: still on the bus, still loopback-bound.
+    assert f'  {ha.UBO_NET}:\n    external: true\n' in compose
+    assert 'host_ip: 127.0.0.1' in compose
 
-    # Disabled → plain bridge-only, no macvlan network.
-    ha._write_home_assistant_compose(composition_path, None, None)  # noqa: SLF001
+
+def test_compose_stays_on_bridge_when_host_network_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Bridge mode publishes 8123 and keeps HA on the shared bus."""
+    ha = _import_home_assistant()
+    monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', tmp_path / 'data')
+    composition_path = tmp_path / 'composition'
+    composition_path.mkdir()
+
+    ha._write_home_assistant_compose(  # noqa: SLF001
+        composition_path,
+        None,
+        host_network=False,
+    )
     compose = (composition_path / 'docker-compose.yml').read_text()
-    assert 'driver: macvlan' not in compose
-    assert 'ha_macvlan:' not in compose
-    assert 'ipv4_address' not in compose
-    # Back to the bridge-only list form.
+    assert 'network_mode' not in compose
+    # The host.docker.internal shim (for Wyoming) is unconditional; the
+    # mosquitto-loopback shim is host-network-only.
+    assert '- host.docker.internal:host-gateway' in compose
+    assert '- "mosquitto:127.0.0.1"' not in compose
+    assert '- 8123:8123' in compose
     assert f'      - {ha.UBO_NET}\n' in compose
+
+
+def test_broker_binds_all_interfaces_when_exposed(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Exposing the broker drops its loopback pin; the port itself is unchanged.
+
+    Safe to offer only because the listener authenticates — see
+    `MOSQUITTO_CONF`, which has no anonymous path.
+    """
+    ha = _import_home_assistant()
+    monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', tmp_path / 'data')
+    composition_path = tmp_path / 'composition'
+    composition_path.mkdir()
+
+    ha._write_home_assistant_compose(  # noqa: SLF001
+        composition_path,
+        None,
+        broker_expose_to_lan=True,
+    )
+    compose = (composition_path / 'docker-compose.yml').read_text()
+    assert '- target: 1883\n        published: 1883\n' in compose
+    assert 'host_ip' not in compose
+
+    # Default stays pinned to loopback.
+    ha._write_home_assistant_compose(  # noqa: SLF001
+        composition_path,
+        None,
+        broker_expose_to_lan=False,
+    )
+    compose = (composition_path / 'docker-compose.yml').read_text()
+    assert 'host_ip: 127.0.0.1\n' in compose
 
 
 def test_zigbee_submenu_view_enabled_present() -> None:
@@ -394,27 +522,22 @@ def test_zigbee_submenu_view_disabled_states() -> None:
     assert sub_heading == 'No adapter detected'
 
 
-def test_suggest_reserved_ip_high_host() -> None:
-    """A /24 yields a high host outside the common low DHCP range."""
+async def test_prepare_honours_host_network_intent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The prepare phase renders whichever network mode the store holds."""
     ha = _import_home_assistant()
-    assert (
-        ha._suggest_reserved_ip('192.168.1.0/24', '192.168.1.1')  # noqa: SLF001
-        == '192.168.1.250'
-    )
+    compositions = tmp_path / 'compositions'
+    monkeypatch.setattr(ha, 'COMPOSITIONS_PATH', compositions)
+    monkeypatch.setattr(ha, 'HOME_ASSISTANT_DATA_PATH', tmp_path / 'data')
+    monkeypatch.setattr(ha, '_resolve_zigbee_device', lambda: None)
+    monkeypatch.setattr(ha, '_resolve_host_network', lambda: True)
+    monkeypatch.setattr(ha, '_resolve_broker_expose_to_lan', lambda: False)
 
+    assert await ha.prepare_home_assistant()
 
-def test_suggest_reserved_ip_avoids_gateway() -> None:
-    """The candidate steps off the gateway if they collide."""
-    ha = _import_home_assistant()
-    assert (
-        ha._suggest_reserved_ip('192.168.1.0/24', '192.168.1.250')  # noqa: SLF001
-        == '192.168.1.249'
-    )
-
-
-def test_suggest_reserved_ip_rejects_bad_or_tiny() -> None:
-    """Invalid or too-small subnets yield no suggestion."""
-    ha = _import_home_assistant()
-    assert ha._suggest_reserved_ip('not-a-subnet', '') == ''  # noqa: SLF001
-    assert ha._suggest_reserved_ip('192.168.1.0/31', '') == ''  # noqa: SLF001
-    assert ha._suggest_reserved_ip('', '') == ''  # noqa: SLF001
+    compose = (
+        compositions / ha.HOME_ASSISTANT_COMPOSITION_ID / 'docker-compose.yml'
+    ).read_text()
+    assert 'network_mode: host' in compose

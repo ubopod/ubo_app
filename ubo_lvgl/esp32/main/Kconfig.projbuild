@@ -1,0 +1,344 @@
+menu "Ubo LVGL Client"
+
+choice UBO_BOARD
+    prompt "Target board"
+    default UBO_BOARD_WAVESHARE_C6_AMOLED if IDF_TARGET_ESP32C6
+    default UBO_BOARD_ESP_BOX_3 if IDF_TARGET_ESP32S3
+    help
+        Which physical board this firmware is built for. The board also fixes
+        the chip, so the choice is filtered by IDF_TARGET — run
+        `idf.py set-target esp32c6` or `idf.py set-target esp32s3` first and the
+        right board is selected for you.
+
+        Source-file and driver-component selection is driven off IDF_TARGET in
+        main/CMakeLists.txt, NOT off this symbol: CONFIG_* values are undefined
+        during ESP-IDF's early requirements-expansion pass, so gating REQUIRES
+        on them would silently drop components. This symbol carries board
+        tuning and asserts consistency.
+
+config UBO_BOARD_WAVESHARE_C6_AMOLED
+    bool "Waveshare ESP32-C6-Touch-AMOLED-1.8 (SH8601 368x448, FT3168, ES8311)"
+    depends on IDF_TARGET_ESP32C6
+
+config UBO_BOARD_ESP_BOX_3
+    bool "Espressif ESP32-S3-BOX-3 (ILI9341 320x240, GT911, ES8311 + ES7210)"
+    depends on IDF_TARGET_ESP32S3
+endchoice
+
+config UBO_WIFI_SSID
+    string "WiFi SSID"
+    default "changeme"
+    help
+        SSID of the 2.4GHz WiFi network to join (both supported boards are
+        2.4GHz-only).
+
+config UBO_WIFI_PASSWORD
+    string "WiFi password"
+    default "changeme"
+    help
+        WPA2 password for the WiFi network.
+
+config UBO_WIFI_CONNECT_TIMEOUT_S
+    int "WiFi connect timeout (seconds)"
+    default 5
+    range 3 30
+    help
+        How long to wait for a station connection before giving up and bringing
+        up the captive-portal provisioning AP.
+
+config UBO_PROV_AP_SSID
+    string "Provisioning AP SSID"
+    default "ubo-setup"
+    help
+        SSID of the open SoftAP exposed for captive-portal WiFi provisioning
+        when the device cannot join a configured network.
+
+config UBO_CORE_GRPC_WEB_URL
+    string "Core gRPC-Web base URL"
+    default "http://192.168.1.100:50052/grpc"
+    help
+        Base URL of ubo-core's Envoy gRPC-Web endpoint, e.g.
+        http://<host-lan-ip>:50052/grpc. Plain HTTP (no TLS). Ignored when
+        built with -DUBO_TRANSPORT=tcp_lite; see UBO_CORE_MCU_ADDR instead.
+
+config UBO_CORE_MCU_ADDR
+    string "Core MCU raw-TCP address (tcp-lite builds only)"
+    default "192.168.1.100:50054"
+    help
+        host:port of ubo-core's raw-TCP "tcp-lite" listener (mcu_server.py),
+        e.g. <host-lan-ip>:50054. No scheme, no path — unlike
+        UBO_CORE_GRPC_WEB_URL this bypasses Envoy/HTTP entirely. Only used
+        when built with -DUBO_TRANSPORT=tcp_lite; ignored otherwise.
+
+        This is the fallback: a host/port provisioned through the captive
+        portal is stored in NVS and takes precedence.
+
+config UBO_USB_PPP_ENABLE
+    bool "Prefer PPP-over-USB (USB Serial/JTAG) when a host is attached"
+    depends on LWIP_PPP_SUPPORT
+    default y
+    help
+        Carry gRPC-Web traffic to ubo-core over the USB cable instead of WiFi,
+        as a PPP link (lwIP PPP client here, pppd on the Pi). At boot, if a USB
+        host is detected (SOF packets — a bare charger doesn't count) and the
+        stored transport preference is "usb", the client connects over USB and
+        WiFi is never brought up. Otherwise the WiFi path runs unchanged.
+
+        Only selectable in the `.ppp` build profile, which enables
+        CONFIG_LWIP_PPP_SUPPORT and hands the USJ endpoint to PPP:
+          idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.ppp"
+        In the default profile lwIP has no PPP stack, so this is forced off and
+        the firmware is WiFi-only (and keeps its USB log console).
+
+config UBO_USB_PPP_PROBE_TIMEOUT_S
+    int "PPP negotiation timeout (seconds)"
+    default 5
+    range 2 30
+    depends on UBO_USB_PPP_ENABLE
+    help
+        How long to wait for pppd to answer LCP/IPCP before retrying. A USB host
+        that isn't running pppd (e.g. a laptop used for flashing) simply retries
+        on this interval; it never falls back to WiFi on its own — the user does
+        that from the on-screen switch.
+
+config UBO_USB_CORE_GRPC_WEB_URL
+    string "Core gRPC-Web base URL over USB"
+    default "http://10.66.0.1:50052/grpc"
+    depends on UBO_USB_PPP_ENABLE
+    help
+        Base URL of ubo-core's Envoy gRPC-Web endpoint as seen from the far end
+        of the PPP link. Must match the local address in the pppd unit
+        (10.66.0.1:10.66.0.2). Used instead of UBO_CORE_GRPC_WEB_URL and instead
+        of any NVS-provisioned host/port, which describe the WiFi-side address.
+        Ignored when built with -DUBO_TRANSPORT=tcp_lite; see
+        UBO_USB_CORE_MCU_ADDR instead.
+
+config UBO_USB_CORE_MCU_ADDR
+    string "Core MCU raw-TCP address over USB (tcp-lite builds only)"
+    default "10.66.0.1:50054"
+    depends on UBO_USB_PPP_ENABLE
+    help
+        host:port of ubo-core's raw-TCP "tcp-lite" listener (mcu_server.py) as
+        seen from the far end of the PPP link. Must match the local address in
+        the pppd unit (10.66.0.1:10.66.0.2) -- same host as
+        UBO_USB_CORE_GRPC_WEB_URL, different port, no scheme/path. Only used
+        when built with -DUBO_TRANSPORT=tcp_lite; ignored otherwise. No NVS
+        override (the WiFi-side provisioning flow doesn't apply to PPP).
+
+config UBO_FRAME_STREAM_FULLRES
+    bool "Use full-resolution camera frames INSTEAD of the chunked stream"
+    depends on SPIRAM
+    default n
+    help
+        Render FrameStreamDataEvent (full-resolution, whole frame per event)
+        instead of FrameStreamChunkEvent (low-res, incremental row bands).
+
+        These are alternatives, NOT complements: both renderers share one
+        frame buffer, and the full-res path resets the chunked path's cached
+        geometry, so subscribing to both makes each full frame invalidate the
+        chunk state and the next chunk zero the buffer — the image looks
+        frozen or garbled. The desktop client uses full-res; MCU builds
+        default to chunked, which is what ubo-core streams for the viewfinder
+        and what actually animates.
+
+        Each full-res frame is ~173KB of RGB888 on the wire plus a decoded
+        copy and the RGB565 conversion — roughly half a megabyte of transient
+        allocation, hence the SPIRAM dependency. Turn this on only if you
+        specifically want still-image fidelity over viewfinder frame rate.
+
+config UBO_AFE_ENABLE
+    bool "Run push-to-talk capture through the esp-sr audio front end (AFE)"
+    depends on SPIRAM
+    default y
+    help
+        Process the microphone array through espressif/esp-sr's AFE before
+        streaming it to ubo-core: blind source separation across the two mics,
+        noise suppression and automatic gain control. This is what makes
+        far-field capture usable, and the AGC also stops close talking from
+        clipping the way a fixed analog gain does.
+
+        Requires PSRAM (AFE buffers are allocated there), so it is unavailable
+        on the PSRAM-less C6, which has a single microphone anyway.
+
+        Acoustic echo cancellation is deliberately NOT enabled: it needs a
+        playback reference channel wired into the capture stream, which this
+        board's audio path does not currently provide. Without AEC the device
+        cannot hear over its own speaker — which is also why wake-word
+        listening (UBO_WAKE_ENABLE) has to time-share the codec with playback
+        rather than run alongside it.
+
+config UBO_WAKE_ENABLE
+    bool "Wake word: start a turn on a spoken phrase (esp-sr WakeNet)"
+    depends on UBO_AFE_ENABLE
+    default n
+    help
+        Run esp-sr's WakeNet inside the AFE so the device starts an assistant
+        turn when it hears its wake word, instead of only on a BOOT-button hold.
+
+        The pod cannot do this for us: ubo-core's wake engines drop every audio
+        sample that carries an `audio_source`, so a satellite's microphone never
+        reaches them. Detection has to happen here.
+
+        Requires a `model` partition holding srmodels.bin (see partitions.csv)
+        and one CONFIG_SR_WN_* model selected under "ESP Speech Recognition".
+        If no model is found the AFE quietly clears wakenet_init and you get the
+        push-to-talk-only pipeline back, so this is safe to leave on.
+
+        Turning this on makes capture ALWAYS-ON: the microphone is open whenever
+        the speaker is idle. Capture and playback cannot coexist (one I2S port,
+        shared bit clock — esp_codec_dev rejects opening the paired device at a
+        different rate), so the device is deaf while it is talking and for
+        UBO_WAKE_COOLDOWN_MS afterwards. There is no barge-in.
+
+config UBO_WAKE_MODEL
+    string "WakeNet model name (empty = whichever model is in the partition)"
+    depends on UBO_WAKE_ENABLE
+    default ""
+    help
+        Passed to esp_srmodel_filter() to choose among the models packed into
+        srmodels.bin. Leave EMPTY unless you have deliberately packed more than
+        one: with a single model, empty always resolves to it, whereas a name
+        that does not match anything resolves to NULL and silently disables the
+        wake word. Which model gets packed is set by CONFIG_SR_WN_* under
+        "ESP Speech Recognition" (we ship CONFIG_SR_WN_WN9_JARVIS_TTS).
+
+        The resolved model and its wake phrase are logged at boot, so you never
+        have to guess which one is live.
+
+config UBO_WAKE_AGGRESSIVE
+    bool "Bias WakeNet toward recall (DET_MODE_95 instead of DET_MODE_90)"
+    depends on UBO_WAKE_ENABLE
+    default n
+    help
+        Selects the model's 95%-recall operating point rather than its 90% one.
+        Catches more genuine utterances and produces more false wakes. For
+        wn9_jarvis_tts these are thresholds 0.632 and 0.627 respectively.
+
+        Note DET_MODE_2CH_* / _3CH_* are not usable here: AFE_TYPE_VC forces
+        mic_num to 1, so WakeNet runs single-channel.
+
+config UBO_WAKE_THRESHOLD_PCT
+    int "Override the WakeNet detection threshold (percent, 0 = model default)"
+    depends on UBO_WAKE_ENABLE
+    default 0
+    range 0 99
+    help
+        0 keeps the threshold baked into the model (0.627/0.632 for
+        wn9_jarvis_tts). Otherwise this is applied as pct/100 via
+        set_wakenet_threshold(); esp-sr only accepts 0.4..0.9999, so values
+        between 1 and 39 are rejected at build time.
+
+        Higher = stricter = fewer false wakes and more missed ones.
+
+config UBO_WAKE_COOLDOWN_MS
+    int "Deaf window after the speaker goes quiet (ms)"
+    depends on UBO_WAKE_ENABLE
+    default 800
+    range 0 5000
+    help
+        How long to wait after closing the output before re-arming the wake
+        word. Covers speaker decay and room reverb so the device does not wake
+        itself on the tail of its own reply. Not an echo canceller — the
+        microphone is physically closed while the speaker is open, so this only
+        has to cover what is still ringing in the room.
+
+choice
+    prompt "Assistant behaviour a wake word triggers"
+    depends on UBO_WAKE_ENABLE
+    default UBO_WAKE_MODE_QUICK_CHAT
+    help
+        Sent to ubo-core as WakePhraseTriggerSource.mode, which selects a
+        turn-completion policy on the core side. This matters more than it
+        looks: without a trigger source the core resolves no policy at all and
+        the turn never ends, because — unlike push-to-talk — there is no button
+        release to stop it.
+
+    config UBO_WAKE_MODE_CONVERSATION
+        bool "Conversation (long pauses tolerated, ends on an end-of-turn phrase)"
+    config UBO_WAKE_MODE_QUICK_CHAT
+        bool "Quick chat (one short turn, ends after a brief silence)"
+    config UBO_WAKE_MODE_INTENTS
+        bool "Intents (voice shortcut)"
+endchoice
+
+config UBO_WAKE_MODE
+    int
+    depends on UBO_WAKE_ENABLE
+    default 3 if UBO_WAKE_MODE_CONVERSATION
+    default 2 if UBO_WAKE_MODE_QUICK_CHAT
+    default 1 if UBO_WAKE_MODE_INTENTS
+    help
+        Numeric WakeMode sent on the wire. Must match the WakeMode enum in
+        ubo_app/rpc/proto/ubo/v1/ubo.proto (INTENTS=1, QUICK_CHAT=2,
+        CONVERSATION=3, STOP_TALKING=4). Not user-visible; set by the choice
+        above.
+
+config UBO_CPU_PROBE
+    bool "Log per-task CPU usage once a second (debug)"
+    default n
+    select FREERTOS_USE_TRACE_FACILITY
+    select FREERTOS_GENERATE_RUN_TIME_STATS
+    help
+        Samples the FreeRTOS run-time counters and prints each task's share of
+        the last second. Written to answer "is rendering starving audio?" — it
+        shows, for example, that streaming assistant text puts `lvgl` and
+        `ubo_store` at ~50% each on one core while `ubo_mic` holds ~100% of the
+        other, which is the difference between a scheduling problem and a
+        protocol one.
+
+        OFF by default: the run-time counters it selects add a timer read to
+        every context switch, and a line a second is noise on a healthy device.
+
+config UBO_MIC_SESSION_RECORDER
+    bool "Dump each capture session over the console as base64 (debug)"
+    depends on SPIRAM
+    default n
+    help
+        Records every byte handed upstream during a push-to-talk session into
+        PSRAM and, once capture stops, prints it to the console as base64
+        between SESBEGIN/SESEND markers. Decode it back to a .wav to hear
+        exactly what ubo-core received, which is the only way to tell a capture
+        fault (wrong TDM slot, dead mic, AFE misconfigured) from a fault
+        further up the pipeline — it is what the far-field investigation in
+        AFE-FAR-FIELD.md was built around, and it will be wanted again.
+
+        OFF by default because it is not free: the dump runs inside
+        `mic_release`, *before* `mic_active` is cleared, and a session is
+        hundreds of KB of base64 over a serial console. `ubo_audio_play`
+        refuses every chunk while `mic_active` is set, so for as long as the
+        dump runs the device silently discards incoming TTS — which presents
+        as an assistant reply that starts several seconds in, or, for a short
+        reply, is never heard at all. Enable it only when you are debugging
+        capture, and expect playback to be deaf while it drains.
+
+config UBO_MIC_CHUNK_MS
+    int "Push-to-talk mic chunk size (ms)"
+    default 200
+    range 60 500
+    help
+        How much 16kHz/16-bit mic audio to accumulate per AudioReportSampleAction
+        dispatch. Each dispatch is a full HTTP unary POST (no keep-alive on the
+        C6), so larger chunks mean fewer requests/sec at the cost of latency.
+
+config UBO_TALK_HOLD_MS
+    int "BOOT hold-to-talk threshold (ms)"
+    default 350
+    range 150 1000
+    help
+        How long the BOOT button must be held before a push-to-talk session
+        starts. A shorter press is treated as a HOME tap.
+
+config UBO_AUDIO_GAIN_PERCENT
+    int "Speaker software gain (%)"
+    default 300 if UBO_BOARD_WAVESHARE_C6_AMOLED
+    default 150 if UBO_BOARD_ESP_BOX_3
+    default 300
+    range 100 800
+    help
+        Digital gain applied to playback PCM before the ES8311, to compensate
+        for the tiny onboard speaker. 100 = unity (no boost). Samples are hard-
+        clamped to int16 after scaling, so very high values will distort loud
+        passages; 200-400 is usually a good range. The core's relative volume
+        still applies via the codec DAC, so the volume control keeps working.
+
+endmenu

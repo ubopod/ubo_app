@@ -4,15 +4,22 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from commands import (
     COMMANDS_PERSISTENT_KEY,
+    SEEDED_IDS_PERSISTENT_KEY,
     register_default_bindable_actions,
     register_shortcut_actions,
 )
 from engines_manager import EnginesManager
+from microwakeword_engine import MODELS_DIR as MICRO_MODELS_DIR
+from microwakeword_engine import delete_model as micro_delete_model
+from microwakeword_engine import scan_models as micro_scan_models
+from microwakeword_engine import staging_paths as micro_staging_paths
+from microwakeword_engine import validate_model as micro_validate_model
 from openwakeword_engine import (
     default_model_names,
     delete_model,
@@ -23,12 +30,18 @@ from pattern import PatternError, expand_pattern
 from wake_menu import dispatch_wake_menus, register_wake_handlers
 
 from ubo_app.colors import INFO_COLOR
+from ubo_app.engines.microwakeword_catalog import (
+    download_urls_for as microwakeword_download_urls_for,
+)
+from ubo_app.engines.microwakeword_catalog import model_for as microwakeword_model_for
 from ubo_app.logger import logger
 from ubo_app.store.core.action_registry import register_action, unregister_action
 from ubo_app.store.core.bindable_actions import (
+    BindableAction,
     BindableActionContext,
-    get_bindable_action,
+    decode_binding,
     get_bindable_actions,
+    resolve_binding,
 )
 from ubo_app.store.core.types import (
     MenuItemData,
@@ -47,6 +60,8 @@ from ubo_app.store.main import store
 from ubo_app.store.services.assistant import (
     DEFAULT_VOSK_MODEL_ID,
     AssistantDownloadVoskModelAction,
+    AssistantTriggerSourceUnion,
+    WakePhraseTriggerSource,
 )
 from ubo_app.store.services.notifications import (
     Importance,
@@ -64,8 +79,11 @@ from ubo_app.store.services.speech_recognition import (
     SpeechRecognitionBoundActionTriggeredEvent,
     SpeechRecognitionIntent,
     SpeechRecognitionRemoveCommandAction,
+    SpeechRecognitionSetAssistantListeningAction,
     SpeechRecognitionUpdateCommandAction,
+    WakeMode,
     WakeWordDeleteModelEvent,
+    WakeWordDownloadModelEvent,
     WakeWordDownloadModelsEvent,
     WakeWordEngineConfig,
     WakeWordEngineName,
@@ -75,6 +93,8 @@ from ubo_app.store.services.speech_recognition import (
     WakeWordSetModelsStatusAction,
 )
 from ubo_app.utils.async_ import create_task
+from ubo_app.utils.bindable_action_input import prompt_for_parameters
+from ubo_app.utils.download import download_file
 from ubo_app.utils.input import ubo_input
 from ubo_app.utils.persistent_store import register_persistent_store
 
@@ -193,18 +213,25 @@ def _handle_bound_action_triggered(
     registry and dispatches the produced actions, owning the acknowledgment
     sequence (an RGB blank followed by any RGB ring actions, then the rest).
     """
-    # Voice commands carry no meaningful trigger source (placeholder context).
-    context = BindableActionContext(protocol='', scancode='', device_name=event.phrase)
     rgb_ring_actions: list[RgbRingCommandAction] = []
     other_actions = []
     for key in event.action_keys:
-        bindable = get_bindable_action(key)
-        if bindable is None:
+        binding = resolve_binding(key)
+        if binding is None:
             logger.warning(
                 'No bindable action registered for key',
                 extra={'action_key': key},
             )
             continue
+        bindable, parameters = binding
+        # Voice commands carry no meaningful trigger source (placeholder
+        # protocol/scancode); the phrase stands in for the device name.
+        context = BindableActionContext(
+            protocol='',
+            scancode='',
+            device_name=event.phrase,
+            parameters=parameters,
+        )
         try:
             resolved = bindable.factory(context)
         except Exception:
@@ -260,20 +287,44 @@ def _normalize_phrases(raw: str) -> list[str]:
     return phrases
 
 
-def _collect_action_keys(
+def _collect_actions(
     data: dict[str, str],
-    label_to_key: dict[str, str],
-) -> list[str]:
-    """Map selected slot labels back to keys, dropping None/unknown/duplicates."""
-    keys: list[str] = []
+    label_to_action: dict[str, BindableAction],
+) -> list[BindableAction]:
+    """Map selected slot labels back to actions, dropping None/unknown ones.
+
+    Duplicates are kept here and deduplicated later, once parameters are known:
+    the same parameterized action chosen in two slots is two distinct bindings
+    if its parameters differ.
+    """
+    actions: list[BindableAction] = []
     for slot in range(1, COMMAND_ACTION_SLOTS + 1):
         label = data.get(f'action_{slot}', NO_ACTION_LABEL)
         if not label or label == NO_ACTION_LABEL:
             continue
-        key = label_to_key.get(label)
-        if key is None:
+        action = label_to_action.get(label)
+        if action is None:
             logger.warning('Unknown action label selected', extra={'label': label})
             continue
+        actions.append(action)
+    return actions
+
+
+async def _collect_action_keys(
+    actions: list[BindableAction],
+    defaults: dict[str, dict[str, str]],
+) -> list[str] | None:
+    """Prompt for each action's parameters and return the bindings to store.
+
+    One follow-up prompt per parameterized action, in slot order. Returns None
+    if any is cancelled, so the command is abandoned rather than saved with a
+    half-configured binding.
+    """
+    keys: list[str] = []
+    for action in actions:
+        key = await prompt_for_parameters(action, defaults.get(action.key))
+        if key is None:
+            return None
         if key not in keys:
             keys.append(key)
     return keys
@@ -282,19 +333,24 @@ def _collect_action_keys(
 async def _command_form(existing: SpeechRecognitionIntent | None) -> None:
     """Add or edit a voice command via a Web UI form."""
     bindables = get_bindable_actions()
-    label_to_key = {bindable.label: bindable.key for bindable in bindables}
+    label_to_action = {bindable.label: bindable for bindable in bindables}
     key_to_label = {bindable.key: bindable.label for bindable in bindables}
-    action_options = [NO_ACTION_LABEL, *label_to_key]
+    action_options = [NO_ACTION_LABEL, *label_to_action]
 
-    existing_labels = (
-        [
-            key_to_label[key]
-            for key in existing.action_keys
-            if key in key_to_label
-        ]
-        if existing
-        else []
-    )
+    # A stored binding may carry parameters; the dropdown holds bare action
+    # labels, so decode before looking one up, and keep the parameters around to
+    # pre-select them in the follow-up prompt.
+    existing_bindings = [decode_binding(key) for key in existing.action_keys] if (
+        existing
+    ) else []
+    existing_labels = [
+        key_to_label[key]
+        for key, _parameters in existing_bindings
+        if key in key_to_label
+    ]
+    existing_parameters = {
+        key: parameters for key, parameters in existing_bindings if parameters
+    }
 
     fields = [
         InputFieldDescription(
@@ -349,17 +405,23 @@ async def _command_form(existing: SpeechRecognitionIntent | None) -> None:
     data = result.data if result else {}
     label = (data.get('label', '') or '').strip()
     phrases = _normalize_phrases(data.get('phrases', '') or '')
-    action_keys = _collect_action_keys(dict(data), label_to_key)
+    actions = _collect_actions(dict(data), label_to_action)
 
-    if not label or not phrases or not action_keys:
+    if not label or not phrases or not actions:
         logger.warning(
             'Voice command incomplete; not saving',
             extra={
                 'has_label': bool(label),
                 'phrase_count': len(phrases),
-                'action_count': len(action_keys),
+                'action_count': len(actions),
             },
         )
+        return
+
+    # Step 2 — only opens for actions that declare parameters.
+    action_keys = await _collect_action_keys(actions, existing_parameters)
+    if not action_keys:
+        logger.info('Voice command parameter prompt cancelled; not saving')
         return
 
     if existing:
@@ -494,8 +556,10 @@ def _register_persistence() -> None:
         ),
     )
     register_persistent_store(
-        'speech_recognition:assistant_enabled',
-        lambda state: state.speech_recognition.assistant_enabled,
+        'speech_recognition:enabled_wake_modes',
+        lambda state: [
+            mode.value for mode in state.speech_recognition.enabled_wake_modes
+        ],
     )
     register_persistent_store(
         'speech_recognition:conversation_end_phrases',
@@ -514,6 +578,10 @@ def _register_persistence() -> None:
                 for command in state.speech_recognition.intents
             ],
         ),
+    )
+    register_persistent_store(
+        SEEDED_IDS_PERSISTENT_KEY,
+        lambda state: list(state.speech_recognition.seeded_default_ids),
     )
 
 
@@ -550,7 +618,7 @@ async def _handle_download_models(event: WakeWordDownloadModelsEvent) -> None:
     notification by one unit; the on-disk pool is reported after each so the
     Models list fills in live. On completion the spinner flashes "ready".
     """
-    if event.engine_name is not WakeWordEngineName.OPENWAKEWORD:
+    if event.engine_name != WakeWordEngineName.OPENWAKEWORD:
         logger.warning(
             'Model download not supported for engine',
             extra={'engine_name': event.engine_name},
@@ -645,16 +713,160 @@ async def _handle_download_models(event: WakeWordDownloadModelsEvent) -> None:
     )
 
 
-async def _handle_delete_model(event: WakeWordDeleteModelEvent) -> None:
-    """Delete a wake-word model file off-reducer and re-scan the pool."""
-    if event.engine is not WakeWordEngineName.OPENWAKEWORD:
+# Stable id, like ``_DOWNLOAD_NOTIFICATION_ID`` — one live notification per
+# microWakeWord download, replaced in place as it progresses.
+_MICRO_DOWNLOAD_NOTIFICATION_ID = 'speech_recognition:microwakeword-download'
+
+
+def _micro_download_failed(model_id: str, reason: str) -> None:
+    """Report a failed microWakeWord download and clear the downloading status."""
+    store.dispatch(
+        WakeWordSetModelsStatusAction(
+            engine_name=WakeWordEngineName.MICROWAKEWORD,
+            status=WakeWordModelStatus.ERROR,
+        ),
+        NotificationsAddAction(
+            notification=Notification(
+                id=_MICRO_DOWNLOAD_NOTIFICATION_ID,
+                title='microWakeWord',
+                content=f'Failed to download "{model_id}": {reason}',
+                importance=Importance.HIGH,
+                display_type=NotificationDisplayType.FLASH,
+                icon='',
+            ),
+        ),
+    )
+
+
+async def _handle_download_model(event: WakeWordDownloadModelEvent) -> None:
+    """Download one catalog model (its ``.json`` + ``.tflite``) with a progress notice.
+
+    The reducer already validated ``model_id`` against the catalog, marked the
+    engine ``DOWNLOADING`` and emitted this event. Both halves land in a hidden
+    staging directory and are only moved into place together, so a failure
+    midway can never leave a half-installed model that
+    :func:`micro_scan_models` would list.
+
+    They're staged under their *final* names rather than as ``<name>.part``
+    siblings because ``from_config`` resolves the weights from the manifest's
+    ``model`` key relative to the manifest's own directory — a ``.part``
+    manifest would send validation looking for a ``.tflite`` that isn't there
+    yet, failing every download. ``micro_scan_models`` globs the top level
+    only, so the staging directory stays invisible while in flight.
+    """
+    if event.engine != WakeWordEngineName.MICROWAKEWORD:
+        logger.warning(
+            'Per-model download not supported for engine',
+            extra={'engine': event.engine},
+        )
+        store.dispatch(
+            WakeWordSetModelsStatusAction(
+                engine_name=event.engine,
+                status=WakeWordModelStatus.NOT_AVAILABLE,
+            ),
+        )
         return
-    await asyncio.to_thread(delete_model, event.model_id)
+
+    model = microwakeword_model_for(event.model_id)
+    if model is None:
+        # Belt-and-braces: the reducer rejects unknown ids, so this only fires
+        # if the catalog changed under a queued event.
+        _micro_download_failed(event.model_id, 'unknown model')
+        return
+
+    json_url, tflite_url = microwakeword_download_urls_for(model.id)
+    staging = micro_staging_paths(model.id)
+    shutil.rmtree(staging.directory, ignore_errors=True)
+    staging.directory.mkdir(parents=True, exist_ok=True)
+
+    def _notify(progress: float) -> None:
+        store.dispatch(
+            NotificationsAddAction(
+                notification=Notification(
+                    id=_MICRO_DOWNLOAD_NOTIFICATION_ID,
+                    title='Downloading wake word',
+                    content=model.label,
+                    display_type=NotificationDisplayType.STICKY,
+                    color=INFO_COLOR,
+                    icon='󰇚',
+                    blink=False,
+                    progress=progress,
+                    show_dismiss_action=False,
+                    dismiss_on_close=False,
+                ),
+            ),
+        )
+
+    _notify(0.0)
+    try:
+        # The manifest is well under 1 KB against ~60 KB of weights, so the
+        # progress bar tracks the ``.tflite`` alone rather than interleaving two
+        # streams for a fraction of a percent.
+        async for _ in download_file(url=json_url, path=staging.config):
+            pass
+        async for downloaded, total in download_file(
+            url=tflite_url,
+            path=staging.weights,
+        ):
+            _notify(downloaded / total if total else 0.0)
+    except Exception as error:
+        logger.exception(
+            'Failed to download microWakeWord model',
+            extra={'model': model.id},
+        )
+        shutil.rmtree(staging.directory, ignore_errors=True)
+        _micro_download_failed(model.id, str(error) or 'download error')
+        return
+
+    if not await asyncio.to_thread(micro_validate_model, staging.config):
+        shutil.rmtree(staging.directory, ignore_errors=True)
+        _micro_download_failed(model.id, 'the downloaded model is not loadable')
+        return
+
+    # Weights before manifest — see `install_uploaded_model` for why the order
+    # matters (`set_triggers` keys its reload signature on the `.json` alone).
+    staging.weights.replace(MICRO_MODELS_DIR / f'{model.id}.tflite')
+    staging.config.replace(MICRO_MODELS_DIR / f'{model.id}.json')
+    shutil.rmtree(staging.directory, ignore_errors=True)
+
     store.dispatch(
         WakeWordSetAvailableModelsAction(
             engine=event.engine,
-            models=tuple(scan_models()),
+            models=tuple(micro_scan_models()),
         ),
+        WakeWordSetModelsStatusAction(
+            engine_name=event.engine,
+            status=WakeWordModelStatus.AVAILABLE,
+        ),
+        NotificationsAddAction(
+            notification=Notification(
+                id=_MICRO_DOWNLOAD_NOTIFICATION_ID,
+                title='Wake word ready',
+                content=model.label,
+                display_type=NotificationDisplayType.FLASH,
+                flash_time=2,
+                color=INFO_COLOR,
+                icon='󰄬',
+                progress=1.0,
+                show_dismiss_action=True,
+                dismiss_on_close=True,
+            ),
+        ),
+    )
+
+
+async def _handle_delete_model(event: WakeWordDeleteModelEvent) -> None:
+    """Delete a wake-word model file off-reducer and re-scan the pool."""
+    if event.engine == WakeWordEngineName.OPENWAKEWORD:
+        await asyncio.to_thread(delete_model, event.model_id)
+        models = tuple(scan_models())
+    elif event.engine == WakeWordEngineName.MICROWAKEWORD:
+        await asyncio.to_thread(micro_delete_model, event.model_id)
+        models = tuple(micro_scan_models())
+    else:
+        return
+    store.dispatch(
+        WakeWordSetAvailableModelsAction(engine=event.engine, models=models),
     )
 
 
@@ -670,7 +882,9 @@ def init_service() -> Subscriptions:
     @store.autorun(
         lambda state: (
             state.speech_recognition.wake_engines,
+            state.speech_recognition.enabled_wake_modes,
             state.speech_recognition.openwakeword_models,
+            state.speech_recognition.microwakeword_models,
             state.speech_recognition.wake_word_models_status,
             state.infrared.registered_devices,
         ),
@@ -678,20 +892,30 @@ def init_service() -> Subscriptions:
     def wake_menu_items(
         data: tuple[
             tuple[WakeWordEngineConfig, ...],
+            tuple[WakeMode, ...],
+            tuple[str, ...],
             tuple[str, ...],
             tuple[WakeWordModelStatusEntry, ...],
             list[InfraredDevice],
         ],
     ) -> None:
         """Rebuild the mode-first wake-up menu tree from speech + infrared state."""
-        wake_engines, openwakeword_models, status_entries, ir_devices = data
-        # The serializable state carries a tuple of (engine, status) records;
-        # collapse it to a dict for the menu builders' per-engine lookups.
-        models_status = {entry.engine: entry.status for entry in status_entries}
+        (
+            wake_engines,
+            enabled_wake_modes,
+            openwakeword_models,
+            microwakeword_models,
+            status_entries,
+            ir_devices,
+        ) = data
         dispatch_wake_menus(
             wake_engines,
-            openwakeword_models,
-            models_status,
+            enabled_wake_modes,
+            {
+                WakeWordEngineName.OPENWAKEWORD: openwakeword_models,
+                WakeWordEngineName.MICROWAKEWORD: microwakeword_models,
+            },
+            status_entries,
             list(ir_devices),
         )
 
@@ -767,10 +991,11 @@ def init_service() -> Subscriptions:
     command_action_cleanups = _register_command_actions()
     static_menu_cleanups = _register_static_menus()
 
-    # Seed the OpenWakeWord model pool + status from disk so the Manage Models tab
+    # Seed each engine's model pool + status from disk so the Manage Models tab
     # renders. Done here (service start), never in the reducer, to keep the
     # reducer free of filesystem I/O.
     available_models = tuple(scan_models())
+    available_micro_models = tuple(micro_scan_models())
     store.dispatch(
         WakeWordSetAvailableModelsAction(
             engine=WakeWordEngineName.OPENWAKEWORD,
@@ -782,7 +1007,47 @@ def init_service() -> Subscriptions:
             if available_models
             else WakeWordModelStatus.NOT_AVAILABLE,
         ),
+        WakeWordSetAvailableModelsAction(
+            engine=WakeWordEngineName.MICROWAKEWORD,
+            models=available_micro_models,
+        ),
+        WakeWordSetModelsStatusAction(
+            engine_name=WakeWordEngineName.MICROWAKEWORD,
+            status=WakeWordModelStatus.AVAILABLE
+            if available_micro_models
+            else WakeWordModelStatus.NOT_AVAILABLE,
+        ),
     )
+
+    @store.autorun(
+        lambda state: (
+            state.assistant.is_listening,
+            state.assistant.active_source,
+            state.assistant.active_audio_source,
+        ),
+    )
+    def assistant_listening_arming(
+        data: tuple[bool, AssistantTriggerSourceUnion | None, str],
+    ) -> None:
+        """Arm stage-1 command matching for the life of a quick-chat session.
+
+        Only wake-phrase QUICK_CHAT sessions arm it — those are the ones the user
+        expects to answer a shortcut. Keying the disarm off ``is_listening`` covers
+        every stop path at once (silence flush, end phrase, stop-talking, toggle,
+        bot speech, a swallowed wake while the mic is muted).
+        """
+        is_listening, active_source, active_audio_source = data
+        is_quick_chat = (
+            is_listening
+            and isinstance(active_source, WakePhraseTriggerSource)
+            and active_source.mode == WakeMode.QUICK_CHAT
+        )
+        store.dispatch(
+            SpeechRecognitionSetAssistantListeningAction(
+                active=is_quick_chat,
+                audio_source=active_audio_source if is_quick_chat else '',
+            ),
+        )
 
     from ubo_app.store.core.view_registry import register_path_menu_matcher
 
@@ -793,6 +1058,7 @@ def init_service() -> Subscriptions:
 
     return [
         *engines_manager.subscriptions,
+        assistant_listening_arming.unsubscribe,
         *wake_handler_cleanups,
         *command_action_cleanups,
         *static_menu_cleanups,
@@ -806,6 +1072,10 @@ def init_service() -> Subscriptions:
         store.subscribe_event(
             WakeWordDownloadModelsEvent,
             _handle_download_models,
+        ),
+        store.subscribe_event(
+            WakeWordDownloadModelEvent,
+            _handle_download_model,
         ),
         store.subscribe_event(
             WakeWordDeleteModelEvent,

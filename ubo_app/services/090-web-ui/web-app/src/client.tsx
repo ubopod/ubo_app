@@ -16,6 +16,7 @@ import { WebUIState } from "./bindings/ubo/v1/ubo_pb";
 import { Inputs } from "./inputs";
 import { MainView } from "./main-view";
 import { onPostDispatch } from "./store/action-dispatcher";
+import { getGrpcWebBaseUrl } from "./store/grpc-endpoint";
 import { StatusType } from "./types";
 
 function triggerDownloads(
@@ -29,13 +30,6 @@ function triggerDownloads(
     a.click();
     document.body.removeChild(a);
   }
-}
-
-function getGrpcWebBaseUrl(): string {
-  if (window.location.port === window.WEB_UI_CONFIG.webUiListenPort) {
-    return `${window.location.protocol}//${window.location.hostname}:${window.WEB_UI_CONFIG.grpcEnvoyListenPort}/grpc`;
-  }
-  return `${window.location.origin}/grpc`;
 }
 
 export function Root({ state }: { state: string }) {

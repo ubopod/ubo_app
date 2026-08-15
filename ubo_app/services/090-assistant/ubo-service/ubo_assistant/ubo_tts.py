@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ctypes
+import gc
 import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, cast
@@ -57,7 +59,9 @@ _SERVICE_ID_BY_TTS_NAME: dict[AssistantTtsName, str] = {
 }
 
 # Per-provider default voice used when the user hasn't picked one. Mirrors
-# ``DEFAULT_VOICES`` on the core side (ElevenLabs falls back to its secret).
+# ``DEFAULT_VOICES`` on the core side. ElevenLabs is absent on purpose: it
+# resolves through its own secret first (see ``_create_elevenlabs_service``)
+# before falling back to ``DEFAULT_ELEVENLABS_TTS_VOICE``.
 _DEFAULT_CLOUD_VOICE: dict[str, str] = {
     'openai': 'alloy',
     'rime': 'antoine',
@@ -67,6 +71,10 @@ _DEFAULT_CLOUD_VOICE: dict[str, str] = {
     # ``DEFAULT_MISTRAL_TTS_VOICE`` fallback.
     'mistral': 'en_paul_neutral',
 }
+
+# Default-library voice ("George") used when the user set an API key but no
+# voice id. Kept in sync with core's ``DEFAULT_ELEVENLABS_TTS_VOICE``.
+DEFAULT_ELEVENLABS_TTS_VOICE = 'JBFqnCBsd6RMkjVDRZzb'
 
 VENICE_BASE_URL = 'https://api.venice.ai/api/v1'
 DEFAULT_VENICE_TTS_MODEL = os.environ.get(
@@ -78,6 +86,35 @@ DEFAULT_VENICE_TTS_VOICE = os.environ.get(
     # Kept in sync with core's ``DEFAULT_VENICE_TTS_VOICE``.
     'af_heart',
 )
+
+
+def _reclaim_freed_memory() -> None:
+    """Actually return a released engine's weights to the OS.
+
+    Dropping the last reference is not enough, in two separate ways, and both
+    steps here are load-bearing:
+
+    * Pipecat's ``FrameProcessor`` hierarchy is full of reference cycles
+      (event-handler maps, processor links, task-manager registrations), so a
+      released service is unreachable but not freed until the cyclic collector
+      runs. Without the ``gc.collect()`` the engine stays fully resident —
+      measured on-device, the Kokoro voices file was still held open after the
+      service had been released.
+    * Even once freed, the weights sit in the process's ``[heap]`` (brk) arena
+      rather than going back to the kernel. ``malloc_trim`` releases the
+      unused tail, which is where a few hundred contiguous MB of just-freed
+      model land.
+
+    The trim is best-effort by design — a non-glibc platform (macOS in the
+    test suite, musl) has no ``libc.so.6`` or no ``malloc_trim``, and the
+    memory is still reused by the process either way.
+    """
+    gc.collect()
+    try:
+        libc = ctypes.CDLL('libc.so.6')
+        libc.malloc_trim(0)
+    except (OSError, AttributeError):
+        logger.debug('malloc_trim unavailable on this platform; skipping')
 
 
 @dataclass
@@ -255,19 +292,25 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             else None,
         )
 
-        # Initialize Kokoro TTS only when the bundled model + voices
-        # files are already on disk. If the user hasn't downloaded
-        # Kokoro yet this stays None — picking Kokoro in the TTS
-        # selector before downloading would simply have no active
-        # service, and the subprocess is re-spawned the next time the
-        # files exist so a download triggered from the Manage menu
-        # picks up automatically.
-        self.kokoro_tts = self._initialize_service(
-            'Kokoro',
-            lambda: KokoroTTSService(voice_id=DEFAULT_KOKORO_VOICE_ID)
-            if KOKORO_MODEL_PATH.exists() and KOKORO_VOICES_PATH.exists()
-            else None,
-        )
+        # The voice Kokoro should speak with. Tracked here rather than on the
+        # service because the service may not exist yet — the autorun on
+        # ``selected_kokoro_voice`` fires long before (or without) a selection,
+        # and ``_create_kokoro_service`` reads this when it finally builds.
+        self._kokoro_voice_id = DEFAULT_KOKORO_VOICE_ID
+
+        # Kokoro goes behind a proxy for the same reason the cloud providers
+        # do — but to save memory rather than to wait on a secret. Building
+        # ``KokoroTTSService`` opens an onnxruntime session over the 325 MB
+        # model and costs ~421 MB resident, and it used to happen at
+        # subprocess start for anyone who had ever downloaded the files, even
+        # while the selected provider was a cloud service. The real service is
+        # now built in ``_ensure_kokoro_service`` the first time the user
+        # actually selects Kokoro.
+        #
+        # The proxy also holds the switcher slot unconditionally, so Kokoro
+        # stays selectable before the download and picks the model up on the
+        # next selection — no subprocess respawn needed.
+        self.kokoro_tts = GenericTTSProxy()
 
         self._services = {
             'google': self.google_tts,
@@ -372,10 +415,98 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             },
         )
 
+    def _create_kokoro_service(self) -> TTSService | None:
+        """Build the Kokoro service, or None when the model isn't downloaded.
+
+        This is the expensive one: the constructor opens an onnxruntime
+        session over the 325 MB model file and costs roughly 421 MB resident.
+        Only ever called from :meth:`_ensure_kokoro_service`.
+        """
+        if not (KOKORO_MODEL_PATH.exists() and KOKORO_VOICES_PATH.exists()):
+            logger.info(
+                'Kokoro model not downloaded yet; leaving the slot silent',
+                extra={'voice_id': self._kokoro_voice_id},
+            )
+            return None
+        try:
+            return KokoroTTSService(voice_id=self._kokoro_voice_id)
+        except Exception:
+            logger.exception('Error while initializing Kokoro TTS')
+            return None
+
+    async def _ensure_kokoro_service(self) -> None:
+        """Build Kokoro behind its proxy on first selection.
+
+        No-op once built, so re-selecting Kokoro never reloads the weights.
+        When the files aren't on disk yet the proxy simply stays empty and the
+        next selection retries — which is what lets a download from the Manage
+        menu take effect without respawning the subprocess.
+        """
+        proxy = self.kokoro_tts
+        if not isinstance(proxy, GenericTTSProxy) or proxy.service is not None:
+            return
+
+        service = self._create_kokoro_service()
+        if service is None:
+            return
+
+        await proxy.set_service(service)
+        logger.info(
+            'Kokoro TTS service built on selection',
+            extra={'voice_id': self._kokoro_voice_id},
+        )
+
+    async def _release_kokoro_service(self) -> bool:
+        """Tear down the Kokoro session, returning ~421 MB to the allocator.
+
+        ``GenericTTSProxy.set_service(None)`` cleans up the outgoing service
+        and drops the only reference to it, so the onnxruntime session is
+        collected. ``_ensure_kokoro_service`` rebuilds it (~2 s) if the user
+        comes back. Returns whether anything was actually released.
+        """
+        proxy = self.kokoro_tts
+        if not isinstance(proxy, GenericTTSProxy) or proxy.service is None:
+            return False
+
+        service = proxy.service
+        await proxy.set_service(None)
+        # Dropping the service is not enough on its own — see
+        # ``KokoroTTSService.release``.
+        if isinstance(service, KokoroTTSService):
+            service.release()
+        logger.info('Kokoro TTS service released on deselection')
+        return True
+
+    async def _release_unselected_local_engines(self, id: str) -> None:
+        """Unload whichever local engine is not *id*.
+
+        Loading lazily only fixes the cost of never using a local engine.
+        Without this, trying Kokoro or Piper once pinned its weights for the
+        life of the subprocess — the assistant sat at ~990 MB instead of
+        ~346 MB after a single local utterance.
+        """
+        released = False
+        if id != 'kokoro':
+            released = await self._release_kokoro_service() or released
+        if id != 'piper' and isinstance(self.piper_tts, PiperTTSService):
+            released = await self.piper_tts.unload() or released
+
+        if released:
+            _reclaim_freed_memory()
+
     async def set_selected_service(self, id: str) -> None:
-        """Set the selected TTS service, refreshing the API key first."""
+        """Set the selected TTS service, refreshing the API key first.
+
+        Local engines are (un)loaded around the switch: the incoming one is
+        built on demand, and whichever local engine is no longer selected
+        gives its weights back.
+        """
         if id in self._API_KEY_PROVIDERS:
             await self._refresh_api_key_service(id)
+        elif id == 'kokoro':
+            await self._ensure_kokoro_service()
+
+        await self._release_unselected_local_engines(id)
         await super().set_selected_service(id)
 
     def _voice_for(self, service_id: str) -> str:
@@ -414,12 +545,20 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             return None
 
     def _create_elevenlabs_service(self) -> ElevenLabsTTSService | None:
-        """Create ElevenLabs TTS service if both api key and voice id are set."""
+        """Create ElevenLabs TTS service if the api key is set.
+
+        The voice id is optional at setup (an API key alone also unlocks
+        ElevenLabs STT), so resolution falls back through picked voice →
+        ``elevenlabs_voice_id`` secret → the default-library voice. Ordering
+        matters: the secret must still win over the default for users who
+        configured a voice before it became optional.
+        """
         voice_id = (
             self._config.selected_voices.get('elevenlabs')
             or self._config.elevenlabs_voice_id
+            or DEFAULT_ELEVENLABS_TTS_VOICE
         )
-        if not (self._config.elevenlabs_api_key and voice_id):
+        if not self._config.elevenlabs_api_key:
             return None
         try:
             return ElevenLabsTTSService(
@@ -537,13 +676,20 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             if isinstance(target, PiperTTSService):
                 target.request_voice(voice_id)
 
-        # Kokoro keeps every voice in the bundled ``voices-v1.0.bin``
-        # that's already loaded into memory by ``KokoroTTSService``, so
-        # a voice switch is a pure settings update — no file work.
+        # Kokoro keeps every voice in the bundled ``voices-v1.0.bin`` that a
+        # live ``KokoroTTSService`` already holds, so a voice switch on a built
+        # service is a pure settings update — no file work. Before the service
+        # exists (Kokoro not selected yet, so nothing is loaded) the choice is
+        # recorded on ``_kokoro_voice_id`` and applied by the constructor when
+        # ``_ensure_kokoro_service`` eventually builds it.
         @self.client.autorun(['state.assistant.selected_kokoro_voice'])
         def _handle_kokoro_voice_change(data: list[StringValue]) -> None:
             voice_id = data[0].value
-            target = self.kokoro_tts
+            if not voice_id:
+                return
+            self._kokoro_voice_id = voice_id
+            proxy = self.kokoro_tts
+            target = proxy.service if isinstance(proxy, GenericTTSProxy) else proxy
             if isinstance(target, KokoroTTSService):
                 target.request_voice(voice_id)
 

@@ -1,6 +1,7 @@
 # ruff: noqa: SLF001, D100, D103
 from __future__ import annotations
 
+import dataclasses
 import functools
 from enum import Enum
 from typing import TYPE_CHECKING, Protocol, TypeAlias, TypeVar, cast, overload
@@ -73,6 +74,27 @@ def _build_dict_wrapper_message(
     return wrapper_cls(items=items)
 
 
+def _basic_type(value: object) -> ubo_bindings.ubo.v1.BasicType:
+    """Wrap a scalar in the `BasicType` oneof used by map values.
+
+    Callers guarantee `value` is a scalar; the branches narrow it.
+    """
+    from ubo_bindings.ubo import v1
+
+    if value is None:
+        return v1.BasicType()
+    if isinstance(value, str):
+        return v1.BasicType(string=value)
+    # bool before int since bool is subclass of int
+    if isinstance(value, bool):
+        return v1.BasicType(bool=value)
+    if isinstance(value, int):
+        return v1.BasicType(int64=value)
+    if isinstance(value, float):
+        return v1.BasicType(float=value)
+    return v1.BasicType(bytes=cast('bytes', value))
+
+
 def _convert_basic_value(
     value: object,
     value_cls: type[betterproto.Message],
@@ -86,20 +108,7 @@ def _convert_basic_value(
     from ubo_bindings.ubo import v1
 
     if isinstance(value, str | int | float | bool | bytes | None):
-        if value is None:
-            basic_type = v1.BasicType()
-        elif isinstance(value, str):
-            basic_type = v1.BasicType(string=value)
-        elif isinstance(value, bool):
-            # bool before int since bool is subclass of int
-            basic_type = v1.BasicType(bool=value)
-        elif isinstance(value, int):
-            basic_type = v1.BasicType(int64=value)
-        elif isinstance(value, float):
-            basic_type = v1.BasicType(float=value)
-        else:
-            basic_type = v1.BasicType(bytes=value)
-
+        basic_type = _basic_type(value)
         if value_cls is v1.BasicType:
             return basic_type
         return value_cls(basic_type=basic_type)  # type: ignore[call-arg]
@@ -114,6 +123,16 @@ def _convert_basic_value(
                 for item in value
             ]
             return value_cls(list=list_cls(items=converted_items))  # type: ignore[call-arg]
+
+    # A map whose values are themselves messages — `SensorsState.devices` is
+    # `dict[str, SensorDeviceState]`. Here `value_cls` already *is* that
+    # message class, so the value goes back through the normal conversion
+    # rather than the `BasicType` wrapping above.
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        return cast(
+            'betterproto.Message',
+            build_message(cast('Immutable', value), expected_type=value_cls),
+        )
 
     msg = f'Cannot convert {type(value)} to {value_cls}'
     raise TypeError(msg)
@@ -260,9 +279,16 @@ def build_message(  # noqa: C901, PLR0912
                 if value_cls is not None and issubclass(
                     value_cls, betterproto.Message,
                 ):
-                    # Map values need conversion (e.g. extra_data map)
+                    # Two shapes of message-valued map: dynamic-typed values
+                    # (e.g. extra_data) go through the BasicType oneof;
+                    # structured Immutable values (e.g. SensorsState.devices)
+                    # recurse through build_message like any other message.
                     converted = {
-                        k: _convert_basic_value(v, value_cls)
+                        k: (
+                            build_message(v, expected_type=value_cls)
+                            if hasattr(v, '__dataclass_fields__')
+                            else _convert_basic_value(v, value_cls)
+                        )
                         for k, v in object_.items()
                     }
                     return cast('T', expected_type(items=converted))  # type: ignore[call-arg]
@@ -299,10 +325,16 @@ def build_message(  # noqa: C901, PLR0912
             msg = f'Expected {expected_type}, got {message_class}'
             raise ValueError(msg)
 
+    # `cls_by_field` is keyed by betterproto's own field name, which is not
+    # always the Python attribute name: `snake_case` splits a digit/letter
+    # boundary, so `load_average_1m` becomes `load_average_1_m`. Looking the
+    # type up under the un-normalized name raises `KeyError` for any such
+    # field — and that kills the whole `SubscribeStore` stream, not just the
+    # one selector.
     fields = {
-        _snake_case(key): build_message(
+        (normalized := _snake_case(key)): build_message(
             getattr(object_, key),
-            expected_type=message_class._betterproto.cls_by_field[key],
+            expected_type=message_class._betterproto.cls_by_field[normalized],
         )
         for key in keys
     }

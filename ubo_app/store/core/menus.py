@@ -518,6 +518,7 @@ def _setup_registered_apps_autoruns() -> None:  # noqa: C901, PLR0915
                 label=entry.label,
                 icon=entry.icon,
                 action_id=entry.action_id or f'{MENU_SELECT_PREFIX}{key}',
+                color=entry.color or '#ffffff',
                 background_color=entry.background_color,
             )
             for key, entry in root_entries
@@ -537,6 +538,7 @@ def _setup_registered_apps_autoruns() -> None:  # noqa: C901, PLR0915
                     label=entry.label,
                     icon=entry.icon,
                     action_id=entry.action_id or f'{MENU_SELECT_PREFIX}{key}',
+                    color=entry.color or '#ffffff',
                     background_color=entry.background_color,
                 )
                 for key, entry in entries
@@ -628,6 +630,7 @@ def _setup_registered_apps_autoruns() -> None:  # noqa: C901, PLR0915
                     label=entry.label,
                     icon=entry.icon,
                     action_id=entry.action_id or f'{MENU_SELECT_PREFIX}{key}',
+                    color=entry.color or '#ffffff',
                     background_color=entry.background_color,
                 )
                 for key, entry in category_entries

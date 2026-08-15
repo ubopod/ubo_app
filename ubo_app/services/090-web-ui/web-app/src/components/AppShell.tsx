@@ -5,6 +5,7 @@ import { ApplicationView } from "./ApplicationView";
 import { BackButton } from "./BackButton";
 import { Breadcrumb } from "./Breadcrumb";
 import { ChatView } from "./ChatView";
+import { Dashboard } from "./dashboard/Dashboard";
 import { InstructionView } from "./InstructionView";
 import { NotificationOverlay } from "./NotificationOverlay";
 import { PromptView } from "./PromptView";
@@ -13,43 +14,22 @@ import { StatusBar } from "./StatusBar";
 import { TileGrid } from "./TileGrid";
 import type { StoreServiceClient } from "../bindings/store/v1/StoreServiceClientPb";
 import { useKeyboardNavigation } from "../hooks/useKeyboardNavigation";
-import { navigateTo } from "../store/action-dispatcher";
 import { subscribeToAudioEvents } from "../store/audio";
 import { unwrapItems } from "../store/helpers";
-import {
-  StateManager,
-  StateManagerContext,
-  useStateManager,
-} from "../store/state-manager";
+import { StateManager, StateManagerContext } from "../store/state-manager";
 import { useAppState } from "../store/useAppState";
 import { splitIconFromText } from "../utils/color-markup";
 
 function AppContent({ store }: { store: StoreServiceClient }) {
   const { currentView, statusBar, stack } = useAppState();
-  const stateManager = useStateManager();
   useKeyboardNavigation(store);
-
-  // Auto-navigate past home view to main menu (debounced to avoid rapid-fire).
-  // The dispatch re-checks the *freshest* state at fire time: if the device
-  // navigated into a menu during the debounce window, the closed-over
-  // `currentView` is stale and pushing 'main' onto a non-root stack would
-  // strand the GUI in a blank, unresolvable view. Only push when still at root.
-  useEffect(() => {
-    if (currentView?.homeViewData) {
-      const timer = setTimeout(() => {
-        const latest = stateManager.getState();
-        if (latest.currentView?.homeViewData && (latest.stack?.length ?? 0) <= 1) {
-          navigateTo(store, "main");
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [currentView, store, stateManager]);
 
   // Derive current title (icon + text) from view data
   const { currentTitle, currentTitleIcon, currentTitleText } = (() => {
     if (!currentView) return { currentTitle: "", currentTitleIcon: "", currentTitleText: "" };
-    if (currentView.homeViewData) return { currentTitle: "Home", currentTitleIcon: "", currentTitleText: "Home" };
+    // The dashboard is self-describing; a redundant "Home" heading above it
+    // would only eat vertical space.
+    if (currentView.homeViewData) return { currentTitle: "Home", currentTitleIcon: "", currentTitleText: "" };
     if (currentView.menuViewData) {
       const { icon, text } = splitIconFromText(currentView.menuViewData.title ?? "");
       return { currentTitle: icon ? `${icon}${text}` : text, currentTitleIcon: icon, currentTitleText: text };
@@ -90,7 +70,7 @@ function AppContent({ store }: { store: StoreServiceClient }) {
 
   // Render content area based on view type
   const content = (() => {
-    if (!currentView || currentView.homeViewData) {
+    if (!currentView) {
       return (
         <Box
           sx={{
@@ -104,12 +84,14 @@ function AppContent({ store }: { store: StoreServiceClient }) {
         >
           <CircularProgress size={32} />
           <Typography variant="body2" color="text.secondary">
-            {currentView?.homeViewData
-              ? "Navigating to main menu..."
-              : "Connecting to store..."}
+            Connecting to store...
           </Typography>
         </Box>
       );
+    }
+
+    if (currentView.homeViewData) {
+      return <Dashboard store={store} />;
     }
 
     if (currentView.menuViewData) {
@@ -208,13 +190,24 @@ interface AppShellProps {
 }
 
 export function AppShell({ store }: AppShellProps) {
-  const stateManager = useMemo(() => new StateManager(store), [store]);
+  const stateManager = useMemo(() => new StateManager(), []);
+
+  // A failed `/status` poll swaps this component out for the status message, so
+  // a core restart unmounts us. Without this the manager's streams stay open
+  // and keep reconnecting with no owner, and the remount adds a second set —
+  // enough to exhaust the browser's per-origin connection cap and leave the
+  // page stuck on "Connecting to store..." until a manual refresh.
+  //
+  // Relies on `StrictMode` being off (see `client.tsx`): its double
+  // mount/unmount would dispose the memoised manager without rebuilding it. If
+  // StrictMode is ever enabled, construct the manager inside this effect.
+  useEffect(() => () => stateManager.dispose(), [stateManager]);
 
   // Subscribe to audio events
   useEffect(() => {
-    const unsubscribe = subscribeToAudioEvents(store);
+    const unsubscribe = subscribeToAudioEvents();
     return unsubscribe;
-  }, [store]);
+  }, []);
 
   return (
     <StateManagerContext.Provider value={stateManager}>

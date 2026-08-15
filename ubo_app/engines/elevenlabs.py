@@ -83,28 +83,30 @@ class ElevenLabsEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
     def not_setup_message(self) -> str:
         """Message shown when the ElevenLabs service API key is not set."""
         return (
-            'ElevenLabs service API key and voice ID are not set. '
-            'You can set them in the settings.'
+            'ElevenLabs service API key is not set. You can set it in the settings.'
         )
 
     @property
     @override
     def is_setup(self) -> bool:
-        """Check if the ElevenLabs engine is set up."""
+        """Check if the ElevenLabs engine is set up.
+
+        The API key alone is the requirement: it is all STT needs, and TTS
+        falls back to ``DEFAULT_ELEVENLABS_TTS_VOICE`` when no voice has been
+        picked. Gating on the voice id too would hide the engine from the STT
+        picker for a reason that only concerns TTS.
+        """
         api_key = secrets.read_secret(ELEVENLABS_API_KEY_SECRET_ID)
-        voice_id = secrets.read_secret(ELEVENLABS_VOICE_ID)
 
         return (
             bool(api_key)
-            and bool(voice_id)
             and re.match(ELEVENLABS_API_KEY_PATTERN, api_key) is not None
-            and re.match(ELEVENLABS_VOICE_ID_PATTERN, voice_id) is not None
         )
 
     async def _setup(self) -> None:
         _, result = await ubo_input(
             title='ElevenLabs Configuration',
-            prompt='Enter your ElevenLabs API key and voice ID.',
+            prompt='Enter your ElevenLabs API key.',
             descriptions=[
                 WebUIInputDescription(
                     fields=[
@@ -119,9 +121,10 @@ class ElevenLabsEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                         InputFieldDescription(
                             name='voice_id',
                             type=InputFieldType.TEXT,
-                            label='Voice ID',
-                            description='Enter your ElevenLabs voice ID',
-                            required=True,
+                            label='Voice ID (optional)',
+                            description='Leave empty to use the default voice. '
+                            'Not needed for speech-to-text.',
+                            required=False,
                             pattern=ELEVENLABS_VOICE_ID_PATTERN,
                         ),
                         InputFieldDescription(
@@ -137,16 +140,21 @@ class ElevenLabsEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                 QRCodeInputDescription(
                     title='ElevenLabs Configuration',
                     instructions=ReadableInformation(
-                        text='Convert your ElevenLabs API key and voice ID to a QR '
-                        'code in the format "api_key:voice_id" and hold it in front '
-                        'of the camera to scan it.',
-                        picovoice_text='Convert your ElevenLabs API key and voice ID '
-                        'to a {QR|K Y UW AA R} code in the format "API key colon '
-                        'voice ID" and hold it in front of the camera to scan it.',
+                        text='Convert your ElevenLabs API key to a QR code — '
+                        'optionally as "api_key:voice_id" to set a voice too — and '
+                        'hold it in front of the camera to scan it.',
+                        picovoice_text='Convert your ElevenLabs API key to a '
+                        '{QR|K Y UW AA R} code, optionally in the format "API key '
+                        'colon voice ID", and hold it in front of the camera to '
+                        'scan it.',
                     ),
+                    # The voice-id half is optional so a bare API key scans too.
                     pattern=(
-                        r'(?P<api_key>' + ELEVENLABS_API_KEY_PATTERN + r'):'
-                        r'(?P<voice_id>' + ELEVENLABS_VOICE_ID_PATTERN + r')'
+                        r'^(?P<api_key>'
+                        + ELEVENLABS_API_KEY_PATTERN.strip('^$')
+                        + r')(?::(?P<voice_id>'
+                        + ELEVENLABS_VOICE_ID_PATTERN.strip('^$')
+                        + r'))?$'
                     ),
                 ),
             ],
@@ -155,7 +163,12 @@ class ElevenLabsEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
             key=ELEVENLABS_API_KEY_SECRET_ID,
             value=result.data['api_key'],
         )
-        voice_id = result.data['voice_id']
+        # The voice id is optional: without one, TTS falls back to
+        # ``DEFAULT_ELEVENLABS_TTS_VOICE`` and STT does not need a voice at all.
+        # An omitted voice must not wipe a previously stored one.
+        voice_id = (result.data.get('voice_id') or '').strip()
+        if not voice_id:
+            return
         secrets.write_secret(
             key=ELEVENLABS_VOICE_ID,
             value=voice_id,

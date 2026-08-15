@@ -7,6 +7,8 @@ set -o nounset
 
 export DEBIAN_FRONTEND=noninteractive
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Check for root privileges
 if [ "$(id -u)" != "0" ]; then
   echo "This script must be run as root" 1>&2
@@ -105,6 +107,23 @@ grep -q "^dtoverlay=wm8960-soundcard$" /boot/firmware/config.txt ||
 mkdir -p /etc/wm8960-soundcard
 cp *.conf /etc/wm8960-soundcard
 cp *.state /etc/wm8960-soundcard
+
+# Make the HAT WirePlumber's default audio device, so attaching an HDMI monitor
+# doesn't steal playback. See the header of the rule file for the full story.
+# The Lua config format is WirePlumber 0.4 (Debian bookworm); 0.5 dropped it in
+# favour of SPA-JSON under /etc/wireplumber/wireplumber.conf.d/, so warn rather
+# than silently install a file that would be ignored.
+wireplumber_version="$(wireplumber --version 2>/dev/null |
+  sed -n 's/.*Compiled with libwireplumber \([0-9]*\.[0-9]*\).*/\1/p' || true)"
+if [ "$wireplumber_version" = "0.4" ]; then
+  mkdir -p /etc/wireplumber/main.lua.d
+  cp "$SCRIPT_DIR/../wireplumber/51-ubo-audio-priority.lua" \
+    /etc/wireplumber/main.lua.d/
+else
+  echo "WARNING: expected WirePlumber 0.4, found '${wireplumber_version:-none}'." 1>&2
+  echo "WARNING: skipping the WM8960 default-device rule — audio may route to" 1>&2
+  echo "WARNING: HDMI when a monitor is attached." 1>&2
+fi
 
 #set service
 cp wm8960-soundcard /usr/bin/

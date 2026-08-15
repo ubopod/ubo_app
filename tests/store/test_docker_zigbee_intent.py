@@ -76,49 +76,28 @@ def test_detach_clears_zigbee_intent() -> None:
     assert result.zigbee_adapter_by_id == ''
 
 
-def test_set_macvlan_config_persists_params() -> None:
-    """Enabling macvlan stores all four LAN parameters."""
+def test_enable_host_network_sets_intent() -> None:
+    """Enabling LAN discovery records the host-network intent."""
     reducer_module = _reducer_module()
     service_reducer = reducer_module.service_reducer
     state = service_reducer(None, reducer_module.InitAction())
 
     result = service_reducer(
         state,
-        reducer_module.DockerSetMacvlanConfigAction(
-            enabled=True,
-            parent='eth0',
-            subnet='192.168.1.0/24',
-            gateway='192.168.1.1',
-            ip='192.168.1.50',
-        ),
+        reducer_module.DockerSetHostNetworkAction(enabled=True),
     )
 
-    assert result.macvlan_enabled is True
-    assert result.macvlan_parent == 'eth0'
-    assert result.macvlan_subnet == '192.168.1.0/24'
-    assert result.macvlan_gateway == '192.168.1.1'
-    assert result.macvlan_ip == '192.168.1.50'
+    assert result.host_network_enabled is True
 
 
-def test_disable_macvlan_clears_params() -> None:
-    """Disabling macvlan clears the stored parameters."""
+def test_disable_host_network_clears_intent() -> None:
+    """Disabling LAN discovery puts Home Assistant back on the bridge."""
     reducer_module = _reducer_module()
     service_reducer = reducer_module.service_reducer
-    set_macvlan = reducer_module.DockerSetMacvlanConfigAction
+    set_host_network = reducer_module.DockerSetHostNetworkAction
 
     state = service_reducer(None, reducer_module.InitAction())
-    state = service_reducer(
-        state,
-        set_macvlan(
-            enabled=True,
-            parent='eth0',
-            subnet='192.168.1.0/24',
-            gateway='192.168.1.1',
-            ip='192.168.1.50',
-        ),
-    )
-    result = service_reducer(state, set_macvlan(enabled=False))
+    state = service_reducer(state, set_host_network(enabled=True))
+    result = service_reducer(state, set_host_network(enabled=False))
 
-    assert result.macvlan_enabled is False
-    assert result.macvlan_parent == ''
-    assert result.macvlan_ip == ''
+    assert result.host_network_enabled is False

@@ -3,8 +3,14 @@ name = "ubo-gui-client"
 dynamic = ["version"]
 description = "Kivy GUI client for Ubo App - communicates via gRPC"
 license = "Apache-2.0"
-authors = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
-maintainers = [{ name = "Sassan Haradji", email = "me@sassanh.com" }]
+authors = [
+  { name = "Mehrdad M", email = "mehrdad@getubo.com" },
+  { name = "Sassan Haradji", email = "me@sassanh.com" },
+]
+maintainers = [
+  { name = "Mehrdad M", email = "mehrdad@getubo.com" },
+  { name = "Sassan Haradji", email = "me@sassanh.com" },
+]
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 keywords = ["ubo", "gui", "kivy", "grpc"]
@@ -16,6 +22,12 @@ dependencies = [
     "ubo-app-raw-bindings",
     "numpy",
     "adafruit-circuitpython-rgb-display>=3.14.0",
+    # Transitive via rgb-display, floored deliberately: 9.1.0 and earlier pick
+    # the GPIO chip by the last character of its sysfs name, so a kernel that
+    # numbers the RP1 controller `gpiochip15` sends them to `/dev/gpiochip5` and
+    # this client dies at import with "can not open gpiochip". See the matching
+    # note in the root `pyproject.toml`.
+    "adafruit-blinka>=9.2.0",
     "pillow>=11.3.0",
     "pypng>=0.20220715.0",
     "python-fake>=0.2.0",
@@ -73,6 +85,9 @@ select = ["ALL"]
 ignore = ["INP001", "PLR0911", "D203", "D213", "PLC0415", "TD003"]
 fixable = ["ALL"]
 unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"test_*.py" = ["S101", "PLR0913", "PLR0915", "PLR2004", "D103"]
 
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["id"]

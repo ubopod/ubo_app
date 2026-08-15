@@ -71,6 +71,10 @@ jobs:
           uv run --frozen poe proto:generate:raw
           uv run --frozen poe proto:compile:raw
 
+      - name: Sync LVGL GUI client virtualenv
+        run: |
+          uv sync --frozen --directory ubo_app/lvgl_gui
+
       - name: Type Check
         run: |
           uv run --frozen poe typecheck
@@ -158,10 +162,39 @@ jobs:
           uv run --frozen poe proto:generate:raw
           uv run --frozen poe proto:compile:raw
 
+      # Provider secrets live in a file on the Pi runners (UBO_SECRETS_PATH),
+      # not in GitHub Secrets, so GitHub doesn't auto-mask them. Register every
+      # value with ::add-mask:: — parsed with the same dotenv reader the tests
+      # use — so any accidental print/traceback is redacted for the whole job.
+      - name: Mask provider secrets in logs
+        if: startsWith(matrix.runner, 'ubo-pod')
+        run: |
+          uv run --frozen python <<'PY'
+          import os
+          from dotenv import dotenv_values
+
+          path = os.environ.get('UBO_SECRETS_PATH')
+          values = dotenv_values(path).values() if path and os.path.exists(path) else []
+          for value in values:
+              for line in (value or '').splitlines():
+                  if line.strip():
+                      print(f'::add-mask::{line}')
+          PY
+
       - name: Run Tests
         run: |
           mkdir -p $HOME/.kivy/mods
           uv run --frozen poe test --showlocals --make-screenshots --cov=ubo_app --cov-report=xml --cov-report=html --log-level=DEBUG
+
+      # Real-credential provider round-trips run only on the Pi pods, which hold
+      # the secrets file (UBO_SECRETS_PATH); providers without keys self-skip.
+      # Invoke the service's own `test:providers` task directly — no
+      # `--showlocals`/`--log-level=DEBUG`, which would dump keys on failure.
+      - name: Run Provider E2E Tests
+        if: startsWith(matrix.runner, 'ubo-pod')
+        run: |
+          cd ubo_app/services/090-assistant/ubo-service
+          uv run poe test:providers
 
       - name: Collect Window Screenshots
         uses: actions/upload-artifact@v4
@@ -195,8 +228,12 @@ jobs:
     name: Protobuf Files
     runs-on: ubuntu-latest
     steps:
+      # submodules: nanopb's generator (ubo_lvgl/third_party/nanopb) is needed
+      # by proto:lvgl:generate below.
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: System Dependencies
         run: |
@@ -223,6 +260,25 @@ jobs:
         with:
           name: proto-files
           path: ubo_app/rpc/proto
+          if-no-files-found: error
+
+      # Verifies ubo_lvgl/client/proto/ubo_client.proto's Action/Event oneof tags
+      # against the ubo.proto just generated above, and fails the job on drift —
+      # ubo-core assigns those tags by alphabetical position, so any new
+      # action/event anywhere silently renumbers them (see
+      # ubo_lvgl/client/proto/sync_tags.sh). Regenerates the LVGL client's
+      # nanopb bindings only once the tags are confirmed in sync.
+      - name: Build LVGL client protobuf bindings
+        run: |
+          uv run --frozen poe proto:lvgl:generate
+
+      - name: Upload LVGL Client Protobuf Files
+        uses: actions/upload-artifact@v4
+        with:
+          name: lvgl-client-proto-files
+          path: |
+            ubo_lvgl/client/proto/ubo_client.pb.c
+            ubo_lvgl/client/proto/ubo_client.pb.h
           if-no-files-found: error
 
   bindings:
@@ -331,6 +387,11 @@ jobs:
           done
           echo "Building GUI client"
           cd ubo_app/gui
+          uv build
+          cp dist/* $GITHUB_WORKSPACE/services-packages/
+          cd -
+          echo "Building LVGL GUI client"
+          cd ubo_app/lvgl_gui
           uv build
           cp dist/* $GITHUB_WORKSPACE/services-packages/
           cd -
@@ -484,6 +545,34 @@ jobs:
           IMAGE_SIZE=$(awk -v IMAGE_SIZE_GB=$IMAGE_SIZE_GB 'BEGIN {printf "%.0f", IMAGE_SIZE_GB * 1024 ^ 3}')
           echo "image_size=$IMAGE_SIZE" >>"$GITHUB_OUTPUT"
 
+      - name: Download Bundled Docker Images
+        run: |
+          # Daemon-less pull of the images listed in the manifest into tarballs
+          # that Packer bakes into the image and a first-boot service loads.
+          MANIFEST=scripts/packer/bundled-docker-images.txt
+          DEST=/build/docker-images
+          mkdir -p "$DEST"
+
+          apt-get update
+          apt-get install -y curl
+
+          CRANE_VERSION=v0.20.2
+          curl -fsSL \
+            "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_arm64.tar.gz" \
+            | tar -xz -C /usr/local/bin crane
+          crane version
+
+          while IFS= read -r ref || [ -n "$ref" ]; do
+            ref="${ref%%#*}"
+            ref="$(echo "$ref" | xargs)"
+            [ -z "$ref" ] && continue
+            sanitized="$(echo "$ref" | tr '/:' '__')"
+            echo "Pulling $ref -> $DEST/$sanitized.tar"
+            crane pull --platform linux/arm64 "$ref" "$DEST/$sanitized.tar"
+          done <"$MANIFEST"
+
+          ls -lh "$DEST"
+
       - name: Build Artifact
         env:
           PACKER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -520,6 +609,101 @@ jobs:
             steps.generate-image-url.outputs.dashed_suffix}}-arm64.img.gz
           path: /ubo_app-${{ needs.version.outputs.version }}-bookworm${{
             steps.generate-image-url.outputs.dashed_suffix }}.img.gz
+          if-no-files-found: error
+
+  esp32:
+    name: Build ESP32 Firmware (${{ matrix.board }})
+    needs:
+      - version
+      - proto
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: esp32c6
+            board: waveshare-c6-amoled
+          - target: esp32s3
+            board: esp-box-3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Generated by the `proto` job (checks the curated Action/Event oneof
+      # tags for drift, then runs nanopb) — these files are gitignored, not
+      # committed, so the esp-idf-ci-action container below never needs a
+      # Python toolchain to produce them itself.
+      - name: Download LVGL Client Protobuf Files
+        uses: actions/download-artifact@v4
+        with:
+          name: lvgl-client-proto-files
+          path: ubo_lvgl/client/proto
+
+      # WiFi profile. -DUBO_TRANSPORT=tcp_lite is the default for the ESP-IDF
+      # build (components/ubo_client_core/CMakeLists.txt) but is passed
+      # explicitly so the published image's transport is not implicit.
+      - name: Build Firmware
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v6.0.1
+          target: ${{ matrix.target }}
+          path: ubo_lvgl/esp32
+          command: >-
+            idf.py -DUBO_TRANSPORT=tcp_lite build &&
+            idf.py merge-bin -o ubo-lvgl-${{ matrix.target }}-merged.bin
+
+      # Staged per target: bootloader.bin / partition-table.bin /
+      # flasher_args.json have the same names for both boards and would
+      # otherwise collide when the artifacts are merged at publish time.
+      - name: Stage Artifacts
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          BUILD=ubo_lvgl/esp32/build
+          OUT="esp32-firmware/$TARGET"
+          mkdir -p "$OUT"
+          cp "$BUILD/ubo-lvgl-$TARGET-merged.bin" \
+            "$OUT/ubo-lvgl-$TARGET-$VERSION-merged.bin"
+          cp "$BUILD/bootloader/bootloader.bin" "$OUT/"
+          cp "$BUILD/partition_table/partition-table.bin" "$OUT/"
+          cp "$BUILD/ubo_lvgl_$TARGET.bin" "$OUT/"
+          cp "$BUILD/flasher_args.json" "$OUT/"
+
+      # Second profile: PPP over the USB Serial/JTAG cable instead of WiFi (the
+      # Ubo Pod build). It hands the USJ endpoint to PPP, so it has no USB log
+      # console — which is why it is a separate image and not the default.
+      # Built for both boards: usb_ppp.c is target-neutral (USB Serial/JTAG
+      # exists on the C6 and the S3 alike) and UBO_USB_PPP_ENABLE only depends
+      # on LWIP_PPP_SUPPORT, which this profile turns on.
+      # sdkconfig.defaults* is only read when sdkconfig is absent, hence the rm.
+      - name: Build Firmware (USB/PPP profile)
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v6.0.1
+          target: ${{ matrix.target }}
+          path: ubo_lvgl/esp32
+          command: >-
+            rm -rf build sdkconfig sdkconfig.old &&
+            idf.py -DUBO_TRANSPORT=tcp_lite
+            -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.ppp" build &&
+            idf.py merge-bin -o ubo-lvgl-${{ matrix.target }}-usbppp-merged.bin
+
+      - name: Stage USB/PPP Artifact
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          cp "ubo_lvgl/esp32/build/ubo-lvgl-$TARGET-usbppp-merged.bin" \
+            "esp32-firmware/$TARGET/ubo-lvgl-$TARGET-$VERSION-usbppp-merged.bin"
+
+      - name: Upload Firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-firmware-${{ matrix.target }}-${{ needs.version.outputs.version }}
+          path: esp32-firmware/
           if-no-files-found: error
 
   publish:
@@ -576,6 +760,7 @@ jobs:
       - build
       - publish
       - images
+      - esp32
     runs-on: ubuntu-latest
     environment:
       name: release
@@ -618,6 +803,15 @@ jobs:
           name: services-packages
           path: artifacts
 
+      # One artifact per board; merge-multiple flattens them into the shared
+      # esp32-firmware/ tree, where each board keeps its own <target>/ subdir.
+      - name: Procure ESP32 Firmware
+        uses: actions/download-artifact@v4
+        with:
+          pattern: esp32-firmware-*-${{ needs.version.outputs.version }}
+          merge-multiple: true
+          path: esp32-firmware
+
       - name: Split Large Files into 2GB chunks in a for loop only if they are
           bigger than 2GB
         run: |
@@ -648,7 +842,9 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*
+          files: |
+            artifacts/*
+            esp32-firmware/*/ubo-lvgl-esp32*-merged.bin
           tag_name: v${{ needs.version.outputs.version }}
           body: |
             PyPI package: https://pypi.org/project/${{ needs.version.outputs.name }}/${{ needs.version.outputs.version }}
