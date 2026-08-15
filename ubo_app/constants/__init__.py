@@ -138,6 +138,7 @@ CORE_SERVICE_IDS = [
     'keypad',
     'kiosk',
     'lightdm',
+    'localization',
     'mcp',
     'mqtt',
     'notifications',

@@ -79,7 +79,7 @@
     "_type": "SettingsState",
     "assistant_debug": false,
     "beta_versions": false,
-    "grpc_remote_access": false,
+    "grpc_remote_access": true,
     "pdb_signal": false,
     "services": {},
     "services_status": "loading",

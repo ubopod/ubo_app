@@ -509,6 +509,17 @@
     "is_installed": false,
     "is_installing": false
   },
+  "localization": {
+    "_type": "LocalizationState",
+    "clock": "00:00",
+    "date": "2023-01-01",
+    "language": "en",
+    "location": null,
+    "location_source": "ip",
+    "public_ip": null,
+    "unit_system": "auto",
+    "weather": null
+  },
   "main": {
     "_type": "MainState",
     "apps_items_priorities": {
@@ -950,6 +961,42 @@
         "label": "Desktop",
         "priority": 0
       },
+      "localization:language": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "localization:open_language_picker",
+        "app_category": null,
+        "background_color": null,
+        "category": "Localization",
+        "color": null,
+        "icon": "󰗊",
+        "key": "localization:language",
+        "label": "Language",
+        "priority": 0
+      },
+      "localization:location": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "localization:open_location_menu",
+        "app_category": null,
+        "background_color": null,
+        "category": "Localization",
+        "color": null,
+        "icon": "󰍎",
+        "key": "localization:location",
+        "label": "Location",
+        "priority": 1
+      },
+      "localization:unit_system": {
+        "_type": "RegisteredAppEntry",
+        "action_id": "localization:open_unit_system_picker",
+        "app_category": null,
+        "background_color": null,
+        "category": "Localization",
+        "color": null,
+        "icon": "󰉉",
+        "key": "localization:unit_system",
+        "label": "Units of Measurement",
+        "priority": 2
+      },
       "mcp:tools": {
         "_type": "RegisteredAppEntry",
         "action_id": null,
@@ -1098,6 +1145,9 @@
       "infrared:infrared": null,
       "ip:": 0,
       "lightdm:": 0,
+      "localization:language": 0,
+      "localization:location": 1,
+      "localization:unit_system": 2,
       "mcp:tools": 15,
       "mqtt:": -1,
       "rpi_connect:": null,
@@ -1120,7 +1170,7 @@
     ],
     "status_bar": {
       "_type": "StatusBarData",
-      "clock": "",
+      "clock": "00:00",
       "icons": [
         {
           "_type": "StatusIconData",
@@ -1211,6 +1261,8 @@
           {
             "_type": "SensorEntityReading",
             "device_class": "temperature",
+            "display_unit": "°C",
+            "display_value": 0.0,
             "key": "temperature",
             "name": "Temperature",
             "precision": 1,
@@ -1231,6 +1283,8 @@
           {
             "_type": "SensorEntityReading",
             "device_class": "illuminance",
+            "display_unit": "lx",
+            "display_value": 0.0,
             "key": "illuminance",
             "name": "Illuminance",
             "precision": 0,
@@ -1258,7 +1312,7 @@
     "_type": "SettingsState",
     "assistant_debug": false,
     "beta_versions": false,
-    "grpc_remote_access": false,
+    "grpc_remote_access": true,
     "pdb_signal": false,
     "services": {
       "assistant": {
@@ -1388,6 +1442,16 @@
         "is_active": true,
         "is_enabled": true,
         "label": "LightDM",
+        "log_level": 20,
+        "should_auto_restart": false
+      },
+      "localization": {
+        "_type": "ServiceState",
+        "errors": [],
+        "id": "localization",
+        "is_active": true,
+        "is_enabled": true,
+        "label": "Localization",
         "log_level": 20,
         "should_auto_restart": false
       },
@@ -2214,6 +2278,8 @@
     "boot_time": 1700000000.0,
     "cpu_percent": 50,
     "cpu_temperature_celsius": 42.0,
+    "cpu_temperature_display_unit": "°C",
+    "cpu_temperature_display_value": 42.0,
     "disk_percent": 25.0,
     "disk_total_bytes": 34359738368,
     "disk_used_bytes": 8589934592,

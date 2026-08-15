@@ -100,9 +100,73 @@ def test_no_prompt_when_envoy_running(grpc_lan: ModuleType) -> None:
 
 def test_announce_on_start_when_enabled(grpc_lan: ModuleType) -> None:
     """An Envoy start while gRPC access is on announces reachability."""
-    assert grpc_lan.should_announce_exposed(grpc_enabled=True) is True
+    assert grpc_lan.should_announce_exposed(grpc_enabled=True, boot_start=False) is True
 
 
 def test_silent_on_start_when_disabled(grpc_lan: ModuleType) -> None:
     """An Envoy start while gRPC access is off stays silent."""
-    assert grpc_lan.should_announce_exposed(grpc_enabled=False) is False
+    assert (
+        grpc_lan.should_announce_exposed(grpc_enabled=False, boot_start=False) is False
+    )
+
+
+def test_silent_on_boot_reconciled_start(grpc_lan: ModuleType) -> None:
+    """Boot starting Envoy itself stays silent — nothing was acknowledged.
+
+    gRPC access is on by default, so announcing here would post the sticky
+    warning on every single reboot.
+    """
+    assert grpc_lan.should_announce_exposed(grpc_enabled=True, boot_start=True) is False
+
+
+# --- Boot reconciliation: start Envoy so the default-on setting means something
+
+
+def test_boot_starts_envoy_when_enabled_and_image_present(
+    grpc_lan: ModuleType,
+) -> None:
+    """A fresh pod with the bundled image brings Envoy up by itself."""
+    assert (
+        grpc_lan.should_start_envoy_at_boot(
+            grpc_enabled=True,
+            envoy_running=False,
+            image_present=True,
+        )
+        is True
+    )
+
+
+def test_boot_leaves_running_envoy_alone(grpc_lan: ModuleType) -> None:
+    """An already-running Envoy is not restarted at boot."""
+    assert (
+        grpc_lan.should_start_envoy_at_boot(
+            grpc_enabled=True,
+            envoy_running=True,
+            image_present=True,
+        )
+        is False
+    )
+
+
+def test_boot_never_pulls_a_missing_image(grpc_lan: ModuleType) -> None:
+    """Without the image locally, boot stays silent rather than pulling it."""
+    assert (
+        grpc_lan.should_start_envoy_at_boot(
+            grpc_enabled=True,
+            envoy_running=False,
+            image_present=False,
+        )
+        is False
+    )
+
+
+def test_boot_does_nothing_when_access_is_off(grpc_lan: ModuleType) -> None:
+    """A user who opted out keeps Envoy down at boot."""
+    assert (
+        grpc_lan.should_start_envoy_at_boot(
+            grpc_enabled=False,
+            envoy_running=False,
+            image_present=True,
+        )
+        is False
+    )

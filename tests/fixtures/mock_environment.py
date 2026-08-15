@@ -119,6 +119,38 @@ def _monkeypatch_docker(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
+def _monkeypatch_zeroconf(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep mDNS advertisements off the wire.
+
+    The docker service advertises the gRPC control API over mDNS whenever gRPC
+    access is on — which is the default — so without this the suite would open a
+    real multicast socket per test and leave zeroconf's background threads
+    running across tests.
+    """
+    from fake import Fake
+
+    # The shared registry rather than the two module functions: consumers bind
+    # those by name at import, so patching them would miss a module imported
+    # before this fixture ran. Both functions resolve `_shared` at call time.
+    monkeypatch.setattr('ubo_app.utils.zeroconf._shared', Fake())
+
+
+def _monkeypatch_timezone(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the process timezone to UTC.
+
+    `_monkeypatch_datetime` pins the instant, but that is only half of it: with
+    no location set, the localization service publishes the clock via
+    `datetime.now().astimezone()` (`010-localization/setup.py:402`), which
+    renders it in the *system* zone. A UTC Docker container and a device on
+    local time would otherwise disagree on `clock`/`date` — and the store
+    snapshot with them. UTC keeps device and desktop on the same values.
+    """
+    import time
+
+    monkeypatch.setenv('TZ', 'UTC')
+    time.tzset()
+
+
 def _monkeypatch_datetime(monkeypatch: pytest.MonkeyPatch) -> None:
     import datetime
 
@@ -401,6 +433,7 @@ def _monkeypatch_simpleaudio() -> None:
 def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock external resources."""
     random.seed(0)
+    _monkeypatch_timezone(monkeypatch)
     _monkeypatch_datetime(monkeypatch)
 
     import atexit
@@ -499,6 +532,7 @@ def mock_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     _monkeypatch_socket(monkeypatch)
     _monkeypatch_psutil(monkeypatch)
     _monkeypatch_docker(monkeypatch)
+    _monkeypatch_zeroconf(monkeypatch)
     _monkeypatch_uuid(monkeypatch)
     _monkeypatch_aiohttp()
     _monkeypatch_piper()

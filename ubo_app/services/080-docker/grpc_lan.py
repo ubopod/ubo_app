@@ -45,6 +45,30 @@ def should_prompt_envoy(*, envoy_running: bool) -> bool:
     return not envoy_running
 
 
-def should_announce_exposed(*, grpc_enabled: bool) -> bool:
-    """Whether an Envoy ``start`` should announce that gRPC is now exposed."""
-    return grpc_enabled
+def should_start_envoy_at_boot(
+    *,
+    grpc_enabled: bool,
+    envoy_running: bool,
+    image_present: bool,
+) -> bool:
+    """Whether boot should start Envoy so gRPC access is actually reachable.
+
+    gRPC access defaults to on, so a fresh pod has to bring Envoy up by itself —
+    without it the setting exposes nothing and the mobile clients never see the
+    device.
+
+    ``image_present`` gates this deliberately: the shipped image has the Envoy
+    tarball preloaded, so it starts, while an install without the image stays
+    silent rather than pulling ~50MB over the network unprompted at boot.
+    """
+    return grpc_enabled and not envoy_running and image_present
+
+
+def should_announce_exposed(*, grpc_enabled: bool, boot_start: bool) -> bool:
+    """Whether an Envoy ``start`` should announce that gRPC is now exposed.
+
+    The announcement is a sticky warning acknowledging something the user just
+    did, so a boot-reconciled start stays silent — otherwise every reboot of a
+    default-configured pod would post it again.
+    """
+    return grpc_enabled and not boot_start

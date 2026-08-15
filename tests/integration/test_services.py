@@ -25,9 +25,12 @@ MAX_EXPECTED_LISTENERS = 600
 # sensors service's SensorsScanEvent handler, which runs the bus scan off the
 # reducer. Bumped again by 5 for the localization service's location-reset,
 # weather-refresh and three speak-{time,date,weather} handlers, which run the
-# network fetch and the TTS dispatch off the reducer. These are intentional
-# subscriptions, not leaks; the guard still catches runaway growth.
-MAX_EXPECTED_EVENT_HANDLERS = 113
+# network fetch and the TTS dispatch off the reducer. Then to 120 once
+# `localization` joined CORE_SERVICE_IDS, so those handlers (six of them — the
+# five above plus location-changed) finally register here; the device run counts
+# 116, since it also loads the hardware-only services desktop skips. These are
+# intentional subscriptions, not leaks; the guard still catches runaway growth.
+MAX_EXPECTED_EVENT_HANDLERS = 120
 
 
 @pytest.mark.timeout(500)

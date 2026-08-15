@@ -47,6 +47,7 @@ from grpc_lan import (
     classify_grpc_toggle,
     should_announce_exposed,
     should_prompt_envoy,
+    should_start_envoy_at_boot,
 )
 from menus import docker_item_menu, setup_docker_image_dynamic_menu
 from reducer import image_reducer, reducer_id
@@ -197,9 +198,14 @@ def _docker_path_matcher(path: tuple[str, ...]) -> str | None:
     for i, element in enumerate(path):
         if ':' in element:
             prefix, image_id = element.split(':', 1)
-            if prefix == 'docker' and image_id and image_id not in (
-                'service',
-                'registries',
+            if (
+                prefix == 'docker'
+                and image_id
+                and image_id
+                not in (
+                    'service',
+                    'registries',
+                )
             ):
                 menu_id = f'docker:image:{image_id}'
                 # Append any nested keys (e.g., 'ports')
@@ -216,6 +222,7 @@ def _docker_path_matcher(path: tuple[str, ...]) -> str | None:
             return DOCKER_REGISTRIES_MENU_ID
 
     return None
+
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -928,9 +935,7 @@ def _register_image_app_entry(event: DockerImageRegisterAppEvent) -> None:
 
 def _load_images() -> None:
     # First, populate IMAGES with dynamically imported compositions from disk
-    for item in (
-        COMPOSITIONS_PATH.iterdir() if COMPOSITIONS_PATH.is_dir() else []
-    ):
+    for item in COMPOSITIONS_PATH.iterdir() if COMPOSITIONS_PATH.is_dir() else []:
         if not item.is_dir():
             continue
         if item.stem in IMAGES:
@@ -1035,13 +1040,16 @@ def heal_home_assistant_zigbee(image_state: ImageState | None) -> None:
 # run with the native-gRPC TCP listener rendered into its config (see
 # apps/envoy.py); when off, that listener must be gone.
 #
-# Exposure is driven by two events, never by monitoring Envoy's status:
+# Exposure is driven by events, never by monitoring Envoy's status:
 #   * the user toggling `grpc_remote_access` — apply the listener + restart Envoy
 #     if it is running, otherwise prompt to download+start it;
 #   * the Envoy container starting — announce reachability if gRPC access is on.
-# Nothing happens at boot: an already-running Envoy is left as-is (it already
-# fronts gRPC-web and carries the persisted listener config), and a down Envoy
-# exposes nothing, so there is nothing to nag about.
+# Boot additionally *reconciles* once: `grpc_remote_access` is on by default, so a
+# fresh pod has to bring Envoy up itself or the setting would expose nothing and
+# the mobile clients would never discover the device. An already-running Envoy is
+# left as-is (it already fronts gRPC-web and carries the persisted listener
+# config); a down Envoy is started only when its image is already local, so boot
+# never pulls over the network unprompted.
 ENVOY_IMAGE_ID = 'envoy_grpc'
 # Current `grpc_remote_access`, cached by the toggle autorun so the start hook can
 # read it without re-touching the store. `None` = boot value not yet observed.
@@ -1051,6 +1059,16 @@ _grpc_enabled: list[bool | None] = [None]
 # Envoy / re-prompting). Stay inert until boot settles; flipped once, at the end
 # of `init_service`, after hydration is done. Only genuine post-boot toggles act.
 _grpc_toggle_ready: list[bool] = [False]
+# Set while boot's reconciliation start is in flight, so the resulting `start`
+# event advertises over mDNS but skips the sticky "gRPC exposed" warning — that
+# warning acknowledges a user action, and would otherwise fire on every reboot.
+_boot_envoy_start: list[bool] = [False]
+# Whether Envoy is up, tracked from the container `start` hook. The LAN-IP
+# autorun needs this and cannot call `_envoy_running` (blocking Docker I/O).
+_envoy_up: list[bool] = [False]
+# The address the mDNS record currently advertises, so the LAN-IP autorun only
+# re-registers on a genuine change.
+_advertised_ip: list[str | None] = [None]
 
 
 # Virtual / non-LAN interfaces whose addresses are useless to advertise.
@@ -1149,10 +1167,12 @@ async def _advertise_uborpc() -> None:
         address=ip,
         port=GRPC_NATIVE_PROXY_LISTEN_PORT,
     )
+    _advertised_ip[0] = ip
 
 
 async def _withdraw_uborpc() -> None:
     """Stop advertising the gRPC control API over mDNS."""
+    _advertised_ip[0] = None
     await unregister_service(_uborpc_zeroconf_name())
 
 
@@ -1226,6 +1246,24 @@ def _envoy_running() -> bool:
         client.close()
 
 
+def _envoy_image_present() -> bool:
+    """Whether Envoy's image is already local (blocking Docker I/O).
+
+    The shipped device image preloads it (see
+    `scripts/packer/load-bundled-docker-images.sh`), so this is what lets boot
+    start Envoy there without ever pulling on an install that lacks it.
+    """
+    client = docker.from_env()
+    try:
+        client.images.get(IMAGES[ENVOY_IMAGE_ID].full_path)
+    except docker.errors.DockerException:
+        return False
+    else:
+        return True
+    finally:
+        client.close()
+
+
 async def _handle_grpc_enabled() -> None:
     """Expose via Envoy when gRPC access is enabled, else prompt to install it.
 
@@ -1265,13 +1303,40 @@ def _on_grpc_remote_access_changed(enabled: bool) -> None:  # noqa: FBT001
 
 def _on_envoy_started() -> None:
     """Envoy started: mDNS-advertise + announce reachability if gRPC access is on."""
+    _envoy_up[0] = True
+    boot_start = _boot_envoy_start[0]
+    _boot_envoy_start[0] = False
     if bool(_grpc_enabled[0]):
         create_task(_advertise_uborpc())
-    if should_announce_exposed(grpc_enabled=bool(_grpc_enabled[0])):
+    if should_announce_exposed(
+        grpc_enabled=bool(_grpc_enabled[0]),
+        boot_start=boot_start,
+    ):
         _announce_grpc_reachable()
 
 
 register_container_start_hook(ENVOY_IMAGE_ID, _on_envoy_started)
+
+
+@store.autorun(
+    lambda state: state.ip.interfaces if hasattr(state, 'ip') else None,
+)
+def _on_lan_ip_changed(_: Sequence[IpNetworkInterface] | None) -> None:
+    """Re-advertise the gRPC API when the LAN address appears or changes.
+
+    `_advertise_uborpc` silently no-ops without a LAN IP, and at boot that is a
+    real race: on a cold Ethernet start DHCP may not have completed by the time
+    Envoy's `start` event fires, which would leave the pod permanently
+    undiscoverable. This also covers a DHCP lease change and the cable being
+    plugged in after boot. `register_service` replaces any prior registration,
+    so re-advertising needs no unregister first.
+    """
+    ip = _lan_ip()
+    if ip == _advertised_ip[0]:
+        return
+    if not (bool(_grpc_enabled[0]) and _envoy_up[0]):
+        return
+    create_task(_advertise_uborpc() if ip else _withdraw_uborpc())
 
 
 # The (exposure, credentials-revision) pair the broker was last rendered for.
@@ -1445,8 +1510,25 @@ async def init_service() -> Subscriptions:
     # every process start regardless — it lives in this process's memory, so
     # a restart with gRPC access already on and Envoy already up would
     # otherwise leave it silently unadvertised until the next toggle.
-    if bool(_grpc_enabled[0]) and await asyncio.to_thread(_envoy_running):
+    #
+    # And when gRPC access is on but Envoy is down, boot starts it: the setting
+    # is on by default, so on a fresh pod nothing else ever would, and the
+    # setting would expose nothing. Gated on the image already being local so
+    # this never pulls over the network unprompted — see
+    # `should_start_envoy_at_boot`.
+    grpc_enabled = bool(_grpc_enabled[0])
+    envoy_running = grpc_enabled and await asyncio.to_thread(_envoy_running)
+    if grpc_enabled and envoy_running:
+        _envoy_up[0] = True
         create_task(_advertise_uborpc())
+    elif should_start_envoy_at_boot(
+        grpc_enabled=grpc_enabled,
+        envoy_running=envoy_running,
+        # Only asked when it can matter, so an opted-out pod does no Docker I/O.
+        image_present=grpc_enabled and await asyncio.to_thread(_envoy_image_present),
+    ):
+        _boot_envoy_start[0] = True
+        store.dispatch(DockerImageRunAction(image=ENVOY_IMAGE_ID))
 
     return [
         *subscriptions,

@@ -169,7 +169,11 @@ class SettingsState(Immutable):
     grpc_remote_access: bool = field(
         default_factory=lambda: read_from_persistent_store(
             'settings:grpc_remote_access',
-            default=False,
+            # On by default so a freshly flashed pod is reachable by the mobile
+            # clients out of the box — with no GUI hardware attached, the only
+            # way to reach this toggle would otherwise be the Wi-Fi AP web UI.
+            # Turning it off persists, so an opt-out survives reboots.
+            default=True,
         ),
     )
     tcp_lite_enabled: bool = field(
