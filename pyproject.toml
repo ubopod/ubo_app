@@ -411,6 +411,13 @@ exclude = [
   "ubo_lvgl/third_party",                 # git submodule (nanopb)
   "ubo_lvgl/esp32/managed_components",    # ESP-IDF component manager
   "ubo_lvgl/esp32/build",                 # ESP-IDF build output
+  # Sibling client repos, cloned inside this tree and gitignored. Ruff skips
+  # them via .gitignore; pyright does not, and their vendored SwiftPM checkouts
+  # carry protobuf's own Python, which alone accounts for thousands of errors.
+  "ubo-swift-app",
+  "ubo-swift-grpc",
+  "ubo-kotlin-apps",
+  "ubo-kotlin-grpc",
   "**/.venv",
   "dist/",
 ]
