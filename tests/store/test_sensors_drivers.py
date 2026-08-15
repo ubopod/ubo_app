@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import errno
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from tests.service_loader import load_service_modules
+
+if TYPE_CHECKING:
+    import pytest
 
 registry, drivers = load_service_modules(
     Path(__file__).resolve().parents[2] / 'ubo_app' / 'services' / '040-sensors',
@@ -26,6 +29,12 @@ class _PropertySensor:
 
     temperature = 21.5
     relative_humidity = 40.0
+
+
+class _ColorSensor:
+    """An APDS-9960-shaped driver: one attribute carrying four channels."""
+
+    color_data = (12, 34, 56, 78)
 
 
 class _MappingSensor:
@@ -69,12 +78,17 @@ class _PrimedSensor:
         return 2
 
 
+_EntitySpec = tuple[str, str] | tuple[str, str, int]
+
+
 def _definition(
     *,
-    entities: tuple[tuple[str, str], ...],
+    entities: tuple[_EntitySpec, ...],
     read_method: str | None = None,
     read_primer: str | None = None,
     min_read_interval: float = 0.0,
+    takes_address: bool = True,
+    post_init: dict[str, Any] | None = None,
 ) -> Any:  # noqa: ANN401
     return registry.SensorDefinition(
         id='test',
@@ -85,13 +99,23 @@ def _definition(
         driver=registry.DriverSpec(
             module='adafruit_pm25.i2c',
             class_name='PM25_I2C',
+            takes_address=takes_address,
+            post_init=post_init or {},
             read_method=read_method,
             read_primer=read_primer,
         ),
-        entities=tuple(
-            registry.EntityDefinition(key=key, attribute=attribute, name=key)
-            for key, attribute in entities
-        ),
+        entities=tuple(_entity(spec) for spec in entities),
+    )
+
+
+def _entity(spec: _EntitySpec) -> Any:  # noqa: ANN401
+    """Build an entity from `(key, attribute)`, or `(key, attribute, index)`."""
+    key, attribute, *index = spec
+    return registry.EntityDefinition(
+        key=key,
+        attribute=attribute,
+        name=key,
+        index=index[0] if index else None,
     )
 
 
@@ -103,6 +127,56 @@ def _sensor(definition: Any, instance: Any) -> Any:  # noqa: ANN401
     )
 
 
+class _FixedAddressDriver:
+    """An APDS-9960-shaped driver: address fixed in silicon, no such parameter.
+
+    Deliberately strict — handing this constructor an `address` is the
+    `TypeError` `takes_address: false` exists to prevent.
+    """
+
+    def __init__(self, i2c: Any) -> None:  # noqa: ANN401
+        self.i2c = i2c
+        self.enable_proximity = False
+
+
+class _AddressedDriver:
+    """The usual shape: the address arrives by keyword."""
+
+    def __init__(self, i2c: Any, *, address: int) -> None:  # noqa: ANN401
+        self.i2c = i2c
+        self.address = address
+
+
+def test_a_fixed_address_driver_is_constructed_without_an_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The APDS-9960 is hard-wired to `0x39` and its driver takes no address."""
+    monkeypatch.setattr(drivers, 'load_driver', lambda *_: _FixedAddressDriver)
+    definition = _definition(
+        entities=(('proximity', 'proximity'),),
+        takes_address=False,
+        post_init={'enable_proximity': True},
+    )
+    i2c = object()
+
+    instance = drivers.initialize_device(definition, 0x39, i2c)
+
+    assert instance.i2c is i2c
+    assert instance.enable_proximity is True
+
+
+def test_an_addressed_driver_still_gets_its_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`takes_address` defaults to true — the other thirteen sensors rely on it."""
+    monkeypatch.setattr(drivers, 'load_driver', lambda *_: _AddressedDriver)
+    definition = _definition(entities=(('t', 'temperature'),))
+
+    instance = drivers.initialize_device(definition, 0x76, object())
+
+    assert instance.address == 0x76
+
+
 def test_property_driver_is_read_attribute_by_attribute() -> None:
     """The usual shape: each entity names a property."""
     definition = _definition(
@@ -112,6 +186,42 @@ def test_property_driver_is_read_attribute_by_attribute() -> None:
     readings = drivers.read_entities(_sensor(definition, _PropertySensor()))
 
     assert readings == {'temperature': 21.5, 'humidity': 40.0}
+
+
+def test_indexed_entities_split_one_tuple_attribute_into_channels() -> None:
+    """The APDS-9960 reports red, green, blue and clear as one `color_data`."""
+    definition = _definition(
+        entities=(
+            ('red', 'color_data', 0),
+            ('green', 'color_data', 1),
+            ('blue', 'color_data', 2),
+            ('clear', 'color_data', 3),
+        ),
+    )
+
+    readings = drivers.read_entities(_sensor(definition, _ColorSensor()))
+
+    assert readings == {'red': 12.0, 'green': 34.0, 'blue': 56.0, 'clear': 78.0}
+
+
+def test_an_out_of_range_index_loses_only_its_own_entity() -> None:
+    """A driver version reporting fewer channels must not fail the whole device."""
+    definition = _definition(
+        entities=(('red', 'color_data', 0), ('missing', 'color_data', 9)),
+    )
+
+    readings = drivers.read_entities(_sensor(definition, _ColorSensor()))
+
+    assert readings == {'red': 12.0, 'missing': None}
+
+
+def test_an_unindexed_tuple_attribute_reads_as_unavailable() -> None:
+    """`float()` of a tuple raises — the entity is missing, not the device."""
+    definition = _definition(entities=(('color', 'color_data'),))
+
+    readings = drivers.read_entities(_sensor(definition, _ColorSensor()))
+
+    assert readings == {'color': None}
 
 
 def test_mapping_driver_is_read_exactly_once_per_poll() -> None:

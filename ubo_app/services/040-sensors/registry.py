@@ -53,6 +53,10 @@ class EntityDefinition(Immutable):
     key: str
     attribute: str
     name: str
+    # Selects one slot of an attribute that reports several channels at once
+    # rather than a number — the APDS-9960 returns red, green, blue and clear as
+    # a single `color_data` tuple, and each channel is its own entity.
+    index: int | None = None
     # Overrides the default `{{ value_json.<key> }}`. For a reading that is a
     # code rather than a measurement — the ENS160's data-validity state — this
     # is what turns a bare `2` into "starting up" on the Home Assistant side.
@@ -66,7 +70,9 @@ class EntityDefinition(Immutable):
 class DriverSpec(Immutable):
     """How to construct the Adafruit driver for a sensor.
 
-    Five escape hatches, because Adafruit's drivers are not uniform:
+    Six escape hatches, because Adafruit's drivers are not uniform:
+    ``takes_address`` says whether the constructor accepts an address at all (the
+    APDS-9960's is fixed in silicon, so its driver has no such parameter);
     ``init_kwargs`` go to the constructor; ``post_init`` attributes are assigned
     on the instance afterwards (the VEML7700's integration time is a settable
     property, not a constructor argument); ``post_init_calls`` names no-argument
@@ -81,6 +87,7 @@ class DriverSpec(Immutable):
 
     module: str
     class_name: str
+    takes_address: bool = True
     init_kwargs: dict[str, Scalar] = field(default_factory=dict)
     post_init: dict[str, Scalar] = field(default_factory=dict)
     post_init_calls: tuple[str, ...] = ()
@@ -159,6 +166,28 @@ def _parse_optional_string(raw: object, *, what: str) -> str | None:
         return None
     if not isinstance(raw, str):
         msg = f'{what} must be a string, got {type(raw).__name__}'
+        raise RegistryError(msg)
+    return raw
+
+
+def _parse_takes_address(raw: object) -> bool:
+    if raw is None:
+        return True
+    # A truthy string here would read as "yes" and mean the opposite of what a
+    # `false` was written to say.
+    if not isinstance(raw, bool):
+        msg = f'takes_address must be a boolean, got {type(raw).__name__}'
+        raise RegistryError(msg)
+    return raw
+
+
+def _parse_optional_index(raw: object) -> int | None:
+    if raw is None:
+        return None
+    # A negative index would quietly read from the wrong end of the tuple and
+    # publish a plausible number from the wrong channel.
+    if not isinstance(raw, int) or isinstance(raw, bool) or raw < 0:
+        msg = f'index must be a non-negative int, got {raw!r}'
         raise RegistryError(msg)
     return raw
 
@@ -273,6 +302,7 @@ def _parse_entity(raw: object) -> EntityDefinition:
             key=key,
             attribute=str(raw['attribute']),
             name=str(raw['name']),
+            index=_parse_optional_index(raw.get('index')),
             value_template=_parse_optional_string(
                 raw.get('value_template'),
                 what='value_template',
@@ -327,6 +357,7 @@ def _parse_definition(raw: object) -> SensorDefinition:
             driver=DriverSpec(
                 module=str(driver_raw['module']),
                 class_name=str(driver_raw['class']),
+                takes_address=_parse_takes_address(driver_raw.get('takes_address')),
                 init_kwargs=_parse_scalars(
                     driver_raw.get('init_kwargs'),
                     what='init_kwargs',

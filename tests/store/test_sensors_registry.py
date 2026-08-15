@@ -246,11 +246,15 @@ def test_every_bundled_driver_is_importable() -> None:
             )
 
 
-def test_every_bundled_driver_accepts_address_as_a_keyword() -> None:
-    """`initialize_device` passes the address by keyword — every driver must take it.
+def test_every_bundled_takes_address_matches_its_driver() -> None:
+    """`takes_address` must say exactly what the driver's signature says.
 
-    Positionally, it would land in the wrong parameter: `PM25_I2C`'s second
-    argument is `reset_pin`, not `address`.
+    `initialize_device` passes the address by keyword, so a driver that takes one
+    must name it `address` — positionally it would land in the wrong parameter,
+    since `PM25_I2C`'s second argument is `reset_pin`. A driver whose address is
+    fixed in silicon has no such parameter, and passing one is a `TypeError`;
+    that is what `takes_address: false` is for. Asserting equality rather than
+    membership catches the flag being wrong in *either* direction.
     """
     import inspect
 
@@ -260,8 +264,10 @@ def test_every_bundled_driver_accepts_address_as_a_keyword() -> None:
             definition.driver.class_name,
         )
         parameters = inspect.signature(driver_class.__init__).parameters
-        assert 'address' in parameters, (
-            f'{definition.id}: {driver_class.__name__} has no `address` parameter'
+        assert definition.driver.takes_address == ('address' in parameters), (
+            f'{definition.id}: takes_address is '
+            f'{definition.driver.takes_address} but {driver_class.__name__}'
+            f'{"" if "address" in parameters else " has no"} `address` parameter'
         )
 
 
@@ -490,6 +496,106 @@ def test_invalid_entity_metadata_drops_only_its_own_definition(
                 **metadata,
             },
         ],
+    )
+
+    definitions = registry.parse_registry({'sensors': [broken, good]})
+
+    assert [definition.id for definition in definitions] == ['sht4x']
+
+
+def test_an_entity_index_selects_one_channel_of_a_multi_channel_attribute() -> None:
+    """The APDS-9960 reports all four color channels as one `color_data` tuple."""
+    (definition,) = registry.parse_registry(
+        {
+            'sensors': [
+                _definition(
+                    entities=[
+                        {
+                            'key': 'red',
+                            'attribute': 'color_data',
+                            'index': 0,
+                            'name': 'Red',
+                        },
+                        {
+                            'key': 'clear',
+                            'attribute': 'color_data',
+                            'index': 3,
+                            'name': 'Clear',
+                        },
+                    ],
+                ),
+            ],
+        },
+    )
+
+    assert [entity.index for entity in definition.entities] == [0, 3]
+
+
+def test_an_entity_without_an_index_reads_the_attribute_whole() -> None:
+    """Indexing is opt-in — a scalar attribute must not be subscripted."""
+    (definition,) = registry.parse_registry({'sensors': [_definition()]})
+
+    assert definition.entities[0].index is None
+
+
+@pytest.mark.parametrize(
+    'index',
+    [
+        pytest.param(-1, id='negative'),
+        pytest.param(True, id='bool'),
+        pytest.param('0', id='string'),
+        pytest.param(1.5, id='float'),
+    ],
+)
+def test_an_invalid_index_drops_only_its_own_definition(index: object) -> None:
+    """A negative index reads the wrong end of the tuple and looks plausible."""
+    good = _definition(id='sht4x', addresses=['0x44'], probe=None)
+    broken = _definition(
+        entities=[
+            {'key': 'red', 'attribute': 'color_data', 'index': index, 'name': 'Red'},
+        ],
+    )
+
+    definitions = registry.parse_registry({'sensors': [broken, good]})
+
+    assert [definition.id for definition in definitions] == ['sht4x']
+
+
+def test_takes_address_defaults_to_true() -> None:
+    """Almost every driver takes an address; only the fixed-address ones say so."""
+    (definition,) = registry.parse_registry({'sensors': [_definition()]})
+
+    assert definition.driver.takes_address is True
+
+
+def test_takes_address_false_is_carried_through() -> None:
+    """The APDS-9960's address is fixed in silicon and its driver takes none."""
+    (definition,) = registry.parse_registry(
+        {
+            'sensors': [
+                _definition(
+                    driver={
+                        'module': 'adafruit_apds9960.apds9960',
+                        'class': 'APDS9960',
+                        'takes_address': False,
+                    },
+                ),
+            ],
+        },
+    )
+
+    assert definition.driver.takes_address is False
+
+
+def test_a_non_boolean_takes_address_drops_only_its_own_definition() -> None:
+    """A truthy string would read as "yes" and mean the opposite of a `false`."""
+    good = _definition(id='sht4x', addresses=['0x44'], probe=None)
+    broken = _definition(
+        driver={
+            'module': 'adafruit_bme280.basic',
+            'class': 'Adafruit_BME280_I2C',
+            'takes_address': 'false',
+        },
     )
 
     definitions = registry.parse_registry({'sensors': [broken, good]})

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-07-12",
+  "updated": "2026-08-14",
   "sensors": [
     {
       "id": "pct2075",
@@ -529,6 +529,70 @@
           "unit_of_measurement": "cm",
           "state_class": "measurement",
           "suggested_display_precision": 1
+        }
+      ]
+    },
+    {
+      "id": "apds9960",
+      "label": "APDS-9960 Proximity + Color",
+      "manufacturer": "Avago",
+      "addresses": [
+        "0x39"
+      ],
+      "probe": {
+        "register": "0x92",
+        "expected": "0xa8",
+        "read_length": 1,
+        "mask": "0xf8"
+      },
+      "driver": {
+        "module": "adafruit_apds9960.apds9960",
+        "class": "APDS9960",
+        "takes_address": false,
+        "post_init": {
+          "enable_proximity": true,
+          "enable_color": true
+        }
+      },
+      "entities": [
+        {
+          "key": "proximity",
+          "attribute": "proximity",
+          "name": "Proximity",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "red",
+          "attribute": "color_data",
+          "index": 0,
+          "name": "Red",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "green",
+          "attribute": "color_data",
+          "index": 1,
+          "name": "Green",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "blue",
+          "attribute": "color_data",
+          "index": 2,
+          "name": "Blue",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
+        },
+        {
+          "key": "clear",
+          "attribute": "color_data",
+          "index": 3,
+          "name": "Clear",
+          "state_class": "measurement",
+          "suggested_display_precision": 0
         }
       ]
     }

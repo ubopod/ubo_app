@@ -87,6 +87,7 @@ dependencies = [
   # (`040-sensors/registry.default.json`). A definition may only name a driver
   # that is both listed here and on `drivers.DRIVER_ALLOWLIST`.
   "adafruit-circuitpython-ahtx0==1.0.28",
+  "adafruit-circuitpython-apds9960==3.1.19",
   "adafruit-circuitpython-bh1750==1.1.14",
   "adafruit-circuitpython-bme280==2.6.28",
   "adafruit-circuitpython-bme680==3.7.16",

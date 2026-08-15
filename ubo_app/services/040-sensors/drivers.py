@@ -29,6 +29,7 @@ DRIVER_ALLOWLIST = frozenset(
         'adafruit_veml7700',
         # STEMMA QT
         'adafruit_ahtx0',
+        'adafruit_apds9960.apds9960',
         'adafruit_bh1750',
         'adafruit_bme280.basic',
         'adafruit_bme680',
@@ -101,11 +102,14 @@ def initialize_device(
 ) -> Any:  # noqa: ANN401
     """Instantiate a sensor's driver, retrying through transient bus errors."""
     driver_class = load_driver(definition.driver.module, definition.driver.class_name)
-    # The address goes in by keyword, never positionally: every driver names the
-    # parameter `address`, but they do not agree on its *position* — PM25_I2C
-    # takes `reset_pin` second, so a positional address would silently become a
-    # reset pin.
-    instance = driver_class(i2c, address=address, **definition.driver.init_kwargs)
+    # The address goes in by keyword, never positionally: every driver that
+    # takes one names the parameter `address`, but they do not agree on its
+    # *position* — PM25_I2C takes `reset_pin` second, so a positional address
+    # would silently become a reset pin. A sensor whose address is fixed in
+    # silicon has no such parameter at all — the APDS-9960 is hard-wired to
+    # `0x39` — and handing one to its constructor is a `TypeError`.
+    address_kwargs = {'address': address} if definition.driver.takes_address else {}
+    instance = driver_class(i2c, **address_kwargs, **definition.driver.init_kwargs)
     for attribute, value in definition.driver.post_init.items():
         setattr(instance, attribute, value)
     for method_name in definition.driver.post_init_calls:
@@ -114,12 +118,38 @@ def initialize_device(
 
 
 # A driver read can fail in any of these ways: a bus error (`OSError`), a sensor
-# that reports "no data yet" as `None` (`TypeError` from `float(None)`), or a
-# corrupt frame (`RuntimeError` — how the PM25 driver reports a bad checksum).
-_READ_ERRORS = (OSError, AttributeError, KeyError, TypeError, ValueError, RuntimeError)
+# that reports "no data yet" as `None` (`TypeError` from `float(None)`), a
+# corrupt frame (`RuntimeError` — how the PM25 driver reports a bad checksum),
+# or a channel a driver version reports fewer of than the definition expects
+# (`IndexError`).
+_READ_ERRORS = (
+    OSError,
+    AttributeError,
+    IndexError,
+    KeyError,
+    TypeError,
+    ValueError,
+    RuntimeError,
+)
 
 
-def _read_attribute(instance: Any, attribute: str) -> float:  # noqa: ANN401
+def _select(value: Any, index: int | None) -> float:  # noqa: ANN401
+    """Narrow a driver reading to the single number one entity publishes.
+
+    An attribute that reports several channels at once — the APDS-9960's
+    ``color_data`` is one tuple of red, green, blue and clear — gives each of its
+    entities the same attribute and a different ``index``.
+    """
+    if index is not None:
+        value = value[index]
+    return float(value)
+
+
+def _read_attribute(
+    instance: Any,  # noqa: ANN401
+    attribute: str,
+    index: int | None = None,
+) -> float:
     """Read one value off a driver instance.
 
     Usually a property. Sometimes a no-argument method — the SGP40's VOC index
@@ -129,7 +159,7 @@ def _read_attribute(instance: Any, attribute: str) -> float:  # noqa: ANN401
     value: Any = getattr(instance, attribute)
     if callable(value):
         value = value()
-    return float(value)
+    return _select(value, index)
 
 
 def read_entities(sensor: ActiveSensor) -> dict[str, float | None]:
@@ -170,12 +200,16 @@ def read_entities(sensor: ActiveSensor) -> dict[str, float | None]:
         for entity in definition.entities:
             try:
                 readings[entity.key] = (
-                    float(data[entity.attribute])
+                    _select(data[entity.attribute], entity.index)
                     if entity.attribute in data
                     # Not everything such a driver exposes is *in* the mapping:
                     # the ENS160 buffers its measurements there, but reports
                     # data validity from a live status register.
-                    else _read_attribute(sensor.instance, entity.attribute)
+                    else _read_attribute(
+                        sensor.instance,
+                        entity.attribute,
+                        entity.index,
+                    )
                 )
             except _READ_ERRORS:
                 readings[entity.key] = None
@@ -183,7 +217,11 @@ def read_entities(sensor: ActiveSensor) -> dict[str, float | None]:
 
     for entity in definition.entities:
         try:
-            readings[entity.key] = _read_attribute(sensor.instance, entity.attribute)
+            readings[entity.key] = _read_attribute(
+                sensor.instance,
+                entity.attribute,
+                entity.index,
+            )
         except _READ_ERRORS:
             readings[entity.key] = None
     return readings
