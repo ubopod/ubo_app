@@ -38,9 +38,9 @@ def remove_model(model_id: str) -> None:
         root = _model_cache_root(model_id)
     except Exception:
         logger.exception(
-            'Failed to resolve Moonshine cache path; skipping delete',
+            'Failed to resolve Moonshine cache path; skipping delete {extra}',
             extra={'model_id': model_id},
         )
         return
     shutil.rmtree(root, ignore_errors=True)
-    logger.info('Deleted Moonshine model cache', extra={'model_id': model_id})
+    logger.info('Deleted Moonshine model cache {extra}', extra={'model_id': model_id})

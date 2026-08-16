@@ -143,7 +143,7 @@ class PiperTTSService(TTSService):
         model_path = _voice_path(voice_id)
         if not model_path.exists():
             logger.warning(
-                'Requested Piper voice not downloaded yet; keeping current',
+                'Requested Piper voice not downloaded yet; keeping current {extra}',
                 extra={
                     'requested_voice_id': voice_id,
                     'loaded_voice_id': self._loaded_voice_id,
@@ -161,7 +161,7 @@ class PiperTTSService(TTSService):
             )
         except Exception:
             logger.exception(
-                'Failed to load Piper voice',
+                'Failed to load Piper voice {extra}',
                 extra={'voice_id': voice_id, 'path': str(model_path)},
             )
             return
@@ -175,7 +175,7 @@ class PiperTTSService(TTSService):
             language=self.LANGUAGE_CODE,
         )
         logger.info(
-            'Loaded Piper voice',
+            'Loaded Piper voice {extra}',
             extra={'voice_id': voice_id},
         )
 
@@ -195,7 +195,7 @@ class PiperTTSService(TTSService):
                 return False
 
             logger.info(
-                'Unloading Piper voice',
+                'Unloading Piper voice {extra}',
                 extra={'voice_id': self._loaded_voice_id},
             )
             self._client = None
@@ -261,7 +261,7 @@ class PiperTTSService(TTSService):
                     # core process has fetched the model.
                     logger.warning(
                         'Piper selected but no voice downloaded yet; '
-                        'skipping synthesis',
+                        'skipping synthesis {extra}',
                         extra={'requested_voice_id': self._requested_voice_id},
                     )
                     yield TTSStoppedFrame()

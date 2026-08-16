@@ -153,13 +153,13 @@ class UboSTTService(UboSwitchService[STTService], STTService):
         try:
             service = service_factory()
             if service is not None:
-                logger.info('STT initialized successfully',
+                logger.info('STT initialized successfully {extra}',
                         extra={'service_name': service_name})
             else:
-                logger.info('STT not initialized',
+                logger.info('STT not initialized {extra}',
                         extra={'service_name': service_name})
         except Exception:
-            logger.exception('Error while initializing STT',
+            logger.exception('Error while initializing STT {extra}',
                         extra={'service_name': service_name})
             return None
         else:

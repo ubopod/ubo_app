@@ -211,7 +211,7 @@ class MoonshineSTTProxy(STTService):
             )
         except Exception:
             logger.exception(
-                'Failed to build Moonshine model',
+                'Failed to build Moonshine model {extra}',
                 extra={'model_id': model_id},
             )
             return None

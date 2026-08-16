@@ -92,7 +92,7 @@ class SystemPromptWatcher:
         if (custom, is_default_enabled) == (self._custom, self._is_default_enabled):
             return
         logger.info(
-            'System prompt selection updated',
+            'System prompt selection updated {extra}',
             extra={
                 'custom_length': len(custom),
                 'is_default_enabled': is_default_enabled,

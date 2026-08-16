@@ -88,7 +88,7 @@ class PolicyWatcher:
         if new_context == self._context:
             return
         logger.info(
-            'Assistant policy updated',
+            'Assistant policy updated {extra}',
             extra={
                 'silence_timeout_seconds': new_context.silence_timeout_seconds,
                 'end_of_turn_phrases': new_context.end_of_turn_phrases,

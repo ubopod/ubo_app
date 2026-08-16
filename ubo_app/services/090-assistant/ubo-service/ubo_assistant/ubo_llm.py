@@ -435,7 +435,7 @@ class UboLLMService(UboLLMSwitchService):
 
         if is_active and current_id is not None:
             logger.info(
-                'Selected model changed for active provider; refreshing',
+                'Selected model changed for active provider; refreshing {extra}',
                 extra={
                     'service_id': current_id,
                     'previous_model': previous,
@@ -474,7 +474,7 @@ class UboLLMService(UboLLMSwitchService):
             # Toggle applied to a non-active model; nothing to refresh now.
             return
         logger.info(
-            'Ollama thinking toggled; refreshing service',
+            'Ollama thinking toggled; refreshing service {extra}',
             extra={'model': payload.model, 'enabled': payload.enabled},
         )
         cast('ServiceSwitcher', self).create_task(self._refresh_ollama_service())
@@ -621,7 +621,7 @@ class UboLLMService(UboLLMSwitchService):
             )
         except Exception as exception:
             logger.exception(
-                'Error while initializing Google Vertex LLM',
+                'Error while initializing Google Vertex LLM {extra}',
                 extra={'exception': exception},
             )
             return None
@@ -810,7 +810,7 @@ class UboLLMService(UboLLMSwitchService):
             return
         await proxy.set_service(real_service)
         logger.info(
-            'Ollama service refreshed',
+            'Ollama service refreshed {extra}',
             extra={
                 'model': self._resolve_model('ollama'),
                 'has_service': real_service is not None,
@@ -831,7 +831,7 @@ class UboLLMService(UboLLMSwitchService):
             )
         except Exception:
             logger.exception(
-                'Error while initializing remote Ollama LLM',
+                'Error while initializing remote Ollama LLM {extra}',
                 extra={'url': self._config.ollama_onprem_url},
             )
             return None
@@ -851,7 +851,7 @@ class UboLLMService(UboLLMSwitchService):
             )
         except Exception:
             logger.exception(
-                'Error while initializing Generic LLM',
+                'Error while initializing Generic LLM {extra}',
                 extra={'url': self._config.generic_llm_base_url},
             )
             return None
@@ -918,7 +918,7 @@ class UboLLMService(UboLLMSwitchService):
         )
         if command is None:
             logger.warning(
-                'LLM asked for an unknown device command',
+                'LLM asked for an unknown device command {extra}',
                 extra={'command_id': command_id},
             )
             await params.result_callback(
@@ -927,7 +927,7 @@ class UboLLMService(UboLLMSwitchService):
             return
 
         logger.info(
-            'Running device command on behalf of the LLM',
+            'Running device command on behalf of the LLM {extra}',
             extra={'command_id': command_id, 'label': command.label},
         )
         self.client.dispatch(
@@ -954,7 +954,7 @@ class UboLLMService(UboLLMSwitchService):
                 now = datetime.now(ZoneInfo(timezone))
             except (ZoneInfoNotFoundError, ValueError):
                 logger.warning(
-                    'Unknown timezone in localization state',
+                    'Unknown timezone in localization state {extra}',
                     extra={'timezone': timezone},
                 )
                 now = datetime.now().astimezone()
@@ -1086,7 +1086,7 @@ class UboLLMService(UboLLMSwitchService):
             return
 
         logger.info(
-            'Setting device location on behalf of the LLM',
+            'Setting device location on behalf of the LLM {extra}',
             extra={'city': city, 'country': country, 'timezone': timezone},
         )
         self.client.dispatch(

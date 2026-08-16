@@ -228,7 +228,7 @@ class UboSwitchMixin(Generic[T]):
         """Start Ubo autoruns, then delegate routing to Pipecat."""
         if isinstance(frame, StartFrame):
             logger.info(
-                'Ubo native switcher received StartFrame',
+                'Ubo native switcher received StartFrame {extra}',
                 extra={'class_name': self.__class__.__name__},
             )
             self._start_frame = frame
@@ -318,7 +318,7 @@ class UboSwitchMixin(Generic[T]):
             self._location = data[0] if len(data) > 0 else None
             self._weather = data[1] if len(data) > 1 else None
             logger.debug(
-                'Localization state changed via autorun',
+                'Localization state changed via autorun {extra}',
                 extra={
                     'has_location': self._location is not None,
                     'has_weather': self._weather is not None,
@@ -376,7 +376,7 @@ class UboSwitchMixin(Generic[T]):
             ]
 
             logger.info(
-                'Device command catalog changed via autorun',
+                'Device command catalog changed via autorun {extra}',
                 extra={'command_count': len(device_commands)},
             )
 
@@ -416,7 +416,7 @@ class UboSwitchMixin(Generic[T]):
             }
 
             logger.info(
-                'MCP servers state changed via autorun',
+                'MCP servers state changed via autorun {extra}',
                 extra={
                     'enabled_count': len(enabled_servers_set),
                     'server_ids': list(enabled_servers_set),
@@ -493,7 +493,7 @@ class UboSwitchMixin(Generic[T]):
             device_commands=self._device_commands,
         )
         logger.info(
-            'Combined tools ready',
+            'Combined tools ready {extra}',
             extra={'tool_count': len(combined_tools.tools_schema.standard_tools)},
         )
         return combined_tools
@@ -559,7 +559,7 @@ class UboSwitchMixin(Generic[T]):
             self._mcp_clients = new_mcp_clients
             await self._close_mcp_clients(old_mcp_clients)
             logger.info(
-                'Updated LLM tools',
+                'Updated LLM tools {extra}',
                 extra={
                     'tools_supported': tools_supported,
                     'tool_count': tool_count,
@@ -571,7 +571,7 @@ class UboSwitchMixin(Generic[T]):
         target = self.service_map.get(id)
         if target is None:
             logger.warning(
-                'Selected service is not available',
+                'Selected service is not available {extra}',
                 extra={
                     'service_id': id,
                     'service_type': type(self).__name__,

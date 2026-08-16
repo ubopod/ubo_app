@@ -353,5 +353,5 @@ def main() -> None:
         assistant = Assistant()
         asyncio.get_event_loop().run_until_complete(assistant.run())
     except Exception as exception:
-        logger.info('An error occurred', extra={'exception': exception})
+        logger.info('An error occurred {extra}', extra={'exception': exception})
         raise

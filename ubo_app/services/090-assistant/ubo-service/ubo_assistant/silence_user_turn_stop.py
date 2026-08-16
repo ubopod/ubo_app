@@ -126,7 +126,8 @@ class UboPolicyAwareUserTurnStopStrategy(SpeechTimeoutUserTurnStopStrategy):
             and policy.silence_timeout_seconds > 0
         ):
             logger.info(
-                'Silence policy triggered; dispatching AssistantStopListeningAction',
+                'Silence policy triggered; dispatching '
+                'AssistantStopListeningAction {extra}',
                 extra={'silence_seconds': captured_timeout},
             )
             self._client.dispatch(

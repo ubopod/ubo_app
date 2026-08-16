@@ -532,7 +532,7 @@ async def _run_request(  # noqa: C901, PLR0912, PLR0915
                 )
             except TimeoutError:
                 logger.warning(
-                    'STT produced no output before flush timeout',
+                    'STT produced no output before flush timeout {extra}',
                     extra={'session_id': session_id},
                 )
             else:

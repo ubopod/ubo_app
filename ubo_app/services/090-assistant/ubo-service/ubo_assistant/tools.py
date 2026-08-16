@@ -238,8 +238,11 @@ async def create_combined_tools(
             combined_tools.extend(mcp_tools.standard_tools)
             mcp_clients.append(mcp_client)
             logger.info(
-                'Registered MCP gateway tools',
-                extra={'tool_count': len(mcp_tools.standard_tools)},
+                'Registered MCP gateway tools {extra}',
+                extra={
+                    'tool_count': len(mcp_tools.standard_tools),
+                    'tools': [tool.name for tool in mcp_tools.standard_tools],
+                },
             )
         except Exception:
             logger.exception('Failed to connect to MCP gateway')

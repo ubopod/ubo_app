@@ -476,7 +476,10 @@ async def build_stt_service(
             moonshine_model_id=moonshine_model_id,
         )
     except Exception:
-        logger.exception('Failed to build STT service', extra={'provider': provider_id})
+        logger.exception(
+            'Failed to build STT service {extra}',
+            extra={'provider': provider_id},
+        )
         return None
 
 
@@ -490,7 +493,10 @@ async def build_llm_service(
     try:
         return await _build_llm(provider_id, model, client)
     except Exception:
-        logger.exception('Failed to build LLM service', extra={'provider': provider_id})
+        logger.exception(
+            'Failed to build LLM service {extra}',
+            extra={'provider': provider_id},
+        )
         return None
 
 
@@ -512,5 +518,8 @@ async def build_tts_service(
             tts_voice_id=tts_voice_id,
         )
     except Exception:
-        logger.exception('Failed to build TTS service', extra={'provider': provider_id})
+        logger.exception(
+            'Failed to build TTS service {extra}',
+            extra={'provider': provider_id},
+        )
         return None

@@ -103,7 +103,7 @@ class VoskSTTService(STTService):
         path = _model_path(model_id)
         if not path.exists():
             logger.warning(
-                'Requested Vosk model not downloaded yet; keeping current',
+                'Requested Vosk model not downloaded yet; keeping current {extra}',
                 extra={
                     'requested_model_id': model_id,
                     'loaded_model_id': self._loaded_model_id,
@@ -119,7 +119,7 @@ class VoskSTTService(STTService):
             )
         except Exception:
             logger.exception(
-                'Failed to load Vosk model',
+                'Failed to load Vosk model {extra}',
                 extra={'model_id': model_id, 'path': str(path)},
             )
             return
@@ -131,7 +131,7 @@ class VoskSTTService(STTService):
             language=self.LANGUAGE_CODE,
         )
         logger.info(
-            'Loaded Vosk model',
+            'Loaded Vosk model {extra}',
             extra={'model_id': model_id},
         )
 

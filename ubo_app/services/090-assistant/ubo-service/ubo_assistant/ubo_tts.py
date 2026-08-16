@@ -238,13 +238,13 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         try:
             service = service_factory()
             if service is not None:
-                logger.info('TTS initialized successfully',
+                logger.info('TTS initialized successfully {extra}',
                         extra={'service_name': service_name})
             else:
-                logger.info('TTS not initialized',
+                logger.info('TTS not initialized {extra}',
                         extra={'service_name': service_name})
         except Exception:
-            logger.exception('Error while initializing TTS',
+            logger.exception('Error while initializing TTS {extra}',
                         extra={'service_name': service_name})
             return None
         else:
@@ -424,7 +424,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
         """
         if not (KOKORO_MODEL_PATH.exists() and KOKORO_VOICES_PATH.exists()):
             logger.info(
-                'Kokoro model not downloaded yet; leaving the slot silent',
+                'Kokoro model not downloaded yet; leaving the slot silent {extra}',
                 extra={'voice_id': self._kokoro_voice_id},
             )
             return None
@@ -452,7 +452,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
 
         await proxy.set_service(service)
         logger.info(
-            'Kokoro TTS service built on selection',
+            'Kokoro TTS service built on selection {extra}',
             extra={'voice_id': self._kokoro_voice_id},
         )
 
@@ -724,7 +724,7 @@ class UboTTSService(UboSwitchService[TTSService], TTSService):
             and service_id in self._API_KEY_PROVIDERS
         ):
             logger.info(
-                'Selected voice changed for active provider; refreshing',
+                'Selected voice changed for active provider; refreshing {extra}',
                 extra={'service_id': service_id, 'voice_id': payload.voice_id},
             )
             cast('ServiceSwitcher', self).create_task(

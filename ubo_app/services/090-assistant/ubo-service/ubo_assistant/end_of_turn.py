@@ -121,7 +121,7 @@ class EndOfTurnPhraseDetector(FrameProcessor):
             if phrase is not None:
                 logger.info(
                     'End-of-turn phrase matched; ending turn and dropping the '
-                    'phrase transcript so it is not sent to the LLM',
+                    'phrase transcript so it is not sent to the LLM {extra}',
                     extra={'phrase': phrase, 'text': frame.text},
                 )
                 await self._user_turn_stop_strategy.trigger_phrase_end_of_turn()
