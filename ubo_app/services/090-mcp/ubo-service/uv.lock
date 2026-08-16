@@ -1539,7 +1539,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=2.3.0" },
+    { name = "fastmcp", specifier = ">=3.4,<4" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "starlette", specifier = ">=0.40.0" },
     { name = "ubo-app-raw-bindings", editable = "../../../rpc" },
@@ -1556,7 +1556,7 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
-version = "1.7.1.dev260610103991024851"
+version = "2.0.1.dev260816103501014997"
 source = { editable = "../../../rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },

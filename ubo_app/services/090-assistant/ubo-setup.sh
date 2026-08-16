@@ -12,8 +12,10 @@ if [ -n "$WHEELS_DIRECTORY" ]; then
   ls -l "$WHEELS_DIRECTORY"
 fi
 
-PRE_FLAG=${PRE_FLAG:-""}
+# No --pre: the `==$TARGET_VERSION` pins below already opt these two internal
+# packages into pre-releases. A global --pre would also let third-party
+# transitive dependencies resolve to betas.
 TARGET_VERSION=${TARGET_VERSION:-""}
 ASSISTANT_SOURCE="ubo-app-assistant${TARGET_VERSION:+==$TARGET_VERSION}"
 BINDINGS_SOURCE="ubo-app-raw-bindings${TARGET_VERSION:+==$TARGET_VERSION}"
-pip install $PRE_FLAG${WHEELS_DIRECTORY:+ --find-links="$WHEELS_DIRECTORY"} --prefer-binary "$ASSISTANT_SOURCE" "$BINDINGS_SOURCE"
+pip install ${WHEELS_DIRECTORY:+--find-links="$WHEELS_DIRECTORY"} --prefer-binary "$ASSISTANT_SOURCE" "$BINDINGS_SOURCE"

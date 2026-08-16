@@ -15,7 +15,12 @@ readme = "README.md"
 requires-python = ">=3.11,<3.14"
 keywords = ['ubo', 'ubo-pod', 'ubo-service', 'mcp', 'gateway']
 dependencies = [
-  "fastmcp>=2.3.0",
+  # Upper bound is load-bearing: FastMCP 4.x changed the client handshake
+  # (it opens with `server/discover`), which older backends reject. In proxy
+  # mode that leaves the session uninitialized, so `list_tools` fails and the
+  # gateway aggregates *zero* tools instead of erroring. Do not relax without
+  # verifying `create_proxy` against a 3.x stdio backend.
+  "fastmcp>=3.4,<4",
   "uvicorn>=0.34.0",
   "starlette>=0.40.0",
   "loguru>=0.7.3",

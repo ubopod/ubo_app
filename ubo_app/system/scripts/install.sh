@@ -99,12 +99,12 @@ if [ -z "$TARGET_VERSION" ]; then
   fi
 fi
 
-# Enable --pre for dev versions so pip resolves internal packages correctly
-PRE_FLAG=""
-if [[ "$TARGET_VERSION" == *"dev"* ]]; then
-  PRE_FLAG="--pre"
-fi
-export PRE_FLAG
+# No --pre here on purpose. Every internal package below is installed with an
+# exact `==$TARGET_VERSION` pin, and pip already allows a pre-release when the
+# specifier names one explicitly -- so dev versions resolve without any flag.
+# A global --pre would additionally let *third-party* transitive dependencies
+# resolve to betas; that is how fastmcp 4.0.0b3 once reached the MCP gateway
+# and silently reduced it to zero tools.
 export TARGET_VERSION
 
 echo "----------------------------------------------"
@@ -206,7 +206,7 @@ setup_virtualenv
 SOURCE="ubo-app${TARGET_VERSION:+==$TARGET_VERSION}"
 BINDINGS_SOURCE="ubo-app-raw-bindings${TARGET_VERSION:+==$TARGET_VERSION}"
 echo "Installing ${SOURCE} and ${BINDINGS_SOURCE} in $VERSION_ENVIRONMENT..."
-$VERSION_ENVIRONMENT/bin/python -m pip install $PRE_FLAG${WHEELS_DIRECTORY:+ --find-links="$WHEELS_DIRECTORY"} "$SOURCE" "$BINDINGS_SOURCE" --force-reinstall | tee >(grep -c '^Collecting ' >"$INSTALLATION_PATH/.packages-count")
+$VERSION_ENVIRONMENT/bin/python -m pip install ${WHEELS_DIRECTORY:+--find-links="$WHEELS_DIRECTORY"} "$SOURCE" "$BINDINGS_SOURCE" --force-reinstall | tee >(grep -c '^Collecting ' >"$INSTALLATION_PATH/.packages-count")
 
 echo "${SOURCE} installed successfully in $VERSION_ENVIRONMENT."
 
@@ -216,7 +216,7 @@ GUI_SOURCE="ubo-gui-client${TARGET_VERSION:+==$TARGET_VERSION}"
 echo "Installing ${GUI_SOURCE} in $GUI_ENVIRONMENT..."
 rm -rf "$GUI_ENVIRONMENT"
 if virtualenv --system-site-packages "$GUI_ENVIRONMENT" && \
-   $GUI_ENVIRONMENT/bin/python -m pip install $PRE_FLAG${WHEELS_DIRECTORY:+ --find-links="$WHEELS_DIRECTORY"} "$GUI_SOURCE" "$BINDINGS_SOURCE" --force-reinstall; then
+   $GUI_ENVIRONMENT/bin/python -m pip install ${WHEELS_DIRECTORY:+--find-links="$WHEELS_DIRECTORY"} "$GUI_SOURCE" "$BINDINGS_SOURCE" --force-reinstall; then
   echo "ubo-gui-client installed successfully in $GUI_ENVIRONMENT."
 else
   echo "WARNING: Failed to install ubo-gui-client. GUI may not be available."
