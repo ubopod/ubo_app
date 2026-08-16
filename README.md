@@ -801,18 +801,24 @@ The project uses platform-specific dependencies with markers like `platform_mach
 
 ## 🗺️ Roadmap
 
-This is a tentative roadmap for future features. It is subject to change.
+Delivered items are checked off; the rest is tentative and subject to change.
 
-- Emulation for camera and microphone inside browser (requires SSL certificate for browser permissions)
-- Allow users to pick their soundcard for play and record via GUI (e.g. USB audio)
-- Allow users to pick their camera for video via GUI (e.g. USB camera)
-- Option to turn Ubo pod into a voice satellite with wyoming protocol with Home Assistant
-- Make all on-board sensors and infrared discoverable and accessible by Home Assistant
-- Expose `pipecat-ai` preset pipeline configuration via GUI
-- Support for Debian Trixie (13)
+- [ ] Emulation for camera and microphone inside browser (requires SSL certificate for browser permissions)
+- [ ] Allow users to pick their soundcard for play and record via GUI (e.g. USB audio) — *playback output selection shipped in 2.1; capture/record selection is still open*
+- [x] Allow users to pick their camera for video via GUI (e.g. USB camera) — *shipped in 2.0*
+- [x] Option to turn Ubo pod into a voice satellite with wyoming protocol with Home Assistant — *shipped in 2.1*
+- [x] Make all on-board sensors and infrared discoverable and accessible by Home Assistant — *shipped in 2.1*
+- [ ] Expose `pipecat-ai` preset pipeline configuration via GUI
+- [ ] Support for Debian Trixie (13)
 
 If you have any suggestions or feature requests, please open a discussion [here](https://github.com/ubopod/ubo_app/discussions).
 
 ## 🔒 License
 
 This project is released under the Apache-2.0 License. See the [LICENSE](./LICENSE) file for more details.
+
+That license covers the source in this repository. It does **not** cover the
+third-party software Ubo App depends on, bundles in the pre-packaged images, or
+downloads onto the device at your direction — each of those remains under its
+own license and copyright, including several copyleft ones. Consult the license
+shipped with each component for its terms.
