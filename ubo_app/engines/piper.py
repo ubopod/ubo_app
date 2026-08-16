@@ -9,7 +9,6 @@ from functools import reduce
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import aiostream
 from typing_extensions import override
 
 from ubo_app.colors import DANGER_COLOR, INFO_COLOR, SUCCESS_COLOR, WARNING_COLOR
@@ -44,6 +43,7 @@ from ubo_app.store.services.notifications import (
 )
 from ubo_app.utils.async_ import create_task
 from ubo_app.utils.download import download_file
+from ubo_app.utils.zip_latest import zip_latest
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -277,7 +277,7 @@ class PiperEngine(NeedsSetupMixin, AIProviderMixin):
             try:
                 onnx.parent.mkdir(parents=True, exist_ok=True)
 
-                async for download_report in aiostream.stream.ziplatest(
+                async for download_report in zip_latest(
                     download_file(
                         url=model_url_for(target_voice),
                         path=onnx,
