@@ -16,6 +16,35 @@ register its reducer and status-bar hook once the store is ready.
 See [`docs/architecture/UI_REDUX_ARCHITECTURE.md`](../../../docs/architecture/UI_REDUX_ARCHITECTURE.md)
 for the store/action/event model.
 
+## Supported sensors
+
+Fifteen sensor models, 35 entities between them. The first two are **on-board** (resolved from the
+HAT EEPROM, not the bus); the other thirteen are STEMMA QT / Qwiic parts the user plugs in and
+discovers with **Settings → Hardware → Sensors → Refresh**.
+
+| Sensor                      | Maker              | Address(es)            | Entities                                        |
+| --------------------------- | ------------------ | ---------------------- | ----------------------------------------------- |
+| PCT2075 Temperature ★       | NXP                | `0x48`–`0x4f`          | Temperature                                     |
+| VEML7700 Ambient Light ★    | Vishay             | `0x10`                 | Illuminance                                     |
+| AHT20 Temp/Humidity         | Aosong             | `0x38`                 | Temperature, Humidity                           |
+| BME280 Environment          | Bosch              | `0x76`, `0x77`         | Temperature, Humidity, Pressure                 |
+| BME680 Environment + Gas    | Bosch              | `0x76`, `0x77`         | Temperature, Humidity, Pressure, Gas Resistance |
+| BMP388 Pressure             | Bosch              | `0x76`, `0x77`         | Pressure, Temperature, Altitude                 |
+| SCD-40 CO₂                  | Sensirion          | `0x62`                 | CO₂, Temperature, Humidity                      |
+| SGP40 VOC                   | Sensirion          | `0x59`                 | VOC Index                                       |
+| ENS160 Air Quality          | ScioSense          | `0x53`, `0x52`         | eCO₂, TVOC, Air Quality Index, Data Validity    |
+| SHT4x Temp/Humidity         | Sensirion          | `0x44`                 | Temperature, Humidity                           |
+| BH1750 Ambient Light        | Rohm               | `0x23`, `0x5c`         | Illuminance                                     |
+| MCP9808 Temperature         | Microchip          | `0x18`–`0x1f`          | Temperature                                     |
+| PMSA003I Air Quality        | Plantower          | `0x12`                 | PM1.0, PM2.5, PM10                              |
+| VL53L1X Distance            | STMicroelectronics | `0x29`                 | Distance                                        |
+| APDS-9960 Proximity + Color | Avago              | `0x39`                 | Proximity, Red, Green, Blue, Clear              |
+
+★ on-board.
+
+This table is generated from [`registry.default.json`](registry.default.json), which is the source of
+truth — if you add a sensor, update it here too. See [Adding a sensor](#adding-a-sensor).
+
 ## Files
 
 | Path                    | Purpose                                                                          |

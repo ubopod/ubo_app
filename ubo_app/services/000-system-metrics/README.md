@@ -97,13 +97,15 @@ Related tests:
 
 | Test                                   | Tier        | What it covers                                                             |
 | -------------------------------------- | ----------- | ------------------------------------------------------------------------- |
+| `tests/store/test_system_metrics_reducer.py` | Unit  | The reducer: init zeroing, a full fast-field update, a missing temperature staying `None`, storage updates leaving the fast fields alone, and an unknown action returning the same state. |
 | `tests/store/test_view_computation.py` | Unit        | Confirms `cpu_percent`/`ram_percent` flow through to `HomeViewData` (seeds the `system` slice and asserts the computed view). |
 | `tests/integration/test_services.py`   | Integration | Asserts the `system` service registers and the store snapshot matches.     |
 
-> There is **no dedicated unit test** for the system-metrics reducer or the `read_metrics`
-> thresholding. Both are trivial to cover: feed `SystemMetricsUpdateAction` and assert the resulting
-> `SystemState`, or monkeypatch `psutil` + `store.dispatch` and assert the dead-band suppresses
-> sub-threshold changes. Adding `tests/store/test_system_metrics.py` is a good first contribution.
+> There is **no dedicated unit test** for the `read_metrics` thresholding in `setup.py` — the
+> dead-bands that suppress sub-threshold dispatches (`_METRICS_THRESHOLD`,
+> `_TEMPERATURE_THRESHOLD`, and the absolute/relative pair guarding network rates). It is trivial to
+> cover: monkeypatch `psutil` + `store.dispatch` and assert a sub-threshold change dispatches
+> nothing. That is a good first contribution if you touch this service.
 
 **Maintenance when you change this service:**
 
