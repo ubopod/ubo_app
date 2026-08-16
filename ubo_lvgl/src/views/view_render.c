@@ -1,13 +1,14 @@
 /**
  * @file view_render.c
  * Generic RenderViewData widgets. The core sends a `kind` (e.g. "text_viewer",
- * "status", "qr_code", "qr_code_carousel") plus a flat `props` map; this file
- * dispatches on `kind` and builds the matching LVGL widget tree — the analogue
- * of ubo_gui's GENERIC_RENDER_WIDGETS. Binary widgets (image_viewer,
+ * "status", "qr_code", "qr_code_carousel", "readings") plus a flat `props` map;
+ * this file dispatches on `kind` and builds the matching LVGL widget tree — the
+ * analogue of ubo_gui's GENERIC_RENDER_WIDGETS. Binary widgets (image_viewer,
  * frame_stream) fall through to a placeholder for now.
  */
 #include "ubo_views.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -250,6 +251,89 @@ static void build_qr_carousel(const ubo_render_view *v)
     carousel_render();
 }
 
+/* A label/value/unit table -- "Temperature      22.5 °C" -- the analogue of
+ * ubo_gui's ReadingsRenderPage. `labels`, `values` and `units` are parallel
+ * list props, so they arrive here newline-joined like the carousel's.
+ *
+ * The rows are rebuilt on every props update (1 Hz for a live sensor) rather
+ * than re-texted in place like the Kivy widget does: a handful of labels is
+ * cheap to rebuild, and the update path here already tears the content area
+ * down before calling us. */
+static void build_readings(const ubo_render_view *v)
+{
+    const char *labels = ubo_render_prop_get(v, "labels");
+    const char *values = ubo_render_prop_get(v, "values");
+    const char *units = ubo_render_prop_get(v, "units");
+    const int rows = count_lines(labels);
+
+    /* The band box, not the full-screen page: the header overlays the page, so
+     * a top-aligned list built into it loses its first row behind the title. */
+    lv_obj_t *c = ubo_screen_band_box();
+    lv_obj_set_style_pad_all(c, UBO_SCALE(6), 0);
+
+    if (rows == 0) {
+        const char *placeholder = ubo_render_prop_get(v, "placeholder");
+        lv_obj_t *l = lv_label_create(column(c));
+        lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
+        lv_obj_set_width(l, lv_pct(90));
+        lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_text_font(l, UBO_FONT_SM, 0);
+        lv_obj_set_style_text_color(l, UBO_COL_MUTED, 0);
+        lv_label_set_text(l, (placeholder && placeholder[0]) ? placeholder
+                                                            : "No readings yet");
+        return;
+    }
+
+    lv_obj_t *scroll = lv_obj_create(c);
+    lv_obj_remove_style_all(scroll);
+    lv_obj_set_size(scroll, lv_pct(100), lv_pct(100));
+    lv_obj_set_scroll_dir(scroll, LV_DIR_VER);
+    lv_obj_set_flex_flow(scroll, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_row(scroll, UBO_SCALE(3), 0);
+
+    for (int i = 0; i < rows; i++) {
+        char name[64];
+        char val[32];
+        char unit[16];
+        nth_line(labels, i, name, sizeof(name));
+        nth_line(values, i, val, sizeof(val));
+        nth_line(units, i, unit, sizeof(unit));
+
+        lv_obj_t *row = lv_obj_create(scroll);
+        lv_obj_remove_style_all(row);
+        lv_obj_set_width(row, lv_pct(100));
+        lv_obj_set_height(row, LV_SIZE_CONTENT);
+        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_BETWEEN,
+                              LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+        /* The name gets the larger share and the reading is right-aligned
+         * against the edge, so the numbers line up down the column. */
+        lv_obj_t *n = lv_label_create(row);
+        lv_label_set_long_mode(n, LV_LABEL_LONG_DOT);
+        lv_obj_set_width(n, lv_pct(55));
+        lv_obj_set_style_text_font(n, UBO_FONT_SM, 0);
+        lv_obj_set_style_text_color(n, UBO_COL_MUTED, 0);
+        lv_label_set_text(n, name);
+
+        lv_obj_t *r = lv_label_create(row);
+        lv_label_set_long_mode(r, LV_LABEL_LONG_DOT);
+        lv_obj_set_width(r, lv_pct(43));
+        lv_obj_set_style_text_align(r, LV_TEXT_ALIGN_RIGHT, 0);
+        lv_obj_set_style_text_font(r, UBO_FONT_SM, 0);
+        lv_obj_set_style_text_color(r, UBO_COL_FG, 0);
+        char reading[52];
+        snprintf(reading, sizeof(reading), "%s%s%s", val[0] ? val : "-",
+                 unit[0] ? " " : "", unit);
+        lv_label_set_text(r, reading);
+    }
+
+    /* More entities than fit the panel (a BME680 has five) scroll with UP/DOWN,
+     * reusing the text viewer's scroll path. */
+    s_rw_kind = RW_TEXT;
+    s_text_scroll = scroll;
+}
+
 /* image_viewer / frame_stream: a centred lv_image fed by ubo_render_update_frame
  * (one-shot for image_viewer, repeatedly for frame_stream). */
 static lv_image_dsc_t s_frame_dsc;
@@ -478,6 +562,8 @@ void ubo_build_render(const ubo_render_view *v)
                  ubo_render_prop_get(v, "caption"));
     } else if (strcmp(kind, "qr_code_carousel") == 0) {
         build_qr_carousel(v);
+    } else if (strcmp(kind, "readings") == 0) {
+        build_readings(v);
     } else if (strcmp(kind, "image_viewer") == 0) {
         build_frame_view(false);
     } else if (strcmp(kind, "frame_stream") == 0) {

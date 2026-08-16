@@ -105,6 +105,28 @@ def _unwrap_extra_data_value(value: object) -> object:
     return value
 
 
+def _accepted_kwargs(
+    widget_class: type,
+    kwargs: dict[str, object],
+) -> dict[str, object]:
+    """Drop props the widget has no property for.
+
+    Every other client reads props by name and ignores the rest, so the core is
+    free to add a prop for one client only — `readings` gained `keys` and
+    `device_classes` for the iOS/Android gauges. This client splats the whole
+    map into the constructor instead, and Kivy *raises* on an unknown kwarg
+    (`Properties [...] passed to __init__ may not be existing property names`),
+    which `_render_view`'s except-and-log turns into a page that silently never
+    opens. Filtering here makes this client behave like the others.
+
+    Kivy properties are class attributes, so `hasattr` on the class answers
+    "would this kwarg be accepted?" — inherited properties included.
+    """
+    return {
+        key: value for key, value in kwargs.items() if hasattr(widget_class, key)
+    }
+
+
 class ViewRenderer:
     """Renders the UI based on ViewData from gRPC state subscription.
 
@@ -743,10 +765,13 @@ class ViewRenderer:
             if props_obj is not None:
                 items_dict = getattr(props_obj, 'items', None)
                 if isinstance(items_dict, dict):
-                    kwargs = {
-                        k: _unwrap_extra_data_value(v)
-                        for k, v in items_dict.items()
-                    }
+                    kwargs = _accepted_kwargs(
+                        widget_class,
+                        {
+                            k: _unwrap_extra_data_value(v)
+                            for k, v in items_dict.items()
+                        },
+                    )
 
             # A props update for the stream already on screen is an update, not
             # a navigation: rebuilding the widget would replay the page-swap

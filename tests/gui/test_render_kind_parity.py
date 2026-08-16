@@ -5,7 +5,8 @@ an empty box — which is exactly how the sensor readings page looked on the web
 while the pod screen showed the table. Nothing else pins the registries
 together, so this reads the files rather than importing them: the Kivy widgets
 live in the GUI client's own package (and venv), the web client is TypeScript,
-and the TUI dispatches in an `if`/`elif` chain rather than a registry.
+the TUI dispatches in an `if`/`elif` chain rather than a registry, and the LVGL
+client is C.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ WEB_RENDER_VIEW = (
     / 'RenderView.tsx'
 )
 TUI_RENDER_VIEW = REPO_ROOT / 'ubo_app' / 'tui' / 'ubo_tui' / 'views' / 'render.py'
+LVGL_RENDER_VIEW = REPO_ROOT / 'ubo_lvgl' / 'src' / 'views' / 'view_render.c'
 
 
 def _kivy_render_kinds() -> set[str]:
@@ -68,6 +70,16 @@ def _tui_render_kinds() -> set[str]:
     return kinds
 
 
+def _lvgl_render_kinds() -> set[str]:
+    """Read the `strcmp(kind, "…") == 0` labels of the C dispatcher.
+
+    Like the TUI it has no registry, and unlike the TUI an unknown kind is not
+    even a silent blank: it draws the kind string itself as a placeholder, which
+    is how the sensor readings page read "readings" on the LVGL screen.
+    """
+    return set(re.findall(r'strcmp\(kind, "([^"]+)"\)', LVGL_RENDER_VIEW.read_text()))
+
+
 def test_the_web_client_renders_every_kind_the_kivy_client_does() -> None:
     """Otherwise the web UI silently draws an empty page for that kind."""
     assert _kivy_render_kinds() - _web_render_kinds() == set()
@@ -76,3 +88,8 @@ def test_the_web_client_renders_every_kind_the_kivy_client_does() -> None:
 def test_the_tui_client_renders_every_kind_the_kivy_client_does() -> None:
     """Otherwise the TUI falls through to "(no text content)" for that kind."""
     assert _kivy_render_kinds() - _tui_render_kinds() == set()
+
+
+def test_the_lvgl_client_renders_every_kind_the_kivy_client_does() -> None:
+    """Otherwise the LVGL screen shows the kind name as its own placeholder."""
+    assert _kivy_render_kinds() - _lvgl_render_kinds() == set()
