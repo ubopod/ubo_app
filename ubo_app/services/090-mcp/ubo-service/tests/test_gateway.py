@@ -173,6 +173,13 @@ class _FakeClient:
         return self._tools
 
 
+class _Tool:
+    """Minimal stand-in for a listed MCP tool."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
 def _server(client: _RecordingClient) -> GatewayServer:
     return GatewayServer(client=client, token='t', host='127.0.0.1', port=0)  # type: ignore[arg-type]  # noqa: S106
 
@@ -185,7 +192,12 @@ def test_probe_server_reports_checking_then_healthy(
     monkeypatch: object,
 ) -> None:
     """A backend that lists tools transitions CHECKING → HEALTHY."""
-    monkeypatch.setattr(server_module, 'Client', _FakeClient)  # type: ignore[attr-defined]
+    monkeypatch.setattr(server_module, 'create_proxy', lambda config: config)  # type: ignore[attr-defined]
+    monkeypatch.setattr(  # type: ignore[attr-defined]
+        server_module,
+        'Client',
+        lambda config: _FakeClient(config, tools=[_Tool('get_weather')]),
+    )
     recorder = _RecordingClient()
 
     asyncio.run(_server(recorder)._probe_server('a_1', {'command': 'echo'}))
@@ -196,10 +208,63 @@ def test_probe_server_reports_checking_then_healthy(
     ]
 
 
+def test_probe_server_probes_through_the_proxy(
+    monkeypatch: object,
+) -> None:
+    """The probe must go through ``create_proxy``, not straight to the backend.
+
+    A direct client tolerates handshake quirks that leave the proxy's provider
+    uninitialized, so probing the backend directly can report HEALTHY while the
+    gateway serves nothing.
+    """
+    seen: list[object] = []
+
+    def _create_proxy(config: object) -> object:
+        seen.append(config)
+        return config
+
+    monkeypatch.setattr(server_module, 'create_proxy', _create_proxy)  # type: ignore[attr-defined]
+    monkeypatch.setattr(  # type: ignore[attr-defined]
+        server_module,
+        'Client',
+        lambda config: _FakeClient(config, tools=[_Tool('t')]),
+    )
+    recorder = _RecordingClient()
+
+    asyncio.run(_server(recorder)._probe_server('a_1', {'command': 'echo'}))
+
+    assert seen == [
+        {'mcpServers': {'a_1': {'command': 'echo', 'keep_alive': False}}},
+    ]
+
+
+def test_probe_server_reports_failed_when_no_tools(
+    monkeypatch: object,
+) -> None:
+    """A backend contributing zero tools is FAILED, not HEALTHY.
+
+    ``create_proxy`` swallows per-provider ``list_tools`` errors and yields an
+    empty aggregate, which is invisible to the assistant.
+    """
+    monkeypatch.setattr(server_module, 'create_proxy', lambda config: config)  # type: ignore[attr-defined]
+    monkeypatch.setattr(server_module, 'Client', _FakeClient)  # type: ignore[attr-defined]
+    recorder = _RecordingClient()
+
+    asyncio.run(_server(recorder)._probe_server('a_1', {'command': 'echo'}))
+
+    assert _statuses(recorder) == [
+        McpServerStatus.CHECKING,
+        McpServerStatus.FAILED,
+    ]
+    message = recorder.actions[-1].mcp_set_server_status_action.message
+    assert 'no tools' in (message or '')
+
+
 def test_probe_server_reports_failed_with_message(
     monkeypatch: object,
 ) -> None:
     """A backend that fails to connect transitions CHECKING → FAILED (+ message)."""
+    monkeypatch.setattr(server_module, 'create_proxy', lambda config: config)  # type: ignore[attr-defined]
 
     def _factory(config: object) -> _FakeClient:
         return _FakeClient(config, raise_exc=RuntimeError('spawn failed'))

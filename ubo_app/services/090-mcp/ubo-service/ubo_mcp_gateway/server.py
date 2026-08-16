@@ -160,11 +160,20 @@ class GatewayServer:
         )
 
     async def _probe_server(self, server_id: str, entry: dict[str, Any]) -> None:
-        """Probe one backend: connect and list its tools. Report the result.
+        """Probe one backend *through a proxy* and report the result.
 
-        Uses a throwaway single-backend ``Client`` so a failure (bad command,
-        unreachable URL, protocol error) is attributable to this server. A
-        successful ``list_tools`` — even with zero tools — counts as healthy.
+        The probe deliberately mirrors :func:`build_app`: it wraps the single
+        backend in ``create_proxy`` and lists tools through that, rather than
+        talking to the backend with a direct ``Client``. Those two paths do not
+        fail alike — a direct client tolerates handshake quirks that leave
+        ``ProxyProvider`` uninitialized — so a direct probe can report HEALTHY
+        while the gateway actually serves nothing. Probing the serving path
+        means HEALTHY implies "the LLM can really see these tools".
+
+        For the same reason an empty tool list counts as a failure: a backend
+        that contributes nothing to the aggregate is invisible to the assistant,
+        and ``create_proxy`` swallows per-provider ``list_tools`` errors rather
+        than raising them.
 
         ``keep_alive=False`` is forced for stdio backends: FastMCP defaults it to
         ``True`` (keeping the subprocess alive for reuse), which would leave the
@@ -178,9 +187,9 @@ class GatewayServer:
         try:
             async with (
                 asyncio.timeout(PROBE_TIMEOUT),
-                Client(probe_config) as client,
+                Client(create_proxy(probe_config)) as client,
             ):
-                await client.list_tools()
+                tools = await client.list_tools()
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001 - any failure ⇒ unhealthy
@@ -193,8 +202,29 @@ class GatewayServer:
                 McpServerStatus.FAILED,
                 str(exc) or exc.__class__.__name__,
             )
-        else:
-            self._report_status(server_id, McpServerStatus.HEALTHY)
+            return
+
+        if not tools:
+            logger.warning(
+                'MCP server exposes no tools through the gateway {extra}',
+                extra={'server_id': server_id},
+            )
+            self._report_status(
+                server_id,
+                McpServerStatus.FAILED,
+                'Server exposed no tools through the gateway proxy',
+            )
+            return
+
+        logger.info(
+            'MCP server probe succeeded {extra}',
+            extra={
+                'server_id': server_id,
+                'tool_count': len(tools),
+                'tools': [tool.name for tool in tools],
+            },
+        )
+        self._report_status(server_id, McpServerStatus.HEALTHY)
 
     async def _probe_all(self, config: dict[str, Any]) -> None:
         """Probe every enabled backend concurrently and report each result."""
