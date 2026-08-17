@@ -176,6 +176,16 @@ export function NotificationOverlay({
                     const label = item.label
                       ? stripColorMarkup(item.label)
                       : null;
+                    const iconSpan = parsedIcon ? (
+                      <span
+                        style={{
+                          fontFamily: "ArimoNerdFont",
+                          fontSize: 16,
+                        }}
+                      >
+                        {parsedIcon.icon}
+                      </span>
+                    ) : null;
                     return (
                       <Button
                         key={`${item.key || "action"}-${index}`}
@@ -204,20 +214,12 @@ export function NotificationOverlay({
                             outlineOffset: 2,
                           },
                         }}
-                        startIcon={
-                          parsedIcon ? (
-                            <span
-                              style={{
-                                fontFamily: "ArimoNerdFont",
-                                fontSize: 16,
-                              }}
-                            >
-                              {parsedIcon.icon}
-                            </span>
-                          ) : undefined
-                        }
+                        startIcon={label ? iconSpan : undefined}
                       >
-                        {label || parsedIcon?.icon || "?"}
+                        {/* Without a label the glyph becomes the body — it must
+                            still render in the icon font, otherwise it shows as
+                            a tofu box. */}
+                        {label || iconSpan || "?"}
                       </Button>
                     );
                   })}

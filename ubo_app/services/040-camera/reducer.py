@@ -78,6 +78,9 @@ def prompt_notification(description: QRCodeInputDescription) -> NotificationsAdd
             color='#ffffff',
             actions=[
                 NotificationDispatchItem(
+                    # A demand without a pattern only wants a snapshot (e.g.
+                    # the assistant's vision tool), not a code to scan.
+                    label='Scan QR code' if description.pattern else 'Take a photo',
                     store_action=CameraStartViewfinderAction(
                         pattern=description.pattern,
                     ),
