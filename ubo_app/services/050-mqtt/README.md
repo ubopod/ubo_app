@@ -227,6 +227,7 @@ silently become another's.
 | --- | --- | --- |
 | `notify` | `notify` | the raw message text |
 | `notify.rich` | none — automation-driven | `{"message": …, "title": …, "chime": …, "display_type": …, "blink": …, "color": …, "icon": …}` |
+| `speak` | a second `notify` | the raw message text, read aloud |
 | `chime` | `select` | the bare option, e.g. `done` |
 | `ring.brightness` | `number` (min 0, max 1, step 0.05) | a bare number, e.g. `0.55` |
 | `ring.off` | `button` | `payload_press` |
@@ -240,6 +241,13 @@ JSON `notify.rich` topic, published from an automation. Both share one rate-limi
 the same user-visible effect. Colour gets no entity because three channels need a `light`,
 whose `schema: json` payload is HA's own `state`/`brightness`/`color` shape rather than raw RGB — and
 a real light must report state back, which `RgbRingState` cannot: it holds only `is_busy`.
+
+`speak` reads its text aloud instead of showing it. It gets a **second `notify` entity** rather than a
+`text` one: `text` is stateful, and with no state topic to report back on it renders as `unknown`. The
+text goes to `SpeechSynthesisReadTextAction` — the same front door the screen reader and
+`010-localization` use — so the engine and voice are whichever the user selected, and "Prefer Local"
+is honoured. Nothing here pins an engine. Note that `ReadableInformation` substitutes `{{hostname}}`
+into the text, so an automation can have the pod say its own address.
 
 Guards, each defending something specific:
 
@@ -260,8 +268,12 @@ Guards, each defending something specific:
   remote caller cannot ask the pod to emit an arbitrary code.
 - **Bounded and rate-limited.** 4 KiB per payload, one chime a second, five notifications per ten
   seconds, one infrared send every half second — `090-infrared`'s send queue is unbounded and each
-  send shells out to `ir-ctl` behind a lock. Ring updates are *coalesced* rather than throttled — a
-  slider drag must end on the value the user released at, which plain throttling would drop.
+  send shells out to `ir-ctl` behind a lock. Speech gets its own budget: 512 characters and one
+  utterance every two seconds, because the assistant synthesizes up to three at once, so
+  back-to-back requests would *overlap audibly* rather than queue — and unlike a notification, a
+  spoken line occupies the speaker until it finishes and cannot be dismissed early. Ring updates are
+  *coalesced* rather than throttled — a slider drag must end on the value the user released at,
+  which plain throttling would drop.
 
 Turning control off retires the entities. The bridge filters **every** component carrying a
 `command_channel` out of the announce while control is off — once, centrally, so a contributor cannot
@@ -271,6 +283,112 @@ leaves the entity on the dashboard, because discovery is retained.
 
 Registering or unregistering a contributor also requests an announce, so stopping a service takes its
 entities with it.
+
+### Sending a notification or speech from Home Assistant
+
+Turn on **Settings → Network → MQTT → Home Assistant Control** on the pod first. Until then the
+session does not subscribe to `command/#` at all, the commandable entities are withheld from
+discovery, and `dispatch` refuses everything with `remote control is off` — a Home Assistant action
+that looks perfectly correct will simply do nothing.
+
+The pod appears as one device named after its pod id (`ubo-7k`, `ubo-a3`, … — two random characters
+seeded from the HAT serial). Home Assistant slugifies *device name + entity name* into the entity id,
+so the two `notify` entities below land at `notify.ubo_7k_notification` and `notify.ubo_7k_speak`.
+**Substitute your own pod's id** — check Developer Tools → States, or the device page, rather than
+copying `7k`.
+
+Both entities are `notify`, so both are driven with `notify.send_message`. Where they differ is what
+the pod does with the text: one puts it on the screen, the other says it out loud.
+
+#### Show a notification
+
+```yaml
+action: notify.send_message
+target:
+  entity_id: notify.ubo_7k_notification
+data:
+  message: The kettle boiled
+```
+
+The `notify` platform publishes the **raw message text** — no title, no JSON. That is a platform
+limitation, not a simplification on the pod's side: no `command_template` is declared because the
+discovery docs do not specify which variables such a template would receive, and a wrong guess yields
+an entity that silently never works. The pod always titles these "Home Assistant" and flashes them.
+
+#### Speak it instead
+
+```yaml
+action: notify.send_message
+target:
+  entity_id: notify.ubo_7k_speak
+data:
+  message: The garage door has been open for ten minutes
+```
+
+Read aloud with whichever TTS engine the pod is set to use — the same one the screen reader uses, and
+"Prefer Local" is honoured. Nothing in the payload selects an engine, deliberately.
+
+The pod substitutes `{{hostname}}` in the text with its own address, but **Home Assistant renders
+`message` as a Jinja template first**, so writing it plainly makes HA resolve it as an undefined
+variable and the pod never sees it. Escape it to get the literal through:
+
+```yaml
+data:
+  message: "I am {{ '{{hostname}}' }}"
+```
+
+Note this speaks **without** showing anything. To both show and say a line, fire both actions:
+
+```yaml
+- action: notify.send_message
+  target:
+    entity_id: notify.ubo_7k_notification
+  data:
+    message: Front door unlocked
+- action: notify.send_message
+  target:
+    entity_id: notify.ubo_7k_speak
+  data:
+    message: Front door unlocked
+```
+
+They have separate rate-limit budgets, so neither starves the other.
+
+#### A notification with a title, chime and colour
+
+`notify.send_message` carries a message and nothing else, so anything richer needs `mqtt.publish`
+against the `notify.rich` topic, which has no entity by design. This one addresses the pod by
+**serial**, not by entity: the serial is the HAT EEPROM value and falls back to the pod id only when
+there is no EEPROM, so do not assume it matches the entity ids above. Find it with the
+`mosquitto_sub` command at the end of this section — it is the middle segment of the
+`ubo/<serial>/availability` topic.
+
+```yaml
+action: mqtt.publish
+data:
+  topic: ubo/<serial>/command/notify.rich
+  payload: >-
+    {"title": "Laundry", "message": "The washing machine finished",
+     "chime": "done", "display_type": "sticky", "color": "#00aaff"}
+```
+
+Allowed fields are exactly `title`, `message`, `chime`, `display_type`, `blink`, `color` and `icon`;
+an unknown one is **refused, not ignored**, so a typo fails loudly instead of half-working.
+
+#### When nothing happens
+
+Refusals are logged on the pod with the reason, and never raise. The usual causes, in the order worth
+checking: Home Assistant Control is off; the payload is empty (`an empty notification` /
+`nothing to say`); two requests arrived too close together (`rate limited` — one chime a second, five
+notifications per ten seconds, one utterance every two seconds); or the message was `retain: true`,
+which is dropped outright and the retained slot cleared, because a retained command re-fires on every
+reconnect forever.
+
+To watch the traffic directly:
+
+```bash
+mosquitto_sub -h 127.0.0.1 -u ubo -P <password> -t 'ubo/#' -t 'homeassistant/#' -v
+```
 
 ### Contributed by other services
 

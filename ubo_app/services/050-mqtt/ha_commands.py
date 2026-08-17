@@ -32,6 +32,18 @@ _ENTITIES: tuple[tuple[str, dict[str, object]], ...] = (
         },
     ),
     (
+        'speak',
+        {
+            'platform': 'notify',
+            'name': 'Speak',
+            # A second `notify` entity rather than a `text` one: the platform
+            # publishes the raw message text, which is exactly what there is to
+            # say, and a `text` entity is stateful — with no state topic to
+            # report back on it renders as `unknown`. Same reason as `notify`
+            # for declaring no `command_template`.
+        },
+    ),
+    (
         'chime',
         {
             'platform': 'select',

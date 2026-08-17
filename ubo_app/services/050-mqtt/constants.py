@@ -24,6 +24,11 @@ MAX_NOTIFICATION_MESSAGE = 256
 MAX_NOTIFICATION_TITLE = 64
 MAX_NOTIFICATION_ICON = 16
 
+# An utterance bound, well under `MAX_COMMAND_PAYLOAD`. Roughly half a minute of
+# speech; the payload cap alone would let a caller occupy the speaker for
+# minutes, and unlike a notification there is no way to dismiss one early.
+MAX_SPEAK_TEXT = 512
+
 # Rate limits for inbound commands. One-shot side effects are capped outright;
 # ring updates are throttled instead, because the newest value is the one the
 # user means.
@@ -33,6 +38,10 @@ RING_COALESCE_INTERVAL = 0.1
 # Each send shells out to `ir-ctl` behind a lock, fed by an unbounded queue in
 # `090-infrared`, so this is what stops a button flooding it.
 IR_SEND_MIN_INTERVAL = 0.5
+# Speech is a one-shot side effect like a chime, but a far longer one. The
+# assistant subprocess caps synthesis concurrency at 3, so an unthrottled topic
+# produces *overlapping voices* rather than a queue.
+SPEAK_MIN_INTERVAL = 2.0
 
 # How long "Test Connection" waits before calling a broker unreachable.
 PROBE_TIMEOUT = 10

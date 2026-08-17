@@ -20,7 +20,13 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from tests.service_loader import load_service_modules
-from ubo_app.store.services import audio, infrared, notifications, rgb_ring
+from ubo_app.store.services import (
+    audio,
+    infrared,
+    notifications,
+    rgb_ring,
+    speech_synthesis,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -93,6 +99,72 @@ def test_a_long_message_is_truncated_not_refused(dispatched: list[Any]) -> None:
 
     (action,) = dispatched
     assert len(action.notification.content) == 256
+
+
+def test_speak_takes_the_raw_message_text(dispatched: list[Any]) -> None:
+    """Its own `notify` entity, so the payload is the text to say."""
+    assert _run('speak', b'The kettle boiled') is None
+
+    (action,) = dispatched
+    assert isinstance(action, speech_synthesis.SpeechSynthesisReadTextAction)
+    assert action.information.text == 'The kettle boiled'
+
+
+def test_speak_leaves_the_engine_unset(dispatched: list[Any]) -> None:
+    """Nothing here pins an engine, so the pod's selected TTS is used.
+
+    `engine` and `speech_rate` are deprecated no-ops on the action; setting
+    either would imply a choice this command deliberately does not make.
+    """
+    assert _run('speak', b'hello') is None
+
+    (action,) = dispatched
+    assert action.engine is None
+    assert action.speech_rate is None
+
+
+def test_speak_rejects_an_empty_payload(dispatched: list[Any]) -> None:
+    """There is nothing to synthesize, and silence would look like a failure."""
+    assert _run('speak', b'   ') == 'nothing to say'
+    assert dispatched == []
+
+
+def test_a_long_line_of_speech_is_truncated_not_refused(
+    dispatched: list[Any],
+) -> None:
+    """An over-long line is still worth saying the beginning of.
+
+    Same treatment as a notification message: truncation covers the range
+    between this cap and the 4 KiB payload cap.
+    """
+    assert _run('speak', b'x' * 1000) is None
+
+    (action,) = dispatched
+    assert len(action.information.text) == commands.MAX_SPEAK_TEXT
+
+
+def test_speech_is_rate_limited(dispatched: list[Any]) -> None:
+    """Utterances overlap rather than queue, so back-to-back requests are cut."""
+    assert _run('speak', b'first') is None
+    assert _run('speak', b'second') == 'rate limited'
+
+    assert len(dispatched) == 1
+
+
+def test_speech_does_not_share_the_notification_budget(
+    dispatched: list[Any],
+) -> None:
+    """Different costs, so different budgets.
+
+    A notification is glanced at; a spoken line occupies the speaker until it
+    finishes. Exhausting one must not silence the other.
+    """
+    for _ in range(5):
+        assert _run('notify', b'hello') is None
+    assert _run('notify', b'hello') == 'rate limited'
+
+    assert _run('speak', b'still speaking') is None
+    assert len(dispatched) == 6
 
 
 def test_chime_takes_the_bare_option_string(dispatched: list[Any]) -> None:

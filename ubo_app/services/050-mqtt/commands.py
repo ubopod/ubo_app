@@ -32,9 +32,11 @@ from constants import (
     MAX_NOTIFICATION_ICON,
     MAX_NOTIFICATION_MESSAGE,
     MAX_NOTIFICATION_TITLE,
+    MAX_SPEAK_TEXT,
     NOTIFY_RATE_BURST,
     NOTIFY_RATE_WINDOW,
     RING_COALESCE_INTERVAL,
+    SPEAK_MIN_INTERVAL,
 )
 from task_scope import TaskScope
 
@@ -52,6 +54,10 @@ from ubo_app.store.services.rgb_ring import (
     RgbRingBlankAction,
     RgbRingSetAllAction,
     RgbRingSetBrightnessAction,
+)
+from ubo_app.store.services.speech_synthesis import (
+    ReadableInformation,
+    SpeechSynthesisReadTextAction,
 )
 
 if TYPE_CHECKING:
@@ -196,6 +202,34 @@ def _parse_notify_rich(payload: str) -> UboAction:
     return NotificationsAddAction(notification=notification)
 
 
+def _parse_speak(payload: str) -> UboAction:
+    """Read text aloud through whichever TTS engine the pod is set to use.
+
+    Its own `notify` entity, so Home Assistant publishes the raw message text
+    here too — same reasoning as `_parse_notify`, and the same reason neither
+    declares a `command_template`.
+
+    Truncated rather than refused, matching how `_parse_notify` bounds its
+    message: an over-long line is still worth saying the beginning of.
+
+    `SpeechSynthesisReadTextAction` is the same front door the screen reader and
+    `010-localization` use, so the engine and voice are the ones the user
+    selected (and "Prefer Local" is honoured). Deliberately *not*
+    `AssistantSynthesizeAction`, which would pin an engine here.
+
+    `ReadableInformation` substitutes `{{hostname}}` into the text. That is
+    inherited template behaviour rather than a leak — the hostname is already
+    broadcast over mDNS — so it is left reachable and documented.
+    """
+    text = payload.strip()[:MAX_SPEAK_TEXT]
+    if not text:
+        msg = 'nothing to say'
+        raise CommandError(msg)
+    return SpeechSynthesisReadTextAction(
+        information=ReadableInformation(text=text),
+    )
+
+
 def _parse_chime(payload: str) -> UboAction:
     """Read the bare option string a `select` publishes, e.g. `done`."""
     name = payload.strip().lower()
@@ -312,6 +346,7 @@ COMMANDS: tuple[Command, ...] = (
         label='Notification (with options)',
         parse=_parse_notify_rich,
     ),
+    Command(name='speak', label='Speak', parse=_parse_speak),
 )
 
 _BY_NAME = {command.name: command for command in COMMANDS}
@@ -323,6 +358,7 @@ _recent_notifications: list[float] = []
 _last_chime = 0.0
 _last_ring = 0.0
 _last_ir_send = 0.0
+_last_speak = 0.0
 # The newest ring action seen inside the current interval, and the timer that
 # will flush it. See `_coalesce_ring`.
 _pending_ring: UboAction | None = None
@@ -415,6 +451,21 @@ def _allow_ir_send(now: float) -> bool:
     return True
 
 
+def _allow_speak(now: float) -> bool:
+    """Bound speech.
+
+    An utterance lasts seconds and the assistant synthesizes up to three at
+    once, so back-to-back requests overlap audibly rather than queueing. Its own
+    budget rather than the notification one: a notification is glanced at, a
+    spoken line occupies the speaker until it finishes.
+    """
+    global _last_speak  # noqa: PLW0603
+    if now - _last_speak < SPEAK_MIN_INTERVAL:
+        return False
+    _last_speak = now
+    return True
+
+
 def _is_allowed(name: str, now: float) -> bool:
     """Whether a one-shot command may run now. Ring updates are not one-shot."""
     if name == 'chime':
@@ -423,17 +474,20 @@ def _is_allowed(name: str, now: float) -> bool:
         return _allow_notification(now)
     if name == 'ir.send':
         return _allow_ir_send(now)
+    if name == 'speak':
+        return _allow_speak(now)
     return True
 
 
 def reset_rate_limits() -> None:
     """Forget every rate-limit window and drop any pending flush. For tests."""
-    global _last_chime, _last_ir_send, _last_ring  # noqa: PLW0603
+    global _last_chime, _last_ir_send, _last_ring, _last_speak  # noqa: PLW0603
     global _pending_ring, _ring_flush  # noqa: PLW0603
     _recent_notifications.clear()
     _last_chime = 0.0
     _last_ir_send = 0.0
     _last_ring = 0.0
+    _last_speak = 0.0
     _pending_ring = None
     if _ring_flush is not None and not _ring_flush.done():
         _ring_flush.cancel()

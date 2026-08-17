@@ -43,6 +43,21 @@ def test_the_notify_entity_declares_only_a_command_topic() -> None:
     }
 
 
+def test_the_speak_entity_is_a_second_notify() -> None:
+    """A `text` entity is stateful and would render as `unknown` with no state
+    topic; `notify` publishes the raw message text, which is what there is to
+    say. Distinct `unique_id`, so it coexists with the notification entity.
+    """  # noqa: D205
+    assert _rendered()['cmd_speak'] == {
+        'p': 'notify',
+        'unique_id': 'ubo_abc_cmd_speak',
+        'name': 'Speak',
+        'cmd_t': 'ubo/abc/command/speak',
+        'ret': False,
+        'qos': 0,
+    }
+
+
 def test_the_chime_entity_carries_its_options() -> None:
     """`options` is required for a select; without it there is nothing to pick."""
     chime = _rendered()['cmd_chime']
