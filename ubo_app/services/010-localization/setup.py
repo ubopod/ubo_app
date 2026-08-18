@@ -402,14 +402,23 @@ def _now(timezone: str | None) -> datetime:
     return datetime.now().astimezone()
 
 
-@store.with_state(lambda state: state.localization)
-def _publish_clock(localization: LocalizationState) -> None:
+@store.with_state(lambda state: getattr(state, 'localization', None))
+def _publish_clock(localization: LocalizationState | None) -> None:
     """Dispatch the wall clock at the device's location, if it moved.
 
     Both strings are minute-resolution, so the tick is far finer than the
     updates: the store only sees one dispatch a minute, and none at all while
     the values are unchanged.
     """
+    if localization is None:
+        # `init_service` publishes once synchronously, and the reducer barrier
+        # in `service_thread._wait_for_reducers` normally guarantees this slice
+        # exists by then — but that barrier gives up on timeout and lets setup
+        # run anyway. Raising here would kill the setup task and leave the
+        # device with no clock at all; the `_monitor_clock` tick republishes
+        # shortly after, once registration has landed.
+        return
+
     timezone = localization.location.timezone if localization.location else None
     now = _now(timezone)
     clock = now.strftime('%H:%M')
