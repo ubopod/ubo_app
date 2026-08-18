@@ -325,6 +325,12 @@ class UboServiceThread(threading.Thread):
         super().start()
 
     def stop(self) -> None:
+        # `loop` is only bound once `run` reaches its first line on the new
+        # thread, so a service that was registered but never started — or that
+        # died before then — has none. `stop_services` walks every service in
+        # one loop, so raising here would strand all the ones after it.
+        if not hasattr(self, 'loop'):
+            return
         self.loop.call_soon_threadsafe(self.loop.create_task, self.shutdown())
 
     def run(self) -> None:  # noqa: C901, PLR0915
