@@ -193,6 +193,34 @@ def _connection_fingerprint(
     return {(c.ssid, c.state.value) for c in connections}
 
 
+def _deduplicate_by_ssid(
+    connections: Sequence[WiFiConnection],
+) -> list[WiFiConnection]:
+    """Collapse connections sharing an SSID down to one entry each.
+
+    NetworkManager readily reports several profiles under one SSID — band-split
+    access points, or duplicate saved profiles. Every action ID below is keyed
+    by SSID alone, so registering per raw connection raises ``ValueError`` on
+    the duplicate and takes the whole ``update_wifi_dynamic_menu`` autorun with
+    it, freezing the WiFi menu.
+
+    The liveliest profile wins, so a duplicate that is merely saved can't mask
+    the one actually carrying the connection.
+    """
+    ranking = {
+        ConnectionState.CONNECTED: 0,
+        ConnectionState.CONNECTING: 1,
+        ConnectionState.DISCONNECTED: 2,
+        ConnectionState.UNKNOWN: 3,
+    }
+    best: dict[str, WiFiConnection] = {}
+    for connection in connections:
+        incumbent = best.get(connection.ssid)
+        if incumbent is None or ranking[connection.state] < ranking[incumbent.state]:
+            best[connection.ssid] = connection
+    return list(best.values())
+
+
 def _register_wifi_action_handlers(
     connections: Sequence[WiFiConnection] | None,
 ) -> None:
@@ -218,7 +246,7 @@ def _register_wifi_action_handlers(
     if connections is None:
         return
 
-    for connection in connections:
+    for connection in _deduplicate_by_ssid(connections):
         ssid = connection.ssid
         state = connection.state.value
         register_action(f'wifi:open-connection:{ssid}', _make_open_handler(ssid, state))
