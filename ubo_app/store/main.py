@@ -97,6 +97,7 @@ if TYPE_CHECKING:
     from ubo_app.store.services.display import DisplayAction, DisplayEvent, DisplayState
     from ubo_app.store.services.docker import DockerAction, DockerState
     from ubo_app.store.services.file_system import FileSystemEvent
+    from ubo_app.store.services.file_upload import FileUploadAction, FileUploadEvent
     from ubo_app.store.services.infrared import (
         InfraredAction,
         InfraredEvent,
@@ -175,6 +176,7 @@ UboAction: TypeAlias = Union[
     'DisplayAction',
     'DockerAction',
     'FileSystemAction',
+    'FileUploadAction',
     'InfraredAction',
     'IpAction',
     'KeypadAction',
@@ -210,6 +212,7 @@ UboEvent: TypeAlias = Union[
     'ChatEvent',
     'DisplayEvent',
     'FileSystemEvent',
+    'FileUploadEvent',
     'InfraredEvent',
     'IpEvent',
     'KioskEvent',

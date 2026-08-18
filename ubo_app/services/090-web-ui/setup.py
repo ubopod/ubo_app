@@ -7,6 +7,7 @@ import re
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
+from uuid import uuid4
 
 from quart import Quart, Response, render_template, request, send_file
 from ubo_bindings.ubo.v1 import WebUiState as GRPCWebUIState
@@ -42,6 +43,11 @@ from ubo_app.store.services.docker import (
     DockerInstallAction,
     DockerStartAction,
     DockerStopAction,
+)
+from ubo_app.store.services.file_upload import (
+    FileUploadChunkAction,
+    FileUploadCompleteAction,
+    FileUploadStartAction,
 )
 from ubo_app.store.services.notifications import (
     Importance,
@@ -81,6 +87,11 @@ _CACHE_TTL = 5.0
 
 
 _DOCKER_COMMAND_TIMEOUT = 5.0
+
+# Browser uploads are re-chunked onto the same store path gRPC clients use, so
+# the file-system service sees one code path regardless of where the bytes came
+# from.
+UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 
 async def _run_docker_command(
@@ -350,47 +361,28 @@ async def init_service() -> Subscriptions:  # noqa: C901, PLR0915
                 if fs.filename:
                     data[f'{key}_name'] = fs.filename
                 if file_bytes:
-                    from uuid import uuid4
-
-                    from upload_handler import (  # pyright: ignore[reportMissingImports]
-                        handle_upload_chunk,
-                        handle_upload_complete,
-                        handle_upload_start,
-                    )
-
-                    from ubo_app.store.services.file_upload import (
-                        FileUploadChunkEvent,
-                        FileUploadCompleteEvent,
-                        FileUploadStartEvent,
-                    )
-
-                    chunk_size = 1024 * 1024
+                    chunk_size = UPLOAD_CHUNK_SIZE
                     upload_id = uuid4().hex
-                    total_chunks = (
-                        len(file_bytes) + chunk_size - 1
-                    ) // chunk_size
-                    handle_upload_start(
-                        FileUploadStartEvent(
+                    total_chunks = (len(file_bytes) + chunk_size - 1) // chunk_size
+                    store.dispatch(
+                        FileUploadStartAction(
                             upload_id=upload_id,
                             filename=fs.filename or key,
                             total_size=len(file_bytes),
                             total_chunks=total_chunks,
                             chunk_size=chunk_size,
                         ),
-                    )
-                    for i in range(total_chunks):
-                        chunk = file_bytes[
-                            i * chunk_size : (i + 1) * chunk_size
-                        ]
-                        handle_upload_chunk(
-                            FileUploadChunkEvent(
+                        *[
+                            FileUploadChunkAction(
                                 upload_id=upload_id,
                                 chunk_index=i,
-                                data=chunk,
-                            ),
-                        )
-                    handle_upload_complete(
-                        FileUploadCompleteEvent(upload_id=upload_id),
+                                data=file_bytes[
+                                    i * chunk_size : (i + 1) * chunk_size
+                                ],
+                            )
+                            for i in range(total_chunks)
+                        ],
+                        FileUploadCompleteAction(upload_id=upload_id),
                     )
                     data[f'{key}_upload_id'] = upload_id
 
