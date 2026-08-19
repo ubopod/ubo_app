@@ -1532,6 +1532,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pathvalidate"
+version = "3.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/2a/52a8da6fe965dea6192eb716b357558e103aea0a1e9a8352ad575a8406ca/pathvalidate-3.3.1.tar.gz", hash = "sha256:b18c07212bfead624345bb8e1d6141cdcf15a39736994ea0b94035ad2b1ba177", size = 63262 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9a/70/875f4a23bfc4731703a5835487d0d2fb999031bd415e7d17c0ae615c18b7/pathvalidate-3.3.1-py3-none-any.whl", hash = "sha256:5263baab691f8e1af96092fa5137ee17df5bdfbd6cff1fcac4d6ef4bc2e1735f", size = 24305 },
+]
+
+[[package]]
 name = "phonemizer-fork"
 version = "3.3.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1674,18 +1683,19 @@ wheels = [
 
 [[package]]
 name = "piper-tts"
-version = "1.4.1"
+version = "1.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "onnxruntime" },
+    { name = "pathvalidate" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/2f/df92a56383bbfb7a3a35ff539ba4081932bef0daf920ec089ab7269e1493/piper_tts-1.4.1.tar.gz", hash = "sha256:bf0640db9fe512392f0cf570d445f76b3894b29fbab6f81be42b784fd8f0afe0", size = 4364811 }
+sdist = { url = "https://files.pythonhosted.org/packages/ab/52/21fd6898dbb5f24fb2b8cd6d454ef97304f47dc5c7e3349a8eebf46c9325/piper_tts-1.7.0.tar.gz", hash = "sha256:9d097cc1aa96817c840c0a9d33644ade65e99f9b88d695546cfdf23d0b6b7b8c", size = 24268274 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2b/1c/e9a6695e19aa5c80b3ac4f70dd432fe3dcf99519458ad149f73af5b0fa44/piper_tts-1.4.1-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:76467df3abe0a0dd8d53e4e7d769ceb1669796e7188954182257be4cf79ddae0", size = 13822406 },
-    { url = "https://files.pythonhosted.org/packages/e4/56/633c64944a9ae13d5183989de1519e5eb30e5e6b668942d97ca03b04c53a/piper_tts-1.4.1-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:a99d93a2eb2805aa7059996069f8448c86ce7704200ec0bf9f9099f035494dc7", size = 13830418 },
-    { url = "https://files.pythonhosted.org/packages/df/95/c4c4163cf0f636eec0ccb3adc63c70fb74334ff28e41e176f0ca0415496e/piper_tts-1.4.1-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:3dbc990b4e28c680a44e26dc7a880b3e1068e06ffc1deecc8690929895ffb005", size = 13841987 },
-    { url = "https://files.pythonhosted.org/packages/39/42/b44ae16ef80d86173518aafe2a493a826b46f9fe4fba1b82cd575117d5ac/piper_tts-1.4.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5aa533364c15248d2932bcc362eb0740de7cd28dc34233de8df2ee3c6f2adf00", size = 13841873 },
-    { url = "https://files.pythonhosted.org/packages/5c/d9/bc628449230681cf49af5e289974a076b22e98ecd017108ef0e679be4e00/piper_tts-1.4.1-cp39-abi3-win_amd64.whl", hash = "sha256:058c025f2a929180d034ed8c333f6b9dd286178703be2133efbafba7f4db13ff", size = 13831941 },
+    { url = "https://files.pythonhosted.org/packages/5b/72/fae4e71199c68e7c402cc063c069458671a7057c1477b04934bec8578339/piper_tts-1.7.0-cp39-abi3-macosx_10_9_x86_64.whl", hash = "sha256:68f8e052fe09b4532edd2e2b32de7080c20e477cb8c31118043922023dbbe377", size = 34106243 },
+    { url = "https://files.pythonhosted.org/packages/0b/31/64d0053a4ba24d0435671560d6cfe4636ecf174fc611aa28eaed0116571e/piper_tts-1.7.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:b01504ae404631005a88d72d2a5792adff29ccea6c84f20601f7fefcfc5574de", size = 34114202 },
+    { url = "https://files.pythonhosted.org/packages/89/e1/5cbbd7e9de2a9f6004ff0fdd2637a07614251148fa29ec410ff1b7cff8fb/piper_tts-1.7.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b43b2d299556bd6e87bcb6932fe853f8f89d65d7ad85cc372c89777ad2035d8f", size = 34126221 },
+    { url = "https://files.pythonhosted.org/packages/a4/29/9123b168249b8a37be150847a3853ea000d22895265e384f754ace50bb1a/piper_tts-1.7.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:72adc623b977bdbbdf3d6f6bf88d66eda7cfe2ee8e7919a74a5952acb77a339e", size = 34125913 },
+    { url = "https://files.pythonhosted.org/packages/76/e1/58fe12897ce3885060447a14078d2c6abe099f9b87dd05291c40b98a43a5/piper_tts-1.7.0-cp39-abi3-win_amd64.whl", hash = "sha256:a2af3dae98e1835a3b1da37e4aa290e6adf41165c7d768e1ce73d9246f867d2c", size = 34114093 },
 ]
 
 [[package]]
@@ -2640,12 +2650,12 @@ dev = [
 requires-dist = [
     { name = "pipecat-ai", extras = ["anthropic", "assemblyai", "cerebras", "deepgram", "elevenlabs", "fal", "google", "grok", "kokoro", "mcp", "mistral", "moonshine", "openai", "rime", "silero"], specifier = "==1.4.0" },
     { name = "pipecat-ai-whisker", specifier = "==2.0.0" },
-    { name = "piper-tts", specifier = "==1.4.1" },
-    { name = "platformdirs", specifier = ">=4.3.8" },
-    { name = "python-fake", specifier = ">=0.2.0" },
+    { name = "piper-tts", specifier = "==1.7.0" },
+    { name = "platformdirs", specifier = "==4.3.8" },
+    { name = "python-fake", specifier = "==0.2.0" },
     { name = "ubo-app-raw-bindings", editable = "../../../rpc" },
     { name = "vosk", specifier = "==0.3.44" },
-    { name = "websockets", specifier = ">=13.1" },
+    { name = "websockets", specifier = "==13.1" },
 ]
 
 [package.metadata.requires-dev]
@@ -2660,7 +2670,7 @@ dev = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
-version = "2.0.1.dev260712103484953551"
+version = "2.0.1.dev260816103501014997"
 source = { editable = "../../../rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },

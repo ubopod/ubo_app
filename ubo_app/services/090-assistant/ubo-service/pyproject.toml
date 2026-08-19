@@ -17,15 +17,15 @@ keywords = ['ubo', 'ubo-pod', 'ubo-service', 'pipecat', 'assistant']
 dependencies = [
   "pipecat-ai[google,openai,grok,fal,silero,elevenlabs,mcp,deepgram,cerebras,assemblyai,rime,anthropic,mistral,kokoro,moonshine]==1.4.0",
   "pipecat-ai-whisker==2.0.0",
-  "platformdirs>=4.3.8",
-  "python-fake>=0.2.0",
-  "ubo-app-raw-bindings",
+  "platformdirs==4.3.8",
+  "python-fake==0.2.0",
+  "ubo-app-raw-bindings==2.1.0",
   "vosk==0.3.44",
   # Imported directly by error_notification to classify websocket close codes;
   # otherwise only a transitive dependency of pipecat-ai.
-  "websockets>=13.1",
+  "websockets==13.1",
   # RPi dependencies
-  "piper-tts==1.4.1",
+  "piper-tts==1.7.0",
 ]
 
 [tool.uv]
