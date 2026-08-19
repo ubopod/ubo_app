@@ -23,6 +23,12 @@
 - [🤝 Contributing](#🤝-contributing)
   - [ℹ️️ Conventions](#ℹ️️-conventions)
   - [Development](#development)
+- [🐞 Debugging](#🐞-debugging)
+  - [Process model](#process-model)
+  - [Starting and stopping services](#starting-and-stopping-services)
+  - [Logs](#logs)
+  - [Running from the command line](#running-from-the-command-line)
+  - [Environment variables](#environment-variables)
 - [🛠️ Hardware](#🛠️-hardware)
   - [Emulation](#emulation)
   - [Ubo Pod](#ubo-pod)
@@ -691,27 +697,232 @@ suffer field-tag drift — but a new action needs a matching branch in each clie
 hand-written action mapping. Kotlin catches a missing branch at compile time; Swift does
 not, and a missing case dispatches silently as a no-op.*
 
+## 🐞 Debugging
+
+This section covers the running system: which process is which, how to stop and
+start it, where it writes its logs, and which environment variables to reach for
+when something misbehaves.
+
+### Process model
+
+Understanding the processes makes the system much easier to debug and
+troubleshoot.
+
+| Component | Process | Listens on | Logs to |
+| --- | --- | --- | --- |
+| Supervisor | `ubo` (`ubo_app/main.py`) | — | journal |
+| **Core** — Redux store, all services, web UI, gRPC | `ubo-core` (`ubo_app/main_headless.py`) | gRPC `127.0.0.1:50051`, tcp-lite `0.0.0.0:50054`, web UI `0.0.0.0:4321` | `/opt/ubo/ubo-app.log` |
+| Kivy GUI client | `ubo-gui-client` (own venv, `/opt/ubo/gui-client/`) | dials `50051` | journal (stderr) |
+| Assistant | `bin/ubo-assistant` (own venv) | — | `/opt/ubo/ubo-assistant.log` |
+| MCP gateway | `bin/ubo-mcp-gateway` (own venv) | `0.0.0.0:4322` | `/opt/ubo/ubo-mcp-gateway.log` |
+| System manager | `ubo-system` (**root**) | unix socket `/run/ubo/system_manager.sock` | `/opt/ubo/system-manager.log` |
+| Envoy (only with gRPC Access on) | Docker container | `50052` gRPC-web, `50053` native proxy | `docker logs` |
+
+Three consequences worth internalizing:
+
+- **`ubo` is a supervisor, not the app.** It picks the GUI backend, spawns the
+  GUI client first (so the splash appears while the core boots), then spawns
+  `ubo-core`, and forwards signals to both.
+- **Services are threads, not processes.** Every service in
+  `ubo_app/services/` runs as a thread with its own asyncio loop inside the
+  core, so a service failure lands in `ubo-app.log` — there is no per-service
+  log file. The assistant and the MCP gateway are the two exceptions: each is
+  spawned as a real subprocess in its **own venv**, and each writes its own log.
+- **Clients are dumb renderers.** The GUI, web, TUI, LVGL, iOS, Android clients hold no
+  state; they render what the core streams them over gRPC and dispatch actions
+  back. See the [architecture section](#🏗️-architecture).
+
+### Starting and stopping services
+
+⚠️*Note: `ubo-app` is a **user** unit and `ubo-system` is a **system** unit.
+Forgetting `--user` (or adding it where it doesn't belong) is the most common
+first mistake.*
+
+```bash
+# The app itself — user unit, runs as the `ubo` user
+systemctl --user status ubo-app
+systemctl --user restart ubo-app
+systemctl --user stop ubo-app
+
+# The root system manager — system unit (run under pi user or other sudo users)
+sudo systemctl status ubo-system
+sudo systemctl restart ubo-system
+```
+
+If you are logged in over SSH as a different user than `ubo`, a user unit needs the `ubo`
+user's session bus:
+
+```bash
+sudo XDG_RUNTIME_DIR=/run/user/$(id -u ubo) -u ubo systemctl --user restart ubo-app
+```
+
+or 
+
+```bash
+sudo su ubo && systemctl --user restart ubo-app
+```
+
+The remaining units are installed but disabled — they are activated on demand,
+not run by hand:
+
+| Unit | Scope | Activated by |
+| --- | --- | --- |
+| `ubo-hotspot` | system (root) | `ubo-system`, when the hotspot is switched on |
+| `ubo-kiosk` | system (root) | the kiosk service; runs weston on tty2 |
+| `ubo-esp32-ppp` | system (root) | udev, when an ESP32 satellite is plugged in over USB |
+
+From your development machine, the deploy tasks wrap the same commands:
+
+```bash
+uv run poe device:deploy:restart # restart ubo-system and ubo-app
+uv run poe device:deploy:kill    # kill the app; systemd restarts it
+```
+
+### Logs
+
+Log files are written **relative to the process's working directory**, and the
+systemd units set that to the installation path. So on a device every log is in
+`/opt/ubo/`, while in a development checkout they land in the repo root.
+
+| File | Written by | Level variable | Rotation |
+| --- | --- | --- | --- |
+| `ubo-app.log` | core process and all service threads | `UBO_LOG_LEVEL` | 1 MB × 3 |
+| `system-manager.log` | `ubo-system` (root) | `UBO_LOG_LEVEL` | 1 MB × 3 |
+| `ubo-assistant.log` | assistant subprocess | `UBO_ASSISTANT_LOG_LEVEL` | 1 MB × 3 |
+| `ubo-mcp-gateway.log` | MCP gateway subprocess | `UBO_MCP_GATEWAY_LOG_LEVEL` | 1 MB × 3 |
+| `headless-kivy.log` | GUI client, only when `HEADLESS_KIVY_DEBUG=true` | — | none |
+
+```bash
+tail -f /opt/ubo/ubo-app.log
+```
+
+Three traps that cost real debugging time:
+
+- **Assistant errors are not in `ubo-app.log`.** The assistant is a separate
+  process with a separate log file *and* a separate level variable — raising
+  `UBO_LOG_LEVEL` does nothing for it. The same applies to the MCP gateway.
+- **The GUI client has no log file.** It logs to stderr, which systemd captures
+  into the user journal. Pass `-v` to the client for DEBUG output.
+- **An empty log file is not a symptom.** `ubo-gui.log` is only written if the
+  core loads the `ubo_gui` widget library, which the headless core normally does
+  not — so it stays empty, as does `headless-kivy.log` unless
+  `HEADLESS_KIVY_DEBUG=true`.
+
+Use `journalctl` — not `tail` — for anything that logs to stdout/stderr rather
+than a file:
+
+| What | Command |
+| --- | --- |
+| Supervisor, GUI/LVGL client output, crashes before logging is set up | `journalctl --user -u ubo-app -f` |
+| System manager stderr | `sudo journalctl -u ubo-system -f` |
+| Hotspot captive portal | `sudo journalctl -u ubo-hotspot -f` |
+| Kiosk (weston) | `sudo journalctl -u ubo-kiosk -f` |
+| ESP32 USB/PPP link | `sudo journalctl -u ubo-esp32-ppp -f` |
+
+### Running from the command line
+
+Running the app in the foreground gives you logs on stdout and a place to attach
+a debugger. In a development checkout:
+
+```bash
+UBO_LOG_LEVEL=DEBUG HEADLESS_KIVY_DEBUG=true uv run ubo
+```
+
+To run only the core and attach clients yourself — useful when debugging a
+client, or when you want the core without a display:
+
+```bash
+UBO_LOG_LEVEL=DEBUG uv run ubo-core
+```
+
+On a device, stop the service first; otherwise two instances fight over the
+display and other recources:
+
+```bash
+systemctl --user stop ubo-app
+UBO_LOG_LEVEL=DEBUG /opt/ubo/env/bin/ubo
+```
+
+⚠️*Note: `UBO_LOG_LEVEL=DEBUG` is genuinely usable — the HTTP/2 libraries behind
+gRPC (`hpack`, `hyperframe`, `grpclib`, `h2`) are pinned to `WARNING` on
+startup, so DEBUG doesn't drown in protocol frames. `VERBOSE` is also accepted,
+and is even more detailed than `DEBUG`.*
+
+To set variables persistently instead of prefixing every command, put them in
+`ubo_app/.env` (or `ubo_app/.dev.env`) — both are loaded at startup.
+
+### Environment variables
+
+The ones worth reaching for when something is broken; defaults in parentheses
+where relevant.
+
+**Log levels**
+
+| Variable | Effect |
+| --- | --- |
+| `UBO_LOG_LEVEL` (`INFO`) | Core and system manager. Accepts `VERBOSE`, `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+| `UBO_ASSISTANT_LOG_LEVEL` (`INFO`) | Assistant subprocess — independent of the above |
+| `UBO_MCP_GATEWAY_LOG_LEVEL` (`INFO`) | MCP gateway subprocess |
+| `UBO_GUI_LOG_LEVEL` (`INFO`) | The `ubo_gui` widget library inside the core |
+| `HEADLESS_KIVY_DEBUG` (unset) | Display-pipeline debug output from the GUI client |
+
+`UBO_ASSISTANT_LOG_PATH` and `UBO_MCP_GATEWAY_LOG_PATH` relocate those two log
+files if you want them somewhere other than the working directory.
+
+**Debug flags** (all default to `False`)
+
+| Variable | Effect |
+| --- | --- |
+| `UBO_DEBUG_TASKS` | Record a creation stack for every asyncio task, so task errors show where the task came from |
+| `UBO_DEBUG_SCHEDULER` | Detect store-scheduler freezes, time each callback, print a summary on shutdown |
+| `UBO_DEBUG_MENU` | Menu/navigation debugging |
+| `UBO_DEBUG_VISUAL` | Kivy visual debug overlay |
+| `UBO_DEBUG_PDB_SIGNAL` | Attach a debugger by sending a signal |
+| `UBO_DEBUG_DOCKER` | Verbose docker app behavior |
+| `UBO_WEB_UI_DEBUG_MODE` | Quart debug mode for the web UI |
+
+**Narrowing down the problem**
+
+| Variable | Effect |
+| --- | --- |
+| `UBO_DISABLED_SERVICES` | Comma-separated service ids to skip — the fastest way to bisect a misbehaving service |
+| `UBO_ENABLED_SERVICES` | Comma-separated allowlist; everything else is skipped |
+| `UBO_FORCE_HARDWARE` | Pretend the Ubo Pod HAT is present, for running on a machine without it |
+| `UBO_GUI_BACKEND` (`kivy`) | `kivy` or `lvgl` — which GUI client the supervisor spawns |
+| `UBO_LVGL_BACKEND` (`st7789`) | Display backend for the LVGL client; use `sdl` on a desktop |
+| `UBO_DISABLE_GRPC` | Start the core without the gRPC server |
+| `UBO_DISABLE_MCU_SERVER` | Start the core without the tcp-lite listener for ESP32 satellites |
+
+`ubo_app/constants/__init__.py` is the source of truth for every variable and
+its default — the table above is only the debugging-relevant subset.
+
+For problems specific to a subsystem, see
+[`ubo_app/services/090-mcp/README.md`](ubo_app/services/090-mcp/README.md) for
+the MCP gateway, and [`ubo_lvgl/README.md`](ubo_lvgl/README.md) plus
+[`ubo_lvgl/esp32/README.md`](ubo_lvgl/esp32/README.md) for the LVGL client and
+the ESP32 satellites.
+
 ## 🛠️ Hardware 
 
-This section presents different hardware or emulation options that you can use with Ubo app.
+This section presents different hardware or emulation options that you can use with Ubo App.
 
 ### Emulation
 
-To remove barriers to adoption as much as possible and allow developers use Ubo app without hardware depenencies, we are currently emulating the physical GUI in the browser. 
+To remove barriers to adoption as much as possible and allow developers to use Ubo App without hardware dependencies, we are currently emulating the physical GUI in the browser. 
 
-The audio playback is also streamed through the broswer. 
+The audio playback is also streamed through the browser. 
 
 We plan to emulate camera and microphone with WebRTC in the future.
 
-![Ubo Pod photo](https://raw.githubusercontent.com/ubopod/mediakit/main/images//gui_emulation.png)
+![Ubo Pod photo](https://raw.githubusercontent.com/ubopod/mediakit/main/images/gui_emulation.png)
 
-However, other specialized hardware components (sensors, infrared rx/tx, etc) cannot be emulated. 
+However, other specialized hardware components (sensors, infrared rx/tx, etc.) cannot be emulated. 
 
 ### Ubo Pod
 
 ![Ubo Pod photo](https://raw.githubusercontent.com/ubopod/mediakit/main/images/rotating-pod.gif)
 
-Ubo pod is an open hardware that includes the following additional hardware capabilities that is supported by Ubo app out of the box:
+Ubo Pod is open hardware that includes the following additional hardware capabilities, all supported by Ubo App out of the box:
 
 - A built-in minimal GUI (color LCD display and keypad)
 - Stereo microphone and speakers (2W)
