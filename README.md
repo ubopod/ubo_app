@@ -1,11 +1,13 @@
 # ☯️ Ubo App
 
 [![PyPI version](https://img.shields.io/pypi/v/ubo-app.svg)](https://pypi.python.org/pypi/ubo-app)
-[![License](https://img.shields.io/pypi/l/ubo-app.svg)](https://github.com/ubopod/ubo-app/LICENSE)
+[![License](https://img.shields.io/pypi/l/ubo-app.svg)](https://github.com/ubopod/ubo_app/blob/main/LICENSE)
 [![Python version](https://img.shields.io/pypi/pyversions/ubo-app.svg)](https://pypi.python.org/pypi/ubo-app)
-[![Actions status](https://github.com/ubopod/ubo-app/workflows/CI/CD/badge.svg)](https://github.com/ubopod/ubo-app/actions)
-[![codecov](https://codecov.io/gh/ubopod/ubo-app/graph/badge.svg?token=KUI1KRDDY0)](https://codecov.io/gh/ubopod/ubo-app)
+[![Actions status](https://github.com/ubopod/ubo_app/workflows/CI/CD/badge.svg)](https://github.com/ubopod/ubo_app/actions)
+[![codecov](https://codecov.io/gh/ubopod/ubo_app/graph/badge.svg?token=KUI1KRDDY0)](https://codecov.io/gh/ubopod/ubo_app)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ubopod/ubo_app)
+
+<a href="https://discord.com/invite/QSWH7tU8US"><img src="https://raw.githubusercontent.com/ubopod/mediakit/main/logo/join-discord.png" width="200" alt="Join us on Discord"></a>
 
 ## 📑 Table of Contents
 
