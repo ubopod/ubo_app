@@ -16,7 +16,9 @@ import betterproto
 import pytest
 from pipecat.frames.frames import (
     InputAudioRawFrame,
+    LLMFullResponseEndFrame,
     LLMRunFrame,
+    LLMTextFrame,
     TranscriptionFrame,
     TTSAudioRawFrame,
     TTSSpeakFrame,
@@ -437,3 +439,49 @@ async def test_collector_dispatch_error_is_terminal_and_idempotent() -> None:
     assert frame.error == 'boom'
     assert collector.first_output.is_set()
     assert collector.last_output.is_set()
+
+
+async def test_collector_llm_end_frame_without_text_leaves_stream_open() -> None:
+    """A failed completion's end frame must not swallow the provider error.
+
+    pipecat pushes ``LLMFullResponseEndFrame`` from a ``finally``, so a
+    completion that failed outright still ends with one — and it reaches the
+    collector (one hop downstream) before the ``push_error`` that travels
+    upstream to the task. Ending the stream on it would make the later
+    ``dispatch_error`` a silent no-op, surfacing a 402/401 as an empty string
+    with no error at all.
+    """
+    client = FakeUboRPCClient()
+    collector = _collector(client, AssistantPipelineStage.LLM)
+
+    await collector.process_frame(LLMFullResponseEndFrame(), _DOWN)
+
+    assert not collector.sent_last_frame
+    assert collector.output_count == 0
+
+    await collector.dispatch_error('Error during completion: 402 out of credit')
+    await _settle(collector)
+
+    frames = _report_frames(client)
+    assert len(frames) == 1
+    assert isinstance(frames[0], AssistanceErrorFrame)
+    assert '402' in frames[0].error
+
+
+async def test_collector_llm_end_frame_after_text_ends_the_stream() -> None:
+    """A successful completion still finishes on its end frame."""
+    client = FakeUboRPCClient()
+    collector = _collector(client, AssistantPipelineStage.LLM)
+
+    await collector.process_frame(LLMTextFrame(text='Paris'), _DOWN)
+    await collector.process_frame(LLMFullResponseEndFrame(), _DOWN)
+    await _settle(collector)
+
+    assert collector.sent_last_frame
+    assert collector.last_output.is_set()
+    texts = [
+        frame.text
+        for frame in _report_frames(client)
+        if isinstance(frame, AssistanceTextFrame)
+    ]
+    assert texts[0] == 'Paris'

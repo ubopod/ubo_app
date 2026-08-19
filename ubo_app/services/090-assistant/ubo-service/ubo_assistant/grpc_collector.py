@@ -336,7 +336,21 @@ class GRPCTerminalCollector(FrameProcessor):
         elif self._terminal_stage is AssistantPipelineStage.LLM:
             if isinstance(frame, LLMTextFrame):
                 self._dispatch_text(frame.text)
-            elif isinstance(frame, LLMFullResponseEndFrame):
+            # Only end the stream once text has actually flowed — the same
+            # guard the TTS branch below applies, and for a sharper reason.
+            # pipecat pushes ``LLMFullResponseEndFrame`` from a ``finally``
+            # (``openai/base_llm.py``), so a completion that failed outright
+            # (402 out of credit, 401, 429, unreachable host) still ends with
+            # one. Its ``push_error`` travels *upstream* to the task, while
+            # this frame travels one hop *downstream* to us — so the end frame
+            # wins the race, and marking the stream finished here would make
+            # ``dispatch_error`` a no-op when the real error finally lands AND
+            # suppress the request handler's "produced no output" backstop
+            # (which requires ``not sent_last_frame``). The provider failure
+            # then reaches the caller as an empty string with no error at all.
+            # With no text yet, leave the stream open: a real error frame still
+            # gets through, and a silent failure falls back to the timeout.
+            elif isinstance(frame, LLMFullResponseEndFrame) and self.output_count > 0:
                 await self.dispatch_last_frame()
         elif self._terminal_stage is AssistantPipelineStage.TTS:
             if isinstance(frame, TTSAudioRawFrame) and frame.audio:
