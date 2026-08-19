@@ -118,7 +118,8 @@ Be aware that at the moment, Ubo App sends crash reports to Sentry. Soon we will
     - VS Code tunnel
     - Raspberry Pi Connect
     - Tailscale
-- Kiosk-mode control on two optional monitors
+    - Pangolin/Twingate/Ngrok (under apps)
+- Kiosk-mode control on two optional HDMI monitors
 - Support for Home Assistant (HA) Wymoning and MQTT events
 - Install and run Dockerized apps headlessly
     - One-click install
@@ -133,15 +134,12 @@ Be aware that at the moment, Ubo App sends crash reports to Sentry. Soon we will
 - Natural language interactions for tool calling (voice AI)
 - Offline-online hybrid user-defined voice commands to bindable actions
 - Web UI
-- Infrared remote control (send/receive), including Web UI assignment of
-  registered IR keys to bindable actions
+- Infrared remote control (send/receive), including Web UI assignment of registered IR keys to bindable actions
 - gRPC API for remote control - find sample clients [here](https://github.com/ubopod/ubo-grpc-clients)
 - ESP32 satellites - companion boards
   ([Waveshare ESP32-C6-Touch-AMOLED-1.8](https://www.waveshare.com/esp32-c6-touch-amoled-1.8.htm),
   [Espressif ESP32-S3-BOX-3](https://github.com/espressif/esp-box)) that extend the pod
-  over WiFi or USB: the same GUI rendered natively in C/LVGL with touch navigation,
-  audio playback and capture, on-device WiFi setup via a captive portal, and — on the
-  ESP32-S3-BOX-3 — far-field microphones with an on-device wake word
+  over WiFi or USB: the same GUI rendered natively in C/LVGL with touch navigation, audio playback and capture, on-device WiFi setup via a captive portal, and more.
 - Native phone and watch clients for iOS, watchOS, Android and Wear OS (including an
   Android Glance widget) - experimental/beta, [build from source](#mobile-and-wearable-apps)
 
@@ -157,7 +155,7 @@ For features that require add-on hardware that is not natively supported by Rasp
 
 1. Purchase an [Ubo Pod Development Kit](https://shop.getubo.com/products/ubo-pro-4-and-5)
 2. DIY the hardware
-3. Use only a subset of hardware features by using phone/laptop/watch camera, microphone, speakers, sensors, etc. 
+3. Stream video/audio/sensor data from/to phone/laptop/watch/satellites (detached hardware). 
 
 For more details check out the [hardware section](#🛠️-hardware) below.
 
@@ -176,7 +174,7 @@ Ubo Pod ships with a pre-flashed MicroSD card that has the app installed on it b
 
 If you don't have it, or you just want to set up a fresh device, then:
 
-1. Download one of the images from the release section
+1. Download one of the images from the [release](https://github.com/ubopod/ubo_app/releases) section
 1. Use Raspberry Pi Imager and choose `custom image` to provide the downloaded image file.
 1. Write the image
 1. Use the image to boot your Ubo Pod or Raspberry Pi
@@ -189,7 +187,7 @@ To run the app on a bare Raspberry Pi, you can watch this short [demo video](htt
 
 ### Install on existing OS
 
-If you want to install the app on an existing operating system, then read on. Otherwise, skip this section.
+If you want to install the app on an existing Raspberry Pi OS (Bookworm / Debian 12 only supported right now), then read on. Otherwise, skip this section.
 
 ---
 
