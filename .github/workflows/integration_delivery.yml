@@ -113,8 +113,18 @@ jobs:
     steps:
       - name: System Dependencies
         if: matrix.runner == 'ubuntu-latest'
+        timeout-minutes: 10
         run: |
-          sudo apt-get update -y
+          # See the note on the `proto` job's System Dependencies step: the
+          # runner's default apt mirror can stall indefinitely mid-transfer.
+          sudo sed -i 's|azure\.archive\.ubuntu\.com|mirrors.edge.kernel.org|g' \
+            /etc/apt/apt-mirrors.txt || true
+          for attempt in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 \
+              -o Acquire::https::Timeout=15 update -y && break
+            echo "apt-get update failed (attempt ${attempt}); retrying"
+            sleep 5
+          done
           sudo apt-get install -y libegl1 libgl1 libmtdev1 libzbar0 libportaudio2 portaudio19-dev
 
       - name: Checkout
@@ -236,8 +246,23 @@ jobs:
           submodules: recursive
 
       - name: System Dependencies
+        timeout-minutes: 10
         run: |
-          sudo apt-get update -y
+          # `azure.archive.ubuntu.com` is first in the runner's apt mirrorlist
+          # and goes unhealthy periodically. apt then falls back to
+          # `archive.ubuntu.com`, which serves the small InRelease files fine but
+          # stalls mid-transfer on the large Packages indexes from Azure. Nothing
+          # bounds a stalled fetch by default, so on 2026-08-19 this hung jobs for
+          # the full 6h Actions limit. Prefer a CDN mirror, cap every fetch, and
+          # retry rather than waiting it out (the step timeout is the backstop).
+          sudo sed -i 's|azure\.archive\.ubuntu\.com|mirrors.edge.kernel.org|g' \
+            /etc/apt/apt-mirrors.txt || true
+          for attempt in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 \
+              -o Acquire::https::Timeout=15 update -y && break
+            echo "apt-get update failed (attempt ${attempt}); retrying"
+            sleep 5
+          done
           sudo apt-get install -y portaudio19-dev
 
       - name: Install uv
@@ -292,8 +317,23 @@ jobs:
         uses: actions/checkout@v4
 
       - name: System Dependencies
+        timeout-minutes: 10
         run: |
-          sudo apt-get update -y
+          # `azure.archive.ubuntu.com` is first in the runner's apt mirrorlist
+          # and goes unhealthy periodically. apt then falls back to
+          # `archive.ubuntu.com`, which serves the small InRelease files fine but
+          # stalls mid-transfer on the large Packages indexes from Azure. Nothing
+          # bounds a stalled fetch by default, so on 2026-08-19 this hung jobs for
+          # the full 6h Actions limit. Prefer a CDN mirror, cap every fetch, and
+          # retry rather than waiting it out (the step timeout is the backstop).
+          sudo sed -i 's|azure\.archive\.ubuntu\.com|mirrors.edge.kernel.org|g' \
+            /etc/apt/apt-mirrors.txt || true
+          for attempt in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 \
+              -o Acquire::https::Timeout=15 update -y && break
+            echo "apt-get update failed (attempt ${attempt}); retrying"
+            sleep 5
+          done
           sudo apt-get install -y portaudio19-dev
 
       - name: Install uv
@@ -339,8 +379,23 @@ jobs:
           lfs: true
 
       - name: System Dependencies
+        timeout-minutes: 10
         run: |
-          sudo apt-get update -y
+          # `azure.archive.ubuntu.com` is first in the runner's apt mirrorlist
+          # and goes unhealthy periodically. apt then falls back to
+          # `archive.ubuntu.com`, which serves the small InRelease files fine but
+          # stalls mid-transfer on the large Packages indexes from Azure. Nothing
+          # bounds a stalled fetch by default, so on 2026-08-19 this hung jobs for
+          # the full 6h Actions limit. Prefer a CDN mirror, cap every fetch, and
+          # retry rather than waiting it out (the step timeout is the backstop).
+          sudo sed -i 's|azure\.archive\.ubuntu\.com|mirrors.edge.kernel.org|g' \
+            /etc/apt/apt-mirrors.txt || true
+          for attempt in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 \
+              -o Acquire::https::Timeout=15 update -y && break
+            echo "apt-get update failed (attempt ${attempt}); retrying"
+            sleep 5
+          done
           sudo apt-get install -y portaudio19-dev
 
       - name: Install uv
@@ -418,8 +473,23 @@ jobs:
           lfs: true
 
       - name: System Dependencies
+        timeout-minutes: 10
         run: |
-          sudo apt-get update -y
+          # `azure.archive.ubuntu.com` is first in the runner's apt mirrorlist
+          # and goes unhealthy periodically. apt then falls back to
+          # `archive.ubuntu.com`, which serves the small InRelease files fine but
+          # stalls mid-transfer on the large Packages indexes from Azure. Nothing
+          # bounds a stalled fetch by default, so on 2026-08-19 this hung jobs for
+          # the full 6h Actions limit. Prefer a CDN mirror, cap every fetch, and
+          # retry rather than waiting it out (the step timeout is the backstop).
+          sudo sed -i 's|azure\.archive\.ubuntu\.com|mirrors.edge.kernel.org|g' \
+            /etc/apt/apt-mirrors.txt || true
+          for attempt in 1 2 3; do
+            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 \
+              -o Acquire::https::Timeout=15 update -y && break
+            echo "apt-get update failed (attempt ${attempt}); retrying"
+            sleep 5
+          done
           sudo apt-get install -y portaudio19-dev
 
       - name: Install uv
