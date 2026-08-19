@@ -88,6 +88,10 @@ Run these in order. Stop and fix on any failure — don't press on.
    - Convert any remaining direct deps from `>=`/bare to exact `==`, add/refresh
      the `# Transitive dependency pins (resolved from uv.lock)` block, and
      refresh the lock: `uv lock`.
+   - **Check `[project].classifiers`** still lists every supported Python
+     version. Shields' `pypi/pyversions` badge reads these trove classifiers,
+     **not** `requires-python` — an empty list renders the README badge as
+     `missing`, and PyPI metadata is immutable once the version is published.
 
    > **Why pinning unpublished versions is build-safe.** Pinning the ubo-owned
    > wheels to a version that isn't on PyPI yet does **not** break CI — there is
@@ -123,6 +127,18 @@ Run these in order. Stop and fix on any failure — don't press on.
       has the lite + default `.img.gz` images and the package wheels attached.
     - Release body shows the curated notes from `docs/releases/X.Y.Z.md` and the
       2GB-split footer.
+    - **README badges render correctly.** All three were broken before 2.1 and
+      are expected to fix themselves with this release:
+      - `python` shows `3.11` rather than `missing` — confirm the classifiers
+        actually shipped:
+        `curl -s https://pypi.org/pypi/ubo-app/json | python3 -c 'import sys,json;print(json.load(sys.stdin)["info"]["classifiers"])'`
+      - `codecov` shows a percentage rather than `unknown` — the badge URL must
+        use the `ubo_app` slug (underscore). GitHub 301-redirects the `ubo-app`
+        form, which is why the CI/CD badge masked this; Codecov does not follow
+        that redirect.
+      - The License badge link resolves — `LICENSE` reaches `main` only with
+        this release, so `https://github.com/ubopod/ubo_app/blob/main/LICENSE`
+        404s until the promotion in step 9.
 
 ## Post-release — re-open `development` for the next cycle
 
