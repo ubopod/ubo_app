@@ -34,58 +34,98 @@
 
 ## 🌟 Overview
 
-Ubo App is a Python application that provides a unified interface and tools for developing and running hardware-integrated apps. 
+Ubo App provides a unified and universal interface (across web, mobile, watch, embedded) and tools for developing and running agentic hardware-integrated experiences. 
 
-It offers a minimalistic, yet intuitive UI for end-users to install and interact with developer apps. It is optimized for Raspberry Pi (4 & 5) devices. 
 
-Hardware specific capabilities such as infrared send/receive, sensing, LED ring, etc. are supported by Ubo Pod hardware. It is also possible to DIY your own hardware, see the [hardware DIY section](#diy-path) below.
+It is optimized for Raspberry Pi (4 & 5, Zero for detached satellites) devices, but support for other SBCs, the Nvidia Jetson family, and x86 devices is under way.
 
-The pod is not the only surface. [**ESP32 satellites**](#esp32-satellites) are companion
-boards that extend a pod with an extra screen, audio and more, over WiFi or USB, and
-experimental [**phone and watch apps**](#mobile-and-wearable-apps) for iOS, watchOS,
-Android and Wear OS provide detached hardware remotely.
+![Ubo Pod photo](https://raw.githubusercontent.com/ubopod/mediakit/main/images/pod-and-satellites.jpg)
+
+We designed and manufactured Ubo Pod (open source developer kit edition) to give developers all necessary hardware peripherals for supporting various interaction modes and sensory, context-aware UX.
+
+These capabilities include built-in display/GUI, dual mics/speakers, infrared send/receive, light and temperature sensors, addressable RGB LED ring, sensor connector, etc. 
+
+The pod is not the only surface. [**ESP32 satellites**](#esp32-satellites) are companion boards that extend a pod with an extra screen, audio and more, over WiFi or USB, and
+experimental [**phone and watch apps**](#mobile-and-wearable-apps) for iOS, watchOS, Android and Wear OS provide detached hardware remotely. The apps are not yet available on App Store or Google Play yet but you can build from source or join our [Discord](https://discord.gg/QSWH7tU8US) for beta install link (via TestFlight, etc). 
+
+You can purchase the kit [here](https://shop.getubo.com/products/ubo-pro-4-and-5) which supports both Raspberry Pi 4 and 5. Your purchase can help us fund further development of this open source platform. These repos contain the [PCB design](https://github.com/ubopod/ubo-pcb) and [mechnical design](https://github.com/ubopod/ubo-mechanical) files.
+
+Alternatively, you can run the software on a bare Raspberryu Pi and use mobile/watch/esp32 apps to interface with it. You can check out [hardware DIY section](#diy-path) below if you are considering a DIY build.
+
+<b>Example Interface Screenshots</b>
+
+<table>
+  <tr>
+    <th colspan="2" align="center">On-device GUI</th>
+    <th colspan="2" align="center">Web UI</th>
+  </tr>
+  <tr>
+    <td colspan="1" align="center"><img src="https://raw.githubusercontent.com/ubopod/mediakit/main/images/gui-overview.png" width="200" alt="On-device GUI screens"></td>
+    <td colspan="3" align="center"><img src="https://raw.githubusercontent.com/ubopod/mediakit/main/images/webUI-dashboard.png" width="300" alt="Web UI dashboard"></td>
+  </tr>
+  <tr>
+    <th colspan="2" align="center">Android app</th>
+    <th colspan="2" align="center">iOS app</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="https://raw.githubusercontent.com/ubopod/mediakit/main/images/android-4.png" width="180" alt="Android app dashboard"><br><sub>Dashboard</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ubopod/mediakit/main/images/android-1.png" width="180" alt="Android app Menu"><br><sub>Menu</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ubopod/mediakit/main/images/ios-4.PNG" width="180" alt="iOS app dashboard"><br><sub>Dashboard</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/ubopod/mediakit/main/images/ios-2.PNG" width="180" alt="iOS app menu"><br><sub>Menu</sub></td>
+  </tr>
+  <tr>
+    <th colspan="2" align="center">watchOS app</th>
+    <th colspan="2" align="center">Wear OS app</th>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="https://raw.githubusercontent.com/ubopod/mediakit/main/images/ubo_apple_watch.png" width="100" alt="watchOS app"></td>
+    <td colspan="2" align="center"><img src="https://raw.githubusercontent.com/ubopod/mediakit/main/images/pixel_watch_4.png" width="100" alt="Wear OS app"></td>
+  </tr>
+</table>
 
 ### Goals
 
 The design is centered around the following goals:
 
-  - Making hardware-integarted app development easier 
-  - Offer no-code/no-terminal UI/UX optionsto both developers and end-users of their apps
-  - Give developers tools to build apps with multi-modal UX
+  - Making hardware-integrated UX development easier 
+  - Offer no-code/no-terminal UI/UX options to developers and end-users of their apps
+  - Give developers and agents tools to build multi-modal UX
   - Leverage tight hardware and software co-development to unlock new potentials
-  - Let users focus on their app logic while Ubo app handles the rest (hardware abstractions, UI, etc.)
+  - Let users focus on their app logic while Ubo App handles the rest (hardware abstractions, UI, etc.)
   - Hot-pluggable services
   - Modular and friendly to AI tool-calling
   - Remote API access (gRPC)
 
-⚠️ Due to limited development resources, we are not able to support every single board computer (SBC), operating system, and hardware configuration. 
+⚠️ Due to limited development resources, we are not able to support every single-board computer (SBC), operating system, and hardware configuration. 
 
-If you are willing to supporting other SBCs or operating systems, please consider contributing to the project.
-
-<b>Example GUI screenshots</b>
-
-![GUI Overview](https://raw.githubusercontent.com/ubopod/mediakit/main/images/gui-overview.png))
+If you are willing to help support other SBCs or operating systems, please consider contributing to the project.
 
 ## 🚧 Disclaimer
 
-Be aware that at the moment, Ubo app sends crash reports to Sentry. Soon we will limit this to beta versions only.
+Be aware that at the moment, Ubo App sends crash reports to Sentry. Soon we will allow users to easily opt-out in the settings.
 
 ## ⚙️ Notable Features
 
-- Easy WiFi on-boarding with QR code or hotspot  
+- Easy WiFi onboarding with QR code or hotspot  
 - Headless (no monitor/keyboard) remote access setup 
     - SSH
     - VS Code tunnel
     - Raspberry Pi Connect
+    - Tailscale
+- Kiosk-mode control on two optional monitors
+- Support for Home Assistant (HA) Wymoning and MQTT events
 - Install and run Dockerized apps headlessly
-- One-click install for pre-configured apps
+    - One-click install
+    - Hermes, OpenClaw, n8n, Home Assistant, Pangoline, Twingate, Ollama, Immich etc 
+- Local and Cloud full-stack voice control (VOSK, Moonshine, Piper, KoKoro for local voice)
+- Configurable wake words and trigger sources
+- MCP tool hosting and gateway
 - Access and control basic Linux utilities and settings
   - User management
   - Network management
   - File system operations
-- Natural language interactions for tool calling (voice AI) (experimental)
-- User-defined short voice commands with regex-style phrase patterns that map
-  utterances to bindable actions
+- Natural language interactions for tool calling (voice AI)
+- Offline-online hybrid user-defined voice commands to bindable actions
 - Web UI
 - Infrared remote control (send/receive), including Web UI assignment of
   registered IR keys to bindable actions
@@ -107,20 +147,20 @@ At minimum you need a Raspberry Pi 4 or 5 to run Ubo App.
 
 To run LLM models locally, we recommend a Raspberry Pi 5 with at least 8GB of RAM.
 
-For features that require add-on hardware that is not natively supported by Raspberry Pi (such as audio, infrared rx/tx, sensors, etc), you can:
+For features that require add-on hardware that is not natively supported by Raspberry Pi (such as audio, infrared rx/tx, sensors, etc.), you can:
 
-1. Purchase an Ubo Pod Development Kit 
+1. Purchase an [Ubo Pod Development Kit](https://shop.getubo.com/products/ubo-pro-4-and-5)
 2. DIY the hardware
-3. Use only subset of hardware features emulated in the browser
+3. Use only a subset of hardware features by using phone/laptop/watch camera, microphone, speakers, sensors, etc. 
 
 For more details check out the [hardware section](#🛠️-hardware) below.
 
-🙏 Please consider supporting this project by pre-ordering an Ubo Pod Dev Edition on [Kickstarter](https://www.kickstarter.com/projects/ubopod/ubo-pod-hackable-personal-ai-assistant). 
+🙏 Please consider supporting this project by [ordering](https://shop.getubo.com/products/ubo-pro-4-and-5) an Ubo Pod Dev Edition. This project was orginally successfully funded on [Kickstarter](https://www.kickstarter.com/projects/ubopod/ubo-pod-hackable-personal-ai-assistant). 
 
 The sales proceeds from the hardware will be used to support continued development and maintenance of Ubo App and its open source dependencies.
 
 <b> Note </b>: 
-The app still functions even if some special hardware elements (audio, infrared rx/tx, sensors, etc) are not provided. The features that rely on these hardware components just won't function. For example, WiFi onboarding with QR code requires a camera onboard. 
+The app still functions even if some special hardware elements (audio, infrared rx/tx, sensors, etc.) are not provided. The features that rely on these hardware components simply won't function.
 
 ## 🪏 Installation
 
@@ -131,23 +171,23 @@ Ubo Pod ships with a pre-flashed MicroSD card that has the app installed on it b
 If you don't have it, or you just want to set up a fresh device, then:
 
 1. Download one of the images from the release section
-1. Use Raspberry Pi Images and choose `custom image` to provide the download image file.
-1. Write to the image
+1. Use Raspberry Pi Imager and choose `custom image` to provide the downloaded image file.
+1. Write the image
 1. Use the image to boot your Ubo Pod or Raspberry Pi
 
 This is the fastest, easiest, and recommended way to get started with Ubo App. 
 
-🙋‍♂️If this is the first time you are flashing an image for Raspberry Pi, I recommend following the more detailed steps [here](https://github.com/ubopod/ubo-image).
+🙋‍♂️ If this is the first time you are flashing an image for Raspberry Pi, we recommend following the more detailed steps [here](https://github.com/ubopod/ubo-image).
 
-To run the app on bare Raspberry Pi, you can watch this short [demo video](https://www.youtube.com/watch?v=Rro3YLVIUx4).
+To run the app on a bare Raspberry Pi, you can watch this short [demo video](https://www.youtube.com/watch?v=Rro3YLVIUx4).
 
 ### Install on existing OS
 
-If you want to install the image on an existing operating system, then read on. Otherwise, skip this section.
+If you want to install the app on an existing operating system, then read on. Otherwise, skip this section.
 
 ---
 
-⚠️ **Executing scripts directly from the internet with root privileges poses a significant security risk. It's generally a good practice to ensure you understand the script's content before running it. You can check the content of this particular script [here](https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/install.sh) before running it.**
+⚠️ **Executing scripts directly from the internet with root privileges poses a significant security risk. It's generally a good practice to ensure you understand the script's content before running it. You can check the content of this particular script [here](https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/scripts/install.sh) before running it.**
 
 ---
 
@@ -157,7 +197,7 @@ To install ubo, run this command in a terminal shell:
 curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/scripts/install.sh | sudo bash
 ```
 
-If you don't want to install docker service you can set the `WITH_DOCKER` environment variable to `false`:
+If you don't want to install the Docker service, you can set the `WITHOUT_DOCKER` environment variable to `true`:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/scripts/install.sh | sudo WITHOUT_DOCKER=true bash
@@ -175,7 +215,7 @@ To install a specific version of ubo, you can set the `TARGET_VERSION` environme
 curl -sSL https://raw.githubusercontent.com/ubopod/ubo-app/main/ubo_app/system/scripts/install.sh | sudo TARGET_VERSION=0.0.1 bash
 ```
 
-Note that as part of the installation process, these debian packages are installed:
+Note that as part of the installation process, these Debian packages are installed:
 
 - accountsservice
 - dhcpcd
@@ -200,7 +240,7 @@ Note that as part of the installation process, these debian packages are install
 - python3-virtualenv
 - rpi-lgpio
 
-Also be aware that ubo-app only installs in `/opt/ubo` and it is not customizable
+Also be aware that ubo-app only installs in `/opt/ubo`, and this is not customizable
 at the moment.
 
 ### ESP32 satellites
@@ -234,7 +274,7 @@ Supported boards:
 To move the board to a different network later, hold the BOOT button for ~8 seconds to
 clear the stored credentials and return to `ubo-setup`.
 
-Boards cabled to a Ubo Pod can carry their traffic **over the USB cable itself** (PPP
+Boards cabled to an Ubo Pod can carry their traffic **over the USB cable itself** (PPP
 over USB) instead of WiFi — the `ppp` firmware profile, which is what the pod build
 ships.
 
@@ -248,13 +288,16 @@ per-board status — are in [`ubo_lvgl/esp32/README.md`](ubo_lvgl/esp32/README.m
 ⚠️ **These apps are experimental and still in beta.** They are **not published on the
 App Store or Google Play**, and there is no timeline for that yet. The only way to try
 them today is to **build them from source** yourself, which means a working Xcode or
-Android Studio setup and a developer account for on-device installs. Expect rough
-edges, breaking changes, and features that only work against a matching ubo-app version.
+Android Studio setup and a developer account for on-device installs. 
+
+You can also join our [Discord](https://discord.gg/QSWH7tU8US) to ask for private beta links on TestFlight, etc. 
+
+Expect rough edges, breaking changes, and features that only work against a matching ubo-app version.
 
 ---
 
-Native clients that connect to a Ubo Pod over the [gRPC API](#🏗️-architecture)
-(port `50051`) and render the same UI remotely — they are thin renderers, so all logic
+Native clients that connect to an Ubo Pod over the [gRPC API](#🏗️-architecture)
+(port `50053`) and render the same UI remotely — they are thin renderers, so all logic
 stays on the pod. Each platform is split into a bindings package (generated from this
 repo's protobuf definitions, plus hand-written wrappers) and the app itself:
 
@@ -277,7 +320,7 @@ reverse proxy or tunnel (Pangolin, Twingate and ngrok all ship as one-click Dock
 ⚠️ **The gRPC API has no authentication layer yet.** Anything that can reach the port has
 full control of the device, so exposing it to the public internet is strongly discouraged
 — and if you tunnel to it, put the access control in the tunnel. Even on a LAN, treat the
-port as unprotected and only run it on a network you trust.
+port as unprotected and only run it on a network you trust. You can close off gRPC Access by going to `Settings → System → General`. 
 
 ## 🤝 Contributing
 
@@ -312,6 +355,8 @@ When it finishes, it prints the command to run the app in development mode.
 
 ##### Manual setup
 
+Only follow these steps if you don't want to run the above dev setup script.
+
 To set up the development environment manually, you need to [have `uv` installed](https://docs.astral.sh/uv/).
 
 First, clone the repository (you need to have [git-lfs installed](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage)):
@@ -322,7 +367,7 @@ git lfs install
 git lfs pull
 ```
 
-In environments where some python packages are installed system-wide, like Raspberry Pi OS, you need to run the following command to create a virtual environment with system site packages enabled:
+In environments where some Python packages are installed system-wide, like Raspberry Pi OS, you need to run the following command to create a virtual environment with system site packages enabled:
 
 ```bash
 uv venv --system-site-packages
@@ -354,7 +399,7 @@ Host ubo-development-pod
   User pi
 ```
 
-⚠️*Note: You may want to add the ssh public key to the device's authorized keys (`~/.ssh/authorized_keys`) so that you don't need to enter the password each time you ssh into the device. If you decide to use password instead,  you need to reset the password for Pi user first using the GUI on the device by going to Hamburger Menu -> Settings -> System -> Users and select pi user*
+⚠️*Note: You may want to add the ssh public key to the device's authorized keys (`~/.ssh/authorized_keys`) so that you don't need to enter the password each time you ssh into the device. If you decide to use a password instead, you need to reset the password for the pi user first using the GUI on the device by going to Hamburger Menu -> Settings -> System -> Users and select pi user*
 
 Before you deploy the code onto the pod, you have to run the following command to generate the protobuf files and compile the web application.
 
@@ -367,6 +412,7 @@ brew install bufbuild/buf/buf
 ```
 
 Then, run the following command to generate the protobuf files whenever an action or
+event changes:
 
 ```bash
 uv run poe proto
@@ -381,7 +427,7 @@ uv run poe proto:compile  # compile the protobuf files to python files
 
 ##### Building the web application
 
-If you are running it for the firt time, you first need to install the dependencies for the web application:
+If you are running it for the first time, you first need to install the dependencies for the web application:
 
 ```bash
 cd ubo_app/services/090-web-ui/web-app
@@ -396,9 +442,9 @@ npm run proto:compile
 npm run build
 ```
 
-If you are modifying web-app typescript files, run `npm run build:watch` and let it stay running in a terminal. This way, whenever you modify web-app files, it will automatically update the built files in `dist` directory as long as it’s running.
+If you are modifying web-app typescript files, run `npm run build:watch` and let it stay running in a terminal. This way, whenever you modify web-app files, it will automatically update the built files in the `dist` directory as long as it stays running.
 
-If you ever add, modify or remove an action or an event you need to run `poe proto` and `npm run proto:compile` again manually.
+If you ever add, modify, or remove an action or an event, you need to run `poe proto` and `npm run proto:compile` again manually.
 
 ---
 
@@ -429,7 +475,7 @@ Pure unit tests for store logic, navigation, and view computation can be run loc
 uv run poe test:unit
 ```
 
-This runs all tests in `tests/store/` and `tests/navigation/` (~285 tests, takes ~3 seconds).
+This runs all the tests in `tests/store/` and `tests/navigation/` (~2000 tests, takes about a minute).
 
 To run them inside Docker:
 
@@ -439,7 +485,7 @@ uv run poe docker:test:unit
 
 #### Running tests on desktop
 
-Easiest way to run tests is to use the provided `Dockerfile`s. To run the tests in a container, you first need to create the development images by running:
+The easiest way to run the tests is to use the provided `Dockerfile`s. To run the tests in a container, you first need to create the development images by running:
 
 ```bash
 uv run poe build-docker-images
@@ -495,11 +541,11 @@ You can also run the tests in your local environment by running:
 uv run poe test
 ```
 
-⚠️**Note:** When running the tests in your local environment, the window snapshots produced by tests may mismatch the expected snapshots. This is because the snapshots are taken with a certain DPI and some environments may have different DPI settings. For example, we are aware that the snapshots taken in macOS have different DPI settings. If you encounter this issue, you should run the tests in a Docker container as described above.
+⚠️**Note:** When running the tests in your local environment, the window snapshots produced by tests may mismatch the expected snapshots. This is because the snapshots are taken with a certain DPI and some environments may have different DPI settings. For example, we are aware that the snapshots taken on macOS have different DPI settings. If you encounter this issue, you should run the tests in a Docker container as described above.
 
 #### Running tests on the device
 
-You need to install dependencies with following commands once:
+You need to install the dependencies with the following commands once:
 
 ```bash
 uv run poe device:test:copy
@@ -514,45 +560,45 @@ uv run poe device:test
 
 #### Running linter
 
-To run the linter run the following command:
+To run the linter, run the following command:
 
 ```bash
 uv run poe lint
 ```
 
-To automatically fix the linting issues run:
+To automatically fix the linting issues, run:
 
 ```bash
-uv run poe lint --fix
+uv run poe lint:fix
 ```
 
 #### Running type checker
 
-To run the type checker run the following command on the pod:
+To run the type checker, run the following command on the pod:
 
 ```bash
 uv run poe typecheck
 ```
 
-⚠️*Note: Please note typecheck needs all packages to be present. To run the above command on the pod, you need to clone the ubo-app repository on the pod, apply your changes on it, have uv installed on the pod and install the dependencies.*
+⚠️*Note: typecheck needs all packages to be present. To run the above command on the pod, you need to clone the ubo-app repository on the pod, apply your changes on it, have uv installed on the pod and install the dependencies.*
 
-If you prefer to run typecheck on the local machine, clone [stubs repository](https://github.com/ubopod/ubo-non-rpi-stubs) (which includes typing stubs for third-party packages) and place the files under `typings` directory. Then run `poe typecheck` command.
+If you prefer to run typecheck on the local machine, clone the [stubs repository](https://github.com/ubopod/ubo-non-rpi-stubs) (which includes typing stubs for third-party packages) and place the files under the `typings` directory. Then run the `poe typecheck` command.
 
 #### Adding new services
 
-It is not documented at the moment, but you can see examples in `ubo_app/services` directory.
+It is not documented at the moment, but you can see examples in the `ubo_app/services` directory.
 
 ⚠️*Note: To make sure your async tasks are running in your service's event loop and not in the main event loop, you should use the `create_task` function imported from `ubo_app.utils.async_` to create a new task. Using `await` inside `async` functions is always fine and doesn't need any special attention.*
 
-⚠️*Note: Your service's setup function, if async, should finish at some point, this is needed so that ubo can know the service has finished its initialization and ready to be used. So it should not run forever, by having a loop at the end, or awaiting an ongoing async function or similar patterns. Running a never-ending async function using `create_task` imported from `ubo_app.utils.async_` is alright.
+⚠️*Note: Your service's setup function, if async, should finish at some point, this is needed so that ubo can know the service has finished its initialization and is ready to be used. So it should not run forever, by having a loop at the end, or awaiting an ongoing async function or similar patterns. Running a never-ending async function using `create_task` imported from `ubo_app.utils.async_` is alright.*
 
 #### QR code
 
-In development environment, the camera is probably not working, as it is relying on `picamera2`, so it may become challenging to test the flows relying on QR code input.
+In the development environment, the camera is probably not working, as it relies on `picamera2`, so it may be challenging to test the flows relying on QR code input.
 
-To address this, the camera module, in not-RPi environments, will try reading from `/tmp/qrcode_input.txt` and `/tmp/qrcode_input.png` too. So, whenever you encounter a QR code input, you can write the content of the QR code in the text file path or put the qrcode image itself in the image file path and the application will read it from there and continue the flow.
+To address this, the camera module, in non-RPi environments, will try reading from `/tmp/qrcode_input.txt` and `/tmp/qrcode_input.png` too. So, whenever you encounter a QR code input, you can write the content of the QR code in the text file path or put the QR code image itself in the image file path and the application will read it from there and continue the flow.
 
-Alternatively you may be able to provide the input in the web-ui (needs refresh at the moment) or provide it by `InputProvideAction` in grpc channel.
+Alternatively, you may be able to provide the input in the web UI (needs a refresh at the moment) or provide it with an `InputProvideAction` over the gRPC channel.
 
 #### LVGL GUI client and ESP32 satellite firmware
 
@@ -682,17 +728,17 @@ Ubo pod is an open hardware that includes the following additional hardware capa
 - Power/reset button 
 - NVMe storage (Pi 5 only)
 
-For more information on hardware spec, see the website [getubo.com](https://getubo.com).
+For more information on the hardware specs, see the website [getubo.com](https://getubo.com).
 
-This is an open hardware. You can access mechanical design files [here](https://github.com/ubopod/ubo-mechanical) and electrical design files [here](https://github.com/ubopod/ubo-pcb).
+This is open hardware. You can access the mechanical design files [here](https://github.com/ubopod/ubo-mechanical) and electrical design files [here](https://github.com/ubopod/ubo-pcb).
 
 ### DIY path
 
-You can also buy different HATs from different vendors to DIY the hardware. Future plans include supporting USB microphone, speakers, cameras as well with headless setup.
+You can also buy different HATs from different vendors to DIY the hardware. Future plans include supporting USB microphones, speakers, and cameras as well, with a headless setup.
 
-This however involves having to purchase multiple HATs from different vendors and the process may not be the easiest and most frictionless. You may have to dig into the code and make some small changes to certain setups and configurations.
+This, however, involves having to purchase multiple HATs from different vendors and the process may not be the easiest and most frictionless. You may have to dig into the code and make some small changes to certain setups and configurations.
 
-I made the table below that shows options for audio, cameras, and other sub-components:
+The table below shows options for audio, cameras, and other sub-components:
 
 | Function | Options |
 | --- | --- |
@@ -713,7 +759,7 @@ Services communicate exclusively through Redux actions and events rather than di
 
 The system uses custom event handlers that automatically route events to the appropriate service threads, enabling reactive responses to state changes across hardware interfaces, user interactions, and system events.  
 
-This reactive architecture allows components like the web UI to subscribe to display render events and audio playback events in real-time, creating a responsive system where changes propagate automatically through the event stream without tight coupling between components.
+This reactive architecture allows components like the web UI to subscribe to display render events and audio playback events in real time, creating a responsive system where changes propagate automatically through the event stream without tight coupling between components.
 
 ![Software architecture](https://raw.githubusercontent.com/ubopod/mediakit/main/images/architecture.jpg)
 
@@ -721,7 +767,7 @@ The following is a summary of key architecture components.
 
 -  <b>Redux-Based State Management</b>: Central `UboStore` manages all application state through immutable state trees, with each service contributing its own state slice (audio, camera, display, docker, wifi, etc.) and communicating via actions and events.
 
--  <b>Modular Service Architecture</b>: 21+ core services run in isolated threads with dedicated event loops, organized by priority (`000-0xx` for hardware, `030-0xx` for networking, `080-0xx` for applications, `090-0xx` for UI), each with their own setup.py, reducer.py, and ubo_handle.py files.
+-  <b>Modular Service Architecture</b>: 30+ core services run in isolated threads with dedicated event loops, organized by priority band (`000-` hardware drivers, `010-` core system, `020-` input, `030-` networking, `040-` sensors, `050-` system integration, `080-` containers, `090-` apps and extensions), each with its own setup.py, reducer.py, and ubo_handle.py files.
 
 -  <b>Hardware Abstraction Layer</b>: Comprehensive abstraction for Raspberry Pi components (ST7789 LCD, WM8960 audio, GPIO keypad, sensors, camera, RGB ring) with automatic environment detection and mock implementations for development on non-RPi systems.
 
@@ -740,7 +786,7 @@ DeepWiki pages you might want to explore:
 - [Overview](https://deepwiki.com/ubopod/ubo_app/1-overview)
 - [Architecture](https://deepwiki.com/ubopod/ubo_app/2-architecture)
 
-## Notable dependencies
+## 📦 Notable dependencies
 
 Here are the key dependencies organized by category:
 
@@ -768,8 +814,8 @@ Here are the key dependencies organized by category:
 
 - `piper-tts`: Text-to-speech synthesis engine
 - `vosk`: Speech recognition library
-- `pvorca`: Picovoice Text-to-speech synthesis engine
-- `pipecat-ai`: framework for building real-time voice and multimodal conversational agents
+- `pvorca`: Picovoice text-to-speech synthesis engine
+- `pipecat-ai`: Framework for building real-time voice and multimodal conversational agents
 
 ### Networking & Services
 
@@ -807,8 +853,12 @@ Delivered items are checked off; the rest is tentative and subject to change.
 
 - [ ] Emulation for camera and microphone inside browser (requires SSL certificate for browser permissions)
 - [ ] Allow users to pick their soundcard for play and record via GUI (e.g. USB audio) — *playback output selection shipped in 2.1; capture/record selection is still open*
+- [ ] Support for NVIDIA Jetson Nano Orin
+- [ ] Support for Radxa X4 and X5
+- [ ] Support for LattePanda
+- [ ] Ansible deployment
 - [x] Allow users to pick their camera for video via GUI (e.g. USB camera) — *shipped in 2.0*
-- [x] Option to turn Ubo pod into a voice satellite with wyoming protocol with Home Assistant — *shipped in 2.1*
+- [x] Option to turn Ubo Pod into a voice satellite with the Wyoming protocol and Home Assistant — *shipped in 2.1*
 - [x] Make all on-board sensors and infrared discoverable and accessible by Home Assistant — *shipped in 2.1*
 - [ ] Expose `pipecat-ai` preset pipeline configuration via GUI
 - [ ] Support for Debian Trixie (13)
