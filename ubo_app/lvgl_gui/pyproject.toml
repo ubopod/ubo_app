@@ -7,14 +7,14 @@ readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["ubo", "gui", "lvgl", "grpc"]
 dependencies = [
-    "cffi>=1.16.0",
-    "grpclib>=0.4.7",
-    "betterproto>=2.0.0b7",
-    "httpx>=0.27.0",
-    "pypng>=0.20220715.0",
-    "ubo-app-raw-bindings",
-    "platformdirs",
-    "python-strtobool>=1.0.3",
+    "cffi==2.1.0",
+    "grpclib==0.4.9",
+    "betterproto==2.0.0b7",
+    "httpx==0.28.1",
+    "pypng==0.20220715.0",
+    "ubo-app-raw-bindings==2.1.0",
+    "platformdirs==4.10.0",
+    "python-strtobool==1.0.3",
 ]
 
 [project.scripts]

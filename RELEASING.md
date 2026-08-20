@@ -192,7 +192,7 @@ into `development`, the same as any other change.
 ## Appendix — 2.0.0 dependency-pin reference
 
 The original template was the v1.7.0 release commit (`7a3cb7b3`). The tree has
-five pyprojects, each pinned for release (replace `X.Y.Z` with the release
+**seven** pyprojects; **six** are pinned for release (replace `X.Y.Z` with the release
 version, e.g. `2.0.0`). (The `090-mcp/ubo-service` wheel below was added after
 2.0.0.)
 
@@ -216,10 +216,22 @@ version, e.g. `2.0.0`). (The `090-mcp/ubo-service` wheel below was added after
 - **`ubo_app/services/090-mcp/ubo-service/pyproject.toml`**
   (`ubo-app-mcp-gateway`) — convert `fastmcp`, `uvicorn`, `starlette`, `loguru`
   (`>=`) to `==`, and pin `ubo-app-raw-bindings` (`path` → `==X.Y.Z`).
-- **`uv.lock`** — refreshed (`uv lock`) to match.
+- **`ubo_app/lvgl_gui/pyproject.toml`** (`ubo-lvgl-gui-client`) — added after
+  2.0.0 and missed by the 2.1.0 pinning pass, which is why it is called out here.
+  It is built and published by CI (`uv build` in that directory) but is **not**
+  installed into the Pi images. Pin `ubo-app-raw-bindings` (`path` → `==X.Y.Z`)
+  and convert `cffi`, `grpclib`, `betterproto`, `httpx`, `pypng`, `platformdirs`,
+  `python-strtobool` to `==`. It keeps its **own** `uv.lock`, which drifts from
+  the root one — resolve versions from `ubo_app/lvgl_gui/uv.lock`, not `uv.lock`.
+- **`ubo_app/tui/pyproject.toml`** (`ubo-tui`) — **not** pinned: never built by
+  CI and not published to PyPI, so it carries no release metadata. Verify that is
+  still true before skipping it.
+- **`uv.lock`** — refreshed (`uv lock`) to match, plus the per-project locks in
+  `ubo_app/lvgl_gui/`, `090-assistant/ubo-service/` and `090-mcp/ubo-service/`.
 
-The five ubo-owned wheels (`ubo-app`, `ubo-app-raw-bindings`, `ubo-app-assistant`,
-`ubo-app-mcp-gateway`, `ubo-gui-client`) are workspace / `path` editable deps
+The six ubo-owned wheels (`ubo-app`, `ubo-app-raw-bindings`, `ubo-app-assistant`,
+`ubo-app-mcp-gateway`, `ubo-gui-client`, `ubo-lvgl-gui-client`) are workspace /
+`path` editable deps
 during dev — every cross-reference to them must become `==X.Y.Z` for release.
 
 To reproduce the transitive-pin block for a new release, resolve the locked

@@ -811,7 +811,7 @@ wheels = [
 
 [[package]]
 name = "ubo-app-raw-bindings"
-version = "2.0.1.dev260705103551004997"
+version = "2.0.1.dev260816103501014997"
 source = { editable = "../rpc" }
 dependencies = [
     { name = "betterproto", extra = ["compiler"] },
@@ -852,13 +852,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "betterproto", specifier = ">=2.0.0b7" },
-    { name = "cffi", specifier = ">=1.16.0" },
-    { name = "grpclib", specifier = ">=0.4.7" },
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "platformdirs" },
-    { name = "pypng", specifier = ">=0.20220715.0" },
-    { name = "python-strtobool", specifier = ">=1.0.3" },
+    { name = "betterproto", specifier = "==2.0.0b7" },
+    { name = "cffi", specifier = "==2.1.0" },
+    { name = "grpclib", specifier = "==0.4.9" },
+    { name = "httpx", specifier = "==0.28.1" },
+    { name = "platformdirs", specifier = "==4.10.0" },
+    { name = "pypng", specifier = "==0.20220715.0" },
+    { name = "python-strtobool", specifier = "==1.0.3" },
     { name = "ubo-app-raw-bindings", editable = "../rpc" },
 ]
 
