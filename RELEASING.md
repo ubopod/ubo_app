@@ -156,24 +156,31 @@ into `development`, the same as any other change.
    - **Root `pyproject.toml`** — `platformdirs==…` → `platformdirs`,
      `ubo-app-raw-bindings==X.Y.Z` → `ubo-app-raw-bindings`,
      `onnxruntime==1.22.1` → `onnxruntime>=1.22.0`, `pillow==…` → `pillow>=11.3.0`,
-     and **delete** the `# Transitive dependency pins (resolved from uv.lock)`
-     block. Leave the deps that ship exact-pinned regardless of release as-is.
+     `adafruit-blinka==…` → `adafruit-blinka>=9.2.0`, and **delete** the
+     `# Transitive dependency pins (resolved from uv.lock)` block. Leave the deps
+     that ship exact-pinned regardless of release as-is.
    - **`ubo_app/gui/pyproject.toml`** — revert the converted deps back to their
      `>=`/bare forms and `ubo-app-raw-bindings==X.Y.Z` → bare.
    - **`ubo_app/services/090-assistant/ubo-service/pyproject.toml`** —
-     `platformdirs==…` → `>=`, `python-fake==…` → `>=`,
-     `ubo-app-raw-bindings==X.Y.Z` → bare.
+     `platformdirs==…` → `>=`, `python-fake==…` → `>=`, `websockets==…` → `>=`,
+     `ubo-app-raw-bindings==X.Y.Z` → bare. **`piper-tts` stays where the release
+     put it** — it ships exact-pinned either way, so a bump made during the
+     release pass is a dependency upgrade, not a pin.
    - **`ubo_app/services/090-mcp/ubo-service/pyproject.toml`** —
      `fastmcp==…` → `>=`, `uvicorn==…` → `>=`, `starlette==…` → `>=`,
      `loguru==…` → `>=`, `ubo-app-raw-bindings==X.Y.Z` → bare.
+   - **`ubo_app/lvgl_gui/pyproject.toml`** — revert `cffi`, `grpclib`,
+     `betterproto`, `httpx`, `pypng`, `platformdirs`, `python-strtobool` to their
+     `>=`/bare forms and `ubo-app-raw-bindings==X.Y.Z` → bare.
    - **`ubo_app/rpc/pyproject.toml`** — nothing to do (it is never pinned per
      release; its version is tag-derived).
    > **Keep non-pin changes.** Anything bundled into the release commit that is
    > not a version pin stays. (In 2.0.0 the release commit also carried the
    > `build-web-app` `npm run compile` → `npm run proto:compile` fix — that is a
    > bug fix, not a pin; do **not** revert it.) Unpin = revert pins only.
-3. **Re-open `CHANGELOG.md`** — add a fresh `## Upcoming` heading above the just-
-   released version.
+3. **Re-open `CHANGELOG.md`** — the cycle's entries accumulate under
+   `## Upcoming`, so rename that heading to `## Version X.Y.Z` and add a fresh,
+   empty `## Upcoming` above it.
 4. **Refresh every lock that carried pins** with plain `uv lock` (no
    `PRETEND_VERSION`), so the dev `.devNNN` versions come back:
    ```bash
@@ -181,6 +188,7 @@ into `development`, the same as any other change.
    (cd ubo_app/gui && uv lock)
    (cd ubo_app/services/090-assistant/ubo-service && uv lock)
    (cd ubo_app/services/090-mcp/ubo-service && uv lock)
+   (cd ubo_app/lvgl_gui && uv lock)
    ```
    The `Missing version constraint` warnings for now-bare deps are expected.
 5. **Commit, push the branch, and open a PR into `development`** (no tag, no
