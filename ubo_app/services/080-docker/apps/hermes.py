@@ -671,7 +671,7 @@ def _notify_oauth_result(
                 chime=Chime.DONE if succeeded else Chime.FAILURE,
                 extra_information=None
                 if succeeded or not transcript
-                else ReadableInformation(text=transcript),
+                else ReadableInformation(text=_ANSI_ESCAPE_RE.sub('', transcript)),
             ),
         ),
     )
