@@ -553,6 +553,8 @@ jobs:
       - type-check
       - lint
       - test
+      - bindings
+      - services
       - build
     runs-on: ubuntu-24.04-arm
     container:
@@ -786,6 +788,7 @@ jobs:
       - lint
       - test
       - bindings
+      - services
       - build
     runs-on: ubuntu-latest
     environment:
