@@ -117,11 +117,14 @@ jobs:
         run: |
           # See the note on the `proto` job's System Dependencies step: the
           # runner's default apt mirror can stall indefinitely mid-transfer.
-          sudo sed -i 's|azure\.archive\.ubuntu\.com|mirrors.edge.kernel.org|g' \
-            /etc/apt/apt-mirrors.txt || true
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          else
+            echo "::warning::/etc/apt/apt-mirrors.txt absent; apt mirrors left as-is"
+          fi
           for attempt in 1 2 3; do
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 \
-              -o Acquire::https::Timeout=15 update -y && break
+            sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
+              -o Acquire::https::Timeout=30 update -y && break
             echo "apt-get update failed (attempt ${attempt}); retrying"
             sleep 5
           done
@@ -248,18 +251,25 @@ jobs:
       - name: System Dependencies
         timeout-minutes: 10
         run: |
-          # `azure.archive.ubuntu.com` is first in the runner's apt mirrorlist
-          # and goes unhealthy periodically. apt then falls back to
-          # `archive.ubuntu.com`, which serves the small InRelease files fine but
-          # stalls mid-transfer on the large Packages indexes from Azure. Nothing
-          # bounds a stalled fetch by default, so on 2026-08-19 this hung jobs for
-          # the full 6h Actions limit. Prefer a CDN mirror, cap every fetch, and
-          # retry rather than waiting it out (the step timeout is the backstop).
-          sudo sed -i 's|azure\.archive\.ubuntu\.com|mirrors.edge.kernel.org|g' \
-            /etc/apt/apt-mirrors.txt || true
+          # The runner image's sources.list is `deb mirror+file:/etc/apt/apt-mirrors.txt`,
+          # so mirror hostnames live only in that file, priority-ordered:
+          #   http://azure.archive.ubuntu.com/ubuntu/  priority:1
+          #   https://archive.ubuntu.com/ubuntu/       priority:2
+          #   https://security.ubuntu.com/ubuntu/      priority:3
+          # azure.archive goes unhealthy periodically and stalls mid-transfer on the
+          # large Packages indexes; nothing bounds a stalled fetch by default, so on
+          # 2026-08-19 that hung jobs for the full 6h Actions limit. Delete the azure
+          # entry and Canonical's own HTTPS archive — already listed, no third-party
+          # CDN involved — becomes priority 1. Then cap every fetch and retry rather
+          # than waiting it out (the step timeout is the backstop).
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          else
+            echo "::warning::/etc/apt/apt-mirrors.txt absent; apt mirrors left as-is"
+          fi
           for attempt in 1 2 3; do
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 \
-              -o Acquire::https::Timeout=15 update -y && break
+            sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
+              -o Acquire::https::Timeout=30 update -y && break
             echo "apt-get update failed (attempt ${attempt}); retrying"
             sleep 5
           done
@@ -319,18 +329,25 @@ jobs:
       - name: System Dependencies
         timeout-minutes: 10
         run: |
-          # `azure.archive.ubuntu.com` is first in the runner's apt mirrorlist
-          # and goes unhealthy periodically. apt then falls back to
-          # `archive.ubuntu.com`, which serves the small InRelease files fine but
-          # stalls mid-transfer on the large Packages indexes from Azure. Nothing
-          # bounds a stalled fetch by default, so on 2026-08-19 this hung jobs for
-          # the full 6h Actions limit. Prefer a CDN mirror, cap every fetch, and
-          # retry rather than waiting it out (the step timeout is the backstop).
-          sudo sed -i 's|azure\.archive\.ubuntu\.com|mirrors.edge.kernel.org|g' \
-            /etc/apt/apt-mirrors.txt || true
+          # The runner image's sources.list is `deb mirror+file:/etc/apt/apt-mirrors.txt`,
+          # so mirror hostnames live only in that file, priority-ordered:
+          #   http://azure.archive.ubuntu.com/ubuntu/  priority:1
+          #   https://archive.ubuntu.com/ubuntu/       priority:2
+          #   https://security.ubuntu.com/ubuntu/      priority:3
+          # azure.archive goes unhealthy periodically and stalls mid-transfer on the
+          # large Packages indexes; nothing bounds a stalled fetch by default, so on
+          # 2026-08-19 that hung jobs for the full 6h Actions limit. Delete the azure
+          # entry and Canonical's own HTTPS archive — already listed, no third-party
+          # CDN involved — becomes priority 1. Then cap every fetch and retry rather
+          # than waiting it out (the step timeout is the backstop).
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          else
+            echo "::warning::/etc/apt/apt-mirrors.txt absent; apt mirrors left as-is"
+          fi
           for attempt in 1 2 3; do
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 \
-              -o Acquire::https::Timeout=15 update -y && break
+            sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
+              -o Acquire::https::Timeout=30 update -y && break
             echo "apt-get update failed (attempt ${attempt}); retrying"
             sleep 5
           done
@@ -381,18 +398,25 @@ jobs:
       - name: System Dependencies
         timeout-minutes: 10
         run: |
-          # `azure.archive.ubuntu.com` is first in the runner's apt mirrorlist
-          # and goes unhealthy periodically. apt then falls back to
-          # `archive.ubuntu.com`, which serves the small InRelease files fine but
-          # stalls mid-transfer on the large Packages indexes from Azure. Nothing
-          # bounds a stalled fetch by default, so on 2026-08-19 this hung jobs for
-          # the full 6h Actions limit. Prefer a CDN mirror, cap every fetch, and
-          # retry rather than waiting it out (the step timeout is the backstop).
-          sudo sed -i 's|azure\.archive\.ubuntu\.com|mirrors.edge.kernel.org|g' \
-            /etc/apt/apt-mirrors.txt || true
+          # The runner image's sources.list is `deb mirror+file:/etc/apt/apt-mirrors.txt`,
+          # so mirror hostnames live only in that file, priority-ordered:
+          #   http://azure.archive.ubuntu.com/ubuntu/  priority:1
+          #   https://archive.ubuntu.com/ubuntu/       priority:2
+          #   https://security.ubuntu.com/ubuntu/      priority:3
+          # azure.archive goes unhealthy periodically and stalls mid-transfer on the
+          # large Packages indexes; nothing bounds a stalled fetch by default, so on
+          # 2026-08-19 that hung jobs for the full 6h Actions limit. Delete the azure
+          # entry and Canonical's own HTTPS archive — already listed, no third-party
+          # CDN involved — becomes priority 1. Then cap every fetch and retry rather
+          # than waiting it out (the step timeout is the backstop).
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          else
+            echo "::warning::/etc/apt/apt-mirrors.txt absent; apt mirrors left as-is"
+          fi
           for attempt in 1 2 3; do
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 \
-              -o Acquire::https::Timeout=15 update -y && break
+            sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
+              -o Acquire::https::Timeout=30 update -y && break
             echo "apt-get update failed (attempt ${attempt}); retrying"
             sleep 5
           done
@@ -475,18 +499,25 @@ jobs:
       - name: System Dependencies
         timeout-minutes: 10
         run: |
-          # `azure.archive.ubuntu.com` is first in the runner's apt mirrorlist
-          # and goes unhealthy periodically. apt then falls back to
-          # `archive.ubuntu.com`, which serves the small InRelease files fine but
-          # stalls mid-transfer on the large Packages indexes from Azure. Nothing
-          # bounds a stalled fetch by default, so on 2026-08-19 this hung jobs for
-          # the full 6h Actions limit. Prefer a CDN mirror, cap every fetch, and
-          # retry rather than waiting it out (the step timeout is the backstop).
-          sudo sed -i 's|azure\.archive\.ubuntu\.com|mirrors.edge.kernel.org|g' \
-            /etc/apt/apt-mirrors.txt || true
+          # The runner image's sources.list is `deb mirror+file:/etc/apt/apt-mirrors.txt`,
+          # so mirror hostnames live only in that file, priority-ordered:
+          #   http://azure.archive.ubuntu.com/ubuntu/  priority:1
+          #   https://archive.ubuntu.com/ubuntu/       priority:2
+          #   https://security.ubuntu.com/ubuntu/      priority:3
+          # azure.archive goes unhealthy periodically and stalls mid-transfer on the
+          # large Packages indexes; nothing bounds a stalled fetch by default, so on
+          # 2026-08-19 that hung jobs for the full 6h Actions limit. Delete the azure
+          # entry and Canonical's own HTTPS archive — already listed, no third-party
+          # CDN involved — becomes priority 1. Then cap every fetch and retry rather
+          # than waiting it out (the step timeout is the backstop).
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          else
+            echo "::warning::/etc/apt/apt-mirrors.txt absent; apt mirrors left as-is"
+          fi
           for attempt in 1 2 3; do
-            sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 \
-              -o Acquire::https::Timeout=15 update -y && break
+            sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
+              -o Acquire::https::Timeout=30 update -y && break
             echo "apt-get update failed (attempt ${attempt}); retrying"
             sleep 5
           done
