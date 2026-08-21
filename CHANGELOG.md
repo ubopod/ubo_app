@@ -6,6 +6,8 @@ history and may still collect terse maintainer-oriented entries during a release
 cycle.
 
 ## Upcoming
+
+## Version 2.1.0
 - fix(speech-recognition): validate a downloaded microWakeWord model in a staging
   directory under its final filenames — validating the `.part` files made
   `from_config` look for a `.tflite` that wasn't there yet, failing every model

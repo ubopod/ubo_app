@@ -20,11 +20,11 @@ dependencies = [
   # mode that leaves the session uninitialized, so `list_tools` fails and the
   # gateway aggregates *zero* tools instead of erroring. Do not relax without
   # verifying `create_proxy` against a 3.x stdio backend.
-  "fastmcp==3.4.2",
-  "uvicorn==0.49.0",
-  "starlette==1.2.1",
-  "loguru==0.7.3",
-  "ubo-app-raw-bindings==2.1.0",
+  "fastmcp>=3.4,<4",
+  "uvicorn>=0.34.0",
+  "starlette>=0.40.0",
+  "loguru>=0.7.3",
+  "ubo-app-raw-bindings",
 ]
 
 [tool.uv]

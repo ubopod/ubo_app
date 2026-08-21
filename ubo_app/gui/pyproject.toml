@@ -15,24 +15,24 @@ readme = "README.md"
 requires-python = ">=3.11,<3.14"
 keywords = ["ubo", "gui", "kivy", "grpc"]
 dependencies = [
-    "headless-kivy==0.13.0",
-    "ubo-gui==0.13.17",
-    "grpclib==0.4.8",
-    "betterproto==2.0.0b7",
-    "ubo-app-raw-bindings==2.1.0",
-    "numpy==1.26.4",
-    "adafruit-circuitpython-rgb-display==3.14.0",
+    "headless-kivy>=0.13.0",
+    "ubo-gui>=0.13.17",
+    "grpclib>=0.4.7",
+    "betterproto>=2.0.0b7",
+    "ubo-app-raw-bindings",
+    "numpy",
+    "adafruit-circuitpython-rgb-display>=3.14.0",
     # Transitive via rgb-display, floored deliberately: 9.1.0 and earlier pick
     # the GPIO chip by the last character of its sysfs name, so a kernel that
     # numbers the RP1 controller `gpiochip15` sends them to `/dev/gpiochip5` and
     # this client dies at import with "can not open gpiochip". See the matching
     # note in the root `pyproject.toml`.
-    "adafruit-blinka==9.2.0",
-    "pillow==11.3.0",
-    "pypng==0.20220715.0",
-    "python-fake==0.2.0",
-    "platformdirs==4.3.8",
-    "python-strtobool==1.0.3",
+    "adafruit-blinka>=9.2.0",
+    "pillow>=11.3.0",
+    "pypng>=0.20220715.0",
+    "python-fake>=0.2.0",
+    "platformdirs",
+    "python-strtobool>=1.0.3",
 ]
 
 [project.scripts]
