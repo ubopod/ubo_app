@@ -71,6 +71,11 @@ class AssistantLLMName(StrEnum):
     MISTRAL = 'mistral'
     VENICE = 'venice'
     GENERIC = 'generic_llm'
+    # Per-prompt routing: a classifier in the subprocess picks the provider and
+    # model for each user turn. Not a real provider — it has no engine, model or
+    # credentials. Keep it last: the proto generator numbers enum values in
+    # declaration order, so appending leaves existing wire numbers untouched.
+    AUTO = 'auto'
 
 
 DEFAULT_MODELS = {
@@ -1697,5 +1702,19 @@ class AssistantState(Immutable):
     active_system_prompt: str = field(
         default_factory=lambda: compose_active_system_prompt(
             persisted_system_prompts(),
+        ),
+    )
+    # Concrete provider AUTO routing falls back to when the classifier abstains
+    # or fails, and the one the one-shot request path uses instead of AUTO.
+    # Captured from ``selected_llm`` when the user switches to AUTO; never AUTO
+    # itself. Declared last so its proto field number is appended.
+    auto_fallback_llm: AssistantLLMName = field(
+        default=read_from_persistent_store(
+            'assistant:auto_fallback_llm',
+            default=AssistantLLMName.OLLAMA,
+            mapper=lambda value: AssistantLLMName(value)
+            if value in AssistantLLMName.__members__.values()
+            and value != AssistantLLMName.AUTO
+            else AssistantLLMName.OLLAMA,
         ),
     )

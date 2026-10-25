@@ -154,6 +154,9 @@ def _make_run_pipeline_event(  # noqa: PLR0913
 ) -> AssistantRunPipelineEvent:
     """Build the canonical run-pipeline event, resolving providers/model from state."""
     resolved_llm = llm_provider if llm_provider is not None else state.selected_llm
+    if resolved_llm == AssistantLLMName.AUTO:
+        # One-shot requests are not routed; use AUTO's concrete fallback.
+        resolved_llm = state.auto_fallback_llm
     resolved_tts = tts_provider if tts_provider is not None else state.selected_tts
     return AssistantRunPipelineEvent(
         session_id=session_id,
@@ -237,6 +240,17 @@ def reducer(
             return replace(state, selected_stt=action.stt_name)
 
         case AssistantSetSelectedLLMAction():
+            if (
+                action.llm_name == AssistantLLMName.AUTO
+                and state.selected_llm != AssistantLLMName.AUTO
+            ):
+                # Remember the concrete provider in use so AUTO has somewhere to
+                # fall back to when the classifier abstains or fails.
+                return replace(
+                    state,
+                    selected_llm=action.llm_name,
+                    auto_fallback_llm=state.selected_llm,
+                )
             return replace(state, selected_llm=action.llm_name)
 
         case AssistantSetSelectedTTSAction():
@@ -644,6 +658,11 @@ def reducer(
                     new_state = replace(
                         new_state,
                         selected_llm=AssistantLLMName.OLLAMA,
+                    )
+                if state.auto_fallback_llm == AssistantLLMName.GENERIC:
+                    new_state = replace(
+                        new_state,
+                        auto_fallback_llm=AssistantLLMName.OLLAMA,
                     )
             return CompleteReducerResult(
                 state=new_state,

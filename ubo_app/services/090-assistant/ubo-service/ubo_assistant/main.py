@@ -29,12 +29,14 @@ from pipecat.turns.user_turn_strategies import UserTurnStrategies
 from ubo_bindings.client import UboRPCClient
 
 from ubo_assistant.barge_in import BargeInOnListenSignal
+from ubo_assistant.domain_classifier import DomainClassifier, OllamaClient
 from ubo_assistant.end_of_turn import EndOfTurnPhraseDetector
 from ubo_assistant.error_notification import attach_error_notifier
 from ubo_assistant.image_frame import ImageGenFrame
 from ubo_assistant.logging import setup_file_logging
 from ubo_assistant.pipecat_debug import attach_whisker_observer
 from ubo_assistant.policy_watcher import PolicyWatcher
+from ubo_assistant.prompt_router import PromptRouter
 from ubo_assistant.request_handler import setup_request_handler
 from ubo_assistant.silence_user_turn_stop import (
     UboPolicyAwareUserTurnStopStrategy,
@@ -217,6 +219,13 @@ class Assistant:
             system_prompt_watcher=system_prompt_watcher,
         )
 
+        prompt_router = PromptRouter(
+            target=ubo_llm_service,
+            classifier=DomainClassifier(
+                remote=OllamaClient(ollama_onprem_url) if ollama_onprem_url else None,
+            ),
+        )
+
         messages: list[LLMContextMessage] = [{
             'role': 'system',
             'content': system_prompt_watcher.compose(include_tools=True),
@@ -313,6 +322,10 @@ class Assistant:
                         stop_talking_on_signal,
                         end_of_turn_detector,
                         user_aggregator,
+                        # Holds each user turn until the LLM switcher is on the
+                        # provider/model picked for it; pass-through unless the
+                        # selected LLM is AUTO.
+                        prompt_router,
                         ubo_llm_service,
                         image_producer,
                         ubo_tts_service,

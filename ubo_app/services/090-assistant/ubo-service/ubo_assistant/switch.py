@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from betterproto.lib.google.protobuf import StringValue
+    from pipecat.adapters.schemas.tools_schema import ToolsSchema
+    from pipecat.processors.aggregators.llm_context import LLMContext, NotGiven
     from pipecat.services.mcp_service import MCPClient
     from ubo_bindings.client import UboRPCClient
     from ubo_bindings.ubo.v1 import LocationInfo, WeatherCondition
@@ -63,6 +65,39 @@ def _compose_system_message(
     if include_tools:
         return DEFAULT_SYSTEM_MESSAGE + DEFAULT_TOOLS_MESSAGE
     return DEFAULT_SYSTEM_MESSAGE
+
+
+def set_system_message(context: LLMContext, system_message: str) -> None:
+    """Swap the system message in place, keeping the conversation."""
+    messages = context.get_messages()
+    first = messages[0] if messages else None
+    has_system = isinstance(first, dict) and first.get('role') == 'system'
+    history = messages[1:] if has_system else messages
+    context.set_messages([{'role': 'system', 'content': system_message}, *history])
+
+
+def compose_system_message(
+    watcher: SystemPromptWatcher | None,
+    *,
+    include_tools: bool,
+    system_addendum: str = '',
+) -> str:
+    """Build the system message, with an optional per-turn addendum appended."""
+    system_message = _compose_system_message(watcher, include_tools=include_tools)
+    if system_addendum:
+        system_message += '\n\n' + system_addendum
+    return system_message
+
+
+def _set_system_message_and_tools(
+    context: LLMContext,
+    *,
+    system_message: str,
+    tools: ToolsSchema | NotGiven,
+) -> None:
+    """Swap the system message and tools in place, keeping the conversation."""
+    set_system_message(context, system_message)
+    context.set_tools(tools)
 
 
 class UboNoopService(FrameProcessor):
@@ -147,6 +182,10 @@ class UboSwitchMixin(Generic[T]):
         self._processor_setup: FrameProcessorSetup | None = None
         self._current_service_id: str | None = None
         self.selected_service: T | None = None
+        # Set while a per-prompt routed switch is in flight: the router applies
+        # tools to the held context itself, so the switch must not also queue the
+        # history-replacing ``LLMMessagesUpdateFrame`` refresh.
+        self._routing_switch_in_progress = False
 
         # Pipecat switcher events are async by default. Ubo's selected-service
         # bookkeeping is local and quick, so keep it in the switching path.
@@ -219,6 +258,7 @@ class UboSwitchMixin(Generic[T]):
             service_id is not None
             and isinstance(service, LLMService)
             and self._processor_setup is not None
+            and not self._routing_switch_in_progress
         ):
             cast('ServiceSwitcher', self).create_task(
                 self._update_llm_tools(service_id=service_id, llm_service=service),
@@ -513,8 +553,19 @@ class UboSwitchMixin(Generic[T]):
         *,
         service_id: str,
         llm_service: LLMService[Any],
+        context: LLMContext | None = None,
+        system_addendum: str = '',
     ) -> None:
-        """Update LLM tools and optionally messages."""
+        """Update LLM tools and the system message.
+
+        ``system_addendum`` is appended to the system message (per-prompt routing
+        uses it for a domain profile).
+
+        Without ``context`` the update is queued as frames that replace the whole
+        conversation with the system message. With ``context`` (per-prompt
+        routing) it is written to that context directly, before the held prompt
+        is released, and the conversation history is kept.
+        """
         async with self._mcp_tools_update_lock:
             tools_supported = self._check_tools_support(service_id)
             old_mcp_clients = self._mcp_clients
@@ -541,17 +592,25 @@ class UboSwitchMixin(Generic[T]):
                     tools = NOT_GIVEN
                     tool_count = 0
 
-                system_message = _compose_system_message(
+                system_message = compose_system_message(
                     self._system_prompt_watcher,
                     include_tools=tools_supported,
+                    system_addendum=system_addendum,
                 )
 
-                await llm_service.queue_frame(
-                    LLMMessagesUpdateFrame(
-                        messages=[{'role': 'system', 'content': system_message}],
-                    ),
-                )
-                await llm_service.queue_frame(LLMSetToolsFrame(tools=tools))
+                if context is None:
+                    await llm_service.queue_frame(
+                        LLMMessagesUpdateFrame(
+                            messages=[{'role': 'system', 'content': system_message}],
+                        ),
+                    )
+                    await llm_service.queue_frame(LLMSetToolsFrame(tools=tools))
+                else:
+                    _set_system_message_and_tools(
+                        context,
+                        system_message=system_message,
+                        tools=tools,
+                    )
             except Exception:
                 await self._close_mcp_clients(new_mcp_clients)
                 raise

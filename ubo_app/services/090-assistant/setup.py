@@ -6,6 +6,7 @@ import asyncio
 import json
 import math
 import uuid
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -56,6 +57,7 @@ from ubo_app.constants.assistant import (
     GROK_API_KEY_SECRET_ID,
     MISTRAL_API_KEY_SECRET_ID,
     MOONSHINE_DOWNLOAD_NOTIFICATION_ID,
+    OLLAMA_ONPREM_SETUP_NOTIFICATION_ID,
     OLLAMA_RAM_LIMIT_NOTIFICATION_ID,
     OPENAI_API_KEY_SECRET_ID,
     OPENROUTER_API_KEY_SECRET_ID,
@@ -108,6 +110,7 @@ from ubo_app.engines.ollama_catalog import (
     normalize_model_tag,
     required_ram_bytes,
 )
+from ubo_app.engines.ollama_onprem import OllamaOnPremEngine
 from ubo_app.engines.piper import PiperEngine
 from ubo_app.engines.piper_catalog import (
     DEFAULT_PIPER_VOICE_ID,
@@ -382,6 +385,14 @@ def _communicate(event: AssistantHandleReportEvent) -> None:
             )
 
 
+
+@dataclass(frozen=True)
+class _AutoRoutingMenuEntry:
+    """LLM menu row for AUTO; ``build_engine_menu`` only reads its label."""
+
+    instance_label: str = 'Auto (smart routing)'
+
+
 def _register_persistent_stores() -> None:
     """Register all persistent stores for assistant service."""
     register_persistent_store(
@@ -391,6 +402,10 @@ def _register_persistent_stores() -> None:
     register_persistent_store(
         'assistant:selected_llm',
         lambda state: state.assistant.selected_llm,
+    )
+    register_persistent_store(
+        'assistant:auto_fallback_llm',
+        lambda state: state.assistant.auto_fallback_llm,
     )
     register_persistent_store(
         'assistant:selected_tts',
@@ -765,6 +780,65 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         _refresh_mistral_voices_handler()
         store.dispatch(StackPushMenuAction(menu_key='mistral:voices'))
 
+    _ollama_onprem_model_action_ids: list[str] = []
+
+    async def _show_ollama_onprem_models(current_model: str) -> None:
+        """Build the picker from the models the remote has, then open it."""
+        engine = LLM_ENGINES.get(AssistantLLMName.OLLAMA_ONPREM)
+        if not isinstance(engine, OllamaOnPremEngine):
+            return
+        models = await engine.list_remote_models()
+        if not models:
+            store.dispatch(
+                NotificationsAddAction(
+                    notification=Notification(
+                        id=OLLAMA_ONPREM_SETUP_NOTIFICATION_ID,
+                        title='Ollama (On-Prem)',
+                        content='Could not list models on the remote instance.',
+                        icon='󰀦',
+                        color=WARNING_COLOR,
+                        display_type=NotificationDisplayType.FLASH,
+                    ),
+                ),
+            )
+            return
+
+        for action_id in _ollama_onprem_model_action_ids:
+            unregister_action(action_id)
+        _ollama_onprem_model_action_ids.clear()
+
+        options: list[tuple[str, str, str]] = []
+        for model in models:
+            action_id = f'assistant:select-llm-model:ollama_onprem:{model}'
+            _ollama_onprem_model_action_ids.append(action_id)
+            register_action(
+                action_id,
+                lambda m=model: store.dispatch(
+                    AssistantSetSelectedModelAction(
+                        llm_name=AssistantLLMName.OLLAMA_ONPREM,
+                        model=m,
+                    ),
+                    MenuGoBackAction(),
+                ),
+                allow_reregister=True,
+            )
+            options.append((model, model, action_id))
+
+        build_selection_menu(
+            options=options,
+            selected_key=current_model,
+            menu_id='assistant:llm:models:ollama_onprem',
+            title='Select Model',
+            heading=engine.label,
+            sub_heading=f'Pick a model on the remote {engine.label} instance.',
+        )
+        store.dispatch(
+            StackPushMenuAction(menu_key='models:ollama_onprem'),
+        )
+
+    def _open_ollama_onprem_models(current_model: str) -> None:
+        create_task(_show_ollama_onprem_models(current_model))
+
     @store.autorun(
         lambda state: (
             secrets_monitor.value,
@@ -955,9 +1029,25 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
         for provider in _deduped_providers(data[8]):
             if not isinstance(provider, NeedsSetupMixin):
                 continue
-            if not provider.is_setup and not isinstance(
-                provider,
-                (OllamaEngine, PiperEngine, KokoroEngine, VoskEngine, MoonshineEngine),
+            # An on-prem instance whose saved model has vanished from the
+            # remote reports not-set-up, but its page is where a new model is
+            # picked, so it stays reachable while a URL is stored.
+            if (
+                not provider.is_setup
+                and not isinstance(
+                    provider,
+                    (
+                        OllamaEngine,
+                        PiperEngine,
+                        KokoroEngine,
+                        VoskEngine,
+                        MoonshineEngine,
+                    ),
+                )
+                and not (
+                    isinstance(provider, OllamaOnPremEngine)
+                    and provider.has_stored_credentials()
+                )
             ):
                 continue
 
@@ -1291,6 +1381,31 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
                 )
                 continue
 
+            # On-prem Ollama has no curated list: the picker is built from
+            # whatever the remote instance has when the row is opened.
+            if isinstance(provider, OllamaOnPremEngine):
+                current_onprem_model = selected_models.get(
+                    AssistantLLMName.OLLAMA_ONPREM,
+                    DEFAULT_MODELS.get(AssistantLLMName.OLLAMA_ONPREM, ''),
+                )
+                onprem_models_action = (
+                    'assistant:provider-detail:ollama-onprem-models'
+                )
+                _provider_detail_action_ids.append(onprem_models_action)
+                register_action(
+                    onprem_models_action,
+                    lambda m=current_onprem_model: _open_ollama_onprem_models(m),
+                    allow_reregister=True,
+                )
+                items.append(
+                    MenuItemData(
+                        key='select-model',
+                        label=f'Model: {current_onprem_model}',
+                        icon='󰧑',
+                        action_id=onprem_models_action,
+                    ),
+                )
+
             # "Select Model" — only when this engine is registered as an LLM
             # provider and exposes a curated model list.
             llm_name = _llm_name_for(provider)
@@ -1526,11 +1641,19 @@ def _setup_autorun_and_handlers() -> tuple:  # noqa: C901, PLR0915
 
         # Named generic providers each get their own row; the static GENERIC
         # entry (the "Add Generic LLM" adder) always renders last.
+        # AUTO is menu-only: it is not a provider, so it stays out of
+        # ``LLM_ENGINES`` (setup status, provider settings, model pickers and the
+        # unconfigured-provider auto-switch all walk that registry).
         engines: dict[str, object] = {
-            str(name): engine
-            for name, engine in LLM_ENGINES.items()
-            if name is not AssistantLLMName.GENERIC
+            str(AssistantLLMName.AUTO): _AutoRoutingMenuEntry(),
         }
+        engines.update(
+            {
+                str(name): engine
+                for name, engine in LLM_ENGINES.items()
+                if name is not AssistantLLMName.GENERIC
+            },
+        )
         engines.update(build_generic_llm_engines(generic_llm_providers))
         engines[str(AssistantLLMName.GENERIC)] = LLM_ENGINES[
             AssistantLLMName.GENERIC

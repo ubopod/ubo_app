@@ -160,6 +160,9 @@ _LLM_PROVIDER_IDS = {
     'MISTRAL': 'mistral',
     'VENICE': 'venice',
     'GENERIC': 'generic_llm',
+    # Not routed here: the core resolves AUTO to its fallback before building
+    # the event, so this only yields a clear "not available" error if it leaks.
+    'AUTO': 'auto',
 }
 _TTS_PROVIDER_IDS = {
     'PIPER': 'piper',

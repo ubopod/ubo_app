@@ -58,10 +58,18 @@ from ubo_bindings.ubo.v1 import (
 
 from ubo_assistant.constants import IS_RPI
 from ubo_assistant.image_frame import ImageGenFrame
-from ubo_assistant.switch import UboLLMSwitchService, make_empty_llm_settings
+from ubo_assistant.prompt_router import RoutingDecision
+from ubo_assistant.switch import (
+    UboLLMSwitchService,
+    compose_system_message,
+    make_empty_llm_settings,
+    set_system_message,
+)
 
 if TYPE_CHECKING:
+    from betterproto.lib.google.protobuf import StringValue
     from pipecat.pipeline.service_switcher import ServiceSwitcher
+    from pipecat.processors.aggregators.llm_context import LLMContext
     from ubo_bindings.ubo.v1 import WeatherCondition
 
     from ubo_assistant.system_prompt_watcher import SystemPromptWatcher
@@ -109,6 +117,10 @@ DEFAULT_VENICE_MODEL = os.environ.get(
     'llama-3.3-70b',
 )
 VENICE_BASE_URL = 'https://api.venice.ai/api/v1'
+DEFAULT_OLLAMA_ONPREM_MODEL = os.environ.get(
+    'UBO_DEFAULT_ASSISTANT_OLLAMA_ONPREM_MODEL',
+    'granite3.3:8b',
+)
 DEFAULT_OLLAMA_MODEL = os.environ.get(
     'UBO_DEFAULT_ASSISTANT_OLLAMA_MODEL',
     'gemma3:1b' if IS_RPI else 'gemma3:27b-it-qat',
@@ -125,6 +137,7 @@ _DEFAULT_MODELS: dict[str, str] = {
     'mistral': DEFAULT_MISTRAL_MODEL,
     'venice': DEFAULT_VENICE_MODEL,
     'ollama': DEFAULT_OLLAMA_MODEL,
+    'ollama_onprem': DEFAULT_OLLAMA_ONPREM_MODEL,
 }
 
 
@@ -277,7 +290,12 @@ _SERVICE_ID_BY_LLM_NAME: dict[AssistantLlmName, str] = {
     AssistantLlmName.MISTRAL: 'mistral',
     AssistantLlmName.VENICE: 'venice',
     AssistantLlmName.GENERIC: 'generic_llm',
+    # AUTO has no model picker, so no model-change event ever carries it.
+    AssistantLlmName.AUTO: 'auto',
 }
+
+# ``selected_llm`` value that turns on per-prompt routing (``AssistantLLMName.AUTO``).
+AUTO_SERVICE_ID = 'auto'
 
 
 class UboLLMService(UboLLMSwitchService):
@@ -308,6 +326,18 @@ class UboLLMService(UboLLMSwitchService):
         # and open the image_viewer twice (one render overriding the other).
         # Mirroring each unique frame once keeps a single image_viewer render.
         self._last_mirrored_image_frame_id: int | None = None
+        # Per-prompt routing, on while ``selected_llm`` is AUTO (see ``route_to``).
+        self._routing_enabled = False
+        # Concrete provider AUTO falls back to; from ``auto_fallback_llm``.
+        self._auto_fallback_id: str | None = None
+        # Model the router picked per provider. ``_resolve_model`` prefers it over
+        # the user's selection, so the store's ``selected_models`` is untouched.
+        self._routed_models: dict[str, str] = {}
+        # Model each proxy was last built with by ``route_to`` (``None`` for
+        # providers with a fixed model), so a repeat route skips the rebuild.
+        self._routed_built: dict[str, str | None] = {}
+        # System-message addendum (domain profile) currently in the context.
+        self._routed_addendum = ''
 
         # Initialize all services. Cloud providers that take a runtime API key
         # are wrapped in GenericLLMProxy so they always live in Pipecat's
@@ -329,7 +359,11 @@ class UboLLMService(UboLLMSwitchService):
         # Local Ollama goes behind a GenericLLMProxy so we can hot-swap it when
         # the user picks a new curated model or toggles thinking mode.
         self.ollama_llm = GenericLLMProxy()
-        self.ollama_onprem_llm = self._create_ollama_onprem_service()
+        # Behind a proxy so its model can change (user pick or per-prompt
+        # routing). Absent without a URL, so it is never a routing candidate.
+        self.ollama_onprem_llm = (
+            GenericLLMProxy() if self._config.ollama_onprem_url else None
+        )
         self.generic_llm = GenericLLMProxy()
 
         # Build services dictionary
@@ -366,6 +400,14 @@ class UboLLMService(UboLLMSwitchService):
         if self._autoruns_started:
             return
         super()._ensure_autoruns_started()
+
+        @self.client.autorun(['state.assistant.auto_fallback_llm'])
+        def handle_auto_fallback_change(data: list['StringValue']) -> None:
+            self._auto_fallback_id = data[0].value
+            if self._routing_enabled:
+                cast('ServiceSwitcher', self).create_task(
+                    self.set_selected_service(AUTO_SERVICE_ID),
+                )
 
         # Subscribe to AssistantModelChangedEvent for both:
         #   (a) the imperative "swap the active provider now" path on user
@@ -420,7 +462,8 @@ class UboLLMService(UboLLMSwitchService):
 
         current_id = self._current_service_id
         is_active = current_id == service_id and (
-            current_id in self._API_KEY_PROVIDERS or current_id == 'ollama'
+            current_id in self._API_KEY_PROVIDERS
+            or current_id in ('ollama', 'ollama_onprem')
         )
         # Re-asserting the same model is normally a no-op, but for the active
         # local-Ollama provider it's also how a just-finished model download
@@ -445,6 +488,8 @@ class UboLLMService(UboLLMSwitchService):
             task_runner = cast('ServiceSwitcher', self).create_task
             if current_id == 'ollama':
                 task_runner(self._refresh_ollama_service())
+            elif current_id == 'ollama_onprem':
+                task_runner(self._refresh_ollama_onprem_service())
             else:
                 task_runner(self._refresh_api_key_service(current_id))
 
@@ -599,14 +644,189 @@ class UboLLMService(UboLLMSwitchService):
         )
 
     async def set_selected_service(self, id: str) -> None:
-        """Set the selected service, refreshing dynamic-config providers first."""
+        """Set the selected service, refreshing dynamic-config providers first.
+
+        ``'auto'`` turns on per-prompt routing and starts on the fallback
+        provider; the first one is picked once ``auto_fallback_llm`` arrives.
+        """
+        self._routing_enabled = id == AUTO_SERVICE_ID
+        self._routed_models.clear()
+        self._routed_built.clear()
+        self._routed_addendum = ''
+        if self._routing_enabled:
+            if self._auto_fallback_id is None:
+                logger.info('AUTO selected; waiting for its fallback provider')
+                return
+            id = self._auto_fallback_id
+        await self._refresh_service(id)
+        if self._routing_enabled:
+            self._routed_built[id] = (
+                self._resolve_model(id) if id in _DEFAULT_MODELS else None
+            )
+        await super().set_selected_service(id)
+
+    async def _refresh_service(self, id: str) -> None:
+        """Rebuild a dynamic-config provider's service before it is selected."""
         if id == 'generic_llm':
             await self._refresh_generic_llm_service()
         elif id == 'ollama':
             await self._refresh_ollama_service()
+        elif id == 'ollama_onprem':
+            await self._refresh_ollama_onprem_service()
         elif id in self._API_KEY_PROVIDERS:
             await self._refresh_api_key_service(id)
-        await super().set_selected_service(id)
+
+    def _refresh_active_llm_tools(self) -> None:
+        """Refresh tools, forgetting the routed addendum the refresh drops."""
+        # The frame-based refresh rewrites the system message without it, so the
+        # next routed turn must apply it again.
+        self._routed_addendum = ''
+        super()._refresh_active_llm_tools()
+
+    @property
+    def is_routing_enabled(self) -> bool:
+        """Whether each user prompt is routed (``selected_llm`` is AUTO)."""
+        return self._routing_enabled and self._auto_fallback_id is not None
+
+    def routing_candidates(self) -> tuple[str, ...]:
+        """Return the provider ids the classifier may pick from."""
+        return tuple(self.service_map)
+
+    def _resolve_route(
+        self,
+        decision: RoutingDecision | None,
+        fallback_id: str,
+    ) -> tuple[str, str]:
+        """Return the provider and system addendum to use for ``decision``."""
+        if decision is None:
+            return fallback_id, ''
+        if decision.provider_id not in self.service_map:
+            logger.warning(
+                '[routing] switcher: decided provider not available; using the '
+                'fallback {extra}',
+                extra={
+                    'provider_id': decision.provider_id,
+                    'fallback_id': fallback_id,
+                },
+            )
+            return fallback_id, ''
+        return decision.provider_id, decision.system_addendum
+
+    async def route_to(
+        self,
+        decision: RoutingDecision | None,
+        *,
+        context: 'LLMContext',
+    ) -> None:
+        """Make the provider/model picked for one prompt the active LLM.
+
+        ``None`` (or a provider that is not available) routes to the fallback
+        with the user's model. Nothing is dispatched to the store. When the
+        provider changes, its tools and system message are written straight to
+        ``context`` so they apply to the prompt being held, history intact.
+        """
+        fallback_id = self._auto_fallback_id
+        if fallback_id is None:
+            return
+        previous_id = self._current_service_id
+        previous_model = self._built_model(previous_id)
+        provider_id, addendum = self._resolve_route(decision, fallback_id)
+        rebuilt = False
+
+        # Only providers with a user-selectable model take the routed one;
+        # Google and the generic LLM have it fixed by config.
+        model: str | None = None
+        if provider_id in _DEFAULT_MODELS:
+            if decision is not None and decision.provider_id == provider_id:
+                self._routed_models[provider_id] = decision.model
+            else:
+                self._routed_models.pop(provider_id, None)
+            model = self._resolve_model(provider_id)
+
+        if provider_id not in self._routed_built or (
+            self._routed_built[provider_id] != model
+        ):
+            await self._refresh_service(provider_id)
+            self._routed_built[provider_id] = model
+            rebuilt = True
+
+        target = self.service_map[provider_id]
+        if isinstance(target, GenericLLMProxy) and target.service is None:
+            self._routed_built.pop(provider_id, None)
+            if provider_id != fallback_id:
+                logger.warning(
+                    '[routing] switcher: provider could not be built; using the '
+                    'fallback {extra}',
+                    extra={'provider_id': provider_id, 'model': model},
+                )
+                await self.route_to(None, context=context)
+            else:
+                logger.error(
+                    '[routing] switcher: fallback provider could not be built '
+                    '{extra}',
+                    extra={'provider_id': provider_id, 'model': model},
+                )
+            return
+
+        def log_result(action: str) -> None:
+            logger.info(
+                '[routing] switcher result {extra}',
+                extra={
+                    'action': action,
+                    'from_provider': previous_id,
+                    'from_model': previous_model,
+                    'provider_id': provider_id,
+                    # Read back from the built service, not the requested one.
+                    'model': self._built_model(provider_id),
+                    'used_fallback': decision is None
+                    or decision.provider_id != provider_id,
+                    'profile_applied': bool(addendum),
+                },
+            )
+
+        if provider_id == self._current_service_id:
+            if addendum == self._routed_addendum:
+                log_result('model rebuilt' if rebuilt else 'unchanged')
+            else:
+                # Same provider, different domain: only the system message
+                # changes, so skip the tool (and MCP gateway) rebuild.
+                set_system_message(
+                    context,
+                    compose_system_message(
+                        self._system_prompt_watcher,
+                        include_tools=self._check_tools_support(provider_id),
+                        system_addendum=addendum,
+                    ),
+                )
+                self._routed_addendum = addendum
+                log_result(
+                    'model rebuilt + system message updated'
+                    if rebuilt
+                    else 'system message updated',
+                )
+            return
+
+        self._routing_switch_in_progress = True
+        try:
+            await super().set_selected_service(provider_id)
+        finally:
+            self._routing_switch_in_progress = False
+        await self._update_llm_tools(
+            service_id=provider_id,
+            llm_service=target,
+            context=context,
+            system_addendum=addendum,
+        )
+        self._routed_addendum = addendum
+        log_result('switched provider')
+
+    def _built_model(self, service_id: str | None) -> str | None:
+        """Model of the service currently built for ``service_id``."""
+        service = self.service_map.get(service_id) if service_id else None
+        if isinstance(service, GenericLLMProxy):
+            service = service.service
+        model = service._settings.model if service is not None else None  # noqa: SLF001
+        return model if isinstance(model, str) else None
 
     def _create_google_vertex_service(self) -> GoogleVertexLLMService | None:
         """Create Google Vertex LLM service if credentials are provided."""
@@ -627,14 +847,17 @@ class UboLLMService(UboLLMSwitchService):
             return None
 
     def _resolve_model(self, service_id: str) -> str:
-        """Return the model the user has selected for *service_id*.
+        """Return the model to build *service_id* with.
 
+        A model picked by per-prompt routing wins over the user's selection.
         Falls back to ``_DEFAULT_MODELS[service_id]`` when ``selected_models``
         has no entry yet (e.g. before the autorun has fired or when the user
         has never picked a model for the provider).
         """
         return (
-            self._config.selected_models.get(service_id) or _DEFAULT_MODELS[service_id]
+            self._routed_models.get(service_id)
+            or self._config.selected_models.get(service_id)
+            or _DEFAULT_MODELS[service_id]
         )
 
     def _create_openai_service(self) -> OpenAILLMService | None:
@@ -817,6 +1040,17 @@ class UboLLMService(UboLLMSwitchService):
             },
         )
 
+    async def _refresh_ollama_onprem_service(self) -> None:
+        """Re-create the remote Ollama service with the model to use now."""
+        proxy = self.ollama_onprem_llm
+        if proxy is None:
+            return
+        await proxy.set_service(self._create_ollama_onprem_service())
+        logger.info(
+            'Remote Ollama service refreshed {extra}',
+            extra={'model': self._resolve_model('ollama_onprem')},
+        )
+
     def _create_ollama_onprem_service(self) -> OLLamaLLMService | None:
         """Create remote Ollama LLM service if URL is provided."""
         if not self._config.ollama_onprem_url:
@@ -827,7 +1061,9 @@ class UboLLMService(UboLLMSwitchService):
             base_url = self._config.ollama_onprem_url.rstrip('/') + '/v1'
             return OLLamaLLMService(
                 base_url=base_url,
-                settings=OLLamaLLMService.Settings(model='granite3.3:8b'),
+                settings=OLLamaLLMService.Settings(
+                    model=self._resolve_model('ollama_onprem'),
+                ),
             )
         except Exception:
             logger.exception(
@@ -1146,6 +1382,16 @@ class UboLLMService(UboLLMSwitchService):
                 )
                 return
             self._last_llm_context_frame_id = frame.id
+            # The model that actually answers this turn, routed or not.
+            logger.info(
+                '[routing] inference on active LLM {extra}',
+                extra={
+                    'provider_id': self._current_service_id,
+                    'model': self._built_model(self._current_service_id),
+                    'routing_enabled': self.is_routing_enabled,
+                    'direction': direction.name,
+                },
+            )
 
         await super().process_frame(frame, direction)
 
