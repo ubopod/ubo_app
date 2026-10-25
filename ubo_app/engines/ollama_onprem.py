@@ -172,6 +172,37 @@ class OllamaOnPremEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
 
         create_task(download_ollama_model())
 
+    async def list_remote_models(self) -> list[str]:
+        """Return the models the remote instance reports, or [] if unreachable."""
+        url = secrets.read_secret(OLLAMA_ONPREM_URL_SECRET_ID)
+        if not url:
+            return []
+        try:
+            response = await ollama.AsyncClient(host=url).list()
+        except Exception:
+            logger.exception(
+                'Error listing remote Ollama models',
+                extra={'url': url},
+            )
+            return []
+        return [m.model for m in response.models if m.model]
+
+    def _select_remote_model(self, url: str) -> bool:
+        """Select a model the remote instance already has, if it has any."""
+        models = [
+            m.model for m in ollama.Client(host=url).list().models if m.model
+        ]
+        if not models:
+            return False
+        store.dispatch(
+            AssistantSetSelectedModelAction(
+                llm_name=AssistantLLMName.OLLAMA_ONPREM,
+                model=models[0],
+            ),
+            AssistantUpdateProvidersAction(),
+        )
+        return True
+
     @override
     async def _setup(self) -> None:
         """Set up the remote Ollama instance by getting the URL from user."""
@@ -189,7 +220,7 @@ class OllamaOnPremEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
                 client.list()  # Test connection
 
                 # Connection successful, offer to download model
-                if self.is_setup:
+                if self.is_setup or self._select_remote_model(existing_url):
                     return
 
                 self.event = asyncio.Event()
@@ -302,7 +333,7 @@ class OllamaOnPremEngine(NeedsSetupMixin, AIProviderMixin, RemoteMixin):
         )
 
         # Prompt for model download
-        if not self.is_setup:
+        if not (self.is_setup or self._select_remote_model(url)):
             self.event = asyncio.Event()
             store.dispatch(
                 NotificationsAddAction(
